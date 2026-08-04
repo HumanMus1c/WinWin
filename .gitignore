@@ -1,0 +1,22 @@
+# Gradle
+.gradle/
+build/
+out/
+tmp/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kotlin
+*.kotlin_metadata
