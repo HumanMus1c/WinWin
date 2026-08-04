@@ -13,32 +13,23 @@ import com.winwin.ui.components.AppScreen
 import com.winwin.ui.components.FrostedBottomBar
 import com.winwin.ui.home.HomeScreen
 import com.winwin.ui.profile.ProfileScreen
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.materials.HazeMaterials
 
 /**
  * WinWin — Compose Multiplatform Desktop spike for BiliPai port.
  *
  * Verifies:
  * 1. Material 3 components on Desktop
- * 2. Haze frosted glass blur on Desktop
- * 3. iOS-inspired design language fidelity
- * 4. Compose UI patterns (LazyVerticalGrid, state, animation)
+ * 2. iOS-inspired design language fidelity
+ * 3. Compose UI patterns (LazyVerticalGrid, state, animation)
+ * 4. Haze frosted glass blur integration (pending API verification)
  */
 @Composable
 fun App() {
     var currentScreen by remember { mutableStateOf(AppScreen.Home) }
-    val hazeState = remember { HazeState() }
 
     Box(Modifier.fillMaxSize()) {
-        // ── Content area (registered as blur source) ──
-        Box(
-            Modifier
-                .fillMaxSize()
-                .hazeSource(hazeState)
-        ) {
+        // ── Content area ──
+        Box(Modifier.fillMaxSize()) {
             when (currentScreen) {
                 AppScreen.Home -> HomeScreen()
                 AppScreen.Profile -> ProfileScreen()
@@ -48,13 +39,11 @@ fun App() {
             }
         }
 
-        // ── Bottom navigation bar (blur consumer — frosted glass) ──
+        // ── Bottom navigation bar ──
         FrostedBottomBar(
             currentScreen = currentScreen,
             onNavigate = { currentScreen = it },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .hazeEffect(hazeState, HazeMaterials.thin()),
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
