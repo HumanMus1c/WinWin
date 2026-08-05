@@ -1,22 +1,18 @@
-# Gradle
-.gradle/
+# Flutter
 build/
-out/
-tmp/
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
 
 # IDE
 .idea/
 *.iml
-*.iws
-*.ipr
 .vscode/
-.settings/
-.classpath
-.project
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Kotlin
-*.kotlin_metadata
+# Misc
+*.log
