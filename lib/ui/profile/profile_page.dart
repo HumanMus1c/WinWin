@@ -8,6 +8,7 @@ import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
+import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/pages/toview/toview_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
@@ -129,6 +130,25 @@ class _ProfilePageState extends State<ProfilePage> {
                         iconTint: Colors.red,
                         onTap: () => _onLogout(context),
                       ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: Style.md),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Style.lg),
+                child: IOSGroup(
+                  children: [
+                    IOSClickableItem(
+                      icon: Icons.settings,
+                      title: '设置',
+                      iconTint: iosBlue,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SettingPage(),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

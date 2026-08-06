@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -104,16 +105,40 @@ class VideoCardV extends StatelessWidget {
               children: [
                 if (rcmdReason != null) _badge(context, rcmdReason),
                 if (isFollowed) _badge(context, '已关注'),
-                Expanded(
-                  child: Text(
-                    ownerName,
-                    maxLines: 1,
-                    overflow: TextOverflow.clip,
-                    semanticsLabel: 'UP：$ownerName',
-                    style: TextStyle(
-                      height: 1.5,
-                      fontSize: theme.textTheme.labelMedium?.fontSize,
-                      color: theme.colorScheme.outline,
+                Flexible(
+                  child: GestureDetector(
+                    onTap: () {
+                      final mid = owner?.mid;
+                      if (mid != null && mid > 0) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MemberSpacePage(mid: mid),
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.secondaryContainer
+                            .withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: Text(
+                        ownerName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        semanticsLabel: 'UP：$ownerName',
+                        style: TextStyle(
+                          height: 1.5,
+                          fontSize: theme.textTheme.labelMedium?.fontSize,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
                     ),
                   ),
                 ),
