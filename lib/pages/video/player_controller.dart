@@ -51,6 +51,9 @@ class WinWinPlayerController {
   /// 当前播放倍速（1.0 为原速）。
   final ValueNotifier<double> playbackSpeed = ValueNotifier(1.0);
 
+  /// 画质列表版本号：每次 `_playUrl` 赋值后递增，供面板重建画质按钮。
+  final ValueNotifier<int> qualityVersion = ValueNotifier(0);
+
   /// 上一次生效的倍速，用于弹幕时长联动（先乘旧倍速还原基准再除新倍速）。
   double _lastPlaybackSpeed = 1.0;
 
@@ -215,6 +218,8 @@ class WinWinPlayerController {
 
       _playUrl = playUrl;
       _currentQn = video.id ?? qn;
+      // 通知面板重建画质按钮（_playUrl 为普通字段，不自动触发重建）。
+      qualityVersion.value++;
 
       // 请求头经 'avio.headers' 属性下发，格式为 "Key: Value\r\n" 列表，
       // 对该 Player 打开的所有源（含外部音轨）生效。
@@ -325,5 +330,6 @@ class WinWinPlayerController {
       _subscriptions.clear();
       player.dispose();
     }
+    qualityVersion.dispose();
   }
 }

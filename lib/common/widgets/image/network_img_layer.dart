@@ -46,10 +46,14 @@ class NetworkImgLayer extends StatelessWidget {
 
   Widget _buildImage(BuildContext context) {
     int? memCacheWidth, memCacheHeight;
-    if (width <= height) {
-      memCacheWidth = ImageUtils.cacheSize(width, context);
-    } else {
-      memCacheHeight = ImageUtils.cacheSize(height, context);
+    // 仅对有限尺寸计算 memCache 尺寸；double.infinity（如 Stack/AspectRatio 撑满
+    // 场景）会导致 (inf * dpr).round() 抛 "Infinity or NaN toInt"。
+    if (width.isFinite && height.isFinite) {
+      if (width <= height) {
+        memCacheWidth = ImageUtils.cacheSize(width, context);
+      } else {
+        memCacheHeight = ImageUtils.cacheSize(height, context);
+      }
     }
     return CachedNetworkImage(
       imageUrl: ImageUtils.thumbnailUrl(src),

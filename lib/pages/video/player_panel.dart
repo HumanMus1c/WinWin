@@ -356,36 +356,42 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   Widget _buildQualityButton() {
     final c = widget.controller;
-    final labels = c.qualityLabels;
-    final current = c.currentQualityIndex;
-    if (labels.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return PopupMenuButton<int>(
-      tooltip: '画质',
-      onSelected: c.switchQuality,
-      itemBuilder: (context) => [
-        for (int i = 0; i < labels.length; i++)
-          PopupMenuItem<int>(
-            value: i,
-            child: Text(
-              labels[i],
-              style: TextStyle(
-                color: i == current ? biliPink : null,
-                fontWeight: i == current ? FontWeight.bold : FontWeight.normal,
+    return ValueListenableBuilder<int>(
+      valueListenable: c.qualityVersion,
+      builder: (context, _, _) {
+        final labels = c.qualityLabels;
+        final current = c.currentQualityIndex;
+        if (labels.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return PopupMenuButton<int>(
+          tooltip: '画质',
+          onSelected: c.switchQuality,
+          itemBuilder: (context) => [
+            for (int i = 0; i < labels.length; i++)
+              PopupMenuItem<int>(
+                value: i,
+                child: Text(
+                  labels[i],
+                  style: TextStyle(
+                    color: i == current ? biliPink : null,
+                    fontWeight:
+                        i == current ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
               ),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+            child: Text(
+              (current >= 0 && current < labels.length)
+                  ? labels[current]
+                  : '画质',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ),
-      ],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Style.sm),
-        child: Text(
-          (current >= 0 && current < labels.length)
-              ? labels[current]
-              : '画质',
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
-        ),
-      ),
+        );
+      },
     );
   }
 
