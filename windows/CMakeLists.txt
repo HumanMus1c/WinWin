@@ -43,6 +43,9 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
+  # Debug 默认启用 /INCREMENTAL，与 fvp 插件的 /OPT:ICF 冲突产生 LNK4075。
+  # 在 Debug 配置下显式禁用增量链接以消除该警告（Release 无此问题）。
+  target_link_options(${TARGET} PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL:NO>)
 endfunction()
 
 # Flutter library and tool build rules.
