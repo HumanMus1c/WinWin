@@ -30,7 +30,7 @@ class WinWinPlayerController {
   WinWinPlayerController({required this.bvid, required this.cid}) {
     _playerCount++;
     _sharedPlayer ??= _createPlayer();
-    _attachListeners();
+    attachListeners();
     _startPolling();
   }
 
@@ -99,6 +99,10 @@ class WinWinPlayerController {
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   Timer? _pollTimer;
   bool _disposed = false;
+  /// 是否正在加载/切换 media：为 true 时忽略 onEvent 的 error 事件，
+  /// 避免旧 media 卸载产生的错误事件污染 [error]（真正的失败由 prepare
+  /// 返回值 < 0 判断）。
+  bool _loading = false;
 
   /// 清晰度标签列表（PlayUrlModel.acceptDescription）。
   List<String> get qualityLabels => _playUrl?.acceptDescription ?? const [];
@@ -127,8 +131,9 @@ class WinWinPlayerController {
   }
 
   /// 将本 controller 的事件监听挂载到共享 [_sharedPlayer]。
-  /// 每个 controller 实例持有自己的订阅，dispose 时由 [_detachListeners] 移除。
-  void _attachListeners() {
+  /// 每个 controller 实例持有自己的订阅，dispose 时由 [detachListeners] 移除。
+  /// 供页面 [RouteAware.didPopNext] 重新挂载（参照 PiliPlus addStatusLister）。
+  void attachListeners() {
     final player = _sharedPlayer;
     if (player == null) return;
     _subscriptions
@@ -137,7 +142,7 @@ class WinWinPlayerController {
         playing.value = event.newValue == mdk.PlaybackState.playing;
       }))
       ..add(player.onEvent.listen((ev) {
-        if (_disposed) return;
+        if (_disposed || _loading) return;
         // NOTE: for 'reader.buffering' the error field is progress [0,100],
         // not an error code; real mdk failures carry negative codes.
         if (ev.error < 0) {
@@ -157,9 +162,10 @@ class WinWinPlayerController {
             newValue.test(mdk.MediaStatus.buffered)) {
           buffering.value = false;
         }
-        if (newValue.test(mdk.MediaStatus.invalid)) {
-          error.value ??= '媒体加载失败';
-        }
+        // NOTE: 切换 media 时旧 media 会触发 invalid 状态，这是正常行为而非
+        // 真正的加载失败。真正的加载失败由 prepare() 返回值 < 0 判断并设置
+        // error，此处不再因 invalid 事件误报错误（参照 PiliPlus 不依赖
+        // media status invalid 设 error 的做法）。
       }));
     // mdk 内部 updateTexture() 会更新 player.textureId，镜像到对外 notifier。
     player.textureId.addListener(_syncTextureId);
@@ -167,8 +173,10 @@ class WinWinPlayerController {
     textureId.value = player.textureId.value;
   }
 
-  /// 移除本 controller 的事件监听。
-  void _detachListeners() {
+  /// 移除本 controller 的事件监听（不释放共享 player）。
+  /// 供页面 [RouteAware.didPushNext] 移除监听，避免旧页面被新 media 的事件
+  /// 污染（参照 PiliPlus removeStatusLister / removePositionListener）。
+  void detachListeners() {
     _sharedPlayer?.textureId.removeListener(_syncTextureId);
     for (final sub in _subscriptions) {
       sub.cancel();
@@ -231,7 +239,13 @@ class WinWinPlayerController {
   }) async {
     final player = _player;
     if (player == null || _disposed) return;
+    _loading = true;
     try {
+      // 先停止旧播放，让 mdk 干净卸载旧 media（参照 PiliPlus setDataSource
+      // 中先 pause 旧 player，media_kit open 自动停止旧 media 的等效操作）。
+      // 避免旧 media 仍在加载状态时 setMedia 新 URL 导致 prepare 返回 -1。
+      player.state = mdk.PlaybackState.stopped;
+
       error.value = null;
       ready.value = false;
       buffering.value = false;
@@ -279,6 +293,9 @@ class WinWinPlayerController {
         error.value = '播放失败（错误码 $ret）';
         return;
       }
+      // prepare 成功后再次清空 error（覆盖 setMedia 旧 media 卸载期间
+      // 可能产生的残留错误事件）。
+      error.value = null;
 
       final ms = player.mediaInfo.duration;
       if (ms > 0) duration.value = Duration(milliseconds: ms);
@@ -303,6 +320,8 @@ class WinWinPlayerController {
       ready.value = true;
     } catch (e) {
       if (!_disposed) error.value = '播放失败：$e';
+    } finally {
+      _loading = false;
     }
   }
 
@@ -367,7 +386,7 @@ class WinWinPlayerController {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
-    _detachListeners();
+    detachListeners();
     _pollTimer?.cancel();
     _pollTimer = null;
     // 引用计数递减，归零时才真正释放全局单例 mdk.Player。

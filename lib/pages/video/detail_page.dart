@@ -96,8 +96,10 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
 
   // ─────────────────────────── RouteAware ───────────────────────────
 
-  /// 新页面 push 到本页之上时：暂停共享播放器（不释放，参照 PiliPlus）。
-  /// 新页面复用同一个 mdk.Player 实例切换 media，避免资源冲突。
+  /// 新页面 push 到本页之上时：暂停共享播放器并移除本页的事件监听
+  /// （参照 PiliPlus didPushNext: pause + removeStatusLister +
+  /// removePositionListener）。这样新页面在共享 player 上切换 media 时，
+  /// 旧 media 卸载产生的事件不会污染本页 controller 的状态。
   @override
   void didPushNext() {
     final ctrl = playerController;
@@ -105,15 +107,18 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
       _wasPlaying = ctrl.playing.value;
       _savedPosition = ctrl.position.value;
       ctrl.pause();
+      ctrl.detachListeners();
     }
   }
 
-  /// 上一个页面 pop 回到本页时：在共享播放器上重新加载本页视频，
-  /// 从记忆的进度恢复，之前在播放则自动续播。
+  /// 上一个页面 pop 回到本页时：重新挂载事件监听，然后在共享播放器上
+  /// 重新加载本页视频，从记忆的进度恢复（参照 PiliPlus didPopNext:
+  /// addStatusLister + addPositionListener + playerInit）。
   @override
   void didPopNext() {
     final ctrl = playerController;
     if (ctrl != null) {
+      ctrl.attachListeners();
       ctrl.load(start: _savedPosition, autoplay: _wasPlaying);
       _wasPlaying = false;
       _savedPosition = Duration.zero;
