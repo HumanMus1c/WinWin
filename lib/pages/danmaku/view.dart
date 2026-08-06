@@ -52,10 +52,11 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     c.position.addListener(_onPosition);
     c.playing.addListener(_onPlaying);
     c.seekCount.addListener(_onSeek);
-    c.playbackSpeed.addListener(_onSpeed);
     dm.localEcho.addListener(_onLocalEcho);
 
     // 初始同步一次运行状态（引擎默认 running）。
+    // 倍速联动由 [WinWinPlayerController.setPlaybackSpeed] 内部用
+    // 「先乘旧倍速再除新倍速」公式直接更新 danmakuEngine，无需在此监听。
     _onPlaying();
   }
 
@@ -78,7 +79,6 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     c.position.removeListener(_onPosition);
     c.playing.removeListener(_onPlaying);
     c.seekCount.removeListener(_onSeek);
-    c.playbackSpeed.removeListener(_onSpeed);
     c.danmaku?.localEcho.removeListener(_onLocalEcho);
     c.danmaku?.dispose();
     c.danmaku = null;
@@ -125,17 +125,6 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
   void _onSeek() {
     _lastTick = -1;
     widget.controller.danmakuEngine?.clear();
-  }
-
-  /// 倍速联动：按比例调整弹幕滚动时长。
-  void _onSpeed() {
-    final c = widget.controller;
-    c.danmakuEngine?.updateOption(
-      DanmakuOptions.get(
-        fullscreen: widget.fullscreen,
-        speed: c.playbackSpeed.value,
-      ),
-    );
   }
 
   // ── build ──

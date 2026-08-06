@@ -51,6 +51,9 @@ class WinWinPlayerController {
   /// 当前播放倍速（1.0 为原速）。
   final ValueNotifier<double> playbackSpeed = ValueNotifier(1.0);
 
+  /// 上一次生效的倍速，用于弹幕时长联动（先乘旧倍速还原基准再除新倍速）。
+  double _lastPlaybackSpeed = 1.0;
+
   /// seek 计数器：弹幕层监听后清空画面上的弹幕。
   final ValueNotifier<int> seekCount = ValueNotifier(0);
 
@@ -282,12 +285,29 @@ class WinWinPlayerController {
 
   /// 设置播放倍速：下发 mdk playbackRate 并更新 [playbackSpeed]。
   ///
-  /// 弹幕时长的联动由弹幕视图监听 [playbackSpeed] 后调用
-  /// `danmakuEngine.updateOption(DanmakuOptions.get(..., speed: v))` 完成。
+  /// 弹幕时长联动（移植自 PiliPlus `setPlaybackSpeed`）：当前引擎 option 的
+  /// duration 已被旧倍速除过，需先乘回旧倍速还原 1x 基准，再除以新倍速得到
+  /// 新的生效时长。等价于 `Pref.danmakuDuration / newSpeed`，但自包含、不
+  /// 回查 Pref，仅依赖控制器自身持有的 currentOption + lastPlaybackSpeed。
   void setPlaybackSpeed(double v) {
     if (_disposed || v <= 0) return;
+    _lastPlaybackSpeed = playbackSpeed.value;
     playbackSpeed.value = v;
     _player?.playbackRate = v;
+    final engine = danmakuEngine;
+    if (engine != null) {
+      try {
+        final current = engine.option;
+        final baseDuration = current.duration * _lastPlaybackSpeed;
+        final baseStaticDuration = current.staticDuration * _lastPlaybackSpeed;
+        engine.updateOption(
+          current.copyWith(
+            duration: baseDuration / v,
+            staticDuration: baseStaticDuration / v,
+          ),
+        );
+      } catch (_) {}
+    }
   }
 
   void dispose() {

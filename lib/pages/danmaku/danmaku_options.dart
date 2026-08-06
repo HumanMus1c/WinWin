@@ -1,5 +1,4 @@
 import 'package:winwin/core/storage/storage.dart';
-import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/plugin/canvas_danmaku/canvas_danmaku.dart';
 
