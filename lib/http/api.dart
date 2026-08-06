@@ -423,7 +423,10 @@ abstract final class Api {
   // https://api.bilibili.com/x/player/online/total?aid=913663681&cid=1203559746&bvid=BV1MM4y1s7NZ&ts=56427838
   static const String onlineTotal = '/x/player/online/total';
 
-  // static const String webDanmaku = '/x/v2/dm/web/seg.so';
+  // 分段弹幕（HTTP protobuf，返回 DmSegMobileReply 的 bytes）
+  //   GET ?type=1&oid={cid}&segment_index={idx}
+  //   segment_index 为 1-based，每段 6 分钟。
+  static const String webDanmaku = '/x/v2/dm/web/seg.so';
 
   // 发送视频弹幕
   //https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/danmaku/action.md

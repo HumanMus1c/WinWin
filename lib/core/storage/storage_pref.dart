@@ -179,6 +179,42 @@ abstract final class Pref {
   static int get danmakuFontWeight =>
       _setting.get(SettingBoxKey.danmakuFontWeight, defaultValue: 6);
 
+  /// 智能云屏蔽等级（0-11），权重低于该值的弹幕在渲染前被丢弃。
+  static int get danmakuWeight =>
+      _setting.get(SettingBoxKey.danmakuWeight, defaultValue: 0);
+
+  /// 弹幕显示区域占视频高度比例（0.1-1.0）。
+  static double get danmakuShowArea =>
+      _setting.get(SettingBoxKey.danmakuShowArea, defaultValue: 1.0);
+
+  /// 静态（顶部/底部）弹幕停留时长，秒。
+  static double get danmakuStaticDuration =>
+      _setting.get(SettingBoxKey.danmakuStaticDuration, defaultValue: 4.0);
+
+  /// 海量弹幕模式：轨道占满时叠加显示。
+  static bool get danmakuMassiveMode =>
+      _setting.get(SettingBoxKey.danmakuMassiveMode, defaultValue: false);
+
+  /// 滚动弹幕固定速度（不随内容长度变化）。
+  static bool get danmakuFixedV =>
+      _setting.get(SettingBoxKey.danmakuFixedV, defaultValue: false);
+
+  /// 静态弹幕溢出时降级为滚动弹幕。
+  static bool get danmakuStatic2Scroll =>
+      _setting.get(SettingBoxKey.danmakuStatic2Scroll, defaultValue: false);
+
+  /// 屏蔽彩色弹幕（强制为白色）。
+  ///
+  /// 约定：[danmakuBlockType] 集合包含 6 时视为屏蔽彩色。
+  static bool get blockColorful => danmakuBlockType.contains(6);
+
+  /// 弹幕过滤规则（关键词/正则/用户），持久化在 localCache box。
+  static dynamic get danmakuFilterRule =>
+      _localCache.get(LocalCacheKey.danmakuFilterRules);
+
+  static set danmakuFilterRule(dynamic value) =>
+      _localCache.put(LocalCacheKey.danmakuFilterRules, value);
+
   // ---------- subtitle ----------
   static double get subtitleFontScale =>
       _setting.get(SettingBoxKey.subtitleFontScale, defaultValue: 1.0);
