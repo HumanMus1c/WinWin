@@ -31,8 +31,8 @@ import 'package:winwin/theme/style.dart';
 ///   - RSA 密码加密未实现（需引入 `encrypt` 包），密码以 salt+plaintext 发送
 ///   - 极验验证码 webview 未实现，遇到风控（code=-105 或 status=2）会提示
 ///     "需要验证码但 webview 未实现"，用户需改用扫码/Cookie 登录
-void showLoginPage(BuildContext context) {
-  Navigator.of(context).push(
+Future<void> showLoginPage(BuildContext context) {
+  return Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (_) => const LoginPage(),
       fullscreenDialog: true,
