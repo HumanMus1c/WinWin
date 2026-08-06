@@ -5,6 +5,7 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
+import 'package:winwin/main.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
@@ -31,7 +32,7 @@ class VideoDetailPage extends StatefulWidget {
   State<VideoDetailPage> createState() => _VideoDetailPageState();
 }
 
-class _VideoDetailPageState extends State<VideoDetailPage> {
+class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
   final ScrollController scrollController = ScrollController();
   WinWinPlayerController? playerController;
 
@@ -60,6 +61,9 @@ class _VideoDetailPageState extends State<VideoDetailPage> {
   bool _fullscreen = false;
   bool _descExpanded = false;
 
+  /// 页面被新路由覆盖前是否处于播放状态，用于返回时恢复。
+  bool _wasPlaying = false;
+
   /// 评论区之前的固定区块数量：播放器 / 信息 / 简介 / 评论头。
   static const int _fixedSections = 4;
 
@@ -71,11 +75,39 @@ class _VideoDetailPageState extends State<VideoDetailPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute<dynamic>?);
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     playerController?.dispose();
     scrollController.dispose();
     _commentCtrl.dispose();
     super.dispose();
+  }
+
+  // ─────────────────────────── RouteAware ───────────────────────────
+
+  /// 新页面 push 到本页之上时：暂停播放器，记录原状态。
+  @override
+  void didPushNext() {
+    final ctrl = playerController;
+    if (ctrl != null) {
+      _wasPlaying = ctrl.playing.value;
+      ctrl.pause();
+    }
+  }
+
+  /// 上一个页面 pop 回到本页时：若之前在播放则恢复播放。
+  @override
+  void didPopNext() {
+    if (_wasPlaying) {
+      playerController?.playOrPause();
+      _wasPlaying = false;
+    }
   }
 
   // ─────────────────────────── 数据加载 ───────────────────────────

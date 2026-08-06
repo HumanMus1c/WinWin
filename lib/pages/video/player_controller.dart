@@ -274,6 +274,15 @@ class WinWinPlayerController {
         : mdk.PlaybackState.playing;
   }
 
+  /// 暂停播放（不切换状态）。
+  void pause() {
+    final player = _player;
+    if (player == null || _disposed) return;
+    if (player.state == mdk.PlaybackState.playing) {
+      player.state = mdk.PlaybackState.paused;
+    }
+  }
+
   void seek(Duration to) {
     final player = _player;
     if (player == null || _disposed) return;

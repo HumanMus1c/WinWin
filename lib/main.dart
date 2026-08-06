@@ -6,6 +6,11 @@ import 'pages/setting/theme_notifier.dart';
 import 'theme/app_theme.dart';
 import 'ui/app.dart';
 
+/// 全局路由观察器，供 VideoDetailPage 监听 push/pop 事件，
+/// 在页面被覆盖时暂停播放器、返回时恢复播放。
+final RouteObserver<PageRoute<dynamic>> routeObserver =
+    RouteObserver<PageRoute<dynamic>>();
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // The video player kernel (fvp/mdk) needs no manual init here: the fvp
@@ -33,6 +38,7 @@ class WinWinApp extends StatelessWidget {
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: themeMode,
+          navigatorObservers: [routeObserver],
           home: const AppRoot(),
         );
       },
