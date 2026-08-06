@@ -1,5 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/models/models.dart';
+import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/rcmd/view.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
@@ -7,7 +10,10 @@ import 'package:winwin/theme/style.dart';
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  /// 头像点击跳转到「我的」页面（已登录时）。
+  final VoidCallback onGotoProfile;
+
+  const HomePage({super.key, required this.onGotoProfile});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -28,7 +34,7 @@ class _HomePageState extends State<HomePage> {
             top: 0,
             left: 0,
             right: 0,
-            child: _HomeTopBar(),
+            child: _HomeTopBar(onGotoProfile: widget.onGotoProfile),
           ),
           // ── Category tabs ──
           Positioned(
@@ -46,11 +52,52 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// Floating top bar — avatar + search pill + settings icon.
-class _HomeTopBar extends StatelessWidget {
+/// Floating top bar — avatar (login entry) + search pill + settings icon.
+///
+/// 左上角头像为账户登录入口：未登录点击进入 [LoginPage]，已登录点击
+/// 通过 [onGotoProfile] 回调切换到「我的」页面。监听 [AccountService]
+/// 实时反映登录态与头像。
+class _HomeTopBar extends StatefulWidget {
+  final VoidCallback onGotoProfile;
+
+  const _HomeTopBar({required this.onGotoProfile});
+
+  @override
+  State<_HomeTopBar> createState() => _HomeTopBarState();
+}
+
+class _HomeTopBarState extends State<_HomeTopBar> {
+  @override
+  void initState() {
+    super.initState();
+    AccountService().addListener(_onAccountChanged);
+  }
+
+  @override
+  void dispose() {
+    AccountService().removeListener(_onAccountChanged);
+    super.dispose();
+  }
+
+  void _onAccountChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onAvatarTap() {
+    final service = AccountService();
+    if (service.isLogin) {
+      widget.onGotoProfile();
+    } else {
+      showLoginPage(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final service = AccountService();
+    final isLogin = service.isLogin;
+    final faceUrl = service.face;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Style.lg, vertical: Style.sm),
       child: Container(
@@ -72,20 +119,39 @@ class _HomeTopBar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar
-            Padding(
-              padding: const EdgeInsets.only(left: Style.md),
+            // Avatar (login entry)
+            GestureDetector(
+              onTap: _onAvatarTap,
               child: Container(
                 width: 36,
                 height: 36,
+                margin: const EdgeInsets.only(left: Style.md),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [coverGradients[3].start, coverGradients[3].end],
-                  ),
+                  gradient: isLogin
+                      ? null
+                      : LinearGradient(
+                          colors: [coverGradients[3].start, coverGradients[3].end],
+                        ),
                   border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
                 ),
-                child: const Icon(Icons.person, color: Colors.white, size: 20),
+                clipBehavior: Clip.antiAlias,
+                child: isLogin && faceUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: faceUrl,
+                        placeholder: (_, __) => const ColoredBox(
+                          color: Colors.grey,
+                          child: SizedBox.expand(),
+                        ),
+                        errorWidget: (_, __, ___) => const ColoredBox(
+                          color: Colors.grey,
+                          child: Center(
+                            child: Icon(Icons.person, color: Colors.white, size: 20),
+                          ),
+                        ),
+                        fit: BoxFit.cover,
+                      )
+                    : const Icon(Icons.person, color: Colors.white, size: 20),
               ),
             ),
             const SizedBox(width: 12),

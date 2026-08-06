@@ -23,7 +23,10 @@ class _AppRootState extends State<AppRoot> {
           IndexedStack(
             index: _currentPage == AppPage.profile ? 1 : 0,
             children: [
-              const HomePage(),
+              HomePage(
+                onGotoProfile: () =>
+                    setState(() => _currentPage = AppPage.profile),
+              ),
               const ProfilePage(),
             ],
           ),
