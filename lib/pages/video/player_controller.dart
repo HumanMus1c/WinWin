@@ -14,8 +14,13 @@ import 'package:winwin/plugin/canvas_danmaku/canvas_danmaku.dart';
 
 /// WinWin 播放器控制器（fvp / mdk 内核）。
 ///
-/// 负责：拉取 DASH 播放地址、外部音轨挂载、打开播放、
-/// 进度/缓冲/错误状态广播、清晰度切换。
+/// 采用 PiliPlus 的「全局单例 mdk.Player + 引用计数」方案：
+/// 多个视频详情页共享同一个 [mdk.Player] 实例，切换视频时仅在该实例上
+/// 重新 `media = url` + `prepare`（与 [switchQuality] 同理），
+/// 从根本上避免两个 Player 实例并存导致的资源冲突。
+///
+/// 引用计数 [_playerCount] 管理单例生命周期：每个 controller 构造时递增，
+/// dispose 时递减，归零时才真正释放 [mdk.Player]。
 ///
 /// 对外暴露的 ValueNotifier 供 [PlayerPanel] 及详情页 UI 监听。
 /// 渲染面：mdk 将解码帧注册为 Flutter Texture，面板监听
@@ -23,14 +28,21 @@ import 'package:winwin/plugin/canvas_danmaku/canvas_danmaku.dart';
 /// [videoSize] 用于保持视频帧宽高比（等效 BoxFit.contain）。
 class WinWinPlayerController {
   WinWinPlayerController({required this.bvid, required this.cid}) {
-    _player = _createPlayer();
+    _playerCount++;
+    _sharedPlayer ??= _createPlayer();
+    _attachListeners();
+    _startPolling();
   }
 
   final String bvid;
   final int cid;
 
-  // ── 内部 mdk 播放器 ──
-  mdk.Player? _player;
+  // ── 全局单例 mdk 播放器（跨页面共享，参照 PiliPlus PlPlayerController）──
+  static mdk.Player? _sharedPlayer;
+  static int _playerCount = 0;
+
+  /// 当前 controller 访问的播放器（即全局单例）。
+  mdk.Player? get _player => _sharedPlayer;
 
   // ── 对外状态（ValueNotifier）──
   final ValueNotifier<bool> playing = ValueNotifier(false);
@@ -99,6 +111,7 @@ class WinWinPlayerController {
     return idx < 0 ? 0 : idx;
   }
 
+  /// 创建全局共享的 mdk.Player（仅属性配置，监听器由 [_attachListeners] 挂载）。
   mdk.Player _createPlayer() {
     final player = mdk.Player();
 
@@ -110,7 +123,14 @@ class WinWinPlayerController {
     player.setBufferRange(min: 1000, max: 30000);
 
     player.volume = volume.value / 100.0;
+    return player;
+  }
 
+  /// 将本 controller 的事件监听挂载到共享 [_sharedPlayer]。
+  /// 每个 controller 实例持有自己的订阅，dispose 时由 [_detachListeners] 移除。
+  void _attachListeners() {
+    final player = _sharedPlayer;
+    if (player == null) return;
     _subscriptions
       ..add(player.onStateChanged.listen((event) {
         if (_disposed) return;
@@ -141,12 +161,19 @@ class WinWinPlayerController {
           error.value ??= '媒体加载失败';
         }
       }));
-
     // mdk 内部 updateTexture() 会更新 player.textureId，镜像到对外 notifier。
     player.textureId.addListener(_syncTextureId);
+    // 复用单例时 texture 可能已存在，立即同步一次。
+    textureId.value = player.textureId.value;
+  }
 
-    _startPolling();
-    return player;
+  /// 移除本 controller 的事件监听。
+  void _detachListeners() {
+    _sharedPlayer?.textureId.removeListener(_syncTextureId);
+    for (final sub in _subscriptions) {
+      sub.cancel();
+    }
+    _subscriptions.clear();
   }
 
   void _syncTextureId() {
@@ -260,12 +287,15 @@ class WinWinPlayerController {
       videoSize.value = await player.textureSize;
       if (_disposed) return;
 
-      // 创建渲染 Texture 并更新 player.textureId（镜像到对外 notifier）。
-      final tex = await player.updateTexture();
-      if (_disposed) return;
-      if (tex < 0) {
-        error.value = '视频渲染面创建失败';
-        return;
+      // 创建渲染 Texture（仅首次创建 player 时需要，后续复用单例已存在的
+      // texture，避免重复 updateTexture 导致渲染面重建）。
+      if (player.textureId.value == null) {
+        final tex = await player.updateTexture();
+        if (_disposed) return;
+        if (tex < 0) {
+          error.value = '视频渲染面创建失败';
+          return;
+        }
       }
 
       player.state =
@@ -282,6 +312,15 @@ class WinWinPlayerController {
     player.state = player.state == mdk.PlaybackState.playing
         ? mdk.PlaybackState.paused
         : mdk.PlaybackState.playing;
+  }
+
+  /// 暂停播放（不切换状态），用于页面被覆盖时保留单例资源。
+  void pause() {
+    final player = _player;
+    if (player == null || _disposed) return;
+    if (player.state == mdk.PlaybackState.playing) {
+      player.state = mdk.PlaybackState.paused;
+    }
   }
 
   void seek(Duration to) {
@@ -328,17 +367,15 @@ class WinWinPlayerController {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _detachListeners();
     _pollTimer?.cancel();
     _pollTimer = null;
-    final player = _player;
-    _player = null;
-    if (player != null) {
-      player.textureId.removeListener(_syncTextureId);
-      for (final sub in _subscriptions) {
-        sub.cancel();
-      }
-      _subscriptions.clear();
-      player.dispose();
+    // 引用计数递减，归零时才真正释放全局单例 mdk.Player。
+    _playerCount--;
+    if (_playerCount <= 0) {
+      _playerCount = 0;
+      _sharedPlayer?.dispose();
+      _sharedPlayer = null;
     }
     qualityVersion.dispose();
   }

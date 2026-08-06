@@ -63,8 +63,7 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
 
   /// 页面被新路由覆盖前的播放状态，用于返回时决定是否自动播放。
   bool _wasPlaying = false;
-  /// 页面被覆盖前记录的 cid 与播放位置，用于返回时重建播放器并恢复进度。
-  int? _savedCid;
+  /// 页面被覆盖前记录的播放位置，用于返回时恢复进度。
   Duration _savedPosition = Duration.zero;
 
   /// 评论区之前的固定区块数量：播放器 / 信息 / 简介 / 评论头。
@@ -97,34 +96,27 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
 
   // ─────────────────────────── RouteAware ───────────────────────────
 
-  /// 新页面 push 到本页之上时：彻底释放旧播放器资源（mdk Texture / 解码器），
-  /// 避免与新页面的播放器实例冲突导致新视频播放失败。
-  /// 返回时由 [didPopNext] 用记忆的 cid / 进度重建。
+  /// 新页面 push 到本页之上时：暂停共享播放器（不释放，参照 PiliPlus）。
+  /// 新页面复用同一个 mdk.Player 实例切换 media，避免资源冲突。
   @override
   void didPushNext() {
     final ctrl = playerController;
     if (ctrl != null) {
       _wasPlaying = ctrl.playing.value;
-      _savedCid = ctrl.cid;
       _savedPosition = ctrl.position.value;
-      ctrl.dispose();
-      playerController = null;
-      setState(() {}); // 显示封面占位
+      ctrl.pause();
     }
   }
 
-  /// 上一个页面 pop 回到本页时：用记忆的 cid / 进度重建播放器。
-  /// 之前在播放则自动续播，否则保持暂停。
+  /// 上一个页面 pop 回到本页时：在共享播放器上重新加载本页视频，
+  /// 从记忆的进度恢复，之前在播放则自动续播。
   @override
   void didPopNext() {
-    final cid = _savedCid;
-    if (cid != null) {
-      playerController = WinWinPlayerController(bvid: widget.bvid, cid: cid)
-        ..load(start: _savedPosition, autoplay: _wasPlaying);
-      _savedCid = null;
-      _savedPosition = Duration.zero;
+    final ctrl = playerController;
+    if (ctrl != null) {
+      ctrl.load(start: _savedPosition, autoplay: _wasPlaying);
       _wasPlaying = false;
-      setState(() {});
+      _savedPosition = Duration.zero;
     }
   }
 
