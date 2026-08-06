@@ -12,10 +12,20 @@ import 'package:winwin/core/storage/storage_pref.dart';
 ///
 /// 存储沿用 PiliPlus 体系：`SettingBoxKey.themeMode` 存 int
 /// （0=light, 1=dark, 2=system）。
+///
+/// **初始化时机**：构造时不访问 [Pref]（因此时 Hive 可能尚未初始化），
+/// 初始值固定为 [ThemeMode.system]；`ensureBootstrap()` 完成后由
+/// `main.dart` 调用 [refresh] 从持久化存储读取实际值。
 class ThemeNotifier extends ValueNotifier<ThemeMode> {
-  ThemeNotifier._() : super(Pref.themeMode);
+  ThemeNotifier._() : super(ThemeMode.system);
 
   static final ThemeNotifier instance = ThemeNotifier._();
+
+  /// 从持久化存储读取实际主题模式并通知重建。
+  /// 在 `ensureBootstrap()` 完成后调用。
+  void refresh() {
+    value = Pref.themeMode;
+  }
 
   /// 当前存储的 int 值（0=light, 1=dark, 2=system）。
   int get typeIndex => switch (value) {

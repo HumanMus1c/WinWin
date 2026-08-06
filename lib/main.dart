@@ -13,7 +13,9 @@ void main() {
   // The Windows runner shows the window only after the first frame renders,
   // so bootstrap (Hive → accounts → Dio) must not block runApp(). Controllers
   // await ensureBootstrap() themselves before touching the network.
-  unawaited(ensureBootstrap());
+  unawaited(
+    ensureBootstrap().then((_) => ThemeNotifier.instance.refresh()),
+  );
   runApp(const WinWinApp());
 }
 
