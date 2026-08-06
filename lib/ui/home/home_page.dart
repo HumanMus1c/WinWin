@@ -4,6 +4,7 @@ import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/models/models.dart';
 import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/rcmd/view.dart';
+import 'package:winwin/pages/search/search_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
@@ -158,25 +159,35 @@ class _HomeTopBarState extends State<_HomeTopBar> {
             const SizedBox(width: 12),
             // Search pill
             Expanded(
-              child: Container(
-                height: 36,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainer.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(100),
+              child: GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SearchPage(),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 12),
-                    Icon(Icons.search, size: 18, color: theme.colorScheme.onSurfaceVariant),
-                    const SizedBox(width: 6),
-                    Text(
-                      '搜索视频、UP主...',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontSize: 13,
+                child: Container(
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 12),
+                      Icon(Icons.search,
+                          size: 18,
+                          color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 6),
+                      Text(
+                        '搜索视频、UP主...',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
