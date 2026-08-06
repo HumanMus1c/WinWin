@@ -1,0 +1,78 @@
+import 'package:flutter/material.dart';
+
+import 'package:winwin/core/storage/storage_key.dart';
+import 'package:winwin/pages/setting/models/settings_model.dart';
+
+/// 播放器设置项列表。
+///
+/// 移植自 PiliPlus 的 `playSettings`，仅保留桌面端适用项。
+List<SettingsModel> get playSettings => [
+      const SwitchModel(
+        title: '弹幕开关',
+        subtitle: '是否展示弹幕',
+        leading: Icon(Icons.subtitles_outlined),
+        setKey: SettingBoxKey.enableShowDanmaku,
+        defaultVal: true,
+      ),
+      const SwitchModel(
+        title: '自动播放',
+        subtitle: '进入详情页自动播放',
+        leading: Icon(Icons.motion_photos_auto_outlined),
+        setKey: SettingBoxKey.autoPlayEnable,
+        defaultVal: false,
+      ),
+      const SwitchModel(
+        title: '自动进入全屏',
+        subtitle: '进入详情页自动全屏播放',
+        leading: Icon(Icons.fullscreen),
+        setKey: SettingBoxKey.enableAutoEnter,
+        defaultVal: false,
+      ),
+      const SwitchModel(
+        title: '自动退出全屏',
+        subtitle: '视频结束自动退出全屏',
+        leading: Icon(Icons.fullscreen_exit),
+        setKey: SettingBoxKey.enableAutoExit,
+        defaultVal: true,
+      ),
+      const SwitchModel(
+        title: '后台播放',
+        subtitle: '窗口最小化时继续播放音频',
+        leading: Icon(Icons.picture_in_picture_alt_outlined),
+        setKey: SettingBoxKey.enableBackgroundPlay,
+        defaultVal: true,
+      ),
+      const SwitchModel(
+        title: '双击快退/快进',
+        subtitle: '左侧双击快退/右侧双击快进，关闭则双击均为暂停/播放',
+        leading: Icon(Icons.touch_app_outlined),
+        setKey: SettingBoxKey.enableQuickDouble,
+        defaultVal: true,
+      ),
+      const SwitchModel(
+        title: '全屏显示锁定按钮',
+        leading: Icon(Icons.lock_outline),
+        setKey: SettingBoxKey.showFsLockBtn,
+        defaultVal: true,
+      ),
+      const SwitchModel(
+        title: '全屏显示截图按钮',
+        leading: Icon(Icons.photo_camera_outlined),
+        setKey: SettingBoxKey.showFsScreenshotBtn,
+        defaultVal: true,
+      ),
+      const SwitchModel(
+        title: '键盘控制',
+        subtitle: '空格暂停/方向键快进快退/全屏切换等',
+        leading: Icon(Icons.keyboard_outlined),
+        setKey: SettingBoxKey.keyboardControl,
+        defaultVal: true,
+      ),
+      const SwitchModel(
+        title: '暂停时最小化',
+        subtitle: '窗口最小化时自动暂停播放',
+        leading: Icon(Icons.pause_circle_outline),
+        setKey: SettingBoxKey.pauseOnMinimize,
+        defaultVal: false,
+      ),
+    ];

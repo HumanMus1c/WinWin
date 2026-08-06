@@ -4,6 +4,7 @@ import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/models/models.dart';
 import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/rcmd/view.dart';
+import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 
@@ -183,7 +184,16 @@ class _HomeTopBarState extends State<_HomeTopBar> {
             // Settings icon
             Padding(
               padding: const EdgeInsets.only(right: Style.md),
-              child: Icon(Icons.settings, color: theme.colorScheme.onSurfaceVariant, size: 22),
+              child: GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SettingPage(),
+                  ),
+                ),
+                child: Icon(Icons.settings,
+                    color: theme.colorScheme.onSurfaceVariant, size: 22),
+              ),
             ),
           ],
         ),

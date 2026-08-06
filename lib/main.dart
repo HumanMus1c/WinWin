@@ -2,6 +2,7 @@ import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
 import 'core/bootstrap.dart';
+import 'pages/setting/theme_notifier.dart';
 import 'theme/app_theme.dart';
 import 'ui/app.dart';
 
@@ -21,12 +22,18 @@ class WinWinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WinWin — BiliPai Desktop Port',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      home: const AppRoot(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeNotifier.instance,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          title: 'WinWin — BiliPai Desktop Port',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: themeMode,
+          home: const AppRoot(),
+        );
+      },
     );
   }
 }
