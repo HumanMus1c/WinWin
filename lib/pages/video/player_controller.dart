@@ -169,12 +169,20 @@ class WinWinPlayerController {
     });
   }
 
-  /// 拉取 DASH、pickVideo(maxQn)+pickAudio、挂载外部音轨打开，自动播放。
+  /// 拉取 DASH、pickVideo(maxQn)+pickAudio、挂载外部音轨打开。
+  ///
+  /// [start] 指定起始播放位置（用于页面返回后恢复进度）；
+  /// [autoplay] 为 false 时加载完成后保持暂停（用于之前已暂停的场景）。
   /// 失败时写入 [error]，不抛异常。
-  Future<void> load() async {
+  Future<void> load({Duration? start, bool autoplay = true}) async {
     // 幂等：网络栈未初始化时兜底（main 中未等待 bootstrap）。
     await ensureBootstrap();
-    await _openWithQuality(qn: 80, maxQn: 80);
+    await _openWithQuality(
+      qn: 80,
+      maxQn: 80,
+      start: start,
+      autoplay: autoplay,
+    );
   }
 
   /// 切换到指定清晰度（acceptQuality[index]），记住进度重新 open。
@@ -192,6 +200,7 @@ class WinWinPlayerController {
     required int qn,
     required int maxQn,
     Duration? start,
+    bool autoplay = true,
   }) async {
     final player = _player;
     if (player == null || _disposed) return;
@@ -259,7 +268,8 @@ class WinWinPlayerController {
         return;
       }
 
-      player.state = mdk.PlaybackState.playing;
+      player.state =
+          autoplay ? mdk.PlaybackState.playing : mdk.PlaybackState.paused;
       ready.value = true;
     } catch (e) {
       if (!_disposed) error.value = '播放失败：$e';
@@ -272,15 +282,6 @@ class WinWinPlayerController {
     player.state = player.state == mdk.PlaybackState.playing
         ? mdk.PlaybackState.paused
         : mdk.PlaybackState.playing;
-  }
-
-  /// 暂停播放（不切换状态）。
-  void pause() {
-    final player = _player;
-    if (player == null || _disposed) return;
-    if (player.state == mdk.PlaybackState.playing) {
-      player.state = mdk.PlaybackState.paused;
-    }
   }
 
   void seek(Duration to) {
