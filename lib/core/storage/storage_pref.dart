@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart' show ThemeMode;
@@ -6,6 +7,8 @@ import 'package:hive_ce/hive.dart';
 import 'package:winwin/core/account/login_utils.dart' show LoginUtils;
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
+import 'package:winwin/models/user/user_info.dart';
+import 'package:winwin/utils/credential_crypto.dart';
 
 /// Trimmed-down preference accessor.
 /// Only covers settings that WinWin Phase 1 actually uses:
@@ -317,5 +320,29 @@ abstract final class Pref {
       _localCache.put(LocalCacheKey.buvid, buvid);
     }
     return buvid;
+  }
+
+  // ---------- userInfoCache（加密持久化） ----------
+  /// 读取缓存的用户信息（解密后反序列化）。无缓存返回 null。
+  static UserInfoModel? get userInfoCache {
+    final raw = _localCache.get(LocalCacheKey.userInfoCache) as String?;
+    if (raw == null || raw.isEmpty) return null;
+    final json = CredentialCrypto.decrypt(raw);
+    if (json.isEmpty) return null;
+    try {
+      return UserInfoModel.fromJson(jsonDecode(json) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 写入用户信息（加密后持久化）。
+  static set userInfoCache(UserInfoModel? info) {
+    if (info == null) {
+      _localCache.delete(LocalCacheKey.userInfoCache);
+      return;
+    }
+    final json = jsonEncode(info.toJson());
+    _localCache.put(LocalCacheKey.userInfoCache, CredentialCrypto.encrypt(json));
   }
 }

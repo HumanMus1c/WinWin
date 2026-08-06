@@ -214,6 +214,21 @@ extension BiliCookieJarHelper on DefaultCookieJar {
           .toList() ??
       [];
 
+  /// 从登录接口返回的 cookie 列表（[{name, value}, ...]）构造 jar。
+  static DefaultCookieJar fromList(List cookies) {
+    final jar = DefaultCookieJar(ignoreExpires: true);
+    jar.domainCookies['bilibili.com'] = {
+      '/': {
+        for (final i in cookies)
+          (i as Map)['name'] as String: SerializableCookie(
+            Cookie(i['name'] as String, i['value'] as String)
+              ..setBiliDomain(),
+          ),
+      },
+    };
+    return jar;
+  }
+
   void setBuvid3() {
     (domainCookies['bilibili.com'] ??= {
       '/': {},

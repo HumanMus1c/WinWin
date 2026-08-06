@@ -7,41 +7,64 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:winwin/core/account/account.dart';
 import 'package:winwin/models/common/account_type.dart';
+import 'package:winwin/utils/credential_crypto.dart';
 import 'package:winwin/utils/utils.dart';
 
 /// Adapter so [DefaultCookieJar] can be persisted by Hive CE.
+///
+/// 凭证加密：cookie 内容通过 [CredentialCrypto] 加密后落盘，避免明文存储。
 class BiliCookieJarAdapter extends TypeAdapter<DefaultCookieJar> {
   @override
   final int typeId = 4;
 
   @override
   DefaultCookieJar read(BinaryReader reader) {
-    final json = reader.readString();
-    return BiliCookieJarHelper.fromJson(
-      json.isEmpty ? <String, dynamic>{} : jsonDecode(json),
-    );
+    final raw = reader.readString();
+    if (raw.isEmpty) return BiliCookieJarHelper.fromJson(<String, dynamic>{});
+    // 优先尝试解密；若为旧版明文数据则直接解码（向后兼容）。
+    String json;
+    final decrypted = CredentialCrypto.decrypt(raw);
+    if (decrypted.isNotEmpty) {
+      json = decrypted;
+    } else {
+      json = raw;
+    }
+    return BiliCookieJarHelper.fromJson(jsonDecode(json));
   }
 
   @override
   void write(BinaryWriter writer, DefaultCookieJar obj) {
-    writer.writeString(jsonEncode(BiliCookieJarHelper.toJson(obj)));
+    final json = jsonEncode(BiliCookieJarHelper.toJson(obj));
+    writer.writeString(CredentialCrypto.encrypt(json));
   }
 }
 
 /// Adapter so [LoginAccount] can be persisted by Hive CE.
+///
+/// 凭证加密：accessKey / refresh / cookie 全部通过 [CredentialCrypto] 加密
+/// 后落盘。读取时自动解密，向后兼容旧版明文数据。
 class LoginAccountAdapter extends TypeAdapter<LoginAccount> {
   @override
   final int typeId = 9;
 
   @override
   LoginAccount read(BinaryReader reader) {
-    final json = jsonDecode(reader.readString()) as Map<String, dynamic>;
-    return LoginAccount.fromJson(json);
+    final raw = reader.readString();
+    // 优先尝试解密；若为旧版明文则直接解码。
+    String json;
+    final decrypted = CredentialCrypto.decrypt(raw);
+    if (decrypted.isNotEmpty) {
+      json = decrypted;
+    } else {
+      json = raw;
+    }
+    return LoginAccount.fromJson(jsonDecode(json) as Map<String, dynamic>);
   }
 
   @override
   void write(BinaryWriter writer, LoginAccount obj) {
-    writer.writeString(jsonEncode(obj.toJson()));
+    final json = jsonEncode(obj.toJson());
+    writer.writeString(CredentialCrypto.encrypt(json));
   }
 }
 

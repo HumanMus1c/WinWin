@@ -3,7 +3,11 @@ import 'dart:async' show FutureOr;
 import 'package:flutter/foundation.dart' show debugPrint;
 
 import 'package:winwin/core/account/account.dart';
+import 'package:winwin/core/account/account_service.dart';
+import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/user.dart';
 import 'package:winwin/utils/utils.dart';
 import 'package:crypto/crypto.dart' show Digest;
 
@@ -14,14 +18,31 @@ abstract final class LoginUtils {
     debugPrint('setWebCookie: skipped (no WebView in Phase 1)');
   }
 
+  /// 主账号登录后回调：拉取用户信息（含会员权限）→ 加密持久化 → 广播。
   static Future<void> onLoginMain() async {
-    // TODO: Phase 2 — fetch user info via UserHttp and persist to GStorage.
-    // For now just mark as logged-in.
-    debugPrint('onLoginMain: account logged in');
+    final res = await UserHttp.userInfo();
+    if (res case Success(:final response)) {
+      if (response.isLogin == true) {
+        // 加密写入缓存 + 广播登录态。
+        Pref.userInfoCache = response;
+        AccountService().onLogin(response);
+      }
+    } else if (res case Error(:final errMsg)) {
+      if (errMsg == '账号未登录') {
+        // cookie 失效，清理本地账号。
+        final account = Accounts.main;
+        if (account.isLogin) {
+          await Accounts.deleteAll({account});
+        }
+      }
+      debugPrint('onLoginMain: $errMsg');
+    }
   }
 
+  /// 主账号登出回调：清空缓存 + 广播登出态。
   static Future<void> onLogoutMain() async {
-    debugPrint('onLogoutMain: account logged out');
+    Pref.userInfoCache = null;
+    AccountService().onLogout();
   }
 
   static String generateBuvid() {

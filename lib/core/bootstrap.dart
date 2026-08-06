@@ -1,5 +1,7 @@
+import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/storage/storage.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/init.dart';
 
 /// Startup bootstrap shared by `main()` and lazily-created controllers.
@@ -15,4 +17,6 @@ Future<void> _run() async {
   await GStorage.init();
   await Accounts.init();
   await Request.init();
+  // 从加密缓存恢复登录态，驱动 UI 首屏展示。
+  AccountService().restore(Pref.userInfoCache);
 }
