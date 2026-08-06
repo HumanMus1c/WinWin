@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/models/video/related_video.dart';
@@ -320,8 +321,21 @@ class _VideoDetailPageState extends State<VideoDetailPage> {
                   ),
                 ),
               ),
-              // 装饰性关注按钮（未接关注接口）
-              FilledButton.tonal(onPressed: () {}, child: const Text('关注')),
+              // 关注按钮：未登录→登录页；已登录→TODO 接入关注接口
+              FilledButton.tonal(
+                onPressed: () async {
+                  if (!await LoginGuard.requireLogin(context)) return;
+                  // TODO: 接入关注/取关接口（需 FollowHttp）
+                  if (!mounted) return;
+                  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                    const SnackBar(
+                      content: Text('关注接口待接入'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
+                child: const Text('关注'),
+              ),
             ],
           ),
         ],

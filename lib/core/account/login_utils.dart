@@ -39,8 +39,12 @@ abstract final class LoginUtils {
     }
   }
 
-  /// 主账号登出回调：清空缓存 + 广播登出态。
+  /// 主账号登出回调：清理持久化账号 + 清空缓存 + 广播登出态。
   static Future<void> onLogoutMain() async {
+    final account = Accounts.main;
+    if (account.isLogin) {
+      await Accounts.deleteAll({account});
+    }
     Pref.userInfoCache = null;
     AccountService().onLogout();
   }
