@@ -353,6 +353,8 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                 children: [
                   NetworkImgLayer(
                     src: item.pic,
+                    width: double.infinity,
+                    height: double.infinity,
                     borderRadius: BorderRadius.zero,
                   ),
                   if ((item.duration ?? 0) > 0)
