@@ -634,6 +634,12 @@ class _QRLoginTabState extends State<_QRLoginTab> {
           _loading = false;
           _status = '获取失败：${errMsg ?? '未知错误'}';
         });
+      case Loading():
+        // getHDcode 不会返回 Loading，仅为满足 sealed exhaustiveness 检查。
+        setState(() {
+          _loading = false;
+          _status = '加载中...';
+        });
     }
   }
 
