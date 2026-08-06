@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import 'package:winwin/common/constants.dart';
+import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -205,6 +206,101 @@ abstract final class VideoHttp {
     if (res.data['code'] == 0) {
       return Success(
         ReplyMainData.fromJson(res.data['data'] ?? <String, dynamic>{}),
+      );
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  /// 楼中楼回复列表（`/x/v2/reply/reply`）。
+  ///
+  /// [root] 为根评论 rpid，[nextOffset] 为分页偏移。
+  static Future<LoadingState<ReplyMainData>> replyReplyList({
+    required int oid,
+    required int root,
+    String? nextOffset,
+  }) async {
+    final res = await Request().get(
+      Api.replyReplyList,
+      queryParameters: {
+        'type': 1,
+        'oid': oid,
+        'root': root,
+        'ps': 20,
+        'pagination_str': jsonEncode({'offset': nextOffset ?? ''}),
+        'web_location': '1315873',
+      },
+    );
+    if (res.data['code'] == 0) {
+      return Success(
+        ReplyMainData.fromJson(res.data['data'] ?? <String, dynamic>{}),
+      );
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  /// 评论点赞/取消点赞（`/x/v2/reply/action`）。
+  ///
+  /// [action]: 1=点赞，0=取消点赞。
+  /// 需要登录态（csrf）。
+  static Future<LoadingState> likeReply({
+    required int oid,
+    required int rpid,
+    required int action,
+  }) async {
+    final res = await Request().post(
+      Api.likeReply,
+      data: {
+        'type': 1,
+        'oid': oid,
+        'rpid': rpid,
+        'action': action,
+        'csrf': Accounts.main.csrf,
+      },
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+        extra: {'account': Accounts.main},
+      ),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  /// 发表评论（`/x/v2/reply/add`）。
+  ///
+  /// [root]/[parent] 为 0 或 null 时发表一级评论，否则发表二级回复。
+  /// 需要登录态（csrf）。
+  static Future<LoadingState<ReplyItemModel>> replyAdd({
+    required int oid,
+    required String message,
+    int? root,
+    int? parent,
+  }) async {
+    final data = {
+      'type': 1,
+      'oid': oid,
+      if (root != null && root != 0) 'root': root,
+      if (parent != null && parent != 0) 'parent': parent,
+      'message': message,
+      'csrf': Accounts.main.csrf,
+    };
+    final res = await Request().post(
+      Api.replyAdd,
+      data: data,
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+        extra: {'account': Accounts.main},
+      ),
+    );
+    if (res.data['code'] == 0) {
+      return Success(
+        ReplyItemModel.fromJson(
+          res.data['data']?['reply'] as Map<String, dynamic>? ?? {},
+        ),
       );
     } else {
       return Error(res.data['message']);

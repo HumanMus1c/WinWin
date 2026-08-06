@@ -14,21 +14,50 @@ class ReplyItemModel {
   /// 楼中楼回复数
   int? rcount;
 
-  ReplyItemModel.fromJson(Map<String, dynamic> json) {
-    rpid = _asInt(json['rpid']);
-    mid = _asInt(json['mid']);
-    final memberJson = json['member'];
-    member = memberJson is Map<String, dynamic>
-        ? ReplyMember.fromJson(memberJson)
-        : null;
-    final contentJson = json['content'];
-    content = contentJson is Map<String, dynamic>
-        ? ReplyContent.fromJson(contentJson)
-        : null;
-    like = _asInt(json['like']);
-    ctime = _asInt(json['ctime']);
-    rcount = _asInt(json['rcount']);
-  }
+  /// 点赞状态：0=未操作，1=已点赞，2=已点踩。
+  /// 位于 reply_control.action。
+  int? action;
+
+  ReplyItemModel({
+    this.rpid,
+    this.mid,
+    this.member,
+    this.content,
+    this.like,
+    this.ctime,
+    this.rcount,
+    this.action,
+  });
+
+  ReplyItemModel.fromJson(Map<String, dynamic> json)
+      : this(
+          rpid: _asInt(json['rpid']),
+          mid: _asInt(json['mid']),
+          member: json['member'] is Map<String, dynamic>
+              ? ReplyMember.fromJson(json['member'])
+              : null,
+          content: json['content'] is Map<String, dynamic>
+              ? ReplyContent.fromJson(json['content'])
+              : null,
+          like: _asInt(json['like']),
+          ctime: _asInt(json['ctime']),
+          rcount: _asInt(json['rcount']),
+          action: _asInt(json['reply_control']?['action']),
+        );
+
+  /// 是否已点赞。
+  bool get isLiked => action == 1;
+
+  ReplyItemModel copyWith({int? like, int? action}) => ReplyItemModel(
+        rpid: rpid,
+        mid: mid,
+        member: member,
+        content: content,
+        like: like ?? this.like,
+        ctime: ctime,
+        rcount: rcount,
+        action: action ?? this.action,
+      );
 }
 
 class ReplyMember {
