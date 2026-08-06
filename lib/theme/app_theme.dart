@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'colors.dart';
-import 'style.dart';
 
 /// App theme — iOS-inspired Material 3 color scheme.
 class AppTheme {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../theme/colors.dart';
-import '../../theme/style.dart';
-import '../../models/models.dart';
-import '../components/video_card.dart';
+import 'package:winwin/models/models.dart';
+import 'package:winwin/pages/rcmd/view.dart';
+import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/style.dart';
 
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
@@ -21,25 +21,8 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: Stack(
         children: [
-          // ── Feed grid ──
-          GridView.builder(
-            padding: EdgeInsets.only(
-              top: 120,
-              bottom: 100,
-              left: Style.sm,
-              right: Style.sm,
-            ),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: Style.sm,
-              mainAxisSpacing: Style.sm,
-              childAspectRatio: 0.72,
-            ),
-            itemCount: mockVideos.length,
-            itemBuilder: (context, index) {
-              return VideoCard(item: mockVideos[index]);
-            },
-          ),
+          // ── Feed grid (RcmdPage handles its own scrolling) ──
+          const Positioned.fill(child: RcmdPage()),
           // ── Floating top bar ──
           Positioned(
             top: 0,

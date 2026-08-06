@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 /// Design tokens — ported from BiliPai's BiliDesign object.
 /// iOS-inspired spacing, radius values.
 class Style {
@@ -29,4 +27,10 @@ class Style {
   // Bottom bar
   static const double bottomBarHeight = 60;
   static const double bottomBarRadius = 28;
+
+  // Layout tokens (PiliPlus-compatible)
+  static const double safeSpace = 12;
+  static const double cardSpace = 8;
+  static const double mdRadius = 12;
+  static const double aspectRatio = 16 / 10;
 }

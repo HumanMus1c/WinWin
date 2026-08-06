@@ -18,8 +18,11 @@ dependencies:
   crypto: ^3.0.6
   hive_ce: ^2.19.3
   path_provider: ^2.1.5
-  connectivity_plus: ^7.1.1
   cookie_jar: ^4.0.8
+  cached_network_image: ^3.4.1
+  fvp: ^0.37.3
+  protobuf: ^6.0.0
+  fixnum: ^1.1.1
 
 dev_dependencies:
   flutter_test:
