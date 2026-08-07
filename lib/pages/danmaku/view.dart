@@ -44,6 +44,13 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
   @override
   void initState() {
     super.initState();
+    _initDanmaku();
+    widget.controller.danmakuReloadSignal.addListener(_onReload);
+  }
+
+  /// 创建弹幕数据控制器并挂载监听。
+  /// 提取为独立方法供 initState 和 _onReload（路由返回重建）复用。
+  void _initDanmaku() {
     final c = widget.controller;
     final dm = WinWinDanmakuController(cid: c.cid);
     c.danmaku = dm;
@@ -55,9 +62,26 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     dm.localEcho.addListener(_onLocalEcho);
 
     // 初始同步一次运行状态（引擎默认 running）。
-    // 倍速联动由 [WinWinPlayerController.setPlaybackSpeed] 内部用
-    // 「先乘旧倍速再除新倍速」公式直接更新 danmakuEngine，无需在此监听。
     _onPlaying();
+  }
+
+  /// didPopNext 返回本页时重建弹幕：dispose 旧 dm（清空缓存重新拉取）+
+  /// clear 引擎 + 重置去重标记。等效于 PiliPlus 重建 PlDanmaku，但不需要
+  /// 销毁 DanmakuScreen（避免引擎闪烁）。
+  void _onReload() {
+    final c = widget.controller;
+    // 移除旧 dm 的监听并 dispose。
+    c.position.removeListener(_onPosition);
+    c.playing.removeListener(_onPlaying);
+    c.seekCount.removeListener(_onSeek);
+    c.danmaku?.localEcho.removeListener(_onLocalEcho);
+    c.danmaku?.dispose();
+    // 清空引擎画面上的残留弹幕，重置去重标记。
+    c.danmakuEngine?.clear();
+    _lastTick = -1;
+    _lastLocal = null;
+    // 重建 dm 并重新挂载监听。
+    _initDanmaku();
   }
 
   @override
@@ -76,6 +100,7 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
   @override
   void dispose() {
     final c = widget.controller;
+    c.danmakuReloadSignal.removeListener(_onReload);
     c.position.removeListener(_onPosition);
     c.playing.removeListener(_onPlaying);
     c.seekCount.removeListener(_onSeek);

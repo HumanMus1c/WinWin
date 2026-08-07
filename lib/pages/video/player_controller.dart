@@ -71,6 +71,13 @@ class WinWinPlayerController {
   /// seek 计数器：弹幕层监听后清空画面上的弹幕。
   final ValueNotifier<int> seekCount = ValueNotifier(0);
 
+  /// 弹幕重建信号：didPopNext 返回本页时 ++，WinWinDanmaku 监听后重建
+  /// dm（清空旧缓存重新拉取）+ clear 引擎 + 重置去重标记。等效于 PiliPlus
+  /// 的 videoState 卸载-重建 PlDanmaku，但不需要销毁 DanmakuScreen（避免
+  /// 引擎闪烁）。原因：PlayerPanel 始终挂载，WinWinDanmaku 不会随路由重建，
+  /// 导致弹幕引擎在 pause/resume 后状态僵死，弹幕无法恢复。
+  final ValueNotifier<int> danmakuReloadSignal = ValueNotifier(0);
+
   /// 可选倍速列表（来自 Pref.speedList）。
   List<double> get speedList => Pref.speedList;
 
@@ -411,6 +418,9 @@ class WinWinPlayerController {
     seekCount.value++;
   }
 
+  /// 触发弹幕重建（didPopNext 返回本页时调用）。
+  void reloadDanmaku() => danmakuReloadSignal.value++;
+
   /// 设置音量（0-100）。
   void setVolume(double v) {
     final clamped = v.clamp(0.0, 100.0);
@@ -459,5 +469,6 @@ class WinWinPlayerController {
       _sharedPlayer = null;
     }
     qualityVersion.dispose();
+    danmakuReloadSignal.dispose();
   }
 }

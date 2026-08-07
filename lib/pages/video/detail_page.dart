@@ -120,6 +120,9 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
     if (ctrl != null) {
       ctrl.attachListeners();
       ctrl.load(start: _savedPosition, autoplay: _wasPlaying);
+      // 重建弹幕：PlayerPanel 始终挂载，WinWinDanmaku 不会随路由重建，
+      // 需显式触发 dm 重建 + 引擎 clear（参照 PiliPlus didPopNext 重建 PlDanmaku）。
+      ctrl.reloadDanmaku();
       _wasPlaying = false;
       _savedPosition = Duration.zero;
     }
