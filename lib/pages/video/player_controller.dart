@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:fvp/mdk.dart' as mdk;
 
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/player/sponsorblock_usecase.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart';
 import 'package:winwin/http/video.dart';
@@ -86,6 +87,13 @@ class WinWinPlayerController {
 
   /// 弹幕渲染引擎控制器，由 DanmakuScreen 的 createdController 回调赋值。
   DanmakuController<DanmakuElem>? danmakuEngine;
+
+  /// SponsorBlock 用例：段落加载 + 自动跳过。
+  /// 由 [load] 完成后异步初始化；null 表示未启用或加载失败。
+  SponsorBlockUseCase? sponsorBlock;
+
+  /// 是否启用 SponsorBlock 自动跳过（默认 true，用户可在设置中关闭）。
+  bool sponsorBlockEnabled = true;
 
   /// 弹幕显示不透明度（0-1）：设置面板改动时写入，弹幕层监听实时刷新。
   final ValueNotifier<double> danmakuOpacity = ValueNotifier(
@@ -233,7 +241,15 @@ class WinWinPlayerController {
     _pollTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
       final player = _player;
       if (_disposed || player == null || !ready.value) return;
-      position.value = Duration(milliseconds: player.position);
+      final posMs = player.position;
+      position.value = Duration(milliseconds: posMs);
+      // SponsorBlock 自动跳过：检查当前位置是否在可跳过段落内。
+      if (sponsorBlockEnabled) {
+        final target = sponsorBlock?.computeSkipTarget(posMs / 1000.0);
+        if (target != null) {
+          unawaited(player.seek(position: (target * 1000).toInt()));
+        }
+      }
     });
   }
 
@@ -387,6 +403,21 @@ class WinWinPlayerController {
       player.state =
           autoplay ? mdk.PlaybackState.playing : mdk.PlaybackState.paused;
       ready.value = true;
+
+      // SponsorBlock 段落加载：失败不阻断播放，仅记录日志。
+      if (sponsorBlockEnabled) {
+        sponsorBlock ??= SponsorBlockUseCase();
+        unawaited(
+          sponsorBlock!.fetchSegments(bvid: bvid).then((res) {
+            if (_disposed) return;
+            final segments = res.dataOrNull;
+            if (segments == null) return;
+            if (kDebugMode && segments.isNotEmpty) {
+              debugPrint('SponsorBlock: loaded ${segments.length} segments for $bvid');
+            }
+          }),
+        );
+      }
     } catch (e) {
       if (!_disposed) error.value = '播放失败：$e';
     } finally {
@@ -461,6 +492,8 @@ class WinWinPlayerController {
     detachListeners();
     _pollTimer?.cancel();
     _pollTimer = null;
+    sponsorBlock?.dispose();
+    sponsorBlock = null;
     // 引用计数递减，归零时才真正释放全局单例 mdk.Player。
     _playerCount--;
     if (_playerCount <= 0) {

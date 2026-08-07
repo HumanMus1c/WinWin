@@ -23,6 +23,10 @@ dependencies:
   fvp: ^0.37.3
   protobuf: ^6.0.0
   fixnum: ^1.1.1
+  # Phase 3: 直播弹幕二进制 WebSocket（16 字节头 + auth/heartbeat + zlib/brotli 递归解压）
+  web_socket_channel: ^3.0.3
+  # Phase 3: 直播弹幕 brotli 解压（服务端可能用 brotli 而非 zlib 压缩 payload）
+  brotli: ^0.6.0
 
 dev_dependencies:
   flutter_test:
