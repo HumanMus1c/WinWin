@@ -80,6 +80,10 @@ class DashVideo {
   int? height;
   String? frameRate;
 
+  /// 编解码器标识（如 "avc1.640032"、"hev1.1.6.L120.B0"、"av01.0.08M.08"）。
+  /// 由 [StreamSelectionPolicy] 用于编解码器感知选流评分。
+  String? codecs;
+
   DashVideo.fromJson(Map<String, dynamic> json) {
     id = json['id'] as int?;
     baseUrl = (json['baseUrl'] ?? json['base_url']) as String?;
@@ -90,6 +94,7 @@ class DashVideo {
     width = json['width'] as int?;
     height = json['height'] as int?;
     frameRate = (json['frameRate'] ?? json['frame_rate'])?.toString();
+    codecs = (json['codecs'] ?? json['codecid']) as String?;
   }
 }
 
