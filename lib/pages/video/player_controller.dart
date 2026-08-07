@@ -30,8 +30,7 @@ class WinWinPlayerController {
   WinWinPlayerController({required this.bvid, required this.cid}) {
     _playerCount++;
     _sharedPlayer ??= _createPlayer();
-    attachListeners();
-    _startPolling();
+    attachListeners(); // 内部启动轮询（_startPolling）
   }
 
   final String bvid;
@@ -146,7 +145,9 @@ class WinWinPlayerController {
         // NOTE: for 'reader.buffering' the error field is progress [0,100],
         // not an error code; real mdk failures carry negative codes.
         if (ev.error < 0) {
-          error.value ??= '播放错误 ${ev.error}: ${ev.detail}';
+          // 直接覆盖：让最新错误显示给用户。原 ??= 会忽略后续错误，
+          // 网络恢复后又断开时用户看不到最新错误信息。
+          error.value = '播放错误 ${ev.error}: ${ev.detail}';
         }
       }))
       ..add(player.onMediaStatus.listen((event) {
@@ -171,6 +172,10 @@ class WinWinPlayerController {
     player.textureId.addListener(_syncTextureId);
     // 复用单例时 texture 可能已存在，立即同步一次。
     textureId.value = player.textureId.value;
+    // 启动轮询：didPopNext 重新挂载监听后恢复 position/duration 同步。
+    // detachListeners 时会暂停，避免页面不可见时持续写入 position
+    // （会把共享 player 播放 B 视频的进度写入 A 页面 controller，污染状态）。
+    _startPolling();
   }
 
   /// 移除本 controller 的事件监听（不释放共享 player）。
@@ -182,6 +187,10 @@ class WinWinPlayerController {
       sub.cancel();
     }
     _subscriptions.clear();
+    // 暂停轮询：didPushNext 后页面不可见，停止 position/duration 轮询，
+    // 避免把共享 player（正在播 B 视频）的进度写入本 controller（A 页面）。
+    _pollTimer?.cancel();
+    _pollTimer = null;
   }
 
   void _syncTextureId() {
@@ -212,9 +221,12 @@ class WinWinPlayerController {
   Future<void> load({Duration? start, bool autoplay = true}) async {
     // 幂等：网络栈未初始化时兜底（main 中未等待 bootstrap）。
     await ensureBootstrap();
+    // 复用上次记录的画质偏好（首次加载默认 80），避免 didPopNext 恢复时
+    // 画质被重置为 80，丢失用户在 A 页面选过的高画质。
+    final qn = _currentQn > 0 ? _currentQn : 80;
     await _openWithQuality(
-      qn: 80,
-      maxQn: 80,
+      qn: qn,
+      maxQn: qn,
       start: start,
       autoplay: autoplay,
     );
@@ -239,6 +251,9 @@ class WinWinPlayerController {
   }) async {
     final player = _player;
     if (player == null || _disposed) return;
+    // 防抖：已有加载/切换在进行中时忽略重复请求，避免并发 prepare 导致
+    // mdk 状态错乱（快速点击重试、连续切换画质时的崩溃根因）。
+    if (_loading) return;
     _loading = true;
     try {
       // 先停止旧播放，让 mdk 干净卸载旧 media（参照 PiliPlus setDataSource
@@ -249,6 +264,11 @@ class WinWinPlayerController {
       error.value = null;
       ready.value = false;
       buffering.value = false;
+      // 重置播放状态：避免异步加载完成前 UI 闪烁上一个视频的进度/时长/播放状态
+      // （didPopNext 恢复、switchQuality 切换画质时进度条跳变的根因）。
+      position.value = Duration.zero;
+      duration.value = Duration.zero;
+      playing.value = false;
 
       final result = await VideoHttp.videoUrl(bvid: bvid, cid: cid, qn: qn);
       if (_disposed) return;
@@ -281,8 +301,11 @@ class WinWinPlayerController {
       player.media = videoUrl;
       final audioUrl = audio?.baseUrl;
       if (audioUrl != null && audioUrl.isNotEmpty) {
-        // DASH 分离音轨：以外部音轨方式挂载，prepare 后自动随视频播放。
+        // DASH 分离音轨：以外部音轨方式挂载。native setMedia(url, type) 后
+        // 必须调用 setActiveTracks 显式激活外部音轨，否则音频轨道不会被
+        // 自动选中（B站 DASH 主 media 为纯视频流，无内部音频轨，导致无声）。
         player.setMedia(audioUrl, mdk.MediaType.audio);
+        player.activeAudioTracks = const [0];
       }
 
       final ret = await player.prepare(

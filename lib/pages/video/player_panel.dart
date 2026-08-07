@@ -227,7 +227,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
           ),
           const SizedBox(height: Style.md),
           TextButton(
-            onPressed: widget.controller.load,
+            onPressed: () => widget.controller.load(
+              start: widget.controller.position.value,
+            ),
             child: const Text('重试'),
           ),
         ],
