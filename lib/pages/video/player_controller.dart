@@ -256,10 +256,10 @@ class WinWinPlayerController {
     if (_loading) return;
     _loading = true;
     try {
-      // 先停止旧播放，让 mdk 干净卸载旧 media（参照 PiliPlus setDataSource
-      // 中先 pause 旧 player，media_kit open 自动停止旧 media 的等效操作）。
-      // 避免旧 media 仍在加载状态时 setMedia 新 URL 导致 prepare 返回 -1。
-      player.state = mdk.PlaybackState.stopped;
+      // 不手动 state = stopped：native setMedia(url 变化) 会自动停止旧播放并
+      // 重置轨道（见 generated_bindings.dart 中 setMedia 注释）。手动 stopped
+      // 反而可能导致 native loaded 标志未清除，prepare 误判 "already loaded"
+      // 返回 -1（共享 player 从 A 切换到 B 时正是这个症状）。
 
       error.value = null;
       ready.value = false;
@@ -312,7 +312,14 @@ class WinWinPlayerController {
         position: (start ?? Duration.zero).inMilliseconds,
       );
       if (_disposed) return;
-      if (ret < 0) {
+      // prepare 返回值语义（见 fvp player.dart 注释）：
+      //   0: streams==0 无效媒体，否则成功
+      //  -1: already loading or loaded（setMedia 已触发加载，无需重复 prepare）
+      //  -4: 越界  -10: 内部错误
+      // 共享 player 从 A 切换到 B 时，setMedia 已开始加载 B 的 media，prepare
+      // 常返回 -1。这不是失败：真正的失败由 onEvent 错误事件（ev.error < 0）
+      // 设置 error。仅对 < -1 的硬错误报错。
+      if (ret < -1) {
         error.value = '播放失败（错误码 $ret）';
         return;
       }
@@ -320,12 +327,20 @@ class WinWinPlayerController {
       // 可能产生的残留错误事件）。
       error.value = null;
 
-      final ms = player.mediaInfo.duration;
-      if (ms > 0) duration.value = Duration(milliseconds: ms);
-
-      // 视频帧尺寸（纹理创建前已就绪），供面板保持宽高比。
-      videoSize.value = await player.textureSize;
-      if (_disposed) return;
+      if (ret >= 0) {
+        // prepare 成功加载首帧：同步获取 duration 和 videoSize。
+        final ms = player.mediaInfo.duration;
+        if (ms > 0) duration.value = Duration(milliseconds: ms);
+        // 视频帧尺寸（纹理创建前已就绪），供面板保持宽高比。
+        videoSize.value = await player.textureSize;
+        if (_disposed) return;
+      } else {
+        // ret == -1（already loading）：media 正在加载，不阻塞流程。
+        // 异步获取 videoSize，duration 依赖 _startPolling 轮询获取。
+        unawaited(player.textureSize.then((size) {
+          if (!_disposed) videoSize.value = size;
+        }));
+      }
 
       // 创建渲染 Texture（仅首次创建 player 时需要，后续复用单例已存在的
       // texture，避免重复 updateTexture 导致渲染面重建）。
