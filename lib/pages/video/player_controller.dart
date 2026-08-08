@@ -340,7 +340,7 @@ class WinWinPlayerController {
         cid: cid,
         playType: playType,
         progressSec: progressSec,
-      }).then((res) {
+      ).then((res) {
         if (!kDebugMode) return;
         if (res case Error(:final errMsg)) {
           debugPrint('HeartBeat: report failed: $errMsg');
