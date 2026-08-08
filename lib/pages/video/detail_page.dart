@@ -156,7 +156,8 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
           try {
             final infoRes =
                 await VideoHttp.playInfo(bvid: widget.bvid, cid: cid);
-            if (mounted && infoRes case Success(:final response)) {
+            if (!mounted) return;
+            if (infoRes case Success(:final response)) {
               _playInfo = response;
               if (response.lastPlayTime > 0) {
                 startProgress = Duration(seconds: response.lastPlayTime);
@@ -169,11 +170,21 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
           final ctrl = WinWinPlayerController(bvid: widget.bvid, cid: cid);
           ctrl.aid = aid;
           playerController = ctrl;
+          // Phase 4.4：传入可用字幕列表，SubtitleController 自动按 AI 偏好选择。
+          final subtitles = _playInfo?.subtitle?.subtitles ?? const [];
+          if (subtitles.isNotEmpty) {
+            ctrl.setSubtitleList(subtitles);
+          }
+          // Phase 4.5：传入章节标记（view_points），供进度条渲染章节标记。
+          final viewPoints = _playInfo?.viewPoints ?? const [];
+          if (viewPoints.isNotEmpty) {
+            ctrl.setViewPoints(viewPoints);
+          }
           ctrl.load(start: startProgress);
         }
         setState(() => _detailState = Success(response));
-        if (aid != null) {
-          _loadReplies(oid: aid);
+        if (response.aid != null) {
+          _loadReplies(oid: response.aid!);
         }
       case Error():
         setState(() => _detailState = res);

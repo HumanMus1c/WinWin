@@ -187,7 +187,8 @@ abstract final class SettingBoxKey {
       blockUserID = 'blockUserID',
       blockToast = 'blockToast',
       blockServer = 'blockServer',
-      blockTrack = 'blockTrack';
+      blockTrack = 'blockTrack',
+      enableAudioNormalize = 'enableAudioNormalize';
 
   static const String enableShowDanmaku = 'enableShowDanmaku',
       enableShowLiveDanmaku = 'enableShowLiveDanmaku',

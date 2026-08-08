@@ -1,18 +1,30 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/pages/danmaku/view.dart';
 import 'package:winwin/pages/video/danmaku_settings_panel.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_focus.dart';
 import 'package:winwin/pages/video/send_danmaku_panel.dart';
+import 'package:winwin/pages/video/subtitle_settings_panel.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/duration_utils.dart';
+
+/// Duration 没有 clamp 方法，手动实现（用于 seek 位置限制）。
+Duration _clampDuration(Duration value, Duration min, Duration max) {
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
 
 /// BiliPai 风格的播放器面板。
 ///
@@ -110,6 +122,35 @@ class _PlayerPanelState extends State<PlayerPanel> {
     setState(() {});
   }
 
+  /// Phase 4.6：截图 — 捕获当前帧并弹出预览对话框。
+  Future<void> _takeScreenshot() async {
+    final c = widget.controller;
+    // 提示正在截图。
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      const SnackBar(
+        content: Text('正在截图…'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    final png = await c.screenshot();
+    if (!mounted || png == null) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('截图失败'), duration: Duration(seconds: 1)),
+      );
+      return;
+    }
+    if (!mounted) return;
+    _showScreenshotPreview(png);
+  }
+
+  /// Phase 4.6：截图预览对话框 — 显示截图 + 保存按钮。
+  void _showScreenshotPreview(Uint8List png) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => _ScreenshotPreviewDialog(png: png),
+    );
+  }
+
   // ── 控制条显隐 ──
 
   void _showControlsTemporarily() {
@@ -188,8 +229,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
     final width = renderBox?.size.width ?? 1;
     final isRight = pos.dx > width / 2;
     final delta = isRight ? 10 : -10;
-    final target = (c.position.value + Duration(seconds: delta))
-        .clamp(Duration.zero, c.duration.value);
+    final target = _clampDuration(
+      c.position.value + Duration(seconds: delta),
+      Duration.zero,
+      c.duration.value,
+    );
     c.seek(target);
     _onDoubleTapFeedback(isRight, delta.abs());
     _onPointerActivity();
@@ -220,16 +264,22 @@ class _PlayerPanelState extends State<PlayerPanel> {
     if (_hDragStart == null) return;
     _hDragDelta += details.delta.dx;
     final deltaSec = (_hDragDelta * 0.5).round(); // 0.5 灵敏度
-    final target = (_hDragStart! + Duration(seconds: deltaSec))
-        .clamp(Duration.zero, widget.controller.duration.value);
+    final target = _clampDuration(
+      _hDragStart! + Duration(seconds: deltaSec),
+      Duration.zero,
+      widget.controller.duration.value,
+    );
     _onDragSeeking(deltaSec, target);
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
     if (_hDragStart != null) {
       final deltaSec = (_hDragDelta * 0.5).round();
-      final target = (_hDragStart! + Duration(seconds: deltaSec))
-          .clamp(Duration.zero, widget.controller.duration.value);
+      final target = _clampDuration(
+        _hDragStart! + Duration(seconds: deltaSec),
+        Duration.zero,
+        widget.controller.duration.value,
+      );
       widget.controller.seek(target);
     }
     _hDragStart = null;
@@ -259,15 +309,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
           _showControlsTemporarily();
         }
       }),
-      onScreenshot: () {
-        // Phase 4.6 截图功能预留。
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Text('截图功能开发中'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      },
+      onScreenshot: () => _takeScreenshot(),
       child: MouseRegion(
         onHover: (_) => _onPointerActivity(),
         onEnter: (_) => _onPointerActivity(),
@@ -284,6 +326,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   controller: c,
                   fullscreen: widget.fullscreen,
                 ),
+              ),
+              // Phase 4.4：字幕层（底部居中，IgnorePointer 不拦截手势）。
+              Positioned.fill(
+                child: IgnorePointer(child: _buildSubtitleLayer(c)),
               ),
               // Phase 4.3：手势层 — 单击(播放/暂停) + 双击(快进/快退) +
               // 长按(3x倍速) + 水平拖动(快进)。
@@ -603,9 +649,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
             icon: const Icon(Icons.volume_up, color: Colors.white),
             onPressed: _toggleVolumePopup,
           ),
+          _buildAudioTrackButton(),
           _buildQualityButton(),
           _buildDanmakuToggleButton(),
+          _buildSubtitleButton(),
           _buildSpeedButton(),
+          _buildChapterButton(),
           IconButton(
             tooltip: '发弹幕',
             icon: const Icon(Icons.comment_outlined, color: Colors.white),
@@ -663,34 +712,56 @@ class _PlayerPanelState extends State<PlayerPanel> {
             ? _dragSeconds
             : c.position.value.inSeconds.toDouble();
         final value = posSec.clamp(0.0, maxSec).toDouble();
-        return SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 3,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-            activeTrackColor: biliPink,
-            inactiveTrackColor: Colors.white24,
-            thumbColor: biliPink,
-            overlayColor: const Color(0x33FA7298),
-          ),
-          child: Slider(
-            value: value,
-            min: 0,
-            max: maxSec,
-            onChangeStart: (v) {
-              setState(() {
-                _draggingProgress = true;
-                _dragSeconds = v;
-              });
-            },
-            onChanged: (v) {
-              setState(() => _dragSeconds = v);
-            },
-            onChangeEnd: (v) {
-              setState(() => _draggingProgress = false);
-              c.seek(Duration(seconds: v.round()));
-            },
-          ),
+        final chapters = c.viewPoints;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                activeTrackColor: biliPink,
+                inactiveTrackColor: Colors.white24,
+                thumbColor: biliPink,
+                overlayColor: const Color(0x33FA7298),
+              ),
+              child: Slider(
+                value: value,
+                min: 0,
+                max: maxSec,
+                onChangeStart: (v) {
+                  setState(() {
+                    _draggingProgress = true;
+                    _dragSeconds = v;
+                  });
+                },
+                onChanged: (v) {
+                  setState(() => _dragSeconds = v);
+                },
+                onChangeEnd: (v) {
+                  setState(() => _draggingProgress = false);
+                  c.seek(Duration(seconds: v.round()));
+                },
+              ),
+            ),
+            // Phase 4.5：章节标记（view_points）— 在进度条上显示竖线标记。
+            if (chapters.isNotEmpty && durSec > 0)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: CustomPaint(
+                      painter: _ChapterMarkerPainter(
+                        chapters: chapters,
+                        durationSec: durSec,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -748,6 +819,213 @@ class _PlayerPanelState extends State<PlayerPanel> {
         color: Colors.white,
       ),
       onPressed: _toggleDanmaku,
+    );
+  }
+
+  /// Phase 4.4：字幕按钮 — 打开字幕选择 + 样式设置面板。
+  Widget _buildSubtitleButton() {
+    final c = widget.controller;
+    return ListenableBuilder(
+      listenable: c.subtitle,
+      builder: (context, _) {
+        final hasSubtitles = c.subtitle.available.isNotEmpty;
+        final isActive = c.subtitle.current != null;
+        return IconButton(
+          tooltip: '字幕',
+          icon: Icon(
+            isActive ? Icons.closed_caption : Icons.closed_caption_outlined,
+            color: isActive ? biliPink : Colors.white,
+            size: 20,
+          ),
+          onPressed: hasSubtitles
+              ? () => showSubtitleSettingsPanel(
+                    context,
+                    controller: c,
+                    fullscreen: widget.fullscreen,
+                  )
+              : null,
+        );
+      },
+    );
+  }
+
+  /// Phase 4.4：字幕渲染层 — 监听播放进度 + SubtitleController，
+  /// 显示当前字幕行（可配置字号/字重/描边/背景/边距）。
+  Widget _buildSubtitleLayer(WinWinPlayerController c) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([c.subtitle, c.position]),
+      builder: (context, _) {
+        final cue = c.subtitle.currentCue(c.position.value);
+        if (cue == null) return const SizedBox.shrink();
+        final text = cue.text.trim();
+        if (text.isEmpty) return const SizedBox.shrink();
+        final scale = widget.fullscreen
+            ? Pref.subtitleFontScaleFS
+            : Pref.subtitleFontScale;
+        final bgOpacity = Pref.subtitleBgOpacity;
+        final strokeWidth = Pref.subtitleStrokeWidth;
+        final fontWeight = _fontWeightFromIndex(Pref.subtitleFontWeight);
+        final padH = Pref.subtitlePaddingH.toDouble();
+        final padB = Pref.subtitlePaddingB.toDouble();
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: padH,
+              right: padH,
+              bottom: padB + (widget.fullscreen ? 60 : 48),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Style.sm,
+                vertical: Style.xs,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(bgOpacity),
+                borderRadius: BorderRadius.circular(Style.radiusXs),
+              ),
+              child: Text(
+                text,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16 * scale,
+                  height: 1.4,
+                  fontWeight: fontWeight,
+                  shadows: strokeWidth > 0
+                      ? [
+                          Shadow(
+                            offset: const Offset(0, 1),
+                            blurRadius: strokeWidth,
+                            color: Colors.black,
+                          ),
+                        ]
+                      : null,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 字重索引（0-8）→ FontWeight 映射。
+  static FontWeight _fontWeightFromIndex(int idx) {
+    const weights = [
+      FontWeight.w100,
+      FontWeight.w200,
+      FontWeight.w300,
+      FontWeight.w400,
+      FontWeight.w500,
+      FontWeight.w600,
+      FontWeight.w700,
+      FontWeight.w800,
+      FontWeight.w900,
+    ];
+    if (idx < 0 || idx >= weights.length) return FontWeight.w500;
+    return weights[idx];
+  }
+
+  /// Phase 4.7：音轨选择 + 音频归一化开关。
+  /// 仅当存在多条音轨时显示按钮；单轨时隐藏。
+  Widget _buildAudioTrackButton() {
+    final c = widget.controller;
+    final tracks = c.audioTracks;
+    if (tracks.length <= 1) return const SizedBox.shrink();
+    final active = c.activeAudioTrackIndices;
+    final activeIndex = active.isNotEmpty ? active.first : -1;
+    return PopupMenuButton<String>(
+      tooltip: '音轨',
+      icon: const Icon(Icons.graphic_eq, color: Colors.white, size: 20),
+      onSelected: (value) {
+        if (value == '__normalize') {
+          c.setAudioNormalize(!c.audioNormalizeEnabled);
+        } else {
+          final idx = int.tryParse(value);
+          if (idx != null) c.switchAudioTrack(idx);
+        }
+      },
+      itemBuilder: (context) => [
+        for (final t in tracks)
+          PopupMenuItem<String>(
+            value: t.index.toString(),
+            child: Row(
+              children: [
+                Icon(
+                  t.index == activeIndex
+                      ? Icons.check
+                      : Icons.radio_button_unchecked,
+                  size: 18,
+                  color: t.index == activeIndex ? biliPink : null,
+                ),
+                const SizedBox(width: Style.xs),
+                Flexible(
+                  child: Text(
+                    t.title,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color:
+                          t.index == activeIndex ? biliPink : null,
+                      fontWeight: t.index == activeIndex
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: '__normalize',
+          child: Row(
+            children: [
+              Icon(
+                c.audioNormalizeEnabled
+                    ? Icons.check_box
+                    : Icons.check_box_outline_blank,
+                size: 18,
+                color: c.audioNormalizeEnabled ? biliPink : null,
+              ),
+              const SizedBox(width: Style.xs),
+              const Text('音频归一化'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Phase 4.5：章节列表按钮 — PopupMenu 显示章节，点击跳转。
+  Widget _buildChapterButton() {
+    final c = widget.controller;
+    final chapters = c.viewPoints;
+    if (chapters.isEmpty) return const SizedBox.shrink();
+    return PopupMenuButton<double>(
+      tooltip: '章节',
+      icon: const Icon(Icons.bookmarks_outlined, color: Colors.white, size: 20),
+      onSelected: (sec) => c.seek(Duration(seconds: sec.round())),
+      itemBuilder: (context) => [
+        for (final vp in chapters)
+          PopupMenuItem<double>(
+            value: vp.from,
+            child: Text(
+              '${DurationUtils.formatDuration(vp.from.toInt())}  ${vp.title}',
+              style: TextStyle(
+                fontSize: 13,
+                color: vp.contains(c.position.value.inSeconds.toDouble())
+                    ? biliPink
+                    : null,
+                fontWeight: vp.contains(
+                  c.position.value.inSeconds.toDouble(),
+                )
+                    ? FontWeight.bold
+                    : FontWeight.normal,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -828,6 +1106,169 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   );
                 },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Phase 4.5：章节标记画笔 — 在进度条上绘制章节起始位置的竖线。
+class _ChapterMarkerPainter extends CustomPainter {
+  _ChapterMarkerPainter({
+    required this.chapters,
+    required this.durationSec,
+    required this.color,
+  });
+
+  final List<ViewPoint> chapters;
+  final double durationSec;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (durationSec <= 0 || size.width <= 0) return;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    // 竖线高度：进度条上下各延伸 3px。
+    const markerHeight = 6.0;
+    final centerY = size.height / 2;
+    for (final vp in chapters) {
+      if (vp.from <= 0 || vp.from >= durationSec) continue;
+      final x = (vp.from / durationSec) * size.width;
+      canvas.drawLine(
+        Offset(x, centerY - markerHeight / 2),
+        Offset(x, centerY + markerHeight / 2),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChapterMarkerPainter oldDelegate) {
+    return oldDelegate.durationSec != durationSec ||
+        oldDelegate.chapters.length != chapters.length;
+  }
+}
+
+/// Phase 4.6：截图预览对话框 — 显示截图 + 保存到本地按钮。
+class _ScreenshotPreviewDialog extends StatefulWidget {
+  const _ScreenshotPreviewDialog({required this.png});
+
+  final Uint8List png;
+
+  @override
+  State<_ScreenshotPreviewDialog> createState() =>
+      _ScreenshotPreviewDialogState();
+}
+
+class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
+  bool _saving = false;
+  String? _savedPath;
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      final dir = await getDownloadsDirectory();
+      final folder = dir ?? await getApplicationDocumentsDirectory();
+      final now = DateTime.now();
+      final stamp =
+          '${now.year}${now.month.toString().padLeft(2, '0')}'
+          '${now.day.toString().padLeft(2, '0')}_'
+          '${now.hour.toString().padLeft(2, '0')}'
+          '${now.minute.toString().padLeft(2, '0')}'
+          '${now.second.toString().padLeft(2, '0')}';
+      final file = File('${folder.path}/WinWin_screenshot_$stamp.png');
+      await file.writeAsBytes(widget.png);
+      if (mounted) {
+        setState(() {
+          _savedPath = file.path;
+          _saving = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(content: Text('保存失败：$e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: Style.lg,
+        vertical: Style.xl,
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640, maxHeight: 560),
+        child: Padding(
+          padding: const EdgeInsets.all(Style.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    '截图预览',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const Divider(height: 1),
+              const SizedBox(height: Style.sm),
+              Flexible(
+                child: Image.memory(
+                  widget.png,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: Style.sm),
+              if (_savedPath != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Style.xs),
+                  child: Text(
+                    '已保存：$_savedPath',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('关闭'),
+                  ),
+                  const SizedBox(width: Style.sm),
+                  FilledButton.icon(
+                    onPressed: _saving ? null : _save,
+                    icon: _saving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.download, size: 18),
+                    label: Text(_savedPath != null ? '已保存' : '保存'),
+                  ),
+                ],
               ),
             ],
           ),

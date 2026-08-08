@@ -253,6 +253,13 @@ abstract final class Pref {
   static int get subtitleFontWeight =>
       _setting.get(SettingBoxKey.subtitleFontWeight, defaultValue: 5);
 
+  // ---------- sponsorblock ----------
+  static bool get enableSponsorBlock =>
+      _setting.get(SettingBoxKey.enableSponsorBlock, defaultValue: true);
+
+  static bool get enableAudioNormalize =>
+      _setting.get(SettingBoxKey.enableAudioNormalize, defaultValue: false);
+
   // ---------- essential / recommend ----------
   static String get banWordForRecommend =>
       _setting.get(SettingBoxKey.banWordForRecommend, defaultValue: '');

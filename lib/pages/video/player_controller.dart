@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -10,10 +11,14 @@ import 'package:winwin/core/cache/play_url_cache.dart';
 import 'package:winwin/core/player/sponsorblock_usecase.dart';
 import 'package:winwin/core/policy/stream_selection_policy.dart';
 import 'package:winwin/core/policy/video_load_policy.dart';
+import 'package:winwin/core/storage/storage.dart';
+import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
-import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart';
+import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart' hide SubtitleItem;
+import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/models/user/user_info.dart';
+import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/play_url.dart';
 import 'package:winwin/pages/danmaku/controller.dart';
 import 'package:winwin/pages/video/subtitle_controller.dart';
@@ -105,8 +110,13 @@ class WinWinPlayerController {
   /// 由 [setSubtitleList] 初始化可用列表后自动选择默认字幕。
   final SubtitleController subtitle = SubtitleController();
 
+  /// 章节标记列表（Phase 4.5，来自 playInfo view_points）。
+  /// 由 [setViewPoints] 设置，供面板在进度条上渲染章节标记。
+  List<ViewPoint> _viewPoints = const [];
+  List<ViewPoint> get viewPoints => _viewPoints;
+
   /// 是否启用 SponsorBlock 自动跳过（默认 true，用户可在设置中关闭）。
-  bool sponsorBlockEnabled = true;
+  bool sponsorBlockEnabled = Pref.enableSponsorBlock;
 
   /// 弹幕显示不透明度（0-1）：设置面板改动时写入，弹幕层监听实时刷新。
   final ValueNotifier<double> danmakuOpacity = ValueNotifier(
@@ -330,8 +340,9 @@ class WinWinPlayerController {
         cid: cid,
         playType: playType,
         progressSec: progressSec,
-      ).then((res) {
-        if (kDebugMode && res case Error(:final errMsg)) {
+      }).then((res) {
+        if (!kDebugMode) return;
+        if (res case Error(:final errMsg)) {
           debugPrint('HeartBeat: report failed: $errMsg');
         }
       }),
@@ -606,6 +617,11 @@ class WinWinPlayerController {
       // Phase 4.2：播放就绪后启动心跳定时器（每 5 秒上报进度）。
       _startHeartBeat();
 
+      // Phase 4.7：音频归一化 — 用户已开启时对新加载的 media 应用 loudnorm 滤镜。
+      if (_audioNormalizeEnabled) {
+        player.setProperty('audio.avfilter', 'loudnorm');
+      }
+
       // SponsorBlock 段落加载：失败不阻断播放，仅记录日志。
       if (sponsorBlockEnabled) {
         sponsorBlock ??= SponsorBlockUseCase();
@@ -716,6 +732,98 @@ class WinWinPlayerController {
     }
   }
 
+  /// Phase 4.5：设置章节标记（来自 playInfo view_points）。
+  void setViewPoints(List<ViewPoint> points) {
+    _viewPoints = List.unmodifiable(points);
+  }
+
+  /// Phase 4.5：查找当前播放位置对应的章节标题（无则返回 null）。
+  String? currentChapterTitle() {
+    final posSec = position.value.inSeconds.toDouble();
+    for (final vp in _viewPoints) {
+      if (vp.contains(posSec)) return vp.title;
+    }
+    return null;
+  }
+
+  // ── Phase 4.6 截图 ──
+
+  /// 截取当前视频帧，返回 PNG 编码的字节流。
+  ///
+  /// mdk `snapshot()` 返回 RGBA 数据（stride = width*4），
+  /// 通过 `dart:ui` 解码为 `ui.Image` 后导出为 PNG。
+  /// 失败返回 null。
+  Future<Uint8List?> screenshot() async {
+    final player = _player;
+    if (player == null || _disposed) return null;
+    final rgba = await player.snapshot();
+    if (rgba == null) return null;
+    final size = videoSize.value;
+    if (size == null || size.width <= 0 || size.height <= 0) return null;
+    final w = size.width.toInt();
+    final h = size.height.toInt();
+    final image = ui.decodeImageFromPixelsSync(
+      rgba,
+      w,
+      h,
+      ui.PixelFormat.rgba8888,
+    );
+    final png = await image.toByteData(format: ui.ImageByteFormat.png);
+    return png?.buffer.asUint8List();
+  }
+
+  // ── Phase 4.7 多音轨 + 音频归一化 ──
+
+  /// 可用音频轨道列表（来自 mdk mediaInfo）。
+  /// 每项为 (索引, 标题) — 标题取自 metadata['title'] 或语言代码。
+  List<({int index, String title})> get audioTracks {
+    final player = _player;
+    if (player == null) return const [];
+    final audio = player.mediaInfo.audio;
+    if (audio == null || audio.isEmpty) return const [];
+    return audio.map((s) {
+      final meta = s.metadata;
+      final title = meta['title']?.isNotEmpty == true
+          ? meta['title']!
+          : (meta['language']?.isNotEmpty == true
+              ? meta['language']!
+              : '音轨 ${s.index}');
+      return (index: s.index, title: title);
+    }).toList();
+  }
+
+  /// 当前激活的音频轨道索引列表（通常只有一个）。
+  List<int> get activeAudioTrackIndices {
+    final player = _player;
+    if (player == null) return const [];
+    return player.activeAudioTracks;
+  }
+
+  /// 切换音频轨道（内嵌轨道）。
+  void switchAudioTrack(int index) {
+    final player = _player;
+    if (player == null || _disposed) return;
+    player.activeAudioTracks = [index];
+  }
+
+  /// 是否启用音频归一化（loudnorm 滤镜）。
+  bool _audioNormalizeEnabled = Pref.enableAudioNormalize;
+  bool get audioNormalizeEnabled => _audioNormalizeEnabled;
+
+  /// 开关音频归一化（Phase 4.7）。
+  /// 使用 FFmpeg loudnorm 滤镜，播放时立即生效。持久化到 Pref。
+  void setAudioNormalize(bool enabled) {
+    _audioNormalizeEnabled = enabled;
+    GStorage.setting.put(SettingBoxKey.enableAudioNormalize, enabled);
+    final player = _player;
+    if (player == null || _disposed) return;
+    if (enabled) {
+      player.setProperty('audio.avfilter', 'loudnorm');
+    } else {
+      player.setProperty('audio.avfilter', '');
+    }
+  }
+
   /// 设置音量（0-100）。
   void setVolume(double v) {
     final clamped = v.clamp(0.0, 100.0);
@@ -769,5 +877,6 @@ class WinWinPlayerController {
     }
     qualityVersion.dispose();
     danmakuReloadSignal.dispose();
+    subtitle.dispose();
   }
 }

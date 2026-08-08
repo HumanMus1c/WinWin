@@ -5,6 +5,13 @@ import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 
+/// Duration 没有 clamp 方法，手动实现（用于 seek 位置限制）。
+Duration _clampDuration(Duration value, Duration min, Duration max) {
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
+
 /// 播放器键盘快捷键包装器（Phase 4.3）。
 ///
 /// 移植自 PiliPlus `pages/video/widgets/player_focus.dart`。
@@ -158,7 +165,7 @@ class _PlayerFocusState extends State<PlayerFocus> {
 
   void _seekRelative(WinWinPlayerController c, int deltaSec) {
     final target = c.position.value + Duration(seconds: deltaSec);
-    final clamped = target.clamp(Duration.zero, c.duration.value);
+    final clamped = _clampDuration(target, Duration.zero, c.duration.value);
     c.seek(clamped);
   }
 
@@ -268,7 +275,7 @@ class _DoubleTapSeekDetectorState extends State<DoubleTapSeekDetector> {
     final c = widget.controller;
     final delta = isRight ? widget.forwardStep : -widget.backwardStep;
     final target = c.position.value + Duration(seconds: delta);
-    final clamped = target.clamp(Duration.zero, c.duration.value);
+    final clamped = _clampDuration(target, Duration.zero, c.duration.value);
     c.seek(clamped);
     widget.onFeedback?.call(isRight, delta.abs());
   }
@@ -373,15 +380,21 @@ class _HorizontalSeekDetectorState extends State<HorizontalSeekDetector> {
         if (_dragStart == null) return;
         _dragDelta += details.delta.dx * widget.sensitivity;
         final deltaSec = _dragDelta.round();
-        final target = (_dragStart! + Duration(seconds: deltaSec))
-            .clamp(Duration.zero, widget.controller.duration.value);
+        final target = _clampDuration(
+          _dragStart! + Duration(seconds: deltaSec),
+          Duration.zero,
+          widget.controller.duration.value,
+        );
         widget.onSeeking?.call(deltaSec, target);
       },
       onHorizontalDragEnd: (_) {
         if (_dragStart != null) {
           final deltaSec = _dragDelta.round();
-          final target = (_dragStart! + Duration(seconds: deltaSec))
-              .clamp(Duration.zero, widget.controller.duration.value);
+          final target = _clampDuration(
+            _dragStart! + Duration(seconds: deltaSec),
+            Duration.zero,
+            widget.controller.duration.value,
+          );
           widget.controller.seek(target);
         }
         _dragStart = null;
