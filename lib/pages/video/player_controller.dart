@@ -750,23 +750,23 @@ class WinWinPlayerController {
 
   /// 截取当前视频帧，返回 PNG 编码的字节流。
   ///
-  /// mdk `snapshot()` 返回 RGBA 数据（stride = width*4），
-  /// 通过 `dart:ui` 解码为 `ui.Image` 后导出为 PNG。
+  /// mdk `snapshot()` 返回 BGRA 数据（stride = width*4），
+  /// 通过 `dart:ui` 以 [ui.PixelFormat.bgra8888] 解码为 `ui.Image` 后导出为 PNG。
   /// 失败返回 null。
   Future<Uint8List?> screenshot() async {
     final player = _player;
     if (player == null || _disposed) return null;
-    final rgba = await player.snapshot();
-    if (rgba == null) return null;
+    final bgra = await player.snapshot();
+    if (bgra == null) return null;
     final size = videoSize.value;
     if (size == null || size.width <= 0 || size.height <= 0) return null;
     final w = size.width.toInt();
     final h = size.height.toInt();
     final image = ui.decodeImageFromPixelsSync(
-      rgba,
+      bgra,
       w,
       h,
-      ui.PixelFormat.rgba8888,
+      ui.PixelFormat.bgra8888,
     );
     final png = await image.toByteData(format: ui.ImageByteFormat.png);
     return png?.buffer.asUint8List();
