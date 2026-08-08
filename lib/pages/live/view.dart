@@ -1,0 +1,306 @@
+import 'package:flutter/material.dart';
+
+import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/refresh_indicator.dart';
+import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/http/live.dart';
+import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/pages/member/member_space_page.dart';
+import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/num_utils.dart';
+
+/// 直播页（Phase 7.7.2）。
+///
+/// 参照 PiliPlus 的 `LivePage`：推荐直播网格 + 区域标签。
+/// 当前实现推荐直播列表，点击卡片预留跳转直播间入口。
+class LivePage extends StatefulWidget {
+  const LivePage({super.key});
+
+  @override
+  State<LivePage> createState() => _LivePageState();
+}
+
+class _LivePageState extends State<LivePage>
+    with AutomaticKeepAliveClientMixin {
+  LoadingState<LiveRecommendData> _state = LoadingState.loading();
+  final List<LiveItemModel> _items = [];
+  bool _loading = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    if (_loading) return;
+    _loading = true;
+    setState(() => _state = LoadingState.loading());
+    await ensureBootstrap();
+    final res = await LiveHttp.liveRecommend();
+    if (!mounted) return;
+    switch (res) {
+      case Success(:final response):
+        _items
+          ..clear()
+          ..addAll(response.list);
+        setState(() => _state = Success(response));
+      case Error():
+        setState(() => _state = res);
+    }
+    _loading = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return Scaffold(
+      appBar: AppBar(title: const Text('直播')),
+      body: AppRefreshIndicator(
+        onRefresh: _load,
+        child: switch (_state) {
+          Loading() => const Center(child: CircularProgressIndicator()),
+          Error(:final errMsg) => _buildError(errMsg),
+          Success() => _items.isEmpty
+              ? _buildEmpty()
+              : CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        Style.safeSpace,
+                        Style.sm,
+                        Style.safeSpace,
+                        Style.xxl * 2,
+                      ),
+                      sliver: SliverGrid(
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 280,
+                          childAspectRatio: 0.85,
+                          mainAxisSpacing: Style.cardSpace,
+                          crossAxisSpacing: Style.cardSpace,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, i) => _LiveCard(item: _items[i]),
+                          childCount: _items.length,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+        },
+      ),
+    );
+  }
+
+  Widget _buildError(String? msg) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(msg ?? '加载失败'),
+            const SizedBox(height: Style.md),
+            FilledButton.tonal(
+              onPressed: _load,
+              child: const Text('重试'),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildEmpty() => ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 120),
+          Center(child: Text('暂无直播')),
+        ],
+      );
+}
+
+/// 直播卡片：封面 + 标题 + 主播 + 人气 + 区域。
+class _LiveCard extends StatelessWidget {
+  const _LiveCard({required this.item});
+
+  final LiveItemModel item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          // TODO: Phase 4 直播播放器集成后跳转直播间
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+            SnackBar(
+              content: Text('直播间 ${item.roomId} · 直播播放待集成'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 封面
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  NetworkImgLayer(
+                    src: item.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  // 直播中标识
+                  if (item.isLiving)
+                    Positioned(
+                      left: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.fiber_manual_record,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 2),
+                            Text(
+                              '直播中',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  // 人气
+                  if (item.online != null)
+                    Positioned(
+                      right: 6,
+                      bottom: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.people_alt_outlined,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              NumUtils.formatNum(item.online),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // 文本信息
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(Style.sm),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () {
+                        final uid = item.uid;
+                        if (uid != null && uid > 0) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MemberSpacePage(mid: uid),
+                            ),
+                          );
+                        }
+                      },
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            size: 12,
+                            color: cs.outline,
+                          ),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              item.uname ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: cs.outline,
+                              ),
+                            ),
+                          ),
+                          if (item.areaName != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: cs.secondaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                item.areaName!,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: cs.onSecondaryContainer,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
