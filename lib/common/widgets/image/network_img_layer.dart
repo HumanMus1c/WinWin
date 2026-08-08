@@ -5,6 +5,10 @@ import 'package:winwin/utils/image_utils.dart';
 
 /// A cached network image layer with fade animation, rounded corners and a
 /// gray placeholder. [type] can be 'emote', 'avatar' or 'default'.
+///
+/// Phase 7.5.4 增强：
+/// - [heroTag]：非空时用 [Hero] 包裹图像，用于视频卡片→详情页转场。
+/// - 渐变占位：placeholder 由纯色升级为 surfaceVariant→outlineVariant 渐变。
 class NetworkImgLayer extends StatelessWidget {
   const NetworkImgLayer({
     super.key,
@@ -16,6 +20,7 @@ class NetworkImgLayer extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.fadeInDuration = const Duration(milliseconds: 120),
     this.fadeOutDuration = const Duration(milliseconds: 120),
+    this.heroTag,
   });
 
   final String? src;
@@ -27,19 +32,29 @@ class NetworkImgLayer extends StatelessWidget {
   final Duration fadeInDuration;
   final Duration fadeOutDuration;
 
+  /// Hero 共享元素 tag（非空时启用）。视频卡片与详情页需使用相同 tag。
+  /// 通常用 `'cover_$bvid'` 形式确保唯一。
+  final Object? heroTag;
+
   @override
   Widget build(BuildContext context) {
     final isEmote = type == 'emote';
     final isAvatar = type == 'avatar';
     if (src?.isNotEmpty == true) {
       final child = _buildImage(context);
+      Widget clipped;
       if (isEmote) {
-        return child;
+        clipped = child;
       } else if (isAvatar) {
-        return ClipOval(child: child);
+        clipped = ClipOval(child: child);
       } else {
-        return ClipRRect(borderRadius: borderRadius, child: child);
+        clipped = ClipRRect(borderRadius: borderRadius, child: child);
       }
+      // Hero 包裹：仅当 heroTag 非空且非 emote/avatar 类型时启用
+      if (heroTag != null && !isEmote && !isAvatar) {
+        return Hero(tag: heroTag!, child: clipped);
+      }
+      return clipped;
     }
     return _placeholder(context, isAvatar: isAvatar);
   }
@@ -71,14 +86,21 @@ class NetworkImgLayer extends StatelessWidget {
   }
 
   Widget _placeholder(BuildContext context, {bool isAvatar = false}) {
+    final cs = Theme.of(context).colorScheme;
+    // 渐变占位：从 surfaceVariant 到 outlineVariant，比纯色更有层次
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         shape: isAvatar ? BoxShape.circle : BoxShape.rectangle,
-        color: Theme.of(
-          context,
-        ).colorScheme.onInverseSurface.withValues(alpha: 0.4),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            cs.surfaceContainerHighest.withValues(alpha: 0.6),
+            cs.outlineVariant.withValues(alpha: 0.4),
+          ],
+        ),
         borderRadius: isAvatar ? null : borderRadius,
       ),
     );

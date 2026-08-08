@@ -1,21 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
-/// 视频卡片 - 垂直布局
+/// 视频卡片 - 垂直布局（Phase 7.5.3 重构）。
 ///
 /// [videoItem] is dynamic so the card can render both
 /// RcmdVideoItemAppModel and RcmdVideoItemModel without a compile-time
 /// dependency on the model layer. Expected fields: cover, title, duration,
-/// owner.name, stat.view, stat.danmu, rcmdReason, isFollowed.
+/// owner.name, stat.view, stat.danmu, rcmdReason, isFollowed, bvid.
+///
+/// Phase 7.5.3 改进：
+/// - 圆角统一通过 [AppShapes] 解析（三风格热切换）。
+/// - 时长角标 / rcmdReason 角标改用 [PBadge]。
+/// - `withOpacity` → `withValues(alpha:)`（避免 Flutter 弃用警告）。
+/// - [heroTag] 支持封面→详情页 Hero 共享元素转场。
 class VideoCardV extends StatelessWidget {
-  const VideoCardV({super.key, required this.videoItem, this.onTap});
+  const VideoCardV({
+    super.key,
+    required this.videoItem,
+    this.onTap,
+    this.heroTag,
+  });
 
   final dynamic videoItem;
   final VoidCallback? onTap;
+
+  /// Hero 共享元素 tag（非空时启用封面转场）。建议传 `'cover_$bvid'`。
+  final Object? heroTag;
 
   @override
   Widget build(BuildContext context) {
@@ -45,27 +60,15 @@ class VideoCardV extends StatelessWidget {
                         borderRadius: BorderRadius.vertical(
                           top: radius,
                         ),
+                        heroTag: heroTag,
                       ),
                       if (duration > 0)
                         Positioned(
                           right: 7,
                           bottom: 6,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 5,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.65),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              DurationUtils.formatDuration(duration),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.white,
-                              ),
-                            ),
+                          child: PBadge(
+                            text: DurationUtils.formatDuration(duration),
+                            type: PBadgeType.duration,
                           ),
                         ),
                     ],
@@ -106,8 +109,10 @@ class VideoCardV extends StatelessWidget {
             Row(
               spacing: 2,
               children: [
-                if (rcmdReason != null) _badge(context, rcmdReason),
-                if (isFollowed) _badge(context, '已关注'),
+                if (rcmdReason != null)
+                  PBadge(text: rcmdReason, type: PBadgeType.badge),
+                if (isFollowed)
+                  PBadge(text: '已关注', type: PBadgeType.badge),
                 Flexible(
                   child: GestureDetector(
                     onTap: () {
@@ -128,7 +133,7 @@ class VideoCardV extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.secondaryContainer
-                            .withOpacity(0.5),
+                            .withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(100),
                       ),
                       child: Text(
@@ -172,25 +177,6 @@ class VideoCardV extends StatelessWidget {
           style: style,
         ),
       ],
-    );
-  }
-
-  Widget _badge(BuildContext context, String text) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 9,
-          height: 1.4,
-          color: theme.colorScheme.onSecondaryContainer,
-        ),
-      ),
     );
   }
 }
