@@ -214,6 +214,8 @@ abstract final class SettingBoxKey {
       systemProxyPort = 'systemProxyPort';
 
   static const String themeMode = 'themeMode',
+      // Phase 7.1：UI 风格（0=ios, 1=material3, 2=miuix）
+      uiStyle = 'uiStyle',
       defaultTextScale = 'textScale',
       dynamicColor = 'dynamicColor',
       customColor = 'customColor',

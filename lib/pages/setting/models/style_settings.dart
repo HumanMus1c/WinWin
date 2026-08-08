@@ -5,11 +5,48 @@ import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/theme_notifier.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
+import 'package:winwin/theme/ui_style.dart';
+import 'package:winwin/theme/ui_style_notifier.dart';
 
 /// 外观设置项列表。
 ///
 /// 移植自 PiliPlus 的 `styleSettings`，仅保留桌面端适用项。
 List<SettingsModel> get styleSettings => [
+      // ── Phase 7.1：界面风格（Material 3 / Miuix / iOS 热切换） ──
+      NormalModel(
+        title: '界面风格',
+        leading: const Icon(Icons.palette_outlined),
+        getSubtitle: () =>
+            '当前风格：${UiStyleNotifier.instance.value.label}（切换即时生效）',
+        onTap: (context, setState) async {
+          final res = await showDialog<UiStyle>(
+            context: context,
+            builder: (context) => SelectDialog<UiStyle>(
+              title: '界面风格',
+              value: UiStyleNotifier.instance.value,
+              values: UiStyle.values.map((e) => (e, e.label)).toList(),
+              subtitleBuilder: (_, index) {
+                final desc = switch (UiStyle.values[index]) {
+                  UiStyle.ios => 'Cupertino 控件 + 连续曲率圆角 + 扩散阴影',
+                  UiStyle.material3 => 'M3 原生控件 + 标准 tonal elevation',
+                  UiStyle.miuix => '扁平控件 + 0 elevation + 1.15× 圆角',
+                };
+                return Text(
+                  desc,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                );
+              },
+            ),
+          );
+          if (res != null) {
+            await UiStyleNotifier.instance.setStyle(res);
+            setState();
+          }
+        },
+      ),
+
       // 主题模式
       NormalModel(
         title: '主题模式',

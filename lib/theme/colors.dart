@@ -40,6 +40,83 @@ const List<Color> bottomBarColors = [
   iosGreen,   // 4: ListenVideo
 ];
 
+// ── MD3 Color Tokens（Material Design 3 风格专用） ──
+// 标准 M3 种子色采用 B 站品牌色衍生，与 iOS 蓝区分以体现风格差异。
+const Color md3LightPrimary = Color(0xFF9C4146);      // 品牌粉衍生
+const Color md3LightOnPrimary = Colors.white;
+const Color md3LightPrimaryContainer = Color(0xFFFFDADA);
+const Color md3LightOnPrimaryContainer = Color(0xFF400012);
+const Color md3LightSecondary = Color(0xFF775656);
+const Color md3LightSecondaryContainer = Color(0xFFFFDADA);
+const Color md3LightTertiary = Color(0xFF735C2E);
+const Color md3LightTertiaryContainer = Color(0xFFFFDEA8);
+const Color md3LightSurface = Color(0xFFFFF8F7);
+const Color md3LightSurfaceContainer = Color(0xFFF3EDED);
+const Color md3LightSurfaceContainerHighest = Color(0xFFEDE0E0);
+const Color md3LightBackground = Color(0xFFFFF8F7);
+const Color md3LightOnSurface = Color(0xFF221919);
+const Color md3LightOnSurfaceVariant = Color(0xFF534343);
+const Color md3LightOutline = Color(0xFF857373);
+const Color md3LightOutlineVariant = Color(0xFFD8C2C2);
+const Color md3LightError = Color(0xFFBA1A1A);
+
+const Color md3DarkPrimary = Color(0xFFFFB3B5);
+const Color md3DarkOnPrimary = Color(0xFF5F131F);
+const Color md3DarkPrimaryContainer = Color(0xFF7E2A33);
+const Color md3DarkOnPrimaryContainer = Color(0xFFFFDADA);
+const Color md3DarkSecondary = Color(0xFFE6BDBD);
+const Color md3DarkSecondaryContainer = Color(0xFF5D3F3F);
+const Color md3DarkTertiary = Color(0xFFE2C28D);
+const Color md3DarkTertiaryContainer = Color(0xFF594418);
+const Color md3DarkSurface = Color(0xFF1A1111);
+const Color md3DarkSurfaceContainer = Color(0xFF2D2222);
+const Color md3DarkSurfaceContainerHighest = Color(0xFF3A2C2C);
+const Color md3DarkBackground = Color(0xFF1A1111);
+const Color md3DarkOnSurface = Color(0xFFF0DEDE);
+const Color md3DarkOnSurfaceVariant = Color(0xFFD8C2C2);
+const Color md3DarkOutline = Color(0xFFA08C8C);
+const Color md3DarkOutlineVariant = Color(0xFF534343);
+const Color md3DarkError = Color(0xFFFFB4AB);
+
+// ── Miuix Color Tokens（扁平、低对比、偏灰） ──
+// 参照 BiliPai `BiliMiuixTypography` 的视觉调性：扁平、低 elevation、
+// 更"中性"的表面色，与 MD3 的 tonal 区分层级形成可辨识差异。
+const Color miuixLightPrimary = Color(0xFFFA7298);     // B 站粉
+const Color miuixLightOnPrimary = Colors.white;
+const Color miuixLightPrimaryContainer = Color(0xFFFCE4EC);
+const Color miuixLightOnPrimaryContainer = Color(0xFF4A0E22);
+const Color miuixLightSecondary = Color(0xFF605B5F);
+const Color miuixLightSecondaryContainer = Color(0xFFE8E2E6);
+const Color miuixLightTertiary = Color(0xFF5B6354);
+const Color miuixLightTertiaryContainer = Color(0xFFDFE8D5);
+const Color miuixLightSurface = Colors.white;
+const Color miuixLightSurfaceContainer = Color(0xFFF5F4F5);
+const Color miuixLightSurfaceContainerHighest = Color(0xFFEDEDEF);
+const Color miuixLightBackground = Color(0xFFFAF9FA);
+const Color miuixLightOnSurface = Color(0xFF1C1B1E);
+const Color miuixLightOnSurfaceVariant = Color(0xFF46464A);
+const Color miuixLightOutline = Color(0xFF77767B);
+const Color miuixLightOutlineVariant = Color(0xFFC8C7CC);
+const Color miuixLightError = Color(0xFFB3261E);
+
+const Color miuixDarkPrimary = Color(0xFFFFB1C8);
+const Color miuixDarkOnPrimary = Color(0xFF5E112F);
+const Color miuixDarkPrimaryContainer = Color(0xFF7D2945);
+const Color miuixDarkOnPrimaryContainer = Color(0xFFFFD9E2);
+const Color miuixDarkSecondary = Color(0xFFCDC6CE);
+const Color miuixDarkSecondaryContainer = Color(0xFF48434A);
+const Color miuixDarkTertiary = Color(0xFFC2CCB0);
+const Color miuixDarkTertiaryContainer = Color(0xFF434B3D);
+const Color miuixDarkSurface = Color(0xFF131316);
+const Color miuixDarkSurfaceContainer = Color(0xFF1E1E22);
+const Color miuixDarkSurfaceContainerHighest = Color(0xFF29292E);
+const Color miuixDarkBackground = Color(0xFF131316);
+const Color miuixDarkOnSurface = Color(0xFFE5E1E6);
+const Color miuixDarkOnSurfaceVariant = Color(0xFFC8C7CC);
+const Color miuixDarkOutline = Color(0xFF918E94);
+const Color miuixDarkOutlineVariant = Color(0xFF46464A);
+const Color miuixDarkError = Color(0xFFF2B8B5);
+
 // ── Cover Placeholder Gradients ──
 class GradientPair {
   final Color start;

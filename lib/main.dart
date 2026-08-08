@@ -9,6 +9,9 @@ import 'core/log/app_logger.dart';
 import 'pages/setting/theme_notifier.dart';
 import 'pages/video/desktop_pip.dart';
 import 'theme/app_theme.dart';
+import 'theme/inherited_ui_style.dart';
+import 'theme/ui_style.dart';
+import 'theme/ui_style_notifier.dart';
 import 'ui/app.dart';
 import 'utils/json_file_handler.dart';
 
@@ -55,7 +58,11 @@ void main() async {
   // so bootstrap (Hive → accounts → Dio) must not block runApp(). Controllers
   // await ensureBootstrap() themselves before touching the network.
   unawaited(
-    ensureBootstrap().then((_) => ThemeNotifier.instance.refresh()),
+    ensureBootstrap().then((_) {
+      ThemeNotifier.instance.refresh();
+      // Phase 7.1：从持久化存储读取实际 UI 风格。
+      UiStyleNotifier.instance.refresh();
+    }),
   );
 
   // L5：崩溃捕获 — Catcher2 包装根 widget，handlers = [JsonFileHandler, ConsoleHandler]。
@@ -78,17 +85,27 @@ class WinWinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeNotifier.instance,
-      builder: (context, themeMode, _) {
-        return MaterialApp(
-          title: 'WinWin — BiliPai Desktop Port',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: themeMode,
-          navigatorObservers: [routeObserver],
-          home: const AppRoot(),
+    // Phase 7.1：双层 ValueListenableBuilder — 主题模式 × UI 风格。
+    // 任意一个变化都会重建 MaterialApp + UiStyleScope，实现热切换。
+    return ValueListenableBuilder<UiStyle>(
+      valueListenable: UiStyleNotifier.instance,
+      builder: (context, uiStyle, _) {
+        return ValueListenableBuilder<ThemeMode>(
+          valueListenable: ThemeNotifier.instance,
+          builder: (context, themeMode, _) {
+            return UiStyleScope(
+              style: uiStyle,
+              child: MaterialApp(
+                title: 'WinWin — BiliPai Desktop Port',
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.lightFor(uiStyle),
+                darkTheme: AppTheme.darkFor(uiStyle),
+                themeMode: themeMode,
+                navigatorObservers: [routeObserver],
+                home: const AppRoot(),
+              ),
+            );
+          },
         );
       },
     );
