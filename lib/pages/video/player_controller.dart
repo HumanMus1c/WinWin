@@ -178,6 +178,12 @@ class WinWinPlayerController {
   mdk.Player _createPlayer() {
     final player = mdk.Player();
 
+    // 显式设置 video decoders（与 fvp video_player_mdk.dart Windows 默认一致）。
+    // mdk.Player() 默认 decoder 为 'auto'（通常=FFmpeg），但不显式设置时
+    // D3D11 硬解 / dav1d AV1 软解不会被自动选中，导致 HEVC/AV1 decode error。
+    // 顺序即优先级：D3D11 硬解 → FFmpeg 软解 → dav1d AV1 专用软解。
+    player.videoDecoders = const ['D3D11', 'FFmpeg', 'dav1d'];
+
     // 网络流稳健性 / 格式探测（参照 fvp video_player_mdk.dart 的默认项）。
     player.setProperty('avio.reconnect', '1');
     player.setProperty('avio.reconnect_delay_max', '7');
@@ -204,7 +210,10 @@ class WinWinPlayerController {
         if (_disposed || _loading) return;
         // NOTE: for 'reader.buffering' the error field is progress [0,100],
         // not an error code; real mdk failures carry negative codes.
-        if (ev.error < 0) {
+        // -1 语义同 prepare 的 -1（already loading/open），不是硬错误：
+        // 共享 player 切换 media 时 setMedia 已触发 open，onEvent "open" 返回 -1
+        // 表示"已在加载"。仅对 < -1 的硬错误报错（与 prepare 判断一致）。
+        if (ev.error < -1) {
           // 直接覆盖：让最新错误显示给用户。原 ??= 会忽略后续错误，
           // 网络恢复后又断开时用户看不到最新错误信息。
           AppLogger.e('PlayerController', 'onEvent error: code=${ev.error} detail=${ev.detail}');
@@ -568,7 +577,7 @@ class WinWinPlayerController {
       }
 
       // 1. 设置主视频 media。
-      AppLogger.d('PlayerController', 'setMedia video: url=$videoUrl audioUrl=${audio?.baseUrl}');
+      AppLogger.w('PlayerController', 'setMedia video: url=$videoUrl audioUrl=${audio?.baseUrl}');
       player.media = videoUrl;
       // DASH 分离音轨：以外部音轨方式挂载（prepare 之前）。
       // 参照 fvp setExternalAudio → setMedia(url, MediaType.audio) 用法：
@@ -588,7 +597,7 @@ class WinWinPlayerController {
       // 加载首帧，进度恢复统一用 seek（ret >= 0 时立即 seek，ret == -1
       // 时延迟到 onMediaStatus.buffered 事件后 seek）。
       final ret = await player.prepare();
-      AppLogger.i('PlayerController', 'prepare ret=$ret (0=ok, -1=already loading, <-1=error)');
+      AppLogger.w('PlayerController', 'prepare ret=$ret (0=ok, -1=already loading, <-1=error)');
       if (_disposed) return;
       // prepare 返回值语义（见 fvp player.dart 注释）：
       //   0: streams==0 无效媒体，否则成功
@@ -635,7 +644,7 @@ class WinWinPlayerController {
       player.state =
           autoplay ? mdk.PlaybackState.playing : mdk.PlaybackState.paused;
       ready.value = true;
-      AppLogger.i('PlayerController', 'ready=true, state=${player.state}, textureId=${player.textureId}');
+      AppLogger.w('PlayerController', 'ready=true, state=${player.state}, textureId=${player.textureId}');
       // Phase 4.2：播放就绪后启动心跳定时器（每 5 秒上报进度）。
       _startHeartBeat();
 
@@ -656,12 +665,16 @@ class WinWinPlayerController {
 
       // HDR 自动升级：首次 SDR 起播后，VIP + 自动最高画质 + 有
       // access_token + 当前 DASH 无 HDR 轨道时，二次拉流 qn=125。
-      // 延后到 onMediaStatus.buffered 稳定后触发，避免与首播的
-      // setMedia/prepare/纹理创建并发竞态（失败不阻断当前 SDR 播放）。
-      if (isInitialRequest && !_hdrUpgradeAttempted) {
-        _hdrUpgradeAttempted = true;
-        _pendingHdrUpgrade = playUrl;
-      }
+      //
+      // [DISABLED] 二次 setMedia 会中断正在播放的 SDR media，导致：
+      // - 画面消失（黑屏）：新 media 替换旧 media 后纹理/解码管线重置
+      // - 播放/暂停状态抖动：setMedia 重置 player.state
+      // - onEvent "open" -1 误报
+      // 待 mdk 共享 player 的无缝切换（无缝替换 media + 保留纹理）验证后再启用。
+      // if (isInitialRequest && !_hdrUpgradeAttempted) {
+      //   _hdrUpgradeAttempted = true;
+      //   _pendingHdrUpgrade = playUrl;
+      // }
     } catch (e) {
       if (!_disposed) error.value = '播放失败：$e';
     } finally {

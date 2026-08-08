@@ -22,9 +22,9 @@ abstract final class AppLogger {
   /// L7 阶段接入 Pref.enableVerboseLog；在此之前用 kDebugMode 兜底。
   static bool get enableVerboseLog => kDebugMode;
 
-  /// 落盘开关：受 Pref.enableLogPersistence 控制。
-  /// L7 阶段接入；在此之前用 kDebugMode 兜底（debug 默认落盘便于排查）。
-  static bool get enablePersistence => kDebugMode;
+  /// 落盘开关：始终开启（w/e 级别落盘开销极小，且是线上排查的唯一线索）。
+  /// BiliPai 思想：release 也缓冲 w/e + 落盘。L7 阶段接入 Pref 开关后可细化。
+  static bool get enablePersistence => true;
 
   /// 初始化 LogCollector（幂等）。应在 main() 早期调用。
   static Future<void> init() async {
