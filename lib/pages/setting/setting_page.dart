@@ -3,11 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:winwin/pages/setting/about_page.dart';
 import 'package:winwin/pages/setting/common_setting.dart';
 import 'package:winwin/pages/setting/setting_type.dart';
+import 'package:winwin/pages/setting/ui_style_preview.dart';
+import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 设置主页面 — 桌面端双栏布局。
 ///
 /// 左侧分类导航（flex 3），右侧内容区（flex 7）。
 /// 移植自 PiliPlus 的 `SettingPage`，针对桌面端宽屏优化为固定双栏。
+///
+/// Phase 7.8：左侧导航改用 [AppGroup] / [AppListItem] 美化，顶部增加
+/// 「风格预览」入口（跳转 [UiStylePreviewPage]）。
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
 
@@ -68,10 +74,38 @@ class _SettingPageState extends State<SettingPage> {
                 ),
               ),
               child: ListView(
-                padding: EdgeInsets.only(bottom: padding.bottom + 100),
-                children: _items
-                    .map((item) => _buildCategoryTile(theme, item))
-                    .toList(),
+                padding: EdgeInsets.only(
+                  left: Style.md,
+                  right: Style.md,
+                  top: Style.md,
+                  bottom: padding.bottom + 100,
+                ),
+                children: [
+                  // ── 风格预览入口 ──
+                  AppGroup(
+                    children: [
+                      AppListItem(
+                        icon: Icons.preview_outlined,
+                        title: '风格预览',
+                        subtitle: '三风格卡片可视化对比',
+                        iconTint: theme.colorScheme.primary,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const UiStylePreviewPage(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: Style.md),
+                  // ── 分类导航 ──
+                  AppGroup(
+                    children: _items
+                        .map((item) => _buildCategoryItem(theme, item))
+                        .toList(),
+                  ),
+                ],
               ),
             ),
           ),
@@ -92,24 +126,26 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
-  Widget _buildCategoryTile(ThemeData theme, _SettingEntry item) {
+  Widget _buildCategoryItem(ThemeData theme, _SettingEntry item) {
     final isSelected = item.type == _type;
-    return ListTile(
-      tileColor: isSelected ? theme.colorScheme.onInverseSurface : null,
-      onTap: () => setState(() => _type = item.type),
-      leading: Icon(item.icon),
-      title: Text(
-        item.type.title,
-        style: theme.textTheme.titleMedium,
-      ),
-      subtitle: item.subtitle == null
-          ? null
-          : Text(
-              item.subtitle!,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.outline,
+    return AppListItem(
+      icon: item.icon,
+      title: item.type.title,
+      subtitle: item.subtitle,
+      iconTint: isSelected
+          ? theme.colorScheme.primary
+          : theme.colorScheme.onSurfaceVariant,
+      trailing: isSelected
+          ? Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                shape: BoxShape.circle,
               ),
-            ),
+            )
+          : null,
+      onTap: () => setState(() => _type = item.type),
     );
   }
 }

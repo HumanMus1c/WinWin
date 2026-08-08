@@ -12,9 +12,13 @@ import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/pages/toview/toview_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
-import '../components/ios_components.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// Profile page — ported from BiliPai's ProfileScreen.
+///
+/// Phase 7.8：重构为 [CustomScrollView] + [SliverToBoxAdapter] + [ClipRRect]
+/// 圆角内容卡片向上覆盖壁纸 20dp（BiliPai 风格）。三风格自适应：使用
+/// [AppGroup] / [AppListItem] 替换原 IOSGroup，按 [UiStyle] 切换外观。
 ///
 /// 读取 [AccountService] 真实用户数据：
 ///   - 未登录：头像/用户名显示「点击登录」占位，点击进入登录流程
@@ -30,6 +34,8 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -39,6 +45,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void dispose() {
     AccountService().removeListener(_onAccountChanged);
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -51,110 +58,55 @@ class _ProfilePageState extends State<ProfilePage> {
     final service = AccountService();
     final info = service.userInfo;
     final isLogin = service.isLogin;
+    final theme = Theme.of(context);
     return Scaffold(
       body: Stack(
         children: [
-          // ── Gradient background (simulating wallpaper) ──
+          // ── 壁纸背景（渐变，固定不滚动） ──
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment(0, 0.5),
                 colors: [
-                  biliPink.withOpacity(0.8),
-                  Theme.of(context).scaffoldBackgroundColor,
+                  biliPink.withValues(alpha: 0.8),
+                  theme.scaffoldBackgroundColor,
                 ],
               ),
             ),
           ),
-          // ── Content ──
-          ListView(
-            padding: const EdgeInsets.only(top: 100, bottom: 100),
-            children: [
-              _UserInfoSection(info: info, isLogin: isLogin),
-              _StatsSection(info: info, isLogin: isLogin),
-              const SizedBox(height: Style.md),
-              // Services list
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Style.lg),
-                child: IOSGroup(
-                  children: [
-                    IOSClickableItem(
-                      icon: Icons.download,
-                      title: '离线缓存',
-                      iconTint: iosBlue,
-                      onTap: () => _guarded(context, (_) {}),
-                    ),
-                    IOSClickableItem(
-                      icon: Icons.history,
-                      title: '历史记录',
-                      iconTint: iosBlue,
-                      onTap: () => _guarded(context, showHistoryPage),
-                    ),
-                    IOSClickableItem(
-                      icon: Icons.bookmark,
-                      title: '我的收藏',
-                      iconTint: iosYellow,
-                      onTap: () => _guarded(context, showFavPage),
-                    ),
-                    IOSClickableItem(
-                      icon: Icons.watch_later,
-                      title: '稍后再看',
-                      iconTint: iosGreen,
-                      onTap: () => _guarded(context, showToviewPage),
-                    ),
-                    IOSClickableItem(
-                      icon: Icons.message,
-                      title: '消息中心',
-                      iconTint: iosPink,
-                      onTap: () => _guarded(context, (_) {}),
-                    ),
-                  ],
+          // ── 滚动内容（圆角卡片向上覆盖壁纸 20dp） ──
+          CustomScrollView(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              // 顶部留白：壁纸可见区域（用户信息悬浮于壁纸之上）
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 120),
+              ),
+              // 用户信息区（透明背景，悬浮于壁纸）
+              SliverToBoxAdapter(
+                child: _UserInfoSection(info: info, isLogin: isLogin),
+              ),
+              // 数据统计区
+              SliverToBoxAdapter(
+                child: _StatsSection(info: info, isLogin: isLogin),
+              ),
+              // 圆角内容卡片（向上覆盖壁纸 20dp）
+              SliverToBoxAdapter(
+                child: _ContentCard(
+                  info: info,
+                  isLogin: isLogin,
+                  onGuarded: _guarded,
+                  onLogout: _onLogout,
                 ),
               ),
-              const SizedBox(height: Style.md),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Style.lg),
-                child: IOSGroup(
-                  children: [
-                    IOSClickableItem(
-                      icon: Icons.swap_horiz,
-                      title: '账号切换',
-                      iconTint: iosBlue,
-                      onTap: () => _guarded(context, (_) {}),
-                    ),
-                    if (isLogin)
-                      IOSClickableItem(
-                        icon: Icons.logout,
-                        title: '退出登录',
-                        iconTint: Colors.red,
-                        onTap: () => _onLogout(context),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: Style.md),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Style.lg),
-                child: IOSGroup(
-                  children: [
-                    IOSClickableItem(
-                      icon: Icons.settings,
-                      title: '设置',
-                      iconTint: iosBlue,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SettingPage(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 120),
               ),
             ],
           ),
-          // ── Top bar (centered title) ──
+          // ── 顶栏（居中标题） ──
           Positioned(
             top: 0,
             left: 0,
@@ -165,9 +117,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Center(
                   child: Text(
                     '我的',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -212,6 +164,120 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
+/// 圆角内容卡片 — 向上覆盖壁纸 20dp（BiliPai 风格）。
+///
+/// 顶部 20dp 圆角，背景为 scaffoldBackgroundColor，包含所有服务入口列表。
+/// 使用 [AppGroup] / [AppListItem] 实现三风格自适应。
+class _ContentCard extends StatelessWidget {
+  const _ContentCard({
+    required this.info,
+    required this.isLogin,
+    required this.onGuarded,
+    required this.onLogout,
+  });
+
+  final UserInfoModel? info;
+  final bool isLogin;
+  final Future<void> Function(BuildContext, void Function(BuildContext)) onGuarded;
+  final Future<void> Function(BuildContext) onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Transform.translate(
+      // 向上偏移 20dp，使圆角卡片覆盖壁纸
+      offset: const Offset(0, -20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(Style.radiusXl),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: Style.md),
+            // 服务列表
+            AppGroup(
+              margin: const EdgeInsets.symmetric(horizontal: Style.lg),
+              children: [
+                AppListItem(
+                  icon: Icons.download,
+                  title: '离线缓存',
+                  iconTint: iosBlue,
+                  onTap: () => onGuarded(context, (_) {}),
+                ),
+                AppListItem(
+                  icon: Icons.history,
+                  title: '历史记录',
+                  iconTint: iosBlue,
+                  onTap: () => onGuarded(context, showHistoryPage),
+                ),
+                AppListItem(
+                  icon: Icons.bookmark,
+                  title: '我的收藏',
+                  iconTint: iosYellow,
+                  onTap: () => onGuarded(context, showFavPage),
+                ),
+                AppListItem(
+                  icon: Icons.watch_later,
+                  title: '稍后再看',
+                  iconTint: iosGreen,
+                  onTap: () => onGuarded(context, showToviewPage),
+                ),
+                AppListItem(
+                  icon: Icons.message,
+                  title: '消息中心',
+                  iconTint: iosPink,
+                  onTap: () => onGuarded(context, (_) {}),
+                ),
+              ],
+            ),
+            const SizedBox(height: Style.md),
+            AppGroup(
+              margin: const EdgeInsets.symmetric(horizontal: Style.lg),
+              children: [
+                AppListItem(
+                  icon: Icons.swap_horiz,
+                  title: '账号切换',
+                  iconTint: iosBlue,
+                  onTap: () => onGuarded(context, (_) {}),
+                ),
+                if (isLogin)
+                  AppListItem(
+                    icon: Icons.logout,
+                    title: '退出登录',
+                    iconTint: Colors.red,
+                    onTap: () => onLogout(context),
+                  ),
+              ],
+            ),
+            const SizedBox(height: Style.md),
+            AppGroup(
+              margin: const EdgeInsets.symmetric(horizontal: Style.lg),
+              children: [
+                AppListItem(
+                  icon: Icons.settings,
+                  title: '设置',
+                  iconTint: iosBlue,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SettingPage(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Style.lg),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// 用户信息区：未登录显示「点击登录」占位，已登录显示真实数据。
 class _UserInfoSection extends StatelessWidget {
   final UserInfoModel? info;
@@ -239,8 +305,8 @@ class _UserInfoSection extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: isLogin
                     ? null
-                    : LinearGradient(colors: [biliPink, biliPink.withOpacity(0.7)]),
-                border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                    : LinearGradient(colors: [biliPink, biliPink.withValues(alpha: 0.7)]),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
               ),
               clipBehavior: Clip.antiAlias,
               child: isLogin && (info?.face?.isNotEmpty ?? false)
@@ -320,7 +386,7 @@ class _UserInfoSection extends StatelessWidget {
                     Text(
                       '登录后同步你的账户数据',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                 ],
@@ -329,7 +395,7 @@ class _UserInfoSection extends StatelessWidget {
             if (!isLogin)
               Icon(
                 Icons.chevron_right,
-                color: theme.colorScheme.onSurface.withOpacity(0.4),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               ),
           ],
         ),
