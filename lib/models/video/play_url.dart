@@ -1,4 +1,15 @@
 /// 播放地址（`/x/player/wbi/playurl`，fnval=4048 DASH）简化模型。
+
+/// 安全类型转换：B站 API 部分数值字段可能返回 String（如 "1920"），
+/// 直接 `as int?` 会抛 type cast 异常。此函数兼容 int / double / String。
+int? _asInt(dynamic v) {
+  if (v == null) return null;
+  if (v is int) return v;
+  if (v is num) return v.toInt();
+  if (v is String) return int.tryParse(v);
+  return null;
+}
+
 class PlayUrlModel {
   /// 当前请求返回的清晰度代码（qn）
   int? quality;
@@ -20,15 +31,15 @@ class PlayUrlModel {
   List<FormatItem>? supportFormats;
 
   PlayUrlModel.fromJson(Map<String, dynamic> json) {
-    quality = json['quality'] as int?;
+    quality = _asInt(json['quality']);
     acceptQuality = (json['accept_quality'] as List?)
-        ?.map((e) => (e as num).toInt())
+        ?.map((e) => _asInt(e) ?? 0)
         .toList();
     acceptDescription = (json['accept_description'] as List?)
         ?.map((e) => e.toString())
         .toList();
-    lastPlayTime = json['last_play_time'] as int?;
-    format = json['format'] as int?;
+    lastPlayTime = _asInt(json['last_play_time']);
+    format = _asInt(json['format']);
     final dashJson = json['dash'];
     dash = dashJson is Map<String, dynamic> ? Dash.fromJson(dashJson) : null;
     durl = (json['durl'] as List?)
@@ -77,7 +88,7 @@ class Dash {
   List<DashAudio>? dolbyAudio;
 
   Dash.fromJson(Map<String, dynamic> json) {
-    duration = json['duration'] as int?;
+    duration = _asInt(json['duration']);
     video = (json['video'] as List?)
         ?.map((e) => DashVideo.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -108,16 +119,16 @@ class DashVideo {
   String? codecs;
 
   DashVideo.fromJson(Map<String, dynamic> json) {
-    id = json['id'] as int?;
+    id = _asInt(json['id']);
     baseUrl = (json['baseUrl'] ?? json['base_url']) as String?;
     backupUrl = ((json['backupUrl'] ?? json['backup_url']) as List?)
         ?.map((e) => e.toString())
         .toList();
-    bandwidth = (json['bandWidth'] ?? json['bandwidth']) as int?;
-    width = json['width'] as int?;
-    height = json['height'] as int?;
+    bandwidth = _asInt(json['bandWidth'] ?? json['bandwidth']);
+    width = _asInt(json['width']);
+    height = _asInt(json['height']);
     frameRate = (json['frameRate'] ?? json['frame_rate'])?.toString();
-    codecid = json['codecid'] as int?;
+    codecid = _asInt(json['codecid']);
     codecs = json['codecs'] as String?;
   }
 
@@ -140,16 +151,16 @@ class DashAudio {
   int? height;
 
   DashAudio.fromJson(Map<String, dynamic> json) {
-    id = json['id'] as int?;
+    id = _asInt(json['id']);
     baseUrl = (json['baseUrl'] ?? json['base_url']) as String?;
     backupUrl = ((json['backupUrl'] ?? json['backup_url']) as List?)
         ?.map((e) => e.toString())
         .toList();
-    bandwidth = (json['bandWidth'] ?? json['bandwidth']) as int?;
-    codecid = json['codecid'] as int?;
+    bandwidth = _asInt(json['bandWidth'] ?? json['bandwidth']);
+    codecid = _asInt(json['codecid']);
     frameRate = (json['frameRate'] ?? json['frame_rate'])?.toString();
-    width = json['width'] as int?;
-    height = json['height'] as int?;
+    width = _asInt(json['width']);
+    height = _asInt(json['height']);
   }
 
   /// 该音轨全部可用 CDN URL（主 + 备用，去空）。
@@ -180,10 +191,10 @@ class Durl {
 
   factory Durl.fromJson(Map<String, dynamic> json) {
     return Durl(
-      order: json['order'] as int?,
+      order: _asInt(json['order']),
       url: json['url'] as String?,
-      length: json['length'] as int?,
-      size: json['size'] as int?,
+      length: _asInt(json['length']),
+      size: _asInt(json['size']),
       backupUrl: (json['backup_url'] as List?)
           ?.map((e) => e.toString())
           .toList(),
@@ -220,7 +231,7 @@ class FormatItem {
 
   factory FormatItem.fromJson(Map<String, dynamic> json) {
     return FormatItem(
-      quality: json['quality'] as int?,
+      quality: _asInt(json['quality']),
       newDescription: json['new_description'] as String?,
       description: json['description'] as String?,
       format: json['format'] as String?,
