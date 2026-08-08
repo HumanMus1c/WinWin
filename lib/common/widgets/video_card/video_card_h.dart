@@ -39,8 +39,11 @@ class VideoCardH extends StatelessWidget {
   final bool showStat;
 
   /// 从 videoItem 中取封面 URL（兼容 cover/pic 字段）。
+  /// 不同模型字段名不同：HistoryItem 用 cover，RelatedVideoItem 用 pic。
+  /// 任一缺失均不能抛 NoSuchMethodError，故两边都用 [_opt] 容错。
   String? get _cover =>
-      (videoItem.cover as String?) ?? (videoItem.pic as String?);
+      _opt(() => videoItem.cover as String?) ??
+      _opt(() => videoItem.pic as String?);
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +51,8 @@ class VideoCardH extends StatelessWidget {
     final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
     final radius = shapes.medium;
     final int duration = (videoItem.duration as num?)?.toInt() ?? 0;
-    final double? progress = (videoItem.progress as num?)?.toDouble();
+    // progress 为可选字段（仅 HistoryItem 等模型提供），缺失时返回 null。
+    final double? progress = _opt(() => videoItem.progress as num?)?.toDouble();
 
     return Card(
       child: InkWell(
@@ -170,5 +174,19 @@ class VideoCardH extends StatelessWidget {
         ],
       ],
     );
+  }
+}
+
+/// 安全读取 [obj] 上的可选字段。
+///
+/// [VideoCardH] 通过 dynamic 接收多种模型（RelatedVideoItem /
+/// HistoryItem / RcmdVideoItemModel 等），部分字段（如 cover/pic/progress）
+/// 仅在某些模型上存在。直接 `obj.field` 会在缺失时抛 NoSuchMethodError，
+/// 此包装用 try/catch 把这类异常归一化为 null。
+T? _opt<T>(T? Function() read) {
+  try {
+    return read();
+  } catch (_) {
+    return null;
   }
 }
