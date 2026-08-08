@@ -4,6 +4,7 @@ import 'dart:ui' show Color;
 import 'package:flutter/foundation.dart';
 
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart';
 import 'package:winwin/http/danmaku.dart';
@@ -102,12 +103,11 @@ class WinWinDanmakuController {
           _closed = true;
         }
         handleDanmaku(response.elems);
+        AppLogger.d('DanmakuCtrl', 'segment $segmentIndex loaded: ${response.elems.length} elems, closed=$_closed');
       case Error():
         // 失败时移除标记，允许后续重试。
         _requestedSeg.remove(segmentIndex);
-        if (kDebugMode) {
-          debugPrint('弹幕分段 $segmentIndex 拉取失败：${res.errMsg}');
-        }
+        AppLogger.w('DanmakuCtrl', 'segment $segmentIndex fetch failed: ${res.errMsg}');
       case Loading():
         break;
     }

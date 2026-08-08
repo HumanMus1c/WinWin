@@ -4,6 +4,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/main.dart';
@@ -132,6 +133,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   void didPopNext() {
     final ctrl = playerController;
     if (ctrl != null) {
+      AppLogger.i('VideoDetailPage', 'didPopNext: reload from ${_savedPosition.inSeconds}s, autoplay=$_wasPlaying');
       ctrl.attachListeners();
       ctrl.load(start: _savedPosition, autoplay: _wasPlaying);
       // 重建弹幕：PlayerPanel 始终挂载，WinWinDanmaku 不会随路由重建，

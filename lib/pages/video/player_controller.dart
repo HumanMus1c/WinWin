@@ -8,6 +8,7 @@ import 'package:fvp/mdk.dart' as mdk;
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/cache/play_url_cache.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/player/sponsorblock_usecase.dart';
 import 'package:winwin/core/policy/stream_selection_policy.dart';
 import 'package:winwin/core/policy/video_load_policy.dart';
@@ -206,6 +207,7 @@ class WinWinPlayerController {
         if (ev.error < 0) {
           // 直接覆盖：让最新错误显示给用户。原 ??= 会忽略后续错误，
           // 网络恢复后又断开时用户看不到最新错误信息。
+          AppLogger.e('PlayerController', 'onEvent error: code=${ev.error} detail=${ev.detail}');
           error.value = '播放错误 ${ev.error}: ${ev.detail}';
         }
       }))
@@ -221,6 +223,7 @@ class WinWinPlayerController {
         if (!oldValue.test(mdk.MediaStatus.buffered) &&
             newValue.test(mdk.MediaStatus.buffered)) {
           buffering.value = false;
+          AppLogger.i('PlayerController', 'onMediaStatus: buffered (duration=${player.mediaInfo.duration}ms)');
           // media 加载完成：获取正确的 duration 和 videoSize。
           // 避免切换 media 时拿到旧 media 的值（B 的 duration 比 A 长，
           // 导致时间轴超出 A 的长度）。
@@ -565,6 +568,7 @@ class WinWinPlayerController {
       }
 
       // 1. 设置主视频 media。
+      AppLogger.d('PlayerController', 'setMedia video: url=$videoUrl audioUrl=${audio?.baseUrl}');
       player.media = videoUrl;
       // DASH 分离音轨：以外部音轨方式挂载（prepare 之前）。
       // 参照 fvp setExternalAudio → setMedia(url, MediaType.audio) 用法：
@@ -584,6 +588,7 @@ class WinWinPlayerController {
       // 加载首帧，进度恢复统一用 seek（ret >= 0 时立即 seek，ret == -1
       // 时延迟到 onMediaStatus.buffered 事件后 seek）。
       final ret = await player.prepare();
+      AppLogger.i('PlayerController', 'prepare ret=$ret (0=ok, -1=already loading, <-1=error)');
       if (_disposed) return;
       // prepare 返回值语义（见 fvp player.dart 注释）：
       //   0: streams==0 无效媒体，否则成功
@@ -593,6 +598,7 @@ class WinWinPlayerController {
       // 常返回 -1。这不是失败：真正的失败由 onEvent 错误事件（ev.error < 0）
       // 设置 error。仅对 < -1 的硬错误报错。
       if (ret < -1) {
+        AppLogger.e('PlayerController', 'prepare failed: ret=$ret, aborting load');
         error.value = '播放失败（错误码 $ret）';
         return;
       }
@@ -629,6 +635,7 @@ class WinWinPlayerController {
       player.state =
           autoplay ? mdk.PlaybackState.playing : mdk.PlaybackState.paused;
       ready.value = true;
+      AppLogger.i('PlayerController', 'ready=true, state=${player.state}, textureId=${player.textureId}');
       // Phase 4.2：播放就绪后启动心跳定时器（每 5 秒上报进度）。
       _startHeartBeat();
 

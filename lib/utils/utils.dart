@@ -1,6 +1,7 @@
 import 'dart:convert' show JsonEncoder, base64;
 import 'dart:math' show Random;
 
+import 'package:catcher_2/catcher_2.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 
@@ -90,7 +91,11 @@ abstract final class Utils {
   /// containing the `catch` block with
   /// `@pragma('vm:notify-debugger-on-exception')` to allow an attached debugger
   /// to treat the exception as unhandled.
+  ///
+  /// 统一上报入口：把异常喂给 catcher_2（→ JsonFileHandler 落盘 .winwin_logs.json）。
+  /// 播放器 error/fatal、stream.error 部分分支都走这里。
   static void reportError(Object exception, [StackTrace? stack]) {
     debugPrint('Unhandled exception: $exception\n$stack');
+    Catcher2.reportCheckedError(exception, stack);
   }
 }

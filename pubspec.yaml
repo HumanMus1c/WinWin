@@ -30,6 +30,10 @@ dependencies:
   web_socket_channel: ^3.0.3
   # Phase 3: 直播弹幕 brotli 解压（服务端可能用 brotli 而非 zlib 压缩 payload）
   brotli: ^0.6.0
+  # 日志系统：结构化日志输出（logger）+ 崩溃捕获与 Report 落盘（catcher_2）。
+  # 混合方案：PiliPlus 骨架（同栈可复用）+ BiliPai 增强（内存缓冲/普通日志落盘/脱敏）。
+  logger: ^2.5.0
+  catcher_2: ^2.1.9
 
 dev_dependencies:
   flutter_test:
