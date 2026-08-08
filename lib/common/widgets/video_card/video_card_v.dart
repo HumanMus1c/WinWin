@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
+import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -19,10 +20,12 @@ class VideoCardV extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final int duration = (videoItem.duration as num?)?.toInt() ?? 0;
+    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.ios;
+    final radius = shapes.medium;
     return Card(
       child: InkWell(
         onTap: onTap,
-        borderRadius: const BorderRadius.all(Radius.circular(12)),
+        borderRadius: BorderRadius.all(radius),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -39,8 +42,8 @@ class VideoCardV extends StatelessWidget {
                         src: videoItem.cover as String?,
                         width: maxWidth,
                         height: maxHeight,
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(12),
+                        borderRadius: BorderRadius.vertical(
+                          top: radius,
                         ),
                       ),
                       if (duration > 0)
