@@ -8,7 +8,36 @@ class PlayUrlModel {
   /// 上次播放进度（秒）
   int? lastPlayTime;
 
+  /// 返回格式（0=flv/play，1=dash，2=mp4）
+  int? format;
+
   Dash? dash;
+
+  /// DURL 流（非 DASH 时使用，分段 MP4）
+  List<Durl>? durl;
+
+  /// 支持的格式列表
+  List<FormatItem>? supportFormats;
+
+  PlayUrlModel.fromJson(Map<String, dynamic> json) {
+    quality = json['quality'] as int?;
+    acceptQuality = (json['accept_quality'] as List?)
+        ?.map((e) => (e as num).toInt())
+        .toList();
+    acceptDescription = (json['accept_description'] as List?)
+        ?.map((e) => e.toString())
+        .toList();
+    lastPlayTime = json['last_play_time'] as int?;
+    format = json['format'] as int?;
+    final dashJson = json['dash'];
+    dash = dashJson is Map<String, dynamic> ? Dash.fromJson(dashJson) : null;
+    durl = (json['durl'] as List?)
+        ?.map((e) => Durl.fromJson(e as Map<String, dynamic>))
+        .toList();
+    supportFormats = (json['support_formats'] as List?)
+        ?.map((e) => FormatItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 
   PlayUrlModel.fromJson(Map<String, dynamic> json) {
     quality = json['quality'] as int?;
