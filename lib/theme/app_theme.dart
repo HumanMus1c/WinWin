@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'app_chrome.dart';
+import 'app_shapes.dart';
+import 'app_typography.dart';
 import 'colors.dart';
 import 'ui_style.dart';
 
@@ -33,6 +36,15 @@ class AppTheme {
 
   /// 向后兼容：默认 iOS 深色主题。
   static ThemeData get dark => darkFor(UiStyle.ios);
+
+  /// 按 [UiStyle] 组装三套设计 Token（[AppShapes] / [AppTypography] /
+  /// [AppChrome]），挂载到 [ThemeData.extensions]，组件通过
+  /// `Theme.of(context).extension<AppShapes>()` 等读取。
+  static Iterable<ThemeExtension<dynamic>> _extensionsFor(UiStyle style) => [
+        AppShapes.forStyle(style),
+        AppTypography.forStyle(style),
+        AppChrome.forStyle(style),
+      ];
 
   // ─────────────────────────── iOS ───────────────────────────
 
@@ -70,6 +82,7 @@ class AppTheme {
             borderRadius: BorderRadius.all(_iosRadiusMedium),
           ),
         ),
+        extensions: _extensionsFor(UiStyle.ios),
       );
 
   static ThemeData get _iosDark => ThemeData(
@@ -100,6 +113,7 @@ class AppTheme {
             borderRadius: BorderRadius.all(_iosRadiusMedium),
           ),
         ),
+        extensions: _extensionsFor(UiStyle.ios),
       );
 
   // ─────────────────────────── Material 3 ───────────────────────────
@@ -147,6 +161,7 @@ class AppTheme {
             borderRadius: BorderRadius.all(_md3RadiusMedium),
           ),
         ),
+        extensions: _extensionsFor(UiStyle.material3),
       );
 
   static ThemeData get _md3Dark => ThemeData(
@@ -184,6 +199,7 @@ class AppTheme {
             borderRadius: BorderRadius.all(_md3RadiusMedium),
           ),
         ),
+        extensions: _extensionsFor(UiStyle.material3),
       );
 
   // ─────────────────────────── Miuix ───────────────────────────
@@ -231,6 +247,7 @@ class AppTheme {
             borderRadius: BorderRadius.all(_miuixRadiusMedium),
           ),
         ),
+        extensions: _extensionsFor(UiStyle.miuix),
       );
 
   static ThemeData get _miuixDark => ThemeData(
@@ -268,6 +285,7 @@ class AppTheme {
             borderRadius: BorderRadius.all(_miuixRadiusMedium),
           ),
         ),
+        extensions: _extensionsFor(UiStyle.miuix),
       );
 
   /// 通用：按风格返回圆角半径（供组件层使用）。

@@ -1,13 +1,17 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:winwin/core/account/account_service.dart';
-import 'package:winwin/models/models.dart';
+import 'package:winwin/models/common/home_tab.dart';
 import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/rcmd/view.dart';
 import 'package:winwin/pages/search/search_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
+import 'package:winwin/theme/app_chrome.dart';
+import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/theme/ui_style.dart';
 
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
@@ -58,7 +62,7 @@ class _HomePageState extends State<HomePage> {
 ///
 /// 左上角头像为账户登录入口：未登录点击进入 [LoginPage]，已登录点击
 /// 通过 [onGotoProfile] 回调切换到「我的」页面。监听 [AccountService]
-/// 实时反映登录态与头像。
+/// 实时反映登录态与头像。形状按 [UiStyle] 解析（[AppShapes.floating]）。
 class _HomeTopBar extends StatefulWidget {
   final VoidCallback onGotoProfile;
 
@@ -97,27 +101,41 @@ class _HomeTopBarState extends State<_HomeTopBar> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final service = AccountService();
     final isLogin = service.isLogin;
     final faceUrl = service.face;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final chrome = theme.extension<AppChrome>() ?? AppChrome.ios;
+    final style = InheritedUiStyle.of(context);
+    final renderer = resolvePrimitiveRenderer(style);
+
+    final barRadius = switch (renderer) {
+      PrimitiveRenderer.ios => Style.radiusFloating,
+      _ => chrome.containerRadius,
+    };
+    final showShadow = renderer != PrimitiveRenderer.miuix;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Style.lg, vertical: Style.sm),
       child: Container(
         height: Style.topBarHeight,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface.withOpacity(0.72),
-          borderRadius: BorderRadius.circular(Style.radiusFloating),
+          color: cs.surface.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(barRadius),
           border: Border.all(
-            color: theme.colorScheme.outline.withOpacity(0.1),
-            width: 1,
+            color: cs.outline.withValues(alpha: renderer == PrimitiveRenderer.miuix ? 0 : 0.1),
+            width: 0.5,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: showShadow
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : const [],
         ),
         child: Row(
           children: [
@@ -135,7 +153,7 @@ class _HomeTopBarState extends State<_HomeTopBar> {
                       : LinearGradient(
                           colors: [coverGradients[3].start, coverGradients[3].end],
                         ),
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: isLogin && faceUrl.isNotEmpty
@@ -169,20 +187,20 @@ class _HomeTopBarState extends State<_HomeTopBar> {
                 child: Container(
                   height: 36,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainer.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(100),
+                    color: cs.surfaceContainer.withValues(alpha: 0.5),
+                    borderRadius: shapes.pillBorder,
                   ),
                   child: Row(
                     children: [
                       const SizedBox(width: 12),
                       Icon(Icons.search,
                           size: 18,
-                          color: theme.colorScheme.onSurfaceVariant),
+                          color: cs.onSurfaceVariant),
                       const SizedBox(width: 6),
                       Text(
                         '搜索视频、UP主...',
                         style: TextStyle(
-                          color: theme.colorScheme.onSurfaceVariant,
+                          color: cs.onSurfaceVariant,
                           fontSize: 13,
                         ),
                       ),
@@ -203,7 +221,7 @@ class _HomeTopBarState extends State<_HomeTopBar> {
                   ),
                 ),
                 child: Icon(Icons.settings,
-                    color: theme.colorScheme.onSurfaceVariant, size: 22),
+                    color: cs.onSurfaceVariant, size: 22),
               ),
             ),
           ],
@@ -213,7 +231,7 @@ class _HomeTopBarState extends State<_HomeTopBar> {
   }
 }
 
-/// Horizontally scrollable category tabs.
+/// Horizontally scrollable category tabs — 使用 [HomeTabType.defaultOrder]。
 class _CategoryTabRow extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelect;
@@ -223,30 +241,33 @@ class _CategoryTabRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final tabs = HomeTabType.defaultOrder;
     return SizedBox(
       height: 36,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: Style.lg),
-        itemCount: mockCategories.length,
+        itemCount: tabs.length,
         separatorBuilder: (_, __) => const SizedBox(width: Style.sm),
         itemBuilder: (context, index) {
           final isSelected = index == selectedIndex;
-          final baseColor = theme.colorScheme.primary;
+          final baseColor = cs.primary;
           return GestureDetector(
             onTap: () => onSelect(index),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: isSelected ? baseColor.withOpacity(0.28) : Colors.transparent,
-                borderRadius: BorderRadius.circular(100),
+                color: isSelected ? baseColor.withValues(alpha: 0.28) : Colors.transparent,
+                borderRadius: shapes.pillBorder,
               ),
               child: Text(
-                mockCategories[index],
+                tabs[index].label,
                 style: TextStyle(
                   color: isSelected
                       ? baseColor
-                      : theme.colorScheme.onSurfaceVariant.withOpacity(0.78),
+                      : cs.onSurfaceVariant.withValues(alpha: 0.78),
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
