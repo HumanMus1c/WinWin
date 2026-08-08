@@ -49,32 +49,6 @@ class PlayUrlModel {
         ?.map((e) => FormatItem.fromJson(e as Map<String, dynamic>))
         .toList();
   }
-
-  /// 选择不超过 [maxQn] 的最高清晰度视频轨（B 站 dash video 的 id 即 qn）；
-  /// 若不存在满足条件的轨道，则退回最低清晰度轨道。
-  DashVideo? pickVideo({int maxQn = 80}) {
-    final videos = dash?.video;
-    if (videos == null || videos.isEmpty) return null;
-    DashVideo? result;
-    for (final video in videos) {
-      final qn = video.id;
-      if (qn == null || qn > maxQn) continue;
-      if (result == null || qn > (result.id ?? 0)) {
-        result = video;
-      }
-    }
-    if (result != null) return result;
-    return videos.reduce((a, b) => (a.id ?? 0) <= (b.id ?? 0) ? a : b);
-  }
-
-  /// 选择 bandwidth 最高的音轨。
-  DashAudio? pickAudio() {
-    final audios = dash?.audio;
-    if (audios == null || audios.isEmpty) return null;
-    return audios.reduce(
-      (a, b) => (b.bandwidth ?? 0) > (a.bandwidth ?? 0) ? b : a,
-    );
-  }
 }
 
 class Dash {

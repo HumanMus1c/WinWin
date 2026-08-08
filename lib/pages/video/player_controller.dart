@@ -4,11 +4,16 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:fvp/mdk.dart' as mdk;
 
+import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/cache/play_url_cache.dart';
 import 'package:winwin/core/player/sponsorblock_usecase.dart';
+import 'package:winwin/core/policy/stream_selection_policy.dart';
+import 'package:winwin/core/policy/video_load_policy.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart';
 import 'package:winwin/http/video.dart';
+import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/models/video/play_url.dart';
 import 'package:winwin/pages/danmaku/controller.dart';
 import 'package:winwin/plugin/canvas_danmaku/canvas_danmaku.dart';
@@ -36,6 +41,9 @@ class WinWinPlayerController {
 
   final String bvid;
   final int cid;
+
+  /// 稿件 avid（由详情页 load 完成后设置，供心跳上报使用）。
+  int? aid;
 
   // ── 全局单例 mdk 播放器（跨页面共享，参照 PiliPlus PlPlayerController）──
   static mdk.Player? _sharedPlayer;
@@ -104,6 +112,11 @@ class WinWinPlayerController {
   PlayUrlModel? _playUrl;
   int _currentQn = 80;
 
+  /// HDR 自动升级是否已尝试过（避免循环升级）。
+  bool _hdrUpgradeAttempted = false;
+  /// 当前是否为首次加载（用于 HDR 自动升级判定）。
+  bool _isInitialLoad = true;
+
   // 请求头：Referer + PC User-Agent（经 mdk 'avio.headers' 属性下发）。
   static const String _referer = 'https://www.bilibili.com';
   static const String _pcUserAgent =
@@ -120,6 +133,16 @@ class WinWinPlayerController {
   /// 待恢复的进度：prepare 返回 -1（already loading）时无法立即 seek，
   /// 暂存到此字段，等 onMediaStatus.buffered 事件触发后 seek。
   Duration? _pendingSeek;
+
+  // ── 心跳上报（Phase 4.2）──
+  /// 心跳定时器：每 5 秒上报一次播放进度。
+  Timer? _heartBeatTimer;
+  /// 上次心跳上报时的播放状态，用于检测状态变化。
+  bool _lastHeartBeatPlaying = false;
+  /// 累计播放时长（秒），用于满足 "playing ≥5s" 触发条件。
+  int _playingAccumSec = 0;
+  /// 是否已上报过结束（play_type=-1），避免重复。
+  bool _reportedEnd = false;
 
   /// 清晰度标签列表（PlayUrlModel.acceptDescription）。
   List<String> get qualityLabels => _playUrl?.acceptDescription ?? const [];
@@ -250,29 +273,149 @@ class WinWinPlayerController {
           unawaited(player.seek(position: (target * 1000).toInt()));
         }
       }
+      // 播放结束检测：进度达到 duration 的 99% 视为播完，上报 -1。
+      _maybeReportPlaybackEnd();
     });
   }
 
-  /// 拉取 DASH、pickVideo(maxQn)+pickAudio、挂载外部音轨打开。
+  /// 启动心跳定时器（每 5 秒上报一次进度）。
+  /// 在 load 成功后调用，dispose / detachListeners 时停止。
+  void _startHeartBeat() {
+    _heartBeatTimer?.cancel();
+    _playingAccumSec = 0;
+    _lastHeartBeatPlaying = false;
+    _reportedEnd = false;
+    _heartBeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (_disposed) return;
+      // 未登录或用户关闭历史记录时不报。
+      if (!Accounts.main.isLogin || Pref.historyPause) return;
+      final aid = this.aid;
+      if (aid == null || aid <= 0) return;
+      final isPlaying = playing.value;
+      // 播放中累计 ≥5s 才上报心跳。
+      if (isPlaying) {
+        _playingAccumSec += 5;
+      }
+      // 状态变化（playing↔paused）≥2s（即本周期检测到变化）时上报。
+      if (isPlaying != _lastHeartBeatPlaying) {
+        _lastHeartBeatPlaying = isPlaying;
+        _sendHeartBeat(playType: isPlaying ? 2 : 1);
+        return;
+      }
+      // 持续播放中且累计 ≥5s：上报心跳进度。
+      if (isPlaying && _playingAccumSec >= 5) {
+        _sendHeartBeat(playType: 0);
+      }
+    });
+  }
+
+  /// 发送一次心跳（best-effort，失败静默）。
+  void _sendHeartBeat({required int playType}) {
+    final aid = this.aid;
+    if (aid == null || aid <= 0) return;
+    final progressSec = position.value.inSeconds;
+    unawaited(
+      VideoHttp.heartBeat(
+        aid: aid,
+        cid: cid,
+        playType: playType,
+        progressSec: progressSec,
+      ).then((res) {
+        if (kDebugMode && res case Error(:final errMsg)) {
+          debugPrint('HeartBeat: report failed: $errMsg');
+        }
+      }),
+    );
+  }
+
+  /// 播放结束上报：进度达到 duration 99% 时上报 play_type=-1（仅一次）。
+  void _maybeReportPlaybackEnd() {
+    if (_reportedEnd) return;
+    if (!Accounts.main.isLogin || Pref.historyPause) return;
+    final aid = this.aid;
+    if (aid == null || aid <= 0) return;
+    final dur = duration.value;
+    if (dur.inSeconds <= 0) return;
+    final pos = position.value;
+    // 进度达到 99% 视为播完。
+    if (pos.inMilliseconds >= dur.inMilliseconds * 0.99) {
+      _reportedEnd = true;
+      unawaited(
+        VideoHttp.heartBeat(
+          aid: aid,
+          cid: cid,
+          playType: 3,
+          progressSec: -1,
+        ).then((_) {
+          // 同时上报历史进度（progress = 0 表示已看完）。
+          return VideoHttp.reportHistory(aid: aid, cid: cid, progressSec: 0);
+        }),
+      );
+    }
+  }
+
+  /// 上报当前进度（页面退出/被覆盖时调用，Phase 4.2 didPushNext）。
+  Future<void> reportCurrentProgress() async {
+    if (!Accounts.main.isLogin || Pref.historyPause) return;
+    final aid = this.aid;
+    if (aid == null || aid <= 0) return;
+    final progressSec = position.value.inSeconds;
+    if (progressSec <= 0) return;
+    await VideoHttp.reportHistory(aid: aid, cid: cid, progressSec: progressSec);
+  }
+
+  /// 拉取 DASH、选流（StreamSelectionPolicy）、挂载外部音轨打开。
   ///
+  /// 首次加载时由 [VideoLoadPolicy.resolveInitialStartQuality] 决定 qn
+  /// （根据登录态/VIP/自动最高画质偏好），不再写死 80。
   /// [start] 指定起始播放位置（用于页面返回后恢复进度）；
   /// [autoplay] 为 false 时加载完成后保持暂停（用于之前已暂停的场景）。
   /// 失败时写入 [error]，不抛异常。
   Future<void> load({Duration? start, bool autoplay = true}) async {
     // 幂等：网络栈未初始化时兜底（main 中未等待 bootstrap）。
     await ensureBootstrap();
-    // 复用上次记录的画质偏好（首次加载默认 80），避免 didPopNext 恢复时
-    // 画质被重置为 80，丢失用户在 A 页面选过的高画质。
-    final qn = _currentQn > 0 ? _currentQn : 80;
+    // 首次加载：用 VideoLoadPolicy 决策初始画质；
+    // didPopNext 恢复时复用上次记录的 _currentQn。
+    int qn;
+    if (_isInitialLoad) {
+      qn = _resolveStartQuality();
+      _currentQn = qn;
+    } else {
+      qn = _currentQn > 0 ? _currentQn : 80;
+    }
     await _openWithQuality(
       qn: qn,
       maxQn: qn,
       start: start,
       autoplay: autoplay,
+      isInitialRequest: _isInitialLoad,
+    );
+    _isInitialLoad = false;
+  }
+
+  /// 通过 VideoLoadPolicy 解析首次加载画质。
+  ///
+  /// 桌面端无移动数据概念，[preferFastStartOnMobile] 恒为 false。
+  int _resolveStartQuality() {
+    final account = Accounts.main;
+    final userInfo = Pref.userInfoCache;
+    final isLogin = account.isLogin;
+    final isVip = userInfo?.isVip ?? false;
+    final autoHighest = Pref.autoHighestQuality;
+    final auto1080p = Pref.auto1080pEnabled;
+    final target = Pref.defaultVideoQa;
+    return VideoLoadPolicy.resolveInitialStartQuality(
+      targetQuality: target > 0 ? target : null,
+      isAutoHighestQuality: autoHighest,
+      isLogin: isLogin,
+      isVip: isVip,
+      auto1080pEnabled: auto1080p,
+      preferFastStartOnMobile: false,
     );
   }
 
   /// 切换到指定清晰度（acceptQuality[index]），记住进度重新 open。
+  /// 切换成功后持久化画质偏好到 [Pref.defaultVideoQa]。
   Future<void> switchQuality(int index) async {
     final accept = _playUrl?.acceptQuality;
     if (accept == null || index < 0 || index >= accept.length) return;
@@ -280,7 +423,14 @@ class WinWinPlayerController {
     // 已是当前清晰度：不重复加载（重复 setMedia 同一 URL 会让 prepare 返回 -1）。
     if (qn == _currentQn) return;
     final remembered = position.value;
-    await _openWithQuality(qn: qn, maxQn: qn, start: remembered);
+    await _openWithQuality(
+      qn: qn,
+      maxQn: qn,
+      start: remembered,
+      isInitialRequest: false,
+    );
+    // 持久化画质偏好。
+    if (qn > 0) Pref.defaultVideoQa = qn;
   }
 
   Future<void> _openWithQuality({
@@ -288,6 +438,7 @@ class WinWinPlayerController {
     required int maxQn,
     Duration? start,
     bool autoplay = true,
+    bool isInitialRequest = false,
   }) async {
     final player = _player;
     if (player == null || _disposed) return;
@@ -310,16 +461,48 @@ class WinWinPlayerController {
       duration.value = Duration.zero;
       playing.value = false;
 
-      final result = await VideoHttp.videoUrl(bvid: bvid, cid: cid, qn: qn);
-      if (_disposed) return;
-      final PlayUrlModel? playUrl = result.dataOrNull;
+      // 1. PlayUrlCache：先查缓存，命中且未过期则跳过 HTTP。
+      PlayUrlModel? playUrl =
+          playUrlCache.get(bvid, cid, requestedQuality: qn) as PlayUrlModel?;
       if (playUrl == null) {
-        error.value = '获取播放地址失败';
-        return;
+        final result = await VideoHttp.videoUrl(bvid: bvid, cid: cid, qn: qn);
+        if (_disposed) return;
+        playUrl = result.dataOrNull;
+        if (playUrl == null) {
+          error.value = '获取播放地址失败';
+          return;
+        }
+        // 写入缓存（按 VideoLoadPolicy.shouldCachePlayUrlResult 判定）。
+        final source = PlayUrlSource.dash;
+        if (VideoLoadPolicy.shouldCachePlayUrlResult(
+          source,
+          null,
+          requestedQuality: qn,
+          returnedQuality: playUrl.quality ?? 0,
+          dashVideoIds: playUrl.dash?.video
+                  ?.map((v) => v.id ?? 0)
+                  .toList(growable: false) ??
+              const [],
+        )) {
+          playUrlCache.put(
+            bvid,
+            cid,
+            playUrl,
+            quality: qn,
+          );
+        }
       }
 
-      final video = playUrl.pickVideo(maxQn: maxQn);
-      final audio = playUrl.pickAudio();
+      // 2. StreamSelectionPolicy：编解码器感知选流（AV1 > HEVC > AVC），
+      // 替换原 pickVideo/pickAudio。桌面端默认全档位解码能力。
+      final selection = StreamSelectionPolicy.selectStreams(
+        playUrl,
+        maxQn: maxQn,
+        capability: DeviceCodecCapability.av1,
+        preferSpecialAudio: true,
+      );
+      final video = selection.video;
+      final audio = selection.audio;
       final videoUrl = video?.baseUrl;
       if (video == null || videoUrl == null || videoUrl.isEmpty) {
         error.value = '未获取到可播放的视频流';
@@ -330,6 +513,13 @@ class WinWinPlayerController {
       _currentQn = video.id ?? qn;
       // 通知面板重建画质按钮（_playUrl 为普通字段，不自动触发重建）。
       qualityVersion.value++;
+
+      if (kDebugMode) {
+        debugPrint(
+          'PlayStream: bvid=$bvid qn=$_currentQn codec=${selection.videoCodec.name} '
+          'audio=${selection.audioKind.name}',
+        );
+      }
 
       // 请求头经 'avio.headers' 属性下发，格式为 "Key: Value\r\n" 列表，
       // 对该 Player 打开的所有源（含外部音轨）生效。
@@ -418,10 +608,61 @@ class WinWinPlayerController {
           }),
         );
       }
+
+      // 3. HDR 自动升级：首次 SDR 快速起播后，VIP + 自动最高画质 + 有
+      // access_token + 当前 DASH 无 HDR 轨道时，非阻塞二次拉流 qn=125。
+      // 失败不阻断当前播放。
+      if (isInitialRequest && !_hdrUpgradeAttempted) {
+        _hdrUpgradeAttempted = true;
+        unawaited(_maybeUpgradeToHdr(playUrl));
+      }
     } catch (e) {
       if (!_disposed) error.value = '播放失败：$e';
     } finally {
       _loading = false;
+    }
+  }
+
+  /// HDR 自动升级：满足条件时二次拉流 qn=125（HDR）。
+  ///
+  /// 升级条件（VideoLoadPolicy.shouldScheduleHdrAutoUpgrade）：
+  /// 首次请求 + 自动最高画质 + VIP + 非移动数据 + 有 access_token +
+  /// 当前 DASH 无 HDR 轨道(125) + 用户未手动选画质 + 未尝试过升级。
+  /// 桌面端非移动数据恒为 true。失败静默（不阻断当前 SDR 播放）。
+  Future<void> _maybeUpgradeToHdr(PlayUrlModel currentPlayUrl) async {
+    try {
+      final account = Accounts.main;
+      final userInfo = Pref.userInfoCache;
+      final currentIds = currentPlayUrl.dash?.video
+              ?.map((v) => v.id ?? 0)
+              .toList(growable: false) ??
+          const <int>[];
+      final shouldUpgrade = VideoLoadPolicy.shouldScheduleHdrAutoUpgrade(
+        isInitialRequest: true,
+        isAutoHighestQuality: Pref.autoHighestQuality,
+        isVip: userInfo?.isVip ?? false,
+        isMobileData: false,
+        hasAccessToken: account.accessKey != null && account.accessKey!.isNotEmpty,
+        currentPlayableDashVideoIds: currentIds,
+        userHasExplicitQualitySelection: false,
+        upgradeAlreadyAttempted: false,
+      );
+      if (!shouldUpgrade) return;
+      // 二次拉流 qn=125（HDR）。保留当前进度。
+      final remembered = position.value;
+      await _openWithQuality(
+        qn: 125,
+        maxQn: 125,
+        start: remembered,
+        autoplay: playing.value,
+        isInitialRequest: false,
+      );
+      if (kDebugMode) {
+        debugPrint('PlayStream: HDR auto-upgrade attempted for $bvid');
+      }
+    } catch (e) {
+      // 升级失败静默处理，继续 SDR 播放。
+      if (kDebugMode) debugPrint('PlayStream: HDR upgrade failed: $e');
     }
   }
 

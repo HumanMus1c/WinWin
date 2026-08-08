@@ -306,4 +306,77 @@ abstract final class VideoHttp {
       return Error(res.data['message']);
     }
   }
+
+  /// 播放心跳上报（`/x/click-interface/web/heartbeat`）。
+  ///
+  /// 用于向 B 站上报播放进度，支持多端历史记录同步。
+  /// [aid] 稿件 avid，[cid] 分 P cid，[playType] 播放类型：
+  ///   0=开始播放/心跳，1=暂停，2=继续，3=结束
+  /// [progressSec] 当前播放位置（秒），用于服务端记录进度。
+  /// 未登录时不调用。
+  static Future<LoadingState> heartBeat({
+    required int aid,
+    required int cid,
+    int playType = 0,
+    int? progressSec,
+  }) async {
+    final account = Accounts.main;
+    if (!account.isLogin) return const Error('未登录');
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final res = await Request().post(
+      Api.heartBeat,
+      data: {
+        'aid': aid,
+        'cid': cid,
+        'part': 1,
+        'did': LoginHttp.buvid,
+        's_locale': 'zh-CN',
+        'csrf': account.csrf,
+        if (progressSec != null) 'rt': progressSec,
+        'start_ts': now,
+        'play_type': playType,
+        'type': 3,
+      },
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+        extra: {'account': account},
+      ),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  /// 历史进度上报（`/x/v2/history/report`）。
+  ///
+  /// 用于在退出/切换视频时上报最终观看进度。
+  /// [aid] 稿件 avid，[cid] 分 P cid，[progressSec] 当前进度（秒）。
+  static Future<LoadingState> reportHistory({
+    required int aid,
+    required int cid,
+    int? progressSec,
+  }) async {
+    final account = Accounts.main;
+    if (!account.isLogin) return const Error('未登录');
+    final res = await Request().post(
+      Api.historyReport,
+      data: {
+        'aid': aid,
+        'cid': cid,
+        'progress': progressSec ?? 0,
+        'csrf': account.csrf,
+      },
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+        extra: {'account': account},
+      ),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data['message']);
+    }
+  }
 }

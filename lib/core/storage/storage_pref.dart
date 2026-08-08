@@ -69,6 +69,10 @@ abstract final class Pref {
   static int get defaultVideoQa =>
       _setting.get(SettingBoxKey.defaultVideoQa, defaultValue: 127); // 8K
 
+  /// 持久化默认画质偏好（switchQuality 后写入）。
+  static set defaultVideoQa(int value) =>
+      _setting.put(SettingBoxKey.defaultVideoQa, value);
+
   static int get defaultVideoQaCellular =>
       _setting.get(SettingBoxKey.defaultVideoQaCellular, defaultValue: 80);
 
@@ -132,6 +136,15 @@ abstract final class Pref {
 
   static bool get autoPlayEnable =>
       _setting.get(SettingBoxKey.autoPlayEnable, defaultValue: false);
+
+  /// 是否启用自动 1080P（非 VIP 用户尝试请求 1080P）。
+  /// 对应 SettingBoxKey.p1080，默认关闭。
+  static bool get auto1080pEnabled =>
+      _setting.get(SettingBoxKey.p1080, defaultValue: false);
+
+  /// 是否启用自动最高画质（VIP 用户优先请求 HDR/4K/8K）。
+  /// 当 defaultVideoQa >= 125（HDR 及以上）时视为开启。
+  static bool get autoHighestQuality => defaultVideoQa >= 125;
 
   static bool get enableHA =>
       _setting.get(SettingBoxKey.enableHA, defaultValue: true);
