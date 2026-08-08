@@ -50,6 +50,8 @@ class _LivePageState extends State<LivePage>
         setState(() => _state = Success(response));
       case Error():
         setState(() => _state = res);
+      case Loading():
+        break;
     }
     _loading = false;
   }
@@ -57,9 +59,10 @@ class _LivePageState extends State<LivePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Scaffold(
-      appBar: AppBar(title: const Text('直播')),
-      body: AppRefreshIndicator(
+    // 嵌入 HomePage 时需顶部留白以避开浮动顶栏 + 分类标签行。
+    return Padding(
+      padding: const EdgeInsets.only(top: 120),
+      child: AppRefreshIndicator(
         onRefresh: _load,
         child: switch (_state) {
           Loading() => const Center(child: CircularProgressIndicator()),

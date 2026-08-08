@@ -135,6 +135,8 @@ class _DynTabPageState extends State<_DynTabPage>
         setState(() => _state = Success(response));
       case Error():
         setState(() => _state = res);
+      case Loading():
+        break;
     }
     _loading = false;
   }

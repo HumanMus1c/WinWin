@@ -9,7 +9,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
 
 /// 顶层导航页面枚举。
-enum AppPage { home, dynamic, history, listenVideo, profile }
+enum AppPage { home, dynamic, history, whisper, profile }
 
 /// 导航项配置 — 图标 / 标签 / 强调色。
 ///
@@ -35,7 +35,7 @@ const List<NavDestination> navDestinations = [
   NavDestination(AppPage.home, '首页', Icons.home_outlined, Icons.home, iosBlue),
   NavDestination(AppPage.dynamic, '动态', Icons.notifications_outlined, Icons.notifications, iosOrange),
   NavDestination(AppPage.history, '历史', Icons.history_outlined, Icons.history, iosTeal),
-  NavDestination(AppPage.listenVideo, '听视频', Icons.headphones_outlined, Icons.headphones, iosPink),
+  NavDestination(AppPage.whisper, '消息', Icons.chat_bubble_outline, Icons.chat_bubble, iosPink),
   NavDestination(AppPage.profile, '我的', Icons.person_outlined, Icons.person, iosGreen),
 ];
 

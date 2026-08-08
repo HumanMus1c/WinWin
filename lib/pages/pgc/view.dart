@@ -69,6 +69,8 @@ class _PgcPageState extends State<PgcPage>
         setState(() => _state = Success(response));
       case Error():
         setState(() => _state = res);
+      case Loading():
+        break;
     }
     _loading = false;
   }
@@ -84,9 +86,10 @@ class _PgcPageState extends State<PgcPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Scaffold(
-      appBar: AppBar(title: const Text('番剧')),
-      body: AppRefreshIndicator(
+    // 嵌入 HomePage 时需顶部留白以避开浮动顶栏 + 分类标签行。
+    return Padding(
+      padding: const EdgeInsets.only(top: 120),
+      child: AppRefreshIndicator(
         onRefresh: () => _load(refresh: true),
         child: NotificationListener<ScrollNotification>(
           onNotification: (n) {

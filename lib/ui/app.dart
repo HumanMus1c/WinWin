@@ -12,7 +12,7 @@ import 'components/frosted_bottom_bar.dart';
 /// Phase 7.4：用 PiliPlus 风格的 [MainLayout] 三槽位壳层替换原 `Stack`。
 /// 宽屏自动启用侧边 [AppNavRail]，窄屏显示底部浮动栏（滚动联动显隐）。
 ///
-/// Phase 7.7：动态/消息页接入实现；历史/听视频暂保留占位。
+/// Phase 7.7：动态/消息页接入实现；番剧/直播作为首页子 tab；历史暂保留占位。
 class AppRoot extends StatefulWidget {
   const AppRoot({super.key});
 

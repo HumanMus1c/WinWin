@@ -2,7 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/models/common/home_tab.dart';
+import 'package:winwin/pages/live/view.dart';
 import 'package:winwin/pages/login/login_page.dart';
+import 'package:winwin/pages/pgc/view.dart';
 import 'package:winwin/pages/rcmd/view.dart';
 import 'package:winwin/pages/search/search_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
@@ -27,14 +29,17 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedCategory = 0;
+  /// 已访问过的 tab 索引集合 — 懒加载：首次切到某 tab 才创建其 Widget，
+  /// 避免启动时一次性触发所有 tab 的 HTTP 请求。
+  final Set<int> _visitedTabs = {0};
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // ── Feed grid (RcmdPage handles its own scrolling) ──
-          const Positioned.fill(child: RcmdPage()),
+          // ── Feed content (lazy IndexedStack preserves per-tab state) ──
+          Positioned.fill(child: _buildContent()),
           // ── Floating top bar ──
           Positioned(
             top: 0,
@@ -49,10 +54,58 @@ class _HomePageState extends State<HomePage> {
             right: 0,
             child: _CategoryTabRow(
               selectedIndex: _selectedCategory,
-              onSelect: (i) => setState(() => _selectedCategory = i),
+              onSelect: (i) => setState(() {
+                _selectedCategory = i;
+                _visitedTabs.add(i);
+              }),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 按当前选中的分类 tab 渲染内容。使用 [IndexedStack] 保留各 tab 的滚动位置与已加载数据。
+  /// 未访问过的 tab 返回 [SizedBox.shrink] 占位，首次切到时才实例化对应页面。
+  Widget _buildContent() {
+    return IndexedStack(
+      index: _selectedCategory,
+      children: List.generate(HomeTabType.defaultOrder.length, (i) {
+        if (!_visitedTabs.contains(i)) {
+          return const SizedBox.shrink();
+        }
+        return switch (HomeTabType.defaultOrder[i]) {
+          HomeTabType.recommend => const RcmdPage(),
+          HomeTabType.bangumi => const PgcPage(),
+          HomeTabType.live => const LivePage(),
+          HomeTabType.follow || HomeTabType.hot => _TabPlaceholder(
+              label: HomeTabType.defaultOrder[i].label,
+            ),
+        };
+      }),
+    );
+  }
+}
+
+/// 未实现 tab 的占位（关注 / 热门）。
+class _TabPlaceholder extends StatelessWidget {
+  const _TabPlaceholder({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 120),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.hourglass_empty, size: 48, color: cs.outline),
+            const SizedBox(height: 12),
+            Text('$label · 待实现', style: TextStyle(color: cs.outline)),
+          ],
+        ),
       ),
     );
   }

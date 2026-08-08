@@ -6,7 +6,8 @@ enum HomeTabType {
   recommend('推荐'),
   follow('关注'),
   hot('热门'),
-  bangumi('番剧');
+  bangumi('番剧'),
+  live('直播');
 
   final String label;
   const HomeTabType(this.label);
@@ -17,5 +18,6 @@ enum HomeTabType {
     follow,
     hot,
     bangumi,
+    live,
   ];
 }
