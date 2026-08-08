@@ -11,6 +11,7 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/pages/danmaku/view.dart';
 import 'package:winwin/pages/video/danmaku_settings_panel.dart';
+import 'package:winwin/pages/video/desktop_pip.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_focus.dart';
 import 'package:winwin/pages/video/send_danmaku_panel.dart';
@@ -674,6 +675,16 @@ class _PlayerPanelState extends State<PlayerPanel> {
             icon: const Icon(Icons.lock_outline, color: Colors.white),
             onPressed: _toggleLock,
           ),
+          // Phase 4.6：桌面伪 PiP（非全屏时可用）。
+          if (!widget.fullscreen)
+            IconButton(
+              tooltip: '画中画',
+              icon: const Icon(
+                Icons.picture_in_picture_alt,
+                color: Colors.white,
+              ),
+              onPressed: () => DesktopPipController.instance.togglePip(),
+            ),
           IconButton(
             icon: Icon(
               widget.fullscreen ? Icons.fullscreen_exit : Icons.fullscreen,

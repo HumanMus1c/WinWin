@@ -3,6 +3,7 @@ import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'core/bootstrap.dart';
 import 'pages/setting/theme_notifier.dart';
+import 'pages/video/desktop_pip.dart';
 import 'theme/app_theme.dart';
 import 'ui/app.dart';
 
@@ -13,6 +14,8 @@ final RouteObserver<PageRoute<dynamic>> routeObserver =
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Phase 4.6：初始化桌面伪 PiP 窗口管理器。
+  unawaited(DesktopPipController.instance.ensureInitialized());
   // The video player kernel (fvp/mdk) needs no manual init here: the fvp
   // plugin's dartPluginClass auto-registers on startup (mdk key + globals).
   // The Windows runner shows the window only after the first frame renders,

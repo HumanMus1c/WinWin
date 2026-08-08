@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -11,6 +12,7 @@ import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
+import 'package:winwin/pages/video/desktop_pip.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_panel.dart';
 import 'package:winwin/theme/colors.dart';
@@ -33,7 +35,8 @@ class VideoDetailPage extends StatefulWidget {
   State<VideoDetailPage> createState() => _VideoDetailPageState();
 }
 
-class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
+class _VideoDetailPageState extends State<VideoDetailPage>
+    with RouteAware, WindowListener {
   final ScrollController scrollController = ScrollController();
   WinWinPlayerController? playerController;
 
@@ -77,6 +80,7 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
   @override
   void initState() {
     super.initState();
+    windowManager.addListener(this);
     _loadDetail();
     _loadRelated();
   }
@@ -93,6 +97,9 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
   @override
   void dispose() {
     routeObserver.unsubscribe(this);
+    windowManager.removeListener(this);
+    // 退出时如果处于 PiP 模式，恢复窗口。
+    DesktopPipController.instance.exitPip();
     playerController?.dispose();
     scrollController.dispose();
     _commentCtrl.dispose();
@@ -133,6 +140,17 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
       _wasPlaying = false;
       _savedPosition = Duration.zero;
     }
+  }
+
+  // ─────────────────────────── WindowListener（Phase 4.6 自动 PiP）──
+
+  /// 窗口失焦时，如果启用了 autoPiP 且正在播放，自动进入画中画。
+  @override
+  void onWindowBlur() {
+    if (!autoPipEnabled) return;
+    final ctrl = playerController;
+    if (ctrl == null || !ctrl.playing.value) return;
+    DesktopPipController.instance.enterPip();
   }
 
   // ─────────────────────────── 数据加载 ───────────────────────────
