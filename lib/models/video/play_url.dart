@@ -39,19 +39,6 @@ class PlayUrlModel {
         .toList();
   }
 
-  PlayUrlModel.fromJson(Map<String, dynamic> json) {
-    quality = json['quality'] as int?;
-    acceptQuality = (json['accept_quality'] as List?)
-        ?.map((e) => (e as num).toInt())
-        .toList();
-    acceptDescription = (json['accept_description'] as List?)
-        ?.map((e) => e.toString())
-        .toList();
-    lastPlayTime = json['last_play_time'] as int?;
-    final dashJson = json['dash'];
-    dash = dashJson is Map<String, dynamic> ? Dash.fromJson(dashJson) : null;
-  }
-
   /// 选择不超过 [maxQn] 的最高清晰度视频轨（B 站 dash video 的 id 即 qn）；
   /// 若不存在满足条件的轨道，则退回最低清晰度轨道。
   DashVideo? pickVideo({int maxQn = 80}) {
@@ -80,6 +67,9 @@ class PlayUrlModel {
 }
 
 class Dash {
+  /// 视频时长（秒）。
+  int? duration;
+
   List<DashVideo>? video;
   List<DashAudio>? audio;
 
@@ -87,6 +77,7 @@ class Dash {
   List<DashAudio>? dolbyAudio;
 
   Dash.fromJson(Map<String, dynamic> json) {
+    duration = json['duration'] as int?;
     video = (json['video'] as List?)
         ?.map((e) => DashVideo.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -109,6 +100,9 @@ class DashVideo {
   int? height;
   String? frameRate;
 
+  /// 编解码器代码（如 7=AVC、12=HEVC、13=AV1）。
+  int? codecid;
+
   /// 编解码器标识（如 "avc1.640032"、"hev1.1.6.L120.B0"、"av01.0.08M.08"）。
   /// 由 [StreamSelectionPolicy] 用于编解码器感知选流评分。
   String? codecs;
@@ -123,19 +117,113 @@ class DashVideo {
     width = json['width'] as int?;
     height = json['height'] as int?;
     frameRate = (json['frameRate'] ?? json['frame_rate'])?.toString();
-    codecs = (json['codecs'] ?? json['codecid']) as String?;
+    codecid = json['codecid'] as int?;
+    codecs = json['codecs'] as String?;
   }
+
+  /// 该视频轨全部可用 CDN URL（主 + 备用，去空）。
+  List<String> get playUrls => [
+        if (baseUrl != null && baseUrl!.isNotEmpty) baseUrl!,
+        ...?backupUrl,
+      ];
 }
 
 class DashAudio {
   /// 音质代码（如 30216=64K、30232=128K、30280=192K）
   int? id;
   String? baseUrl;
+  List<String>? backupUrl;
   int? bandwidth;
+  int? codecid;
+  String? frameRate;
+  int? width;
+  int? height;
 
   DashAudio.fromJson(Map<String, dynamic> json) {
     id = json['id'] as int?;
     baseUrl = (json['baseUrl'] ?? json['base_url']) as String?;
+    backupUrl = ((json['backupUrl'] ?? json['backup_url']) as List?)
+        ?.map((e) => e.toString())
+        .toList();
     bandwidth = (json['bandWidth'] ?? json['bandwidth']) as int?;
+    codecid = json['codecid'] as int?;
+    frameRate = (json['frameRate'] ?? json['frame_rate'])?.toString();
+    width = json['width'] as int?;
+    height = json['height'] as int?;
+  }
+
+  /// 该音轨全部可用 CDN URL（主 + 备用，去空）。
+  List<String> get playUrls => [
+        if (baseUrl != null && baseUrl!.isNotEmpty) baseUrl!,
+        ...?backupUrl,
+      ];
+}
+
+/// 非 DASH 模式下的分段 MP4 流（durl 节点）。
+class Durl {
+  /// 分段序号（从 1 开始）。
+  final int? order;
+
+  /// 分段直链 URL。
+  final String? url;
+
+  /// 分段时长（毫秒）。
+  final int? length;
+
+  /// 分段大小（字节）。
+  final int? size;
+
+  /// 备用 URL 列表。
+  final List<String>? backupUrl;
+
+  Durl({this.order, this.url, this.length, this.size, this.backupUrl});
+
+  factory Durl.fromJson(Map<String, dynamic> json) {
+    return Durl(
+      order: json['order'] as int?,
+      url: json['url'] as String?,
+      length: json['length'] as int?,
+      size: json['size'] as int?,
+      backupUrl: (json['backup_url'] as List?)
+          ?.map((e) => e.toString())
+          .toList(),
+    );
+  }
+
+  /// 该分段全部可用 CDN URL（主 + 备用，去空）。
+  List<String> get urls => [
+        if (url != null && url!.isNotEmpty) url!,
+        ...?backupUrl,
+      ];
+}
+
+/// playurl 返回的 support_formats 节点项。
+class FormatItem {
+  /// 清晰度代码。
+  final int? quality;
+
+  /// 清晰度描述（如 "高清 1080P"）。
+  final String? newDescription;
+
+  /// 旧版清晰度描述（如 "1080P"）。
+  final String? description;
+
+  /// 显示用格式字符串（如 "1080P 60帧"）。
+  final String? format;
+
+  FormatItem({
+    this.quality,
+    this.newDescription,
+    this.description,
+    this.format,
+  });
+
+  factory FormatItem.fromJson(Map<String, dynamic> json) {
+    return FormatItem(
+      quality: json['quality'] as int?,
+      newDescription: json['new_description'] as String?,
+      description: json['description'] as String?,
+      format: json['format'] as String?,
+    );
   }
 }

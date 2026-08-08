@@ -148,13 +148,13 @@ class DownloadVideoStream {
     return DownloadVideoStream(
       id: v.id ?? 0,
       codecid: v.codecid ?? 0,
-      bandwidth: v.bandWidth,
+      bandwidth: v.bandwidth,
       width: v.width,
       height: v.height,
       frameRate: v.frameRate,
-      quality: v.quality ?? 0,
+      quality: v.id ?? 0,
       codecs: v.codecs,
-      urls: v.playUrls?.toList() ?? const [],
+      urls: v.playUrls,
     );
   }
 }
@@ -179,15 +179,15 @@ class DownloadAudioStream {
     this.urls = const [],
   });
 
-  factory DownloadAudioStream.fromDashAudio(AudioItem a) {
+  factory DownloadAudioStream.fromDashAudio(DashAudio a) {
     return DownloadAudioStream(
       id: a.id ?? 0,
       codecid: a.codecid ?? 0,
-      bandwidth: a.bandWidth,
+      bandwidth: a.bandwidth,
       frameRate: a.frameRate,
       width: a.width,
       height: a.height,
-      urls: a.playUrls?.toList() ?? const [],
+      urls: a.playUrls,
     );
   }
 }
