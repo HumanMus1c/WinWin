@@ -33,8 +33,14 @@ class UiStyleNotifier extends ValueNotifier<UiStyle> {
   }
 
   /// 切换 UI 风格并持久化。
+  ///
+  /// 先持久化再设置 [value]：若在回调（如 SegmentedButton.onSelectionChanged）
+  /// 同步执行栈内立即 `value = style`，会同步触发 notifyListeners → setState，
+  /// 导致 SegmentedButton 内部 semantics/layout 尚未完成时 widget 树被标记
+  /// dirty，flushSemantics 时 `!parentDataDirty` 断言失败、渲染帧中断。
+  /// 移到 await 后使 value 赋值在微任务中执行，脱离回调同步栈。
   Future<void> setStyle(UiStyle style) async {
-    value = style;
     await GStorage.setting.put(SettingBoxKey.uiStyle, style.legacyInt);
+    value = style;
   }
 }
