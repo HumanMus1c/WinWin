@@ -333,7 +333,7 @@ class AppListItem extends StatelessWidget {
         return InkWell(
           onTap: onTap,
           child: Container(
-            height: 54,
+            constraints: const BoxConstraints(minHeight: 60),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
@@ -382,7 +382,7 @@ class AppListItem extends StatelessWidget {
         return InkWell(
           onTap: onTap,
           child: Container(
-            height: 56,
+            constraints: const BoxConstraints(minHeight: 60),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
