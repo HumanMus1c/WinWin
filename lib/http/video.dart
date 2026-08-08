@@ -8,6 +8,7 @@ import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/login.dart';
+import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/play_url.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/models/video/related_video.dart';
@@ -182,6 +183,34 @@ abstract final class VideoHttp {
     );
     if (res.data['code'] == 0) {
       return Success(PlayUrlModel.fromJson(res.data['data']));
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  /// 播放器信息（`/x/player/wbi/v2`）。
+  ///
+  /// 一次返回多项数据，服务多个 Phase：
+  ///  - last_play_time / last_play_cid：Phase 4.2 历史进度恢复
+  ///  - subtitle.subtitles：Phase 4.4 字幕列表
+  ///  - view_points：Phase 4.5 章节标记
+  ///
+  /// [bvid] / [cid] 必填，用于定位视频。未登录也能调用（无历史进度）。
+  static Future<LoadingState<PlayInfoModel>> playInfo({
+    required String bvid,
+    required int cid,
+  }) async {
+    final params = await WbiSign.makSign({
+      'bvid': bvid,
+      'cid': cid,
+      'web_location': '1315873',
+    });
+    final res = await Request().get(
+      Api.playInfo,
+      queryParameters: params,
+    );
+    if (res.data['code'] == 0) {
+      return Success(PlayInfoModel.fromJson(res.data['data'] ?? {}));
     } else {
       return Error(res.data['message']);
     }

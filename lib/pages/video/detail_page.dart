@@ -6,6 +6,7 @@ import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/main.dart';
+import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
@@ -66,6 +67,10 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
   /// 页面被覆盖前记录的播放位置，用于返回时恢复进度。
   Duration _savedPosition = Duration.zero;
 
+  /// playInfo 接口返回的数据（Phase 4.2 历史进度 / 4.4 字幕 / 4.5 章节）。
+  /// 由 [_loadDetail] 拉取后缓存，供后续 Phase 使用。
+  PlayInfoModel? _playInfo;
+
   /// 评论区之前的固定区块数量：播放器 / 信息 / 简介 / 评论头。
   static const int _fixedSections = 4;
 
@@ -106,6 +111,8 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
     if (ctrl != null) {
       _wasPlaying = ctrl.playing.value;
       _savedPosition = ctrl.position.value;
+      // Phase 4.2：页面被覆盖时上报最终进度（best-effort，不阻塞）。
+      ctrl.reportCurrentProgress();
       ctrl.pause();
       ctrl.detachListeners();
     }
@@ -142,11 +149,29 @@ class _VideoDetailPageState extends State<VideoDetailPage> with RouteAware {
                 ? pages.first.cid
                 : response.cid;
         if (cid != null) {
-          playerController =
-              WinWinPlayerController(bvid: widget.bvid, cid: cid)..load();
+          // Phase 4.2：拉取 playInfo 获取上次播放进度（last_play_time），
+          // 同时缓存字幕列表 / 章节标记供 Phase 4.4 / 4.5 使用。
+          Duration? startProgress;
+          final aid = response.aid;
+          try {
+            final infoRes =
+                await VideoHttp.playInfo(bvid: widget.bvid, cid: cid);
+            if (mounted && infoRes case Success(:final response)) {
+              _playInfo = response;
+              if (response.lastPlayTime > 0) {
+                startProgress = Duration(seconds: response.lastPlayTime);
+              }
+            }
+          } catch (_) {
+            // playInfo 失败不阻断播放。
+          }
+          if (!mounted) return;
+          final ctrl = WinWinPlayerController(bvid: widget.bvid, cid: cid);
+          ctrl.aid = aid;
+          playerController = ctrl;
+          ctrl.load(start: startProgress);
         }
         setState(() => _detailState = Success(response));
-        final aid = response.aid;
         if (aid != null) {
           _loadReplies(oid: aid);
         }

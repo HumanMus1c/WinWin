@@ -16,6 +16,7 @@ import 'package:winwin/http/video.dart';
 import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/models/video/play_url.dart';
 import 'package:winwin/pages/danmaku/controller.dart';
+import 'package:winwin/pages/video/subtitle_controller.dart';
 import 'package:winwin/plugin/canvas_danmaku/canvas_danmaku.dart';
 
 /// WinWin 播放器控制器（fvp / mdk 内核）。
@@ -99,6 +100,10 @@ class WinWinPlayerController {
   /// SponsorBlock 用例：段落加载 + 自动跳过。
   /// 由 [load] 完成后异步初始化；null 表示未启用或加载失败。
   SponsorBlockUseCase? sponsorBlock;
+
+  /// 字幕控制器（Phase 4.4）：字幕加载、解析、当前行查找。
+  /// 由 [setSubtitleList] 初始化可用列表后自动选择默认字幕。
+  final SubtitleController subtitle = SubtitleController();
 
   /// 是否启用 SponsorBlock 自动跳过（默认 true，用户可在设置中关闭）。
   bool sponsorBlockEnabled = true;
@@ -232,6 +237,8 @@ class WinWinPlayerController {
     // detachListeners 时会暂停，避免页面不可见时持续写入 position
     // （会把共享 player 播放 B 视频的进度写入 A 页面 controller，污染状态）。
     _startPolling();
+    // Phase 4.2：didPopNext 返回本页时恢复心跳上报（仅当播放器已就绪）。
+    if (ready.value) _startHeartBeat();
   }
 
   /// 移除本 controller 的事件监听（不释放共享 player）。
@@ -247,6 +254,9 @@ class WinWinPlayerController {
     // 避免把共享 player（正在播 B 视频）的进度写入本 controller（A 页面）。
     _pollTimer?.cancel();
     _pollTimer = null;
+    // 暂停心跳：页面不可见时停止上报，避免把共享 player 的进度误报为本页进度。
+    _heartBeatTimer?.cancel();
+    _heartBeatTimer = null;
   }
 
   void _syncTextureId() {
@@ -593,6 +603,8 @@ class WinWinPlayerController {
       player.state =
           autoplay ? mdk.PlaybackState.playing : mdk.PlaybackState.paused;
       ready.value = true;
+      // Phase 4.2：播放就绪后启动心跳定时器（每 5 秒上报进度）。
+      _startHeartBeat();
 
       // SponsorBlock 段落加载：失败不阻断播放，仅记录日志。
       if (sponsorBlockEnabled) {
@@ -693,6 +705,17 @@ class WinWinPlayerController {
   /// 触发弹幕重建（didPopNext 返回本页时调用）。
   void reloadDanmaku() => danmakuReloadSignal.value++;
 
+  /// Phase 4.4：设置可用字幕列表（来自 playInfo 接口）。
+  /// 自动根据 AI 偏好选择默认字幕并加载。
+  void setSubtitleList(List<SubtitleItem> subtitles) {
+    subtitle.setAvailable(subtitles);
+    // 自动加载选中的字幕。
+    final current = subtitle.current;
+    if (current != null) {
+      unawaited(subtitle.loadSubtitle(current));
+    }
+  }
+
   /// 设置音量（0-100）。
   void setVolume(double v) {
     final clamped = v.clamp(0.0, 100.0);
@@ -733,6 +756,8 @@ class WinWinPlayerController {
     detachListeners();
     _pollTimer?.cancel();
     _pollTimer = null;
+    _heartBeatTimer?.cancel();
+    _heartBeatTimer = null;
     sponsorBlock?.dispose();
     sponsorBlock = null;
     // 引用计数递减，归零时才真正释放全局单例 mdk.Player。
