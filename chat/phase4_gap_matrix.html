@@ -1,0 +1,243 @@
+<svg viewBox="0 0 880 760" xmlns="http://www.w3.org/2000/svg" style="font-family: -apple-system, 'Segoe UI', sans-serif; background: #0f1117; border-radius: 8px;">
+  <defs>
+    <linearGradient id="done" x1="0" x2="1">
+      <stop offset="0" stop-color="#1f3a25"/>
+      <stop offset="1" stop-color="#2a5d3a"/>
+    </linearGradient>
+    <linearGradient id="partial" x1="0" x2="1">
+      <stop offset="0" stop-color="#4a3d15"/>
+      <stop offset="1" stop-color="#7a6520"/>
+    </linearGradient>
+    <linearGradient id="stub" x1="0" x2="1">
+      <stop offset="0" stop-color="#3d2426"/>
+      <stop offset="1" stop-color="#7a3636"/>
+    </linearGradient>
+    <linearGradient id="missing" x1="0" x2="1">
+      <stop offset="0" stop-color="#1a1a22"/>
+      <stop offset="1" stop-color="#2a2a32"/>
+    </linearGradient>
+  </defs>
+
+  <text x="20" y="32" fill="#e4e6eb" font-size="18" font-weight="700">Phase 4 播放器集成 — 缺口矩阵</text>
+  <text x="20" y="52" fill="#8b919e" font-size="12">对照 PiliPlus 源码级核对 · 红=死代码 黄=部分 绿=完成 灰=缺失</text>
+
+  <g transform="translate(20, 70)">
+    <rect width="860" height="32" fill="#1a1d24" rx="4"/>
+    <text x="14" y="22" fill="#9aa0ac" font-size="11" font-weight="600">类别</text>
+    <text x="120" y="22" fill="#9aa0ac" font-size="11" font-weight="600">功能项</text>
+    <text x="430" y="22" fill="#9aa0ac" font-size="11" font-weight="600">现状</text>
+    <text x="560" y="22" fill="#9aa0ac" font-size="11" font-weight="600">优先级</text>
+    <text x="650" y="22" fill="#9aa0ac" font-size="11" font-weight="600">难度</text>
+  </g>
+
+  <g font-size="11" fill="#d4d6db">
+    <!-- 内核与路由 -->
+    <g transform="translate(20, 110)">
+      <rect width="860" height="24" fill="#15171c"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">内核</text>
+      <text x="120" y="16">mdk 全局单例 + 引用计数 + RouteAware</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#done)" rx="3"/>
+      <text x="436" y="16" font-size="10">✓ 完成</text>
+      <text x="560" y="16" fill="#8b919e">—</text>
+      <text x="650" y="16" fill="#8b919e">—</text>
+    </g>
+
+    <g transform="translate(20, 138)">
+      <rect width="860" height="24" fill="#121419"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">选流</text>
+      <text x="120" y="16">StreamSelectionPolicy（编解码器感知）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#stub)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#ffcdd2">✗ 死代码</text>
+      <text x="560" y="16" fill="#ff9d6b">高</text>
+      <text x="650" y="16" fill="#8b919e">低</text>
+    </g>
+
+    <g transform="translate(20, 166)">
+      <rect width="860" height="24" fill="#15171c"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">策略</text>
+      <text x="120" y="16">VideoLoadPolicy（画质档位/回退链/HDR 升级）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#stub)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#ffcdd2">✗ 死代码</text>
+      <text x="560" y="16" fill="#ff9d6b">高</text>
+      <text x="650" y="16" fill="#ffd166">中</text>
+    </g>
+
+    <g transform="translate(20, 194)">
+      <rect width="860" height="24" fill="#121419"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">缓存</text>
+      <text x="120" y="16">PlayUrlCache（LRU+TTL）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#stub)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#ffcdd2">✗ 死代码</text>
+      <text x="560" y="16" fill="#ffd166">中</text>
+      <text x="650" y="16" fill="#8b919e">低</text>
+    </g>
+
+    <g transform="translate(20, 222)">
+      <rect width="860" height="24" fill="#15171c"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">Sponsor</text>
+      <text x="120" y="16">SponsorBlock（仅 fetchSegments）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#partial)" rx="3"/>
+      <text x="436" y="16" font-size="10">◐ 部分</text>
+      <text x="560" y="16" fill="#ffd166">中</text>
+      <text x="650" y="16" fill="#ffd166">中</text>
+    </g>
+
+    <g transform="translate(20, 250)">
+      <rect width="860" height="24" fill="#121419"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">字幕</text>
+      <text x="120" y="16">字幕加载 + 样式 + AI 字幕</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#ff9d6b">高</text>
+      <text x="650" y="16" fill="#ff6b6b">高</text>
+    </g>
+
+    <g transform="translate(20, 278)">
+      <rect width="860" height="24" fill="#15171c"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">章节</text>
+      <text x="120" y="16">view_points 章节 + 跳过片头片尾</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#ffd166">中</text>
+      <text x="650" y="16" fill="#ffd166">中</text>
+    </g>
+
+    <g transform="translate(20, 306)">
+      <rect width="860" height="24" fill="#121419"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">上报</text>
+      <text x="120" y="16">心跳上报 heartBeat（进度同步）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#ff9d6b">高</text>
+      <text x="650" y="16" fill="#8b919e">低</text>
+    </g>
+
+    <g transform="translate(20, 334)">
+      <rect width="860" height="24" fill="#15171c"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">画质</text>
+      <text x="120" y="16">画质偏好持久化 + 自动最高</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#ff9d6b">高</text>
+      <text x="650" y="16" fill="#8b919e">低</text>
+    </g>
+
+    <g transform="translate(20, 362)">
+      <rect width="860" height="24" fill="#121419"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">键盘</text>
+      <text x="120" y="16">键盘快捷键（空格/F/M/←→/↑↓/S/L/D）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#ff9d6b">高</text>
+      <text x="650" y="16" fill="#8b919e">低</text>
+    </g>
+
+    <g transform="translate(20, 390)">
+      <rect width="860" height="24" fill="#15171c"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">手势</text>
+      <text x="120" y="16">双击快进/快退 + 长按 3 倍速</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#ffd166">中</text>
+      <text x="650" y="16" fill="#8b919e">低</text>
+    </g>
+
+    <g transform="translate(20, 418)">
+      <rect width="860" height="24" fill="#121419"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">截图</text>
+      <text x="120" y="16">视频截图（PNG 保存）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#a0d8ff">低</text>
+      <text x="650" y="16" fill="#ffd166">中</text>
+    </g>
+
+    <g transform="translate(20, 446)">
+      <rect width="860" height="24" fill="#15171c"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">PiP</text>
+      <text x="120" y="16">桌面伪 PiP（窗口管理）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#a0d8ff">低</text>
+      <text x="650" y="16" fill="#ffd166">中</text>
+    </g>
+
+    <g transform="translate(20, 474)">
+      <rect width="860" height="24" fill="#121419"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">音轨</text>
+      <text x="120" y="16">多 audio track 切换 / 杜比 / Hi-Res 优先</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#ffd166">中</text>
+      <text x="650" y="16" fill="#ffd166">中</text>
+    </g>
+
+    <g transform="translate(20, 502)">
+      <rect width="860" height="24" fill="#15171c"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">直播</text>
+      <text x="120" y="16">直播流支持（HLS/FLV）+ TCP 弹幕协议</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#a0d8ff">低</text>
+      <text x="650" y="16" fill="#ff6b6b">高</text>
+    </g>
+
+    <g transform="translate(20, 530)">
+      <rect width="860" height="24" fill="#121419"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">画质增强</text>
+      <text x="120" y="16">Anime4K + FSR 超分辨率（计划外发现）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#a0d8ff">低</text>
+      <text x="650" y="16" fill="#ff6b6b">高</text>
+    </g>
+
+    <g transform="translate(20, 558)">
+      <rect width="860" height="24" fill="#15171c"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">听视频</text>
+      <text x="120" y="16">听视频模式 + 歌词引擎（计划外发现）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#a0d8ff">低</text>
+      <text x="650" y="16" fill="#ffd166">中</text>
+    </g>
+
+    <g transform="translate(20, 586)">
+      <rect width="860" height="24" fill="#121419"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">本地</text>
+      <text x="120" y="16">本地文件播放（FileSource）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#a0d8ff">低</text>
+      <text x="650" y="16" fill="#ffd166">中</text>
+    </g>
+
+    <g transform="translate(20, 614)">
+      <rect width="860" height="24" fill="#15171c"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">DLNA</text>
+      <text x="120" y="16">投屏（dlna_dart）</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#a0d8ff">低</text>
+      <text x="650" y="16" fill="#ffd166">中</text>
+    </g>
+
+    <g transform="translate(20, 642)">
+      <rect width="860" height="24" fill="#121419"/>
+      <text x="14" y="16" fill="#67d8a3" font-weight="600">定时</text>
+      <text x="120" y="16">定时关闭服务</text>
+      <rect x="430" y="4" width="120" height="16" fill="url(#missing)" rx="3"/>
+      <text x="436" y="16" font-size="10" fill="#8b919e">○ 缺失</text>
+      <text x="560" y="16" fill="#a0d8ff">低</text>
+      <text x="650" y="16" fill="#8b919e">低</text>
+    </g>
+  </g>
+
+  <!-- 汇总 -->
+  <g transform="translate(20, 680)">
+    <rect width="860" height="60" fill="#1a1d24" rx="4"/>
+    <text x="14" y="22" fill="#e4e6eb" font-size="13" font-weight="700">真实进度评估</text>
+    <text x="14" y="42" fill="#ffd166" font-size="11">完成 3/22 项 · 部分完成 2/22 · 死代码 3/22（已移植未集成）· 缺失 14/22</text>
+    <text x="14" y="58" fill="#ff9d6b" font-size="11" font-weight="600">Phase 4 真实完成度 ≈ 20%（不是 100%）</text>
+  </g>
+</svg>
