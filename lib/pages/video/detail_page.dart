@@ -3,6 +3,8 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/sliver/video_header.dart';
+import 'package:winwin/common/widgets/video_card/video_card_h.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -66,6 +68,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   bool _fullscreen = false;
   bool _descExpanded = false;
 
+  /// Phase 7.6.3：VideoHeader 收缩比例（0.0=展开，1.0=pin），用于顶栏渐变。
+  double _scrollRatio = 0.0;
+
   /// 页面被新路由覆盖前的播放状态，用于返回时决定是否自动播放。
   bool _wasPlaying = false;
   /// 页面被覆盖前记录的播放位置，用于返回时恢复进度。
@@ -74,9 +79,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// playInfo 接口返回的数据（Phase 4.2 历史进度 / 4.4 字幕 / 4.5 章节）。
   /// 由 [_loadDetail] 拉取后缓存，供后续 Phase 使用。
   PlayInfoModel? _playInfo;
-
-  /// 评论区之前的固定区块数量：播放器 / 信息 / 简介 / 评论头。
-  static const int _fixedSections = 4;
 
   @override
   void initState() {
@@ -457,18 +459,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     final String? upName = _detailState.dataOrNull?.owner?.name;
     return Scaffold(
       backgroundColor: _fullscreen ? Colors.black : null,
-      appBar: _fullscreen
-          ? null
-          : AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
-              ),
-              title: Text(
-                (upName?.isNotEmpty ?? false) ? upName! : '视频详情',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
       body: _fullscreen
           ? Stack(
               children: [
@@ -486,7 +476,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 Expanded(
                   child: Row(
                     children: [
-                      Expanded(flex: 7, child: _buildLeftColumn()),
+                      Expanded(flex: 7, child: _buildLeftColumn(upName)),
                       Expanded(flex: 3, child: _buildRightColumn()),
                     ],
                   ),
@@ -499,66 +489,149 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   // ─────────────────────────── 左栏 ───────────────────────────
 
-  Widget _buildLeftColumn() {
+  /// 左栏：CustomScrollView + VideoHeader(pin 播放器) + slivers(信息/简介/评论)。
+  /// 顶部叠加渐变工具栏（基于 _scrollRatio 显隐）。
+  Widget _buildLeftColumn(String? upName) {
     return switch (_detailState) {
-      Loading() => _buildLeftSkeleton(),
-      Error(:final errMsg) => _buildError(errMsg, _loadDetail),
-      Success(:final response) => ListView.builder(
-        controller: scrollController,
-        padding: const EdgeInsets.fromLTRB(
-          Style.safeSpace,
-          Style.sm,
-          Style.cardSpace,
-          Style.xxl * 2,
+      Loading() => Stack(
+          children: [
+            _buildLeftSkeleton(),
+            _buildGradientTopBar(upName, forceOpaque: true),
+          ],
         ),
-        itemCount: _fixedSections + _replies.length + 1,
-        itemBuilder: (context, index) => _buildSection(index, response),
-      ),
+      Error(:final errMsg) => _buildError(errMsg, _loadDetail),
+      Success(:final response) => Stack(
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final maxExtent = constraints.maxWidth * 9 / 16;
+                final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
+                return CustomScrollView(
+                  controller: scrollController,
+                  slivers: [
+                    VideoHeader(
+                      maxExtent: maxExtent,
+                      minExtent: minExtent,
+                      onScrollRatioChange: (r) {
+                        if ((r - _scrollRatio).abs() > 0.01) {
+                          setState(() => _scrollRatio = r);
+                        }
+                      },
+                      child: _buildPlayerContent(response),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        Style.safeSpace,
+                        Style.sm,
+                        Style.cardSpace,
+                        Style.xxl * 2,
+                      ),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            // 0: 信息, 1: 简介, 2: 评论头, 3+: 评论列表 + 尾部
+                            if (index == 0) return _buildInfoSection(response);
+                            if (index == 1) return _buildDescSection(response);
+                            if (index == 2) return _buildReplyHeader(response);
+                            final replyIndex = index - 3;
+                            if (replyIndex < _replies.length) {
+                              if (replyIndex == _replies.length - 1) {
+                                _maybeLoadMoreReplies();
+                              }
+                              return _buildReplyTile(_replies[replyIndex]);
+                            }
+                            return _buildReplyTrailer();
+                          },
+                          childCount: 3 + _replies.length + 1,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            _buildGradientTopBar(upName),
+          ],
+        ),
     };
   }
 
-  Widget _buildSection(int index, VideoDetailData data) {
-    if (index == 0) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: Style.md),
-        child: _buildPlayerSection(data),
-      );
-    }
-    if (index == 1) return _buildInfoSection(data);
-    if (index == 2) return _buildDescSection(data);
-    if (index == 3) return _buildReplyHeader(data);
-    final replyIndex = index - _fixedSections;
-    if (replyIndex < _replies.length) {
-      if (replyIndex == _replies.length - 1) {
-        _maybeLoadMoreReplies();
-      }
-      return _buildReplyTile(_replies[replyIndex]);
-    }
-    return _buildReplyTrailer();
+  /// 渐变顶栏：_scrollRatio=0 透明（覆盖在播放器上），=1 不透明（显示标题）。
+  Widget _buildGradientTopBar(String? upName, {bool forceOpaque = false}) {
+    final theme = Theme.of(context);
+    final opacity = forceOpaque ? 1.0 : _scrollRatio.clamp(0.0, 1.0);
+    final overVideo = opacity < 0.5;
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        bottom: false,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          height: kToolbarHeight,
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor
+                .withValues(alpha: opacity * 0.95),
+            border: opacity > 0.5
+                ? Border(
+                    bottom: BorderSide(
+                      color: theme.colorScheme.outlineVariant
+                          .withValues(alpha: 0.3),
+                      width: 0.5,
+                    ),
+                  )
+                : null,
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: overVideo
+                      ? Colors.white
+                      : theme.colorScheme.onSurface,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+              Expanded(
+                child: AnimatedOpacity(
+                  opacity: opacity,
+                  duration: const Duration(milliseconds: 150),
+                  child: Text(
+                    (upName?.isNotEmpty ?? false) ? upName! : '视频详情',
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  /// 播放器区域：16:9、圆角 12 裁切。
-  /// 详情加载完成前用封面占位，避免向 PlayerPanel 传空 controller。
-  Widget _buildPlayerSection(VideoDetailData data) {
+  /// 播放器内容（Phase 7.6.4：封面加 Hero 共享元素转场）。
+  /// VideoHeader 负责裁切/圆角/尺寸，此处只返回原始内容。
+  Widget _buildPlayerContent(VideoDetailData data) {
     final controller = playerController;
-    final Widget child = controller == null
-        ? NetworkImgLayer(
-            src: widget.cover ?? data.pic,
-            width: double.infinity,
-            height: double.infinity,
-            borderRadius: BorderRadius.zero,
-          )
-        : PlayerPanel(
-            controller: controller,
-            fullscreen: _fullscreen,
-            onToggleFullscreen: _toggleFullscreen,
-          );
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Style.mdRadius),
-        child: ColoredBox(color: Colors.black, child: child),
-      ),
+    if (controller == null) {
+      // 封面占位 + Hero 转场（与 VideoCardV 的 heroTag 'cover_$bvid' 对应）
+      return Hero(
+        tag: 'cover_${widget.bvid}',
+        child: NetworkImgLayer(
+          src: widget.cover ?? data.pic,
+          width: double.infinity,
+          height: double.infinity,
+          borderRadius: BorderRadius.zero,
+        ),
+      );
+    }
+    return PlayerPanel(
+      controller: controller,
+      fullscreen: _fullscreen,
+      onToggleFullscreen: _toggleFullscreen,
     );
   }
 
@@ -1049,7 +1122,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         color: theme.colorScheme.surface,
         border: Border(
           top: BorderSide(
-            color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
             width: 0.5,
           ),
         ),
@@ -1082,7 +1155,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   ),
                   filled: true,
                   fillColor: theme.colorScheme.surfaceContainer
-                      .withOpacity(0.5),
+                      .withValues(alpha: 0.5),
                   suffixIcon: _replyRoot != null
                       ? IconButton(
                           icon: const Icon(Icons.close, size: 16),
@@ -1180,7 +1253,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   // ─────────────────────────── 右栏（相关视频） ───────────────────────────
 
+  /// 右栏相关推荐：Phase 7.6.5 改用 [VideoCardH] 自适应水平卡片。
   Widget _buildRightColumn() {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1193,7 +1268,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           ),
           child: Text(
             '相关推荐',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1207,9 +1282,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     child: Text(
                       '暂无相关推荐',
                       style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   )
@@ -1223,124 +1296,33 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     itemCount: response.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: Style.sm),
-                    itemBuilder: (context, index) =>
-                        _buildRelatedItem(response[index]),
+                    itemBuilder: (context, index) {
+                      final item = response[index];
+                      final bvid = item.bvid;
+                      return VideoCardH(
+                        videoItem: item,
+                        heroTag: bvid != null ? 'cover_$bvid' : null,
+                        coverWidth: 150,
+                        showStat: false,
+                        onTap: bvid == null
+                            ? null
+                            : () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => VideoDetailPage(
+                                      bvid: bvid,
+                                      cover: item.pic,
+                                    ),
+                                  ),
+                                );
+                              },
+                      );
+                    },
                   ),
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildRelatedItem(RelatedVideoItem item) {
-    final theme = Theme.of(context);
-    const double coverWidth = 150;
-    const double coverHeight = coverWidth * 10 / 16;
-    final bvid = item.bvid;
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(Style.radiusSm),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: bvid == null
-            ? null
-            : () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        VideoDetailPage(bvid: bvid, cover: item.pic),
-                  ),
-                );
-              },
-        child: Padding(
-          padding: const EdgeInsets.all(Style.sm),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: coverWidth,
-                height: coverHeight,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    NetworkImgLayer(
-                      src: item.pic,
-                      width: coverWidth,
-                      height: coverHeight,
-                      borderRadius: BorderRadius.circular(Style.radiusSm),
-                    ),
-                    if ((item.duration ?? 0) > 0)
-                      Positioned(
-                        right: 5,
-                        bottom: 4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
-                            borderRadius: BorderRadius.circular(Style.radiusXs),
-                          ),
-                          child: Text(
-                            DurationUtils.formatDuration(item.duration),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: Style.md),
-              Expanded(
-                child: SizedBox(
-                  height: coverHeight,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title ?? '',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          height: 1.3,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const Spacer(),
-                      Row(
-                        spacing: Style.xs,
-                        children: [
-                          Icon(
-                            Icons.person_outline,
-                            size: 13,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          Expanded(
-                            child: Text(
-                              item.owner?.name ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
