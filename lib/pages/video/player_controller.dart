@@ -145,6 +145,12 @@ class WinWinPlayerController {
   /// 避免旧 media 卸载产生的错误事件污染 [error]（真正的失败由 prepare
   /// 返回值 < 0 判断）。
   bool _loading = false;
+  /// 待恢复的进度：prepare 返回 -1（already loading）时无法立即 seek，
+  /// 暂存到此字段，等 onMediaStatus.buffered 事件触发后 seek。
+  Duration? _pendingSeek;
+  /// 待触发的 HDR 自动升级：首播 SDR 后延后到 media buffered 稳定再二次
+  /// 拉流 qn=125，避免与首播的 setMedia/prepare/纹理创建并发竞态。
+  PlayUrlModel? _pendingHdrUpgrade;
 
   // ── 心跳上报（Phase 4.2）──
   /// 心跳定时器：每 5 秒上报一次播放进度。
@@ -223,6 +229,20 @@ class WinWinPlayerController {
           unawaited(player.textureSize.then((size) {
             if (!_disposed && size != null) videoSize.value = size;
           }));
+          // 处理待恢复的进度：prepare 返回 -1 时无法立即 seek，
+          // 暂存到此；media buffered 后 seek 生效。
+          final pending = _pendingSeek;
+          if (pending != null && pending > Duration.zero) {
+            _pendingSeek = null;
+            unawaited(player.seek(position: pending.inMilliseconds));
+          }
+          // 触发待执行的 HDR 自动升级：首播 SDR buffered 稳定后再二次拉流，
+          // 避免与首播的 setMedia/prepare/纹理创建并发竞态。
+          final pendingHdr = _pendingHdrUpgrade;
+          if (pendingHdr != null) {
+            _pendingHdrUpgrade = null;
+            unawaited(_maybeUpgradeToHdr(pendingHdr));
+          }
         }
         // NOTE: 切换 media 时旧 media 会触发 invalid 状态，这是正常行为而非
         // 真正的加载失败。真正的加载失败由 prepare() 返回值 < 0 判断并设置
@@ -538,22 +558,41 @@ class WinWinPlayerController {
         'avio.headers',
         'Referer: $_referer\r\nUser-Agent: $_pcUserAgent\r\n',
       );
+      // Phase 4.7：音频归一化滤镜作为 player 属性在 prepare 前下发，
+      // 避免在 media 已打开/播放中切换 avfilter 触发音频轨重初始化干扰状态。
+      if (_audioNormalizeEnabled) {
+        player.setProperty('audio.avfilter', 'loudnorm');
+      }
 
-      // 1. 设置主视频 media（prepare 之前不挂载外部音轨，避免干扰视频流
-      //    加载导致 open 失败）。参照 fvp video_player_mdk.dart 中
-      //    `player.media = uri; await player.prepare();` 的标准用法，
-      //    以及 mdk Player.h 文档："MUST be after main media setMedia(url)"
-      //    的外部音轨挂载契约。
+      // 1. 设置主视频 media。
       player.media = videoUrl;
+      // DASH 分离音轨：以外部音轨方式挂载（prepare 之前）。
+      // 参照 fvp setExternalAudio → setMedia(url, MediaType.audio) 用法：
+      // native setMedia(url 变化) 会重置轨道，setMediaForType 挂载外部音轨
+      // 后必须调用 setActiveTracks 显式激活，否则音频轨道不会被自动选中
+      // （B站 DASH 主 media 为纯视频流，无内部音频轨，导致无声）。
+      // 在 prepare 之前挂载，使 prepare 能一次性加载主视频 + 外部音轨。
+      final audioUrl = audio?.baseUrl;
+      if (audioUrl != null && audioUrl.isNotEmpty) {
+        player.setMedia(audioUrl, mdk.MediaType.audio);
+        player.activeAudioTracks = const [0];
+      }
 
-      // 2. prepare 加载主视频首帧。
+      // 2. prepare 加载首帧。
+      // prepare 不传 position：prepare 返回 -1（already loading）时
+      // position 参数会被 native 忽略，导致进度没恢复。改用 prepare() 只
+      // 加载首帧，进度恢复统一用 seek（ret >= 0 时立即 seek，ret == -1
+      // 时延迟到 onMediaStatus.buffered 事件后 seek）。
       final ret = await player.prepare();
       if (_disposed) return;
       // prepare 返回值语义（见 fvp player.dart 注释）：
       //   0: streams==0 无效媒体，否则成功
-      //  -1: already loading or loaded
+      //  -1: already loading or loaded（setMedia 已触发加载，无需重复 prepare）
       //  -4: 越界  -10: 内部错误
-      if (ret < 0) {
+      // 共享 player 从 A 切换到 B 时，setMedia 已开始加载 B 的 media，prepare
+      // 常返回 -1。这不是失败：真正的失败由 onEvent 错误事件（ev.error < 0）
+      // 设置 error。仅对 < -1 的硬错误报错。
+      if (ret < -1) {
         error.value = '播放失败（错误码 $ret）';
         return;
       }
@@ -561,26 +600,19 @@ class WinWinPlayerController {
       // 可能产生的残留错误事件）。
       error.value = null;
 
-      // 3. 获取 duration 和 videoSize（prepare 成功后值已就绪）。
-      final ms = player.mediaInfo.duration;
-      if (ms > 0) duration.value = Duration(milliseconds: ms);
-      videoSize.value = await player.textureSize;
-      if (_disposed) return;
-
-      // 4. seek 恢复进度。
+      // 3. seek 恢复进度。
       final startMs = (start ?? Duration.zero).inMilliseconds;
       if (startMs > 0) {
-        await player.seek(position: startMs);
-        if (_disposed) return;
-      }
-
-      // 5. 挂载外部音轨（prepare 之后，参照 fvp setExternalAudio 的时机）。
-      //    DASH 主 media 为纯视频流，外部音轨需 setMediaForType + setActiveTracks
-      //    显式激活，否则无声。
-      final audioUrl = audio?.baseUrl;
-      if (audioUrl != null && audioUrl.isNotEmpty) {
-        player.setMedia(audioUrl, mdk.MediaType.audio);
-        player.activeAudioTracks = const [0];
+        if (ret >= 0) {
+          // prepare 成功加载首帧：立即 seek 恢复进度。
+          await player.seek(position: startMs);
+          if (_disposed) return;
+        } else {
+          // ret == -1（already loading）：media 正在加载，无法立即 seek。
+          // 暂存进度，等 onMediaStatus.buffered 事件触发后 seek。
+          // duration/videoSize 也在 buffered 事件中获取，避免拿到旧 media 的值。
+          _pendingSeek = start;
+        }
       }
 
       // 创建渲染 Texture（仅首次创建 player 时需要，后续复用单例已存在的
@@ -600,11 +632,6 @@ class WinWinPlayerController {
       // Phase 4.2：播放就绪后启动心跳定时器（每 5 秒上报进度）。
       _startHeartBeat();
 
-      // Phase 4.7：音频归一化 — 用户已开启时对新加载的 media 应用 loudnorm 滤镜。
-      if (_audioNormalizeEnabled) {
-        player.setProperty('audio.avfilter', 'loudnorm');
-      }
-
       // SponsorBlock 段落加载：失败不阻断播放，仅记录日志。
       if (sponsorBlockEnabled) {
         sponsorBlock ??= SponsorBlockUseCase();
@@ -620,12 +647,13 @@ class WinWinPlayerController {
         );
       }
 
-      // 3. HDR 自动升级：首次 SDR 快速起播后，VIP + 自动最高画质 + 有
-      // access_token + 当前 DASH 无 HDR 轨道时，非阻塞二次拉流 qn=125。
-      // 失败不阻断当前播放。
+      // HDR 自动升级：首次 SDR 起播后，VIP + 自动最高画质 + 有
+      // access_token + 当前 DASH 无 HDR 轨道时，二次拉流 qn=125。
+      // 延后到 onMediaStatus.buffered 稳定后触发，避免与首播的
+      // setMedia/prepare/纹理创建并发竞态（失败不阻断当前 SDR 播放）。
       if (isInitialRequest && !_hdrUpgradeAttempted) {
         _hdrUpgradeAttempted = true;
-        unawaited(_maybeUpgradeToHdr(playUrl));
+        _pendingHdrUpgrade = playUrl;
       }
     } catch (e) {
       if (!_disposed) error.value = '播放失败：$e';
