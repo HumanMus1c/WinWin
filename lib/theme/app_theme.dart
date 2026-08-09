@@ -17,25 +17,39 @@ import 'ui_style.dart';
 /// 在 `main.dart` 通过 `ValueListenableBuilder<UiStyle>` 消费
 /// [UiStyleNotifier]，切换 `theme`/`darkTheme` 即可实现整树热切换。
 class AppTheme {
-  /// 浅色主题（按 [style] 解析）。
-  static ThemeData lightFor(UiStyle style) => switch (style) {
+  /// 浅色主题（按 [style] 解析，可注入 [fontFamily]）。
+  static ThemeData lightFor(UiStyle style, {String? fontFamily}) =>
+      _applyFont(switch (style) {
         UiStyle.ios => _iosLight,
         UiStyle.material3 => _md3Light,
         UiStyle.miuix => _miuixLight,
-      };
+      }, fontFamily);
 
-  /// 深色主题（按 [style] 解析）。
-  static ThemeData darkFor(UiStyle style) => switch (style) {
+  /// 深色主题（按 [style] 解析，可注入 [fontFamily]）。
+  static ThemeData darkFor(UiStyle style, {String? fontFamily}) =>
+      _applyFont(switch (style) {
         UiStyle.ios => _iosDark,
         UiStyle.material3 => _md3Dark,
         UiStyle.miuix => _miuixDark,
-      };
+      }, fontFamily);
 
   /// 向后兼容：默认 iOS 浅色主题。
   static ThemeData get light => lightFor(UiStyle.ios);
 
   /// 向后兼容：默认 iOS 深色主题。
   static ThemeData get dark => darkFor(UiStyle.ios);
+
+  /// 将 [fontFamily] 注入 [ThemeData] 的 textTheme / primaryTextTheme。
+  ///
+  /// 参照 BiliPai 的 `Typography.withFontFamily()`：遍历全部 TextStyle
+  /// 替换 fontFamily。空值则原样返回。
+  static ThemeData _applyFont(ThemeData base, String? fontFamily) {
+    if (fontFamily == null || fontFamily.isEmpty) return base;
+    return base.copyWith(
+      textTheme: base.textTheme.apply(fontFamily: fontFamily),
+      primaryTextTheme: base.primaryTextTheme.apply(fontFamily: fontFamily),
+    );
+  }
 
   /// 按 [UiStyle] 组装三套设计 Token（[AppShapes] / [AppTypography] /
   /// [AppChrome]），挂载到 [ThemeData.extensions]，组件通过

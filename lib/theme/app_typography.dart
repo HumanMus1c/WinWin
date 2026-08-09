@@ -5,7 +5,7 @@ import 'ui_style.dart';
 /// 字体排印 Token — 按 [UiStyle] 解析的字重 / 字间距体系。
 ///
 /// 参照 BiliPai 的 `BiliDesign.typography`：
-/// - **iOS**：SF Pro 风格，titleMedium 17sp / letterSpacing -0.41（紧凑感）。
+/// - **iOS**：Segoe UI 适配版，轻微紧凑字间距（-0.1），semibold 字重。
 /// - **Material 3**：标准 M3 Typography，letterSpacing 0.15（规范间距）。
 /// - **Miuix**：Medium 字重，letterSpacing 0（扁平舒展）。
 ///
@@ -46,11 +46,13 @@ class AppTypography extends ThemeExtension<AppTypography> {
   /// 当前风格。
   final UiStyle style;
 
-  // ── iOS（SF Pro 紧凑）──
+  // ── iOS（Segoe UI 适配版，保留轻微紧凑感）──
+  // 原 SF Pro 值 -0.41/-0.24/-0.08 在 Segoe UI 上过紧导致字形奇怪，
+  // 调整为温和负值保留 iOS 视觉差异但不影响可读性。
   static const ios = AppTypography(
-    titleLetterSpacing: -0.41,
-    labelLetterSpacing: -0.08,
-    bodyLetterSpacing: -0.24,
+    titleLetterSpacing: -0.1,
+    labelLetterSpacing: 0.0,
+    bodyLetterSpacing: 0.0,
     headlineWeight: FontWeight.w600,
     titleWeight: FontWeight.w600,
     bodyWeight: FontWeight.w400,

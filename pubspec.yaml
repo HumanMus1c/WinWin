@@ -34,6 +34,8 @@ dependencies:
   # 混合方案：PiliPlus 骨架（同栈可复用）+ BiliPai 增强（内存缓冲/普通日志落盘/脱敏）。
   logger: ^2.5.0
   catcher_2: ^2.1.9
+  # 字体导入：桌面端文件选择器，用于导入 .ttf/.otf 自定义字体文件。
+  file_picker: ^8.1.2
 
 dev_dependencies:
   flutter_test:

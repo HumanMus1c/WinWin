@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/storage/storage.dart';
@@ -5,6 +6,7 @@ import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/theme_notifier.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
+import 'package:winwin/theme/app_font_notifier.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/theme/ui_style_notifier.dart';
 
@@ -44,6 +46,19 @@ List<SettingsModel> get styleSettings => [
             await UiStyleNotifier.instance.setStyle(res);
             setState();
           }
+        },
+      ),
+
+      // 应用字体（移植自 BiliPai AppFontFileStore）
+      NormalModel(
+        title: '应用字体',
+        leading: const Icon(Icons.font_download_outlined),
+        getSubtitle: () => '当前：${AppFontNotifier.instance.displayName}',
+        onTap: (context, setState) async {
+          await showDialog<void>(
+            context: context,
+            builder: (context) => _FontPickerDialog(setState: setState),
+          );
         },
       ),
 
@@ -240,5 +255,171 @@ class _SliderDialogState extends State<_SliderDialog> {
         ),
       ],
     );
+  }
+}
+
+/// 字体选择对话框。
+///
+/// 参照 BiliPai `AppearanceSettingsScreen` 的「应用字体」分区：
+/// - 预设字体单选列表（Windows 预装字体）
+/// - 自定义字体导入入口（file_picker 选择 .ttf/.otf）
+/// - 恢复默认按钮（清除已导入的自定义字体）
+class _FontPickerDialog extends StatefulWidget {
+  final void Function() setState;
+
+  const _FontPickerDialog({required this.setState});
+
+  @override
+  State<_FontPickerDialog> createState() => _FontPickerDialogState();
+}
+
+class _FontPickerDialogState extends State<_FontPickerDialog> {
+  late String _selected;
+  bool _importing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = AppFontNotifier.instance.value;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final notifier = AppFontNotifier.instance;
+    final hasCustom = notifier.isCustomFont;
+
+    return AlertDialog(
+      title: const Text('应用字体'),
+      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+      content: SizedBox(
+        width: 360,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 预设字体列表
+              RadioGroup<String>(
+                onChanged: (v) async {
+                  if (v == null) return;
+                  await notifier.setFontFamily(v);
+                  setState(() => _selected = v);
+                },
+                groupValue: _selected,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final preset in AppFontNotifier.presets)
+                      RadioListTile<String>(
+                        dense: true,
+                        value: preset.family,
+                        title: Text(
+                          preset.label,
+                          style: TextStyle(fontFamily: preset.family),
+                        ),
+                      ),
+                    if (hasCustom)
+                      RadioListTile<String>(
+                        dense: true,
+                        value: AppFontNotifier.customFontFamily,
+                        title: const Text('自定义字体（已导入）'),
+                        subtitle: Text(
+                          '点击「恢复默认」可移除',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.outline,
+                              ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // 导入 / 恢复默认
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: _importing ? null : _importFont,
+                      icon: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: _importing
+                            ? const CircularProgressIndicator(strokeWidth: 2)
+                            : const Icon(Icons.file_upload_outlined, size: 18),
+                      ),
+                      label: Text(_importing ? '导入中…' : '导入字体文件'),
+                    ),
+                    if (hasCustom) ...[
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () async {
+                          await notifier.clearCustomFont();
+                          setState(() => _selected = notifier.value);
+                        },
+                        icon: const Icon(Icons.restore, size: 18),
+                        label: const Text('恢复默认'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            widget.setState();
+            Navigator.pop(context);
+          },
+          child: const Text('关闭'),
+        ),
+      ],
+    );
+  }
+
+  /// 通过 file_picker 选择并导入自定义字体文件。
+  Future<void> _importFont() async {
+    setState(() => _importing = true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['ttf', 'otf'],
+        withData: false,
+      );
+      if (result == null || result.files.single.path == null) {
+        setState(() => _importing = false);
+        return;
+      }
+      final path = result.files.single.path!;
+      final err = await AppFontNotifier.instance.importCustomFont(path);
+      if (!mounted) return;
+      if (err != null) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(content: Text(err), duration: const Duration(seconds: 3)),
+        );
+      } else {
+        setState(() => _selected = AppFontNotifier.customFontFamily);
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(
+            content: Text('字体导入成功'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text('导入失败：$e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
   }
 }
