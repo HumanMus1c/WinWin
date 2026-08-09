@@ -147,17 +147,21 @@ class SystemFontScanner {
     // entrySelector(2) + rangeShift(2) = 12 bytes
     await raf.setPosition(baseOffset + 4);
     final headerBytes = await _readExact(raf, 8);
+    if (headerBytes.length < 8) return [];
     final header = ByteData.sublistView(headerBytes);
     final numTables = header.getUint16(0, Endian.big);
 
     // Table directory: numTables entries × 16 bytes
     // Each: tag(4) + checkSum(4) + offset(4) + length(4)
     final dirBytes = await _readExact(raf, numTables * 16);
+    // 防止 corrupt 文件：实际读到的字节可能少于 numTables*16。
+    if (dirBytes.length < numTables * 16) return [];
 
     int? nameOffset;
     int? nameLength;
     for (int i = 0; i < numTables; i++) {
       final off = i * 16;
+      if (off + 16 > dirBytes.length) break;
       final tag = String.fromCharCodes(dirBytes.sublist(off, off + 4));
       if (tag == 'name') {
         final dir = ByteData.sublistView(dirBytes);
@@ -179,13 +183,18 @@ class SystemFontScanner {
       RandomAccessFile raf, int tableOffset, int tableLength) async {
     await raf.setPosition(tableOffset);
     final tableBytes = await _readExact(raf, tableLength);
+    if (tableBytes.length < 6) return [];
     final data = ByteData.sublistView(tableBytes);
 
     final count = data.getUint16(2, Endian.big);
     final stringOffset = data.getUint16(4, Endian.big);
 
+    // langID 常量（十进制：0x0409=1033 en-US，0x0804=2052 zh-CN）。
+    const langEnUs = 1033;
+    const langZhCn = 2052;
+
     // 收集所有相关 name record。
-    // key = (nameID, langID), value = 解码后的字符串。
+    // key = nameID_langID（均为十进制），value = 解码后的字符串。
     final names = <String, String>{};
 
     for (int i = 0; i < count; i++) {
@@ -193,7 +202,6 @@ class SystemFontScanner {
       if (recOff + 12 > tableBytes.length) break;
 
       final platformID = data.getUint16(recOff, Endian.big);
-      final encodingID = data.getUint16(recOff + 2, Endian.big);
       final languageID = data.getUint16(recOff + 4, Endian.big);
       final nameID = data.getUint16(recOff + 6, Endian.big);
       final strLength = data.getUint16(recOff + 8, Endian.big);
@@ -205,8 +213,8 @@ class SystemFontScanner {
       // 仅关注 nameID=1 (Family), 4 (Full Name), 16 (Typographic Family)。
       if (nameID != 1 && nameID != 4 && nameID != 16) continue;
 
-      // 仅关注 en-US (0x0409) 和 zh-CN (0x0804)。
-      if (languageID != 0x0409 && languageID != 0x0804) continue;
+      // 仅关注 en-US 和 zh-CN。
+      if (languageID != langEnUs && languageID != langZhCn) continue;
 
       final absStrOff = stringOffset + strOffset;
       if (absStrOff + strLength > tableBytes.length) continue;
@@ -215,29 +223,29 @@ class SystemFontScanner {
       // platformID=3 下所有 encoding 均为 UTF-16BE。
       final value = _decodeUtf16be(strBytes);
 
+      // key 用十进制格式，与下方查找保持一致。
       final key = '${nameID}_$languageID';
       names.putIfAbsent(key, () => value);
     }
 
     // 解析 family（英文，供 Flutter 解析）。
-    // 优先级：nameID=16(0x0409) > nameID=1(0x0409) > nameID=4(0x0409)
-    //         > nameID=16(0x0804) > nameID=1(0x0804) > nameID=4(0x0804)
-    final family = names['16_0x0409'] ??
-        names['1_0x0409'] ??
-        names['4_0x0409'] ??
-        names['16_0x0804'] ??
-        names['1_0x0804'] ??
-        names['4_0x0804'];
+    // 优先级：nameID=16(en) > 1(en) > 4(en) > 16(zh) > 1(zh) > 4(zh)
+    final family = names['16_$langEnUs'] ??
+        names['1_$langEnUs'] ??
+        names['4_$langEnUs'] ??
+        names['16_$langZhCn'] ??
+        names['1_$langZhCn'] ??
+        names['4_$langZhCn'];
 
     if (family == null || family.isEmpty) return [];
 
     // 解析 label（显示名，优先中文）。
-    final label = names['16_0x0804'] ??
-        names['1_0x0804'] ??
-        names['4_0x0804'] ??
-        names['16_0x0409'] ??
-        names['1_0x0409'] ??
-        names['4_0x0409'] ??
+    final label = names['16_$langZhCn'] ??
+        names['1_$langZhCn'] ??
+        names['4_$langZhCn'] ??
+        names['16_$langEnUs'] ??
+        names['1_$langEnUs'] ??
+        names['4_$langEnUs'] ??
         family;
 
     return [FontInfo(family: family, label: label)];
