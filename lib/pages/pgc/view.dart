@@ -6,6 +6,7 @@ import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/grid.dart';
 
 /// 番剧页（Phase 7.7.4）。
 ///
@@ -85,6 +86,16 @@ class _PgcPageState extends State<PgcPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // 文本区高度按文字缩放自适应：标题 2 行 + 副标题 1 行 + 内边距。
+    // 卡片基础高度由 childAspectRatio(=封面 2/3) 决定，mainAxisExtent 额外
+    // 提供文本区空间，避免 title/subtitle 溢出（曾出现 BOTTOM OVERFLOWED）。
+    final gridDelegate = SliverGridDelegateWithExtentAndRatio(
+      maxCrossAxisExtent: 180,
+      mainAxisSpacing: Style.cardSpace,
+      crossAxisSpacing: Style.cardSpace,
+      childAspectRatio: 2 / 3,
+      mainAxisExtent: MediaQuery.textScalerOf(context).scale(60),
+    );
     // 嵌入 HomePage 时需顶部留白以避开浮动顶栏 + 分类标签行。
     return Padding(
       padding: const EdgeInsets.only(top: 120),
@@ -112,13 +123,7 @@ class _PgcPageState extends State<PgcPage>
                           Style.xxl * 2,
                         ),
                         sliver: SliverGrid(
-                          gridDelegate:
-                              const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 180,
-                            childAspectRatio: 0.62,
-                            mainAxisSpacing: Style.cardSpace,
-                            crossAxisSpacing: Style.cardSpace,
-                          ),
+                          gridDelegate: gridDelegate,
                           delegate: SliverChildBuilderDelegate(
                             (context, i) {
                               if (i == _items.length) return _buildTrailer();
