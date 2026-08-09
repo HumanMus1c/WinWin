@@ -11,10 +11,21 @@ import 'package:winwin/http/loading_state.dart';
 abstract final class LiveHttp {
   /// 推荐直播列表（`/xlive/web-interface/v1/second/getUserRecommend`）。
   ///
-  /// 成功返回 [LiveRecommendData]，含直播卡片列表。
-  static Future<LoadingState<LiveRecommendData>> liveRecommend() async {
+  /// [page] 从 1 开始。成功返回 [LiveRecommendData]，含直播卡片列表。
+  /// 必传 page/page_size/platform，否则触发风控 -352。
+  static Future<LoadingState<LiveRecommendData>> liveRecommend({
+    int page = 1,
+    int pageSize = 30,
+  }) async {
     try {
-      final res = await Request().get<dynamic>(Api.liveList);
+      final res = await Request().get<dynamic>(
+        Api.liveList,
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+          'platform': 'web',
+        },
+      );
       final data = res.data as Map<String, dynamic>;
       if (data['code'] == 0) {
         return Success(
