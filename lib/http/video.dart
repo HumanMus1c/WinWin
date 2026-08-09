@@ -123,6 +123,31 @@ abstract final class VideoHttp {
     }
   }
 
+  // 热门视频（移植自 PiliPlus `VideoHttp.hotVideoList`）
+  // /x/web-interface/popular，页码制分页（pn/ps），返回 web 格式稿件。
+  static Future<LoadingState<List<RcmdVideoItemModel>>> hotVideoList({
+    required int pn,
+    required int ps,
+  }) async {
+    final res = await Request().get(
+      Api.hotList,
+      queryParameters: {'pn': pn, 'ps': ps},
+    );
+    if (res.data['code'] == 0) {
+      List<RcmdVideoItemModel> list = <RcmdVideoItemModel>[];
+      for (final i in res.data['data']['list']) {
+        // 屏蔽拉黑用户
+        if (i['owner'] != null &&
+            !GlobalData().blackMids.contains(i['owner']['mid'])) {
+          list.add(RcmdVideoItemModel.fromJson(i));
+        }
+      }
+      return Success(list);
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
   // 视频详情 标题、简介、分P等
   static Future<LoadingState<VideoDetailData>> videoIntro({
     required String bvid,
