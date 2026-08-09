@@ -8,24 +8,41 @@ import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
+import 'package:winwin/pages/search/search_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/pages/toview/toview_page.dart';
+import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/theme/ui_style.dart';
+import 'package:winwin/theme/ui_style_notifier.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
-/// Profile page — ported from BiliPai's ProfileScreen.
+/// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术按 [UiStyle] 三风格切换。
 ///
-/// Phase 7.8：重构为 [CustomScrollView] + [SliverToBoxAdapter] + [ClipRRect]
-/// 圆角内容卡片向上覆盖壁纸 20dp（BiliPai 风格）。三风格自适应：使用
-/// [AppGroup] / [AppListItem] 替换原 IOSGroup，按 [UiStyle] 切换外观。
+/// 结构（PiliPlus 布局）：
+/// ```
+/// ┌────────────────────────────────────────────┐
+/// │ [search]        [style] [setting]          │ 顶栏操作行
+/// ├────────────────────────────────────────────┤
+/// │ ┌──┐  Username [LV]                        │
+/// │ │av│  硬币 X    经验 Y/Z  [====bar====]   │ 用户信息行
+/// │ └──┘                                        │
+/// ├────────────────────────────────────────────┤
+/// │   动态        关注        粉丝             │ 3 统计方格
+/// ├────────────────────────────────────────────┤
+/// │   ⬇          📜          ⭐          ⏰    │ 4 动作方格
+/// │ 离线缓存   历史记录    我的收藏   稍后再看 │
+/// ├────────────────────────────────────────────┤
+/// │ 账号切换                                >  │
+/// │ 退出登录                                >  │ AppGroup
+/// │ 设置                                    >  │
+/// └────────────────────────────────────────────┘
+/// ```
 ///
-/// 读取 [AccountService] 真实用户数据：
-///   - 未登录：头像/用户名显示「点击登录」占位，点击进入登录流程
-///   - 已登录：显示头像、昵称、等级、会员标识、关注/粉丝/动态/硬币数据
-///
-/// 所有读取账户数据的入口（收藏/历史/稍后再看/消息/账号切换）均经过
-/// [LoginGuard.requireLogin] 守卫，未登录时跳转登录页。
+/// 所有控件（[AppActionTile] / [AppProgressBar] / [AppGroup] / [AppListItem]）
+/// 均读取 [InheritedUiStyle.of] 后用 [resolvePrimitiveRenderer] 分发三风格。
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -34,8 +51,6 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final ScrollController _scrollController = ScrollController();
-
   @override
   void initState() {
     super.initState();
@@ -45,7 +60,6 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void dispose() {
     AccountService().removeListener(_onAccountChanged);
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -58,71 +72,28 @@ class _ProfilePageState extends State<ProfilePage> {
     final service = AccountService();
     final info = service.userInfo;
     final isLogin = service.isLogin;
-    final theme = Theme.of(context);
     return Scaffold(
-      body: Stack(
+      body: Column(
         children: [
-          // ── 壁纸背景（渐变，固定不滚动） ──
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment(0, 0.5),
-                colors: [
-                  biliPink.withValues(alpha: 0.8),
-                  theme.scaffoldBackgroundColor,
-                ],
-              ),
-            ),
-          ),
-          // ── 滚动内容（圆角卡片向上覆盖壁纸 20dp） ──
-          CustomScrollView(
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              // 顶部留白：壁纸可见区域（用户信息悬浮于壁纸之上）
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 120),
-              ),
-              // 用户信息区（透明背景，悬浮于壁纸）
-              SliverToBoxAdapter(
-                child: _UserInfoSection(info: info, isLogin: isLogin),
-              ),
-              // 数据统计区
-              SliverToBoxAdapter(
-                child: _StatsSection(info: info, isLogin: isLogin),
-              ),
-              // 圆角内容卡片（向上覆盖壁纸 20dp）
-              SliverToBoxAdapter(
-                child: _ContentCard(
-                  info: info,
+          _HeaderActions(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 100),
+              children: [
+                _UserInfoSection(info: info, isLogin: isLogin),
+                const SizedBox(height: 10),
+                _StatsRow(info: info, isLogin: isLogin),
+                const SizedBox(height: 10),
+                _ActionGrid(
+                  onGuarded: _guarded,
+                ),
+                const SizedBox(height: Style.md),
+                _SettingsGroup(
                   isLogin: isLogin,
                   onGuarded: _guarded,
                   onLogout: _onLogout,
                 ),
-              ),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 120),
-              ),
-            ],
-          ),
-          // ── 顶栏（居中标题） ──
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: SizedBox(
-                height: 56,
-                child: Center(
-                  child: Text(
-                    '我的',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
+              ],
             ),
           ),
         ],
@@ -159,118 +130,66 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
     if (confirmed != true) return;
-    // 走标准登出流程：清缓存 + 广播 UI。
     await LoginUtils.onLogoutMain();
   }
 }
 
-/// 圆角内容卡片 — 向上覆盖壁纸 20dp（BiliPai 风格）。
-///
-/// 顶部 20dp 圆角，背景为 scaffoldBackgroundColor，包含所有服务入口列表。
-/// 使用 [AppGroup] / [AppListItem] 实现三风格自适应。
-class _ContentCard extends StatelessWidget {
-  const _ContentCard({
-    required this.info,
-    required this.isLogin,
-    required this.onGuarded,
-    required this.onLogout,
-  });
+// ════════════════════════════════════════════════════════════════
+// 顶栏操作行 — 搜索 + 风格切换 + 设置
+// ════════════════════════════════════════════════════════════════
 
-  final UserInfoModel? info;
-  final bool isLogin;
-  final Future<void> Function(BuildContext, void Function(BuildContext)) onGuarded;
-  final Future<void> Function(BuildContext) onLogout;
-
+class _HeaderActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Transform.translate(
-      // 向上偏移 20dp，使圆角卡片覆盖壁纸
-      offset: const Offset(0, -20),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(Style.radiusXl),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    final cs = theme.colorScheme;
+    final style = InheritedUiStyle.of(context);
+    // 下一风格（循环切换 iOS→MD3→Miuix→iOS）
+    final nextStyle = UiStyle.values[(style.legacyInt + 1) % UiStyle.values.length];
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        child: Row(
           children: [
-            const SizedBox(height: Style.md),
-            // 服务列表
-            AppGroup(
-              margin: const EdgeInsets.symmetric(horizontal: Style.lg),
-              children: [
-                AppListItem(
-                  icon: Icons.download,
-                  title: '离线缓存',
-                  iconTint: iosBlue,
-                  onTap: () => onGuarded(context, (_) {}),
-                ),
-                AppListItem(
-                  icon: Icons.history,
-                  title: '历史记录',
-                  iconTint: iosBlue,
-                  onTap: () => onGuarded(context, showHistoryPage),
-                ),
-                AppListItem(
-                  icon: Icons.bookmark,
-                  title: '我的收藏',
-                  iconTint: iosYellow,
-                  onTap: () => onGuarded(context, showFavPage),
-                ),
-                AppListItem(
-                  icon: Icons.watch_later,
-                  title: '稍后再看',
-                  iconTint: iosGreen,
-                  onTap: () => onGuarded(context, showToviewPage),
-                ),
-                AppListItem(
-                  icon: Icons.message,
-                  title: '消息中心',
-                  iconTint: iosPink,
-                  onTap: () => onGuarded(context, (_) {}),
-                ),
-              ],
+            IconButton(
+              tooltip: '搜索',
+              iconSize: 22,
+              padding: const EdgeInsets.all(8),
+              style: const ButtonStyle(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SearchPage()),
+              ),
+              icon: Icon(Icons.search, color: cs.onSurface),
             ),
-            const SizedBox(height: Style.md),
-            AppGroup(
-              margin: const EdgeInsets.symmetric(horizontal: Style.lg),
-              children: [
-                AppListItem(
-                  icon: Icons.swap_horiz,
-                  title: '账号切换',
-                  iconTint: iosBlue,
-                  onTap: () => onGuarded(context, (_) {}),
-                ),
-                if (isLogin)
-                  AppListItem(
-                    icon: Icons.logout,
-                    title: '退出登录',
-                    iconTint: Colors.red,
-                    onTap: () => onLogout(context),
-                  ),
-              ],
+            const Spacer(),
+            IconButton(
+              tooltip: '切换至${nextStyle.label}风格',
+              iconSize: 22,
+              padding: const EdgeInsets.all(8),
+              style: const ButtonStyle(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => UiStyleNotifier.instance.setStyle(nextStyle),
+              icon: Icon(Icons.palette_outlined, color: cs.onSurface),
             ),
-            const SizedBox(height: Style.md),
-            AppGroup(
-              margin: const EdgeInsets.symmetric(horizontal: Style.lg),
-              children: [
-                AppListItem(
-                  icon: Icons.settings,
-                  title: '设置',
-                  iconTint: iosBlue,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const SettingPage(),
-                    ),
-                  ),
-                ),
-              ],
+            IconButton(
+              tooltip: '设置',
+              iconSize: 22,
+              padding: const EdgeInsets.all(8),
+              style: const ButtonStyle(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingPage()),
+              ),
+              icon: Icon(Icons.settings_outlined, color: cs.onSurface),
             ),
-            const SizedBox(height: Style.lg),
+            const SizedBox(width: 8),
           ],
         ),
       ),
@@ -278,150 +197,261 @@ class _ContentCard extends StatelessWidget {
   }
 }
 
-/// 用户信息区：未登录显示「点击登录」占位，已登录显示真实数据。
+// ════════════════════════════════════════════════════════════════
+// 用户信息行 — 头像 + 用户名/等级 + 硬币/经验 + 进度条
+// ════════════════════════════════════════════════════════════════
+
 class _UserInfoSection extends StatelessWidget {
+  const _UserInfoSection({required this.info, required this.isLogin});
+
   final UserInfoModel? info;
   final bool isLogin;
-
-  const _UserInfoSection({required this.info, required this.isLogin});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Style.xl, vertical: Style.lg),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          if (!isLogin) showLoginPage(context);
-        },
+    final cs = theme.colorScheme;
+    final typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.ios;
+
+    final levelInfo = info?.levelInfo;
+    final hasLevel = levelInfo?.currentLevel != null;
+    final isVip = info?.isVip ?? false;
+    final nextExp = levelInfo?.nextExp;
+    final curExp = levelInfo?.currentExp;
+    final progress = (hasLevel &&
+            nextExp != null &&
+            nextExp > 0 &&
+            curExp != null)
+        ? (curExp / nextExp)
+        : null;
+
+    final coinLabelStyle = theme.textTheme.labelMedium?.copyWith(
+      color: cs.outline,
+    );
+    final coinValStyle = theme.textTheme.labelMedium?.copyWith(
+      fontWeight: typo.titleWeight,
+      color: cs.secondary,
+    );
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        if (!isLogin) showLoginPage(context);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
-            // Avatar (72px circle)
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: isLogin
-                    ? null
-                    : LinearGradient(colors: [biliPink, biliPink.withValues(alpha: 0.7)]),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: isLogin && (info?.face?.isNotEmpty ?? false)
-                  ? CachedNetworkImage(
-                      imageUrl: info!.face!,
-                      placeholder: (_, __) => const ColoredBox(
-                        color: Colors.grey,
-                        child: SizedBox.expand(),
-                      ),
-                      errorWidget: (_, __, ___) => const Center(
-                        child: Icon(Icons.person, color: Colors.white, size: 32),
-                      ),
-                      fit: BoxFit.cover,
-                    )
-                  : const Icon(Icons.person, color: Colors.white, size: 32),
-            ),
-            const SizedBox(width: Style.lg),
-            // Name + badges
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isLogin ? (info?.name ?? '未命名用户') : '点击登录',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+            // 头像（55px 圆形 + VIP 角标）
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 55,
+                  height: 55,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: isLogin
+                        ? null
+                        : LinearGradient(
+                            colors: [
+                              biliPink,
+                              biliPink.withValues(alpha: 0.7),
+                            ],
+                          ),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  if (isLogin) ...[
-                    Row(
-                      children: [
-                        // Level badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: biliPink,
-                            borderRadius: BorderRadius.circular(4),
+                  clipBehavior: Clip.antiAlias,
+                  child: isLogin && (info?.face?.isNotEmpty ?? false)
+                      ? CachedNetworkImage(
+                          imageUrl: info!.face!,
+                          placeholder: (_, __) => const ColoredBox(
+                            color: Colors.grey,
+                            child: SizedBox.expand(),
                           ),
-                          child: Text(
-                            'LV ${info?.levelInfo?.currentLevel ?? info?.level ?? 0}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          errorWidget: (_, __, ___) => const Center(
+                            child: Icon(Icons.person,
+                                color: Colors.white, size: 28),
                           ),
+                          fit: BoxFit.cover,
+                        )
+                      : const Icon(Icons.person,
+                          color: Colors.white, size: 28),
+                ),
+                if (isVip)
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: biliPink,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                            color: cs.surface, width: 1),
+                      ),
+                      child: const Text(
+                        'VIP',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(width: 8),
-                        // VIP badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: (info?.isVip ?? false)
-                                ? biliPink
-                                : theme.colorScheme.surfaceContainer,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            (info?.isYearVip ?? false)
-                                ? '年度大会员'
-                                : (info?.isVip ?? false)
-                                    ? '大会员'
-                                    : '正式会员',
-                            style: TextStyle(
-                              color: (info?.isVip ?? false)
-                                  ? Colors.white
-                                  : theme.colorScheme.onSurfaceVariant,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ] else
+                  ),
+              ],
+            ),
+            const SizedBox(width: 16),
+            // 用户名 + 硬币/经验 + 进度条
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    spacing: 6,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          isLogin ? (info?.name ?? '未命名用户') : '点击登录',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            height: 1,
+                            fontWeight: typo.titleWeight,
+                            color: isVip && (info?.isYearVip ?? false)
+                                ? biliPink
+                                : null,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (hasLevel)
+                        _LevelBadge(level: levelInfo!.currentLevel!),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (isLogin)
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(text: '硬币 ', style: coinLabelStyle),
+                          TextSpan(
+                            text: _fmtNum(info?.money?.toInt() ?? info?.coins),
+                            style: coinValStyle,
+                          ),
+                          TextSpan(text: '      经验 ', style: coinLabelStyle),
+                          TextSpan(
+                            text: _fmtNum(curExp),
+                            style: coinValStyle,
+                          ),
+                          TextSpan(
+                            text: '/${_fmtNum(nextExp)}',
+                            style: coinLabelStyle,
+                          ),
+                        ],
+                      ),
+                    )
+                  else
                     Text(
                       '登录后同步你的账户数据',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: cs.onSurface.withValues(alpha: 0.6),
                       ),
+                    ),
+                  const SizedBox(height: 4),
+                  if (isLogin)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 225),
+                      child: AppProgressBar(value: progress),
                     ),
                 ],
               ),
             ),
-            if (!isLogin)
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-              ),
           ],
+        ),
+      ),
+    );
+  }
+
+  String _fmtNum(num? n) {
+    if (n == null) return '-';
+    if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}万';
+    return n.toString();
+  }
+}
+
+/// 等级徽章 — 小圆角胶囊，按风格切换底色。
+class _LevelBadge extends StatelessWidget {
+  const _LevelBadge({required this.level});
+
+  final int level;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final style = InheritedUiStyle.of(context);
+    final (bg, fg) = switch (resolvePrimitiveRenderer(style)) {
+      PrimitiveRenderer.ios => (biliPink, Colors.white),
+      PrimitiveRenderer.material3 => (cs.primary, cs.onPrimary),
+      PrimitiveRenderer.miuix => (cs.secondaryContainer, cs.onSecondaryContainer),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        'LV$level',
+        style: TextStyle(
+          color: fg,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
   }
 }
 
-class _StatsSection extends StatelessWidget {
+// ════════════════════════════════════════════════════════════════
+// 3 统计方格 — 动态 / 关注 / 粉丝
+// ════════════════════════════════════════════════════════════════
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.info, required this.isLogin});
+
   final UserInfoModel? info;
   final bool isLogin;
 
-  const _StatsSection({required this.info, required this.isLogin});
-
   @override
   Widget build(BuildContext context) {
-    final dash = isLogin ? '-' : '—';
+    final dash = isLogin ? null : '—';
     return Padding(
-      padding: const EdgeInsets.only(bottom: Style.md),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _statColumn(context, '动态', isLogin ? _fmt(info?.dynamicCount) : dash),
-          _statColumn(context, '关注', isLogin ? _fmt(info?.following) : dash),
-          _statColumn(context, '粉丝', isLogin ? _fmt(info?.follower) : dash),
-          _statColumn(context, '硬币', isLogin ? _fmt(info?.coins) : dash),
+          AppActionTile(
+            count: isLogin ? _fmt(info?.dynamicCount) : dash,
+            label: '动态',
+            onTap: () {},
+          ),
+          AppActionTile(
+            count: isLogin ? _fmt(info?.following) : dash,
+            label: '关注',
+            onTap: () {},
+          ),
+          AppActionTile(
+            count: isLogin ? _fmt(info?.follower) : dash,
+            label: '粉丝',
+            onTap: () {},
+          ),
         ],
       ),
     );
@@ -432,25 +462,101 @@ class _StatsSection extends StatelessWidget {
     if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}万';
     return n.toString();
   }
+}
 
-  Widget _statColumn(BuildContext context, String label, String value) {
+// ════════════════════════════════════════════════════════════════
+// 4 动作方格 — 离线缓存 / 历史记录 / 我的收藏 / 稍后再看
+// ════════════════════════════════════════════════════════════════
+
+class _ActionGrid extends StatelessWidget {
+  const _ActionGrid({required this.onGuarded});
+
+  final Future<void> Function(BuildContext, void Function(BuildContext)) onGuarded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          AppActionTile(
+            icon: Icons.download_outlined,
+            label: '离线缓存',
+            onTap: () => onGuarded(context, (_) {}),
+          ),
+          AppActionTile(
+            icon: Icons.history,
+            label: '历史记录',
+            onTap: () => onGuarded(context, showHistoryPage),
+          ),
+          AppActionTile(
+            icon: Icons.bookmark_outline,
+            label: '我的收藏',
+            onTap: () => onGuarded(context, showFavPage),
+          ),
+          AppActionTile(
+            icon: Icons.watch_later_outlined,
+            label: '稍后再看',
+            onTap: () => onGuarded(context, showToviewPage),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// 设置组 — 账号切换 / 退出登录 / 设置（AppGroup + AppListItem）
+// ════════════════════════════════════════════════════════════════
+
+class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({
+    required this.isLogin,
+    required this.onGuarded,
+    required this.onLogout,
+  });
+
+  final bool isLogin;
+  final Future<void> Function(BuildContext, void Function(BuildContext)) onGuarded;
+  final Future<void> Function(BuildContext) onLogout;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+        AppGroup(
+          margin: const EdgeInsets.symmetric(horizontal: Style.lg),
+          children: [
+            AppListItem(
+              icon: Icons.swap_horiz,
+              title: '账号切换',
+              iconTint: iosBlue,
+              onTap: () => onGuarded(context, (_) {}),
+            ),
+            if (isLogin)
+              AppListItem(
+                icon: Icons.logout,
+                title: '退出登录',
+                iconTint: Colors.red,
+                onTap: () => onLogout(context),
+              ),
+          ],
         ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+        const SizedBox(height: Style.md),
+        AppGroup(
+          margin: const EdgeInsets.symmetric(horizontal: Style.lg),
+          children: [
+            AppListItem(
+              icon: Icons.settings,
+              title: '设置',
+              iconTint: iosBlue,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingPage()),
+              ),
+            ),
+          ],
         ),
       ],
     );

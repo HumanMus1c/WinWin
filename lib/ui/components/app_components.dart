@@ -660,3 +660,153 @@ class AppSearchField extends StatelessWidget {
     );
   }
 }
+
+// ════════════════════════════════════════════════════════════════
+// AppActionTile
+// ════════════════════════════════════════════════════════════════
+
+/// 自适应方格动作项 — 个人页/动态页等"图标(或数值)+文字"网格用。
+///
+/// 通过 [icon] 或 [count] 二选一指定顶部内容：
+/// - 传入 [icon]：渲染图标（动作入口，如离线缓存/历史记录）。
+/// - 传入 [count]：渲染数值（统计项，如动态/关注/粉丝）。
+///
+/// 三风格差异：
+/// - iOS：图标/数值用 secondary 色，InkWell 胶囊 ripple，紧凑 spacing。
+/// - MD3：图标/数值用 primary 色，InkWell 圆角 ripple，标准 spacing。
+/// - Miuix：图标/数值用 onSurfaceVariant 色，扁平无 ripple，宽 spacing。
+class AppActionTile extends StatelessWidget {
+  const AppActionTile({
+    super.key,
+    this.icon,
+    this.count,
+    required this.label,
+    this.onTap,
+    this.iconTint,
+  }) : assert(
+          icon != null || count != null,
+          'AppActionTile 需传入 icon 或 count 之一',
+        );
+
+  final IconData? icon;
+  final String? count;
+  final String label;
+  final VoidCallback? onTap;
+  final Color? iconTint;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = _Tokens.of(context);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final renderer = resolvePrimitiveRenderer(t.style);
+
+    final (contentColor, spacing, radius) = switch (renderer) {
+      PrimitiveRenderer.ios => (iconTint ?? cs.secondary, 6.0, t.shapes.medium),
+      PrimitiveRenderer.material3 =>
+        (iconTint ?? cs.primary, 6.0, t.shapes.small),
+      PrimitiveRenderer.miuix => (iconTint ?? cs.onSurfaceVariant, 8.0, t.shapes.medium),
+    };
+
+    return Flexible(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.all(radius),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 80),
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: Column(
+              spacing: spacing,
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null)
+                  Icon(icon, color: contentColor, size: 22)
+                else
+                  Text(
+                    count ?? '-',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: t.typo.titleWeight,
+                      color: contentColor,
+                    ),
+                  ),
+                Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// AppProgressBar
+// ════════════════════════════════════════════════════════════════
+
+/// 自适应线性进度条 — 个人页经验进度等细条场景。
+///
+/// 三风格差异：
+/// - iOS：secondary 色，2.25px 细条，圆角 1。
+/// - MD3：primary 色，4px 标准 M3 高度，圆角 2。
+/// - Miuix：tertiary 色，3px 中等高度，全圆角。
+class AppProgressBar extends StatelessWidget {
+  const AppProgressBar({
+    super.key,
+    required this.value,
+    this.height,
+  });
+
+  /// 进度值 0.0–1.0。null 或非有限值视为 0。
+  final double? value;
+
+  /// 覆盖默认高度；不传则按风格解析。
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = _Tokens.of(context);
+    final cs = Theme.of(context).colorScheme;
+    final renderer = resolvePrimitiveRenderer(t.style);
+
+    final v = (value == null || !value!.isFinite) ? 0.0 : value!.clamp(0.0, 1.0);
+    final (trackColor, barColor, h, radius) = switch (renderer) {
+      PrimitiveRenderer.ios => (
+          cs.outline.withValues(alpha: 0.4),
+          cs.secondary,
+          2.25,
+          1.0,
+        ),
+      PrimitiveRenderer.material3 => (
+          cs.surfaceContainerHighest,
+          cs.primary,
+          4.0,
+          2.0,
+        ),
+      PrimitiveRenderer.miuix => (
+          cs.surfaceContainerHighest,
+          cs.tertiary,
+          3.0,
+          1.5,
+        ),
+    };
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: LinearProgressIndicator(
+        value: v,
+        minHeight: height ?? h,
+        backgroundColor: trackColor,
+        valueColor: AlwaysStoppedAnimation<Color>(barColor),
+        // 不显示末端圆点指示器（iOS/Miuix 扁平风格不需要）
+        stopIndicatorColor: Colors.transparent,
+      ),
+    );
+  }
+}
