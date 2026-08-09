@@ -6,7 +6,6 @@ import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/utils/num_utils.dart';
 
 /// 番剧页（Phase 7.7.4）。
 ///
@@ -182,7 +181,7 @@ class _PgcPageState extends State<PgcPage>
   }
 }
 
-/// 番剧卡片：封面 + 标题 + 角标（播放/分数）。
+/// 番剧卡片：封面 + 标题 + 角标（分数/追番）。
 class _PgcCard extends StatelessWidget {
   const _PgcCard({required this.item});
 
@@ -190,12 +189,15 @@ class _PgcCard extends StatelessWidget {
 
   String? get _cover => item['cover']?.toString();
   String get _title => item['title']?.toString() ?? '';
-  String? get _subtitle => item['subtitle']?.toString();
-  int? get _play => (item['stat']?['view'] as num?)?.toInt() ??
-      (item['order']?['play'] as num?)?.toInt();
+  // API 字段为 `subTitle`（大写 S）— 番剧标语；`index_show` 为集数信息。
+  String? get _subtitle => item['subTitle']?.toString();
+  // `order` 是展示用字符串（如 "1770.6万追番"），直接显示。
+  String? get _orderText => item['order']?.toString();
+  // `score` 是顶层字符串（如 "9.7"），需解析为 double。
   double? get _score {
-    final raw = item['order']?['score'];
+    final raw = item['score'];
     if (raw is num) return raw.toDouble();
+    if (raw is String) return double.tryParse(raw);
     return null;
   }
 
@@ -251,7 +253,7 @@ class _PgcCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  if (_play != null)
+                  if (_orderText != null && _orderText!.isNotEmpty)
                     Positioned(
                       left: 4,
                       bottom: 4,
@@ -264,23 +266,12 @@ class _PgcCard extends StatelessWidget {
                           color: Colors.black.withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.play_circle_outlined,
-                              size: 10,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              NumUtils.formatNum(_play),
-                              style: const TextStyle(
-                                fontSize: 9,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          _orderText!,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
