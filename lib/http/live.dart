@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/utils/wbi_sign.dart';
 
 /// 直播 HTTP（移植自 PiliPlus `lib/http/live.dart`，精简为桌面端所需）。
 ///
@@ -12,7 +13,7 @@ abstract final class LiveHttp {
   /// 推荐直播列表（`/xlive/web-interface/v1/second/getUserRecommend`）。
   ///
   /// [page] 从 1 开始。成功返回 [LiveRecommendData]，含直播卡片列表。
-  /// 必传 page/page_size/platform，否则触发风控 -352。
+  /// 该 web 接口需 WBI 签名（w_rid/wts），否则触发风控 -352。
   static Future<LoadingState<LiveRecommendData>> liveRecommend({
     int page = 1,
     int pageSize = 30,
@@ -20,11 +21,12 @@ abstract final class LiveHttp {
     try {
       final res = await Request().get<dynamic>(
         Api.liveList,
-        queryParameters: {
+        queryParameters: await WbiSign.makSign({
           'page': page,
           'page_size': pageSize,
           'platform': 'web',
-        },
+          'web_location': 444.8,
+        }),
       );
       final data = res.data as Map<String, dynamic>;
       if (data['code'] == 0) {
