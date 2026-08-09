@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:winwin/pages/setting/about_page.dart';
 import 'package:winwin/pages/setting/common_setting.dart';
 import 'package:winwin/pages/setting/setting_type.dart';
-import 'package:winwin/pages/setting/ui_style_preview.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
@@ -12,8 +11,7 @@ import 'package:winwin/ui/components/app_components.dart';
 /// 左侧分类导航（flex 3），右侧内容区（flex 7）。
 /// 移植自 PiliPlus 的 `SettingPage`，针对桌面端宽屏优化为固定双栏。
 ///
-/// Phase 7.8：左侧导航改用 [AppGroup] / [AppListItem] 美化，顶部增加
-/// 「风格预览」入口（跳转 [UiStylePreviewPage]）。
+/// Phase 7.8：左侧导航改用 [AppGroup] / [AppListItem] 美化。
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
 
@@ -81,24 +79,6 @@ class _SettingPageState extends State<SettingPage> {
                   bottom: padding.bottom + 100,
                 ),
                 children: [
-                  // ── 风格预览入口 ──
-                  AppGroup(
-                    children: [
-                      AppListItem(
-                        icon: Icons.preview_outlined,
-                        title: '风格预览',
-                        subtitle: '三风格卡片可视化对比',
-                        iconTint: theme.colorScheme.primary,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const UiStylePreviewPage(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: Style.md),
                   // ── 分类导航 ──
                   AppGroup(
                     children: _items

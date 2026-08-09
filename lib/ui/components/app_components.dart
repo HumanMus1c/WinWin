@@ -463,47 +463,17 @@ class AppSegmentedControl<T extends Object> extends StatelessWidget {
           onValueChanged: onChanged,
         );
       case PrimitiveRenderer.material3:
-        // 不使用 Flutter SegmentedButton：其在 onSelectionChanged 回调中
-        // 触发整树重建（MaterialApp theme 切换）会导致 semantics
-        // parentDataDirty 断言持续失败、渲染帧中断页面空白。
-        // 改用与 Miuix 分支一致的自定义实现，M3 tonal 样式。
-        return Container(
-          decoration: BoxDecoration(
-            color: cs.surfaceContainer,
-            borderRadius: t.shapes.pillBorder,
-            border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: 0.5),
-            ),
-          ),
-          padding: const EdgeInsets.all(3),
-          child: Row(
-            children: segments.map((e) {
-              final selected = e.$1 == value;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => onChanged(e.$1),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    decoration: BoxDecoration(
-                      color: selected ? cs.secondaryContainer : Colors.transparent,
-                      borderRadius: t.shapes.pillBorder,
-                    ),
-                    child: Text(
-                      e.$2,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: selected
-                            ? cs.onSecondaryContainer
-                            : cs.onSurfaceVariant,
-                        fontWeight: t.typo.titleWeight,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+        return SegmentedButton<T>(
+          segments: segments
+              .map((e) => ButtonSegment<T>(
+                    value: e.$1,
+                    label: Text(e.$2),
+                  ))
+              .toList(),
+          selected: {value},
+          onSelectionChanged: (s) {
+            if (s.isNotEmpty) onChanged(s.first);
+          },
         );
       case PrimitiveRenderer.miuix:
         return Container(

@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
@@ -35,14 +34,11 @@ class UiStyleNotifier extends ValueNotifier<UiStyle> {
 
   /// 切换 UI 风格并持久化。
   ///
-  /// 使用 [addPostFrameCallback] 将 value 赋值推迟到当前帧渲染完成后，
-  /// 确保完全脱离触发的 widget（如 SegmentedButton/CupertinoSegmentedControl）
-  /// 的 onSelectionChanged/onValueChanged 回调同步栈，避免在 semantics/layout
-  /// 处理中途触发整树重建导致 parentDataDirty 断言失败、渲染帧中断。
+  /// 先持久化再设置 [value]：使 value 赋值在微任务中执行，
+  /// 脱离调用方可能的同步回调栈，避免在 semantics/layout 处理中途
+  /// 触发整树重建导致 parentDataDirty 断言失败。
   Future<void> setStyle(UiStyle style) async {
     await GStorage.setting.put(SettingBoxKey.uiStyle, style.legacyInt);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      value = style;
-    });
+    value = style;
   }
 }
