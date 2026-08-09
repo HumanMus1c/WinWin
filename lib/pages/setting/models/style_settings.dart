@@ -380,7 +380,6 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                           final font = _filteredFonts[index];
                           final isDefault =
                               font.family == AppFontNotifier.windowsDefault;
-                          final hasChineseName = font.label != font.family;
                           return RadioListTile<String>(
                             dense: true,
                             value: font.family,
@@ -388,24 +387,8 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                               isDefault
                                   ? '${font.label}（Windows 默认）'
                                   : font.label,
+                              style: TextStyle(fontFamily: font.family),
                             ),
-                            subtitle: hasChineseName
-                                ? Text(
-                                    '${font.family}  ·  永和九年 AaBb 123',
-                                    style: TextStyle(
-                                      fontFamily: font.family,
-                                      fontSize: 12,
-                                      color: theme.colorScheme.outline,
-                                    ),
-                                  )
-                                : Text(
-                                    '永和九年 AaBb 123',
-                                    style: TextStyle(
-                                      fontFamily: font.family,
-                                      fontSize: 12,
-                                      color: theme.colorScheme.outline,
-                                    ),
-                                  ),
                           );
                         },
                       ),

@@ -229,22 +229,26 @@ class SystemFontScanner {
     }
 
     // 解析 family（英文，供 Flutter 解析）。
-    // 优先级：nameID=16(en) > 1(en) > 4(en) > 16(zh) > 1(zh) > 4(zh)
-    final family = names['16_$langEnUs'] ??
-        names['1_$langEnUs'] ??
+    // 优先级：nameID=1(en) > 16(en) > 4(en) > 1(zh) > 16(zh) > 4(zh)
+    // 注意：nameID=1 (Font Family) 优先于 nameID=16 (Typographic Family)，
+    // 因为 Windows 按 nameID=1 匹配字体族，且 TTC 中多个子字体可能共享
+    // nameID=16（如 msyh.ttc 的 "Microsoft YaHei" 和 "Microsoft YaHei UI"
+    // 共享 nameID=16="Microsoft YaHei"），优先用 nameID=1 才能区分它们。
+    final family = names['1_$langEnUs'] ??
+        names['16_$langEnUs'] ??
         names['4_$langEnUs'] ??
-        names['16_$langZhCn'] ??
         names['1_$langZhCn'] ??
+        names['16_$langZhCn'] ??
         names['4_$langZhCn'];
 
     if (family == null || family.isEmpty) return [];
 
     // 解析 label（显示名，优先中文）。
-    final label = names['16_$langZhCn'] ??
-        names['1_$langZhCn'] ??
+    final label = names['1_$langZhCn'] ??
+        names['16_$langZhCn'] ??
         names['4_$langZhCn'] ??
-        names['16_$langEnUs'] ??
         names['1_$langEnUs'] ??
+        names['16_$langEnUs'] ??
         names['4_$langEnUs'] ??
         family;
 
