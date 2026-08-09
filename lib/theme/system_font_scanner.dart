@@ -4,6 +4,10 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 
 /// 系统字体信息。
+///
+/// [family] 是英文族名（来自 nameID=16 或 1，langID=0x0409），
+/// 供 Flutter 的 `TextStyle(fontFamily:)` 解析使用。
+/// [label] 是显示名称，优先取中文名（langID=0x0804），无则回退到 [family]。
 class FontInfo {
   final String family;
   final String label;
@@ -26,9 +30,10 @@ class FontInfo {
 /// 避免将整个 CJK 字体文件（可达 40MB）读入内存。
 ///
 /// **name table 提取规则**：
-/// - 优先 platformID=3 (Microsoft), encodingID=1 (Unicode BMP), langID=0x0409 (en-US)
-/// - 优先 nameID=16 (Typographic Family) 其次 nameID=1 (Font Family)
-/// - 字符串为 UTF-16BE 编码
+/// - platformID=3 (Microsoft) 下所有 encodingID 均为 UTF-16BE 编码
+/// - 优先 langID=0x0409 (en-US) 的 nameID=16 (Typographic Family)
+/// - 其次 nameID=1 (Font Family)，再次 nameID=4 (Full Name)
+/// - 中文名（langID=0x0804）用于显示标签
 class SystemFontScanner {
   static List<FontInfo>? _cache;
 
@@ -70,11 +75,11 @@ class SystemFontScanner {
           }
 
           try {
-            final families = await _parseFontFamilyNames(entity);
-            for (final name in families) {
-              final trimmed = name.trim();
-              if (trimmed.isNotEmpty && seen.add(trimmed)) {
-                fonts.add(FontInfo(family: trimmed, label: trimmed));
+            final parsed = await _parseFontFamilyNames(entity);
+            for (final info in parsed) {
+              final key = info.family;
+              if (key.isNotEmpty && seen.add(key)) {
+                fonts.add(info);
               }
             }
           } catch (e) {
@@ -93,9 +98,9 @@ class SystemFontScanner {
 
   // ── 字体文件解析 ──────────────────────────────────────────
 
-  /// 解析字体文件，返回包含的所有字体族名。
+  /// 解析字体文件，返回包含的所有字体信息。
   /// TTC 文件可包含多个字体。
-  static Future<List<String>> _parseFontFamilyNames(File file) async {
+  static Future<List<FontInfo>> _parseFontFamilyNames(File file) async {
     RandomAccessFile? raf;
     try {
       raf = await file.open();
@@ -110,7 +115,8 @@ class SystemFontScanner {
   }
 
   /// 解析 TTC (TrueType Collection) 文件。
-  static Future<List<String>> _parseTtc(RandomAccessFile raf) async {
+  /// 每个子字体独立 try/catch，单个失败不影响其他。
+  static Future<List<FontInfo>> _parseTtc(RandomAccessFile raf) async {
     // TTC header: tag(4) + majorVersion(2) + minorVersion(2) + numFonts(4)
     await raf.setPosition(8);
     final numFontsBytes = await _readExact(raf, 4);
@@ -120,20 +126,25 @@ class SystemFontScanner {
     final offsetsBytes = await _readExact(raf, numFonts * 4);
     final offsetsData = ByteData.sublistView(offsetsBytes);
 
-    final families = <String>[];
+    final fonts = <FontInfo>[];
     for (int i = 0; i < numFonts; i++) {
-      final offset = offsetsData.getUint32(i * 4, Endian.big);
-      final names = await _parseTtfFamily(raf, offset);
-      families.addAll(names);
+      try {
+        final offset = offsetsData.getUint32(i * 4, Endian.big);
+        final parsed = await _parseTtfFamily(raf, offset);
+        fonts.addAll(parsed);
+      } catch (e) {
+        // 单个子字体解析失败，跳过继续。
+        debugPrint('SystemFontScanner: TTC 子字体 $i 解析失败 — $e');
+      }
     }
-    return families;
+    return fonts;
   }
 
   /// 解析单个 TTF/OTF 字体的 offset table，提取 name table 中的族名。
-  static Future<List<String>> _parseTtfFamily(
+  static Future<List<FontInfo>> _parseTtfFamily(
       RandomAccessFile raf, int baseOffset) async {
     // Offset table: sfVersion(4) + numTables(2) + searchRange(2) +
-  // entrySelector(2) + rangeShift(2) = 12 bytes
+    // entrySelector(2) + rangeShift(2) = 12 bytes
     await raf.setPosition(baseOffset + 4);
     final headerBytes = await _readExact(raf, 8);
     final header = ByteData.sublistView(headerBytes);
@@ -163,8 +174,8 @@ class SystemFontScanner {
     return _parseNameTable(raf, baseOffset + nameOffset, nameLength);
   }
 
-  /// 解析 name table，提取字体族名。
-  static Future<List<String>> _parseNameTable(
+  /// 解析 name table，提取字体族名（英文 family + 中文 label）。
+  static Future<List<FontInfo>> _parseNameTable(
       RandomAccessFile raf, int tableOffset, int tableLength) async {
     await raf.setPosition(tableOffset);
     final tableBytes = await _readExact(raf, tableLength);
@@ -173,9 +184,9 @@ class SystemFontScanner {
     final count = data.getUint16(2, Endian.big);
     final stringOffset = data.getUint16(4, Endian.big);
 
-    // 收集 platform=3, lang=0x0409 的 nameID=1 和 nameID=16。
-    String? familyName; // nameID = 1
-    String? typoFamilyName; // nameID = 16
+    // 收集所有相关 name record。
+    // key = (nameID, langID), value = 解码后的字符串。
+    final names = <String, String>{};
 
     for (int i = 0; i < count; i++) {
       final recOff = 6 + i * 12;
@@ -188,37 +199,48 @@ class SystemFontScanner {
       final strLength = data.getUint16(recOff + 8, Endian.big);
       final strOffset = data.getUint16(recOff + 10, Endian.big);
 
-      // 仅取 Windows 平台 + 英文。
+      // 仅取 Windows 平台（platformID=3），其下所有 encoding 均为 UTF-16BE。
       if (platformID != 3) continue;
-      if (languageID != 0x0409) continue;
 
-      if (nameID != 1 && nameID != 16) continue;
+      // 仅关注 nameID=1 (Family), 4 (Full Name), 16 (Typographic Family)。
+      if (nameID != 1 && nameID != 4 && nameID != 16) continue;
+
+      // 仅关注 en-US (0x0409) 和 zh-CN (0x0804)。
+      if (languageID != 0x0409 && languageID != 0x0804) continue;
 
       final absStrOff = stringOffset + strOffset;
       if (absStrOff + strLength > tableBytes.length) continue;
 
       final strBytes = tableBytes.sublist(absStrOff, absStrOff + strLength);
-      String value;
-      if (encodingID == 1 || encodingID == 10) {
-        // Unicode BMP / full: UTF-16BE
-        value = _decodeUtf16be(strBytes);
-      } else {
-        // encodingID == 0 (Symbol) 等：按 ASCII 处理。
-        value = String.fromCharCodes(strBytes);
-      }
+      // platformID=3 下所有 encoding 均为 UTF-16BE。
+      final value = _decodeUtf16be(strBytes);
 
-      if (nameID == 1 && familyName == null) {
-        familyName = value;
-      } else if (nameID == 16 && typoFamilyName == null) {
-        typoFamilyName = value;
-      }
+      final key = '${nameID}_$languageID';
+      names.putIfAbsent(key, () => value);
     }
 
-    // 优先 nameID=16 (Typographic Family)，它对多字重字体的族名更准确。
-    final result = <String>[];
-    final name = typoFamilyName ?? familyName;
-    if (name != null) result.add(name);
-    return result;
+    // 解析 family（英文，供 Flutter 解析）。
+    // 优先级：nameID=16(0x0409) > nameID=1(0x0409) > nameID=4(0x0409)
+    //         > nameID=16(0x0804) > nameID=1(0x0804) > nameID=4(0x0804)
+    final family = names['16_0x0409'] ??
+        names['1_0x0409'] ??
+        names['4_0x0409'] ??
+        names['16_0x0804'] ??
+        names['1_0x0804'] ??
+        names['4_0x0804'];
+
+    if (family == null || family.isEmpty) return [];
+
+    // 解析 label（显示名，优先中文）。
+    final label = names['16_0x0804'] ??
+        names['1_0x0804'] ??
+        names['4_0x0804'] ??
+        names['16_0x0409'] ??
+        names['1_0x0409'] ??
+        names['4_0x0409'] ??
+        family;
+
+    return [FontInfo(family: family, label: label)];
   }
 
   /// 从 RandomAccessFile 精确读取 [count] 字节。
@@ -234,13 +256,14 @@ class SystemFontScanner {
     return builder.toBytes();
   }
 
-  /// 解码 UTF-16BE 字节为字符串。
+  /// 解码 UTF-16BE 字节为字符串，过滤 null 字符。
   static String _decodeUtf16be(List<int> bytes) {
     final sb = StringBuffer();
     for (int i = 0; i + 1 < bytes.length; i += 2) {
       final codeUnit = (bytes[i] << 8) | bytes[i + 1];
+      if (codeUnit == 0) continue; // 跳过 null 字符。
       sb.writeCharCode(codeUnit);
     }
-    return sb.toString();
+    return sb.toString().trim();
   }
 }
