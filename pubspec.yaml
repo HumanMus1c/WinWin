@@ -23,6 +23,8 @@ dependencies:
   cached_network_image: ^3.4.1
   fvp: ^0.37.3
   protobuf: ^6.0.0
+  # Phase 8: 极验验证码 WebView（用于短信/密码登录风控）
+  flutter_inappwebview: ^6.1.5
   fixnum: ^1.1.1
   # Phase 4.6: 桌面伪 PiP（窗口缩放 + 置顶）
   window_manager: ^0.4.3

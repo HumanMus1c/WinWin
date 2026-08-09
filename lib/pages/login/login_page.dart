@@ -11,6 +11,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/login.dart';
 import 'package:winwin/http/user.dart';
 import 'package:winwin/models/common/account_type.dart';
+import 'package:winwin/pages/login/geetest_webview_dialog.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
@@ -180,6 +181,13 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
   bool _showPassword = false;
   bool _loading = false;
 
+  /// 极验验证码暂存：从 recaptcha_url 解析的 token，与验证成功后的
+  /// {validate, seccode, challenge}。重试登录时一并提交以通过风控。
+  String? _recaptchaToken;
+  String? _geeValidate;
+  String? _geeSeccode;
+  String? _geeChallenge;
+
   @override
   void dispose() {
     _usernameCtrl.dispose();
@@ -211,6 +219,10 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
         password: password,
         key: key,
         salt: salt,
+        geeChallenge: _geeChallenge,
+        geeSeccode: _geeSeccode,
+        geeValidate: _geeValidate,
+        recaptchaToken: _recaptchaToken,
       );
 
       if (res['status'] == true) {
@@ -222,7 +234,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
         // status==2 表示风控需要短信验证（PiliPlus 在此弹安全中心对话框）。
         if (data['status'] == 2) {
           widget.onToast(
-            '本次登录环境存在风险，需手机号验证。极验 webview 未实现，请改用扫码或 Cookie 登录。',
+            '本次登录环境存在风险，需手机号验证。安全中心流程暂未实现，请改用扫码或 Cookie 登录。',
           );
           return;
         }
@@ -240,9 +252,42 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
         // 处理错误码：-105 表示需要极验验证码。
         final code = res['code'];
         if (code == -105) {
-          widget.onToast(
-            '需要极验验证码，webview 未实现，请改用扫码或 Cookie 登录。',
+          // 从返回数据中解析 recaptcha_url，提取 gee_gt / gee_challenge / token。
+          final dataMap = res['data'] as Map<String, dynamic>?;
+          final captureUrl = dataMap?['url'] as String?;
+          if (captureUrl == null || captureUrl.isEmpty) {
+            widget.onToast('需要极验验证码，但接口未返回验证地址');
+            return;
+          }
+          final captureUri = Uri.parse(captureUrl);
+          _recaptchaToken = captureUri.queryParameters['recaptcha_token'];
+          final geeGt = captureUri.queryParameters['gee_gt'];
+          final geeChallenge = captureUri.queryParameters['gee_challenge'];
+          if (geeGt == null || geeGt.isEmpty ||
+              geeChallenge == null || geeChallenge.isEmpty) {
+            widget.onToast('极验参数缺失，请改用扫码或 Cookie 登录');
+            return;
+          }
+          // 弹出极验 webview，等待用户完成滑块验证。
+          final result = await GeetestWebviewDialog.show(
+            context,
+            geeGt,
+            geeChallenge,
           );
+          if (result == null) {
+            widget.onToast('已取消验证码');
+            return;
+          }
+          _geeValidate = result['geetest_validate'] as String?;
+          _geeSeccode = result['geetest_seccode'] as String?;
+          _geeChallenge = result['geetest_challenge'] as String?;
+          if (_geeValidate == null || _geeSeccode == null) {
+            widget.onToast('验证码结果异常，请重试');
+            return;
+          }
+          // 极验通过后递归调用 _login 重新提交登录请求。
+          widget.onToast('验证成功，正在登录...');
+          await _login();
         } else {
           widget.onToast(res['msg']?.toString() ?? '登录失败');
         }
@@ -587,6 +632,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
   Timer? _pollTimer;
   int _leftTime = 180;
   bool _loading = true;
+  bool _refreshing = false;
 
   @override
   void initState() {
@@ -601,6 +647,8 @@ class _QRLoginTabState extends State<_QRLoginTab> {
   }
 
   Future<void> _refreshQR() async {
+    if (_refreshing) return;
+    _refreshing = true;
     setState(() {
       _loading = true;
       _status = '正在获取二维码...';
@@ -609,7 +657,10 @@ class _QRLoginTabState extends State<_QRLoginTab> {
     _pollTimer?.cancel();
 
     final res = await LoginHttp.getHDcode();
-    if (!mounted) return;
+    if (!mounted) {
+      _refreshing = false;
+      return;
+    }
 
     switch (res) {
       case Success(:final response):
@@ -631,6 +682,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
           _status = '加载中...';
         });
     }
+    _refreshing = false;
   }
 
   void _startPolling(String authCode) {
@@ -650,11 +702,13 @@ class _QRLoginTabState extends State<_QRLoginTab> {
       if (result['status'] == true) {
         t.cancel();
         setState(() => _status = '登录成功');
+        // TV QR 返回的 data 本身即为 tokenInfo（含 access_token/refresh_token
+        // 顶层字段），cookie_info.cookies 为 cookie 列表。
+        // 与 PiliPlus setAccount(value['data'], value['data']['cookie_info']['cookies']) 一致。
         final data = result['data'] as Map<String, dynamic>;
-        final tokenInfo = data['token_info'] as Map<String, dynamic>;
         final cookieInfo = data['cookie_info'] as Map<String, dynamic>;
         await widget.onSetAccount(
-          tokenInfo,
+          data,
           cookieInfo['cookies'] as List,
         );
       } else if (code == 86090) {
@@ -662,8 +716,18 @@ class _QRLoginTabState extends State<_QRLoginTab> {
       } else if (code == 86038) {
         t.cancel();
         setState(() => _status = '二维码已过期，请刷新');
+      } else if (code == 86039) {
+        // 未扫描，保持当前状态（仅在首次设置时更新文案）
+        if (_status == '正在获取二维码...' || _status == '请使用哔哩哔哩手机端扫码') {
+          setState(() => _status = '请使用哔哩哔哩手机端扫码');
+        }
+      } else {
+        // 其他 code（如 86092 用户取消确认 / 86091 已扫码但取消 等）：
+        // 被扫码但登录失败 → 自动刷新获取新二维码。
+        widget.onToast('扫码登录失败（code=$code），正在刷新二维码...');
+        t.cancel();
+        _refreshQR();
       }
-      // 86039=未扫描，保持当前状态
     });
   }
 
@@ -717,7 +781,8 @@ class _QRLoginTabState extends State<_QRLoginTab> {
                 ),
               ),
             const SizedBox(height: Style.lg),
-            if (_leftTime <= 0 || _status.contains('过期'))
+            // 始终显示手动刷新按钮（加载中除外），便于用户在扫码失败/过期时主动刷新。
+            if (!_loading)
               AppPrimaryButton(
                 onPressed: _refreshQR,
                 child: const Row(

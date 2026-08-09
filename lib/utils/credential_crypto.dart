@@ -12,12 +12,17 @@ import 'package:uuid/uuid.dart';
 /// 算法：基于机器绑定密钥的 HMAC-SHA256 密钥流 XOR（流加密）。
 /// - 密钥派生：machineKey（固定常量，桌面端无可靠机器 ID API 时的兜底）
 ///   经 PBKDF2-like 多轮 HMAC 收敛为 32 字节主密钥。
-/// - 加密：对明文按 64 字节分块，每块用 `HMAC(masterKey, nonce || counter)`
-///   生成密钥流后 XOR；密文 = base64( nonce || ciphertext )。
+/// - 加密：对明文按 32 字节分块（与 HMAC-SHA256 输出长度对齐），每块用
+///   `HMAC(masterKey, nonce || counter)` 生成密钥流后 XOR；
+///   密文 = base64( nonce || ciphertext )。
 /// - 解密：逆向。nonce 随机，每次加密结果不同。
 ///
 /// 安全性说明：本方案抵御普通磁盘直接读取；不抵御拥有内存调试能力的攻击者。
 /// 如需更强保护可后续接入 Windows DPAPI（flutter_secure_storage）。
+///
+/// 注意：早期版本块大小为 64 字节但密钥流仅 32 字节，导致明文长度超过 32 字节
+/// 时抛出 `RangeError(length): Invalid value: Not in inclusive range 0..31: 32`。
+/// 现已对齐为 32 字节块，与 HMAC-SHA256 输出一致。
 abstract final class CredentialCrypto {
   /// 机器绑定密钥（WinWin Desktop 专用盐）。
   /// 与应用绑定，不同应用无法直接复用。
@@ -62,11 +67,16 @@ abstract final class CredentialCrypto {
       _uuid.v4obj().toBytes(),
     );
     final cipher = Uint8List(plain.length);
-    final blocks = (plain.length + 63) ~/ 64;
+    // 块大小必须与密钥流长度（HMAC-SHA256 输出 = 32 字节）一致，
+    // 否则访问 ks[i - start] 会越界。
+    const blockSize = 32;
+    final blocks = (plain.length + blockSize - 1) ~/ blockSize;
     for (var b = 0; b < blocks; b++) {
       final ks = _keystream(_masterKey, nonce, b);
-      final start = b * 64;
-      final end = (start + 64 > plain.length) ? plain.length : start + 64;
+      final start = b * blockSize;
+      final end = (start + blockSize > plain.length)
+          ? plain.length
+          : start + blockSize;
       for (var i = start; i < end; i++) {
         cipher[i] = plain[i] ^ ks[i - start];
       }
@@ -84,11 +94,14 @@ abstract final class CredentialCrypto {
       final nonce = Uint8List.fromList(raw.sublist(0, 16));
       final cipher = raw.sublist(16);
       final plain = Uint8List(cipher.length);
-      final blocks = (cipher.length + 63) ~/ 64;
+      const blockSize = 32;
+      final blocks = (cipher.length + blockSize - 1) ~/ blockSize;
       for (var b = 0; b < blocks; b++) {
         final ks = _keystream(_masterKey, nonce, b);
-        final start = b * 64;
-        final end = (start + 64 > cipher.length) ? cipher.length : start + 64;
+        final start = b * blockSize;
+        final end = (start + blockSize > cipher.length)
+            ? cipher.length
+            : start + blockSize;
         for (var i = start; i < end; i++) {
           plain[i] = cipher[i] ^ ks[i - start];
         }
