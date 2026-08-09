@@ -11,8 +11,8 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/login.dart';
 import 'package:winwin/http/user.dart';
 import 'package:winwin/models/common/account_type.dart';
-import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 登录页（移植自 PiliPlus `lib/pages/login/`）。
 ///
@@ -47,21 +47,13 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _LoginPageState extends State<LoginPage> {
+  /// 当前选中的登录方式索引。
+  int _currentTab = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  /// 已访问过的 tab 集合（用于懒初始化 + 状态保留）。
+  /// QR tab 在首次访问前不会开始轮询，与原 TabBarView 行为一致。
+  final Set<int> _visited = {0};
 
   void _toast(String msg) {
     if (!mounted) return;
@@ -101,38 +93,66 @@ class _LoginPageState extends State<LoginPage>
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelColor: biliPink,
-          unselectedLabelColor:
-              Theme.of(context).colorScheme.onSurfaceVariant,
-          indicatorColor: biliPink,
-          tabs: const [
-            Tab(icon: Icon(Icons.password), text: '密码'),
-            Tab(icon: Icon(Icons.sms_outlined), text: '短信'),
-            Tab(icon: Icon(Icons.qr_code), text: '扫码'),
-            Tab(icon: Icon(Icons.cookie_outlined), text: 'Cookie'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _PasswordLoginTab(
-            onToast: _toast,
-            onSetAccount: _setAccount,
+          // ── 风格自适应分段控件：切换 4 种登录方式 ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Style.lg,
+              Style.sm,
+              Style.lg,
+              Style.md,
+            ),
+            child: AppSegmentedControl<int>(
+              segments: const [
+                (0, '密码'),
+                (1, '短信'),
+                (2, '扫码'),
+                (3, 'Cookie'),
+              ],
+              value: _currentTab,
+              onChanged: (v) => setState(() {
+                _currentTab = v;
+                _visited.add(v);
+              }),
+            ),
           ),
-          _SmsLoginTab(
-            onToast: _toast,
-            onSetAccount: _setAccount,
-          ),
-          _QRLoginTab(
-            onToast: _toast,
-            onSetAccount: _setAccount,
-          ),
-          _CookieLoginTab(
-            onToast: _toast,
+          const Divider(height: 1),
+          // ── 内容区：懒加载 + 状态保留 ──
+          Expanded(
+            child: IndexedStack(
+              index: _currentTab,
+              children: [
+                if (_visited.contains(0))
+                  _PasswordLoginTab(
+                    onToast: _toast,
+                    onSetAccount: _setAccount,
+                  )
+                else
+                  const SizedBox.shrink(),
+                if (_visited.contains(1))
+                  _SmsLoginTab(
+                    onToast: _toast,
+                    onSetAccount: _setAccount,
+                  )
+                else
+                  const SizedBox.shrink(),
+                if (_visited.contains(2))
+                  _QRLoginTab(
+                    onToast: _toast,
+                    onSetAccount: _setAccount,
+                  )
+                else
+                  const SizedBox.shrink(),
+                if (_visited.contains(3))
+                  _CookieLoginTab(
+                    onToast: _toast,
+                  )
+                else
+                  const SizedBox.shrink(),
+              ],
+            ),
           ),
         ],
       ),
@@ -237,6 +257,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Style.xl),
       child: Column(
@@ -247,53 +268,51 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
               style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center),
           const SizedBox(height: Style.lg),
-          TextField(
+          AppTextField(
             controller: _usernameCtrl,
+            label: '账号',
+            hint: '邮箱/手机号',
+            prefix: const Icon(Icons.account_box),
             inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.account_box),
-              border: UnderlineInputBorder(),
-              labelText: '账号',
-              hintText: '邮箱/手机号',
-            ),
           ),
           const SizedBox(height: Style.md),
-          TextField(
+          AppTextField(
             controller: _passwordCtrl,
+            label: '密码',
             obscureText: !_showPassword,
             keyboardType: TextInputType.visiblePassword,
+            prefix: const Icon(Icons.password),
             inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.password),
-              border: UnderlineInputBorder(),
-              labelText: '密码',
-            ),
           ),
           Row(
             children: [
-              Checkbox(
+              AppSwitch(
                 value: _showPassword,
-                onChanged: (v) => setState(() => _showPassword = v ?? false),
+                onChanged: (v) => setState(() => _showPassword = v),
               ),
+              const SizedBox(width: Style.sm),
               const Text('显示密码'),
             ],
           ),
           const SizedBox(height: Style.md),
-          FilledButton.icon(
+          AppPrimaryButton(
             onPressed: _loading ? null : _login,
-            icon: _loading
+            expanded: true,
+            child: _loading
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Icon(Icons.login),
-            label: const Text('登录'),
-            style: FilledButton.styleFrom(
-              backgroundColor: biliPink,
-              padding: const EdgeInsets.symmetric(vertical: Style.md),
-            ),
+                : const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.login, size: 18, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('登录'),
+                    ],
+                  ),
           ),
           const SizedBox(height: Style.lg),
           Text(
@@ -303,7 +322,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
             '当前 RSA 加密为 stub，密码登录可能因风控失败，建议优先使用扫码或 Cookie 登录。',
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
+              color: cs.onSurface.withOpacity(0.4),
             ),
           ),
         ],
@@ -446,6 +465,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Style.xl),
       child: Column(
@@ -456,110 +476,80 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
               style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center),
           const SizedBox(height: Style.lg),
-          // 区号 + 手机号
-          DecoratedBox(
-            decoration: UnderlineTabIndicator(
-              borderSide: BorderSide(
-                color: theme.colorScheme.outline.withOpacity(0.4),
-              ),
-            ),
-            child: Row(
-              children: [
-                PopupMenuButton<String>(
-                  tooltip: '选择国际冠码，当前为+$_countryId',
-                  onSelected: (v) => setState(() => _countryId = v),
-                  initialValue: _countryId,
-                  itemBuilder: (_) => _countryCodes.map((item) {
-                    return PopupMenuItem<String>(
-                      value: item.$1,
-                      child: Row(
-                        children: [
-                          Text(item.$2),
-                          const Spacer(),
-                          Text('+${item.$1}'),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+          // 手机号：区号选择器作为 prefix 内嵌入自适应输入框
+          AppTextField(
+            controller: _telCtrl,
+            label: '手机号',
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            prefix: PopupMenuButton<String>(
+              tooltip: '选择国际冠码，当前为+$_countryId',
+              onSelected: (v) => setState(() => _countryId = v),
+              initialValue: _countryId,
+              itemBuilder: (_) => _countryCodes.map((item) {
+                return PopupMenuItem<String>(
+                  value: item.$1,
                   child: Row(
                     children: [
-                      Icon(Icons.phone,
-                          color: theme.colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 8),
-                      Text('+$_countryId'),
-                      const Icon(Icons.arrow_drop_down),
+                      Text(item.$2),
+                      const Spacer(),
+                      Text('+${item.$1}'),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _telCtrl,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      labelText: '手机号',
-                    ),
-                  ),
-                ),
-              ],
+                );
+              }).toList(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.phone, color: cs.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Text('+$_countryId'),
+                  const Icon(Icons.arrow_drop_down),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: Style.md),
-          // 验证码 + 获取按钮
-          DecoratedBox(
-            decoration: UnderlineTabIndicator(
-              borderSide: BorderSide(
-                color: theme.colorScheme.outline.withOpacity(0.4),
+          // 验证码：获取按钮作为 suffix 内嵌入自适应输入框
+          AppTextField(
+            controller: _codeCtrl,
+            label: '验证码',
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            prefix: const Icon(Icons.sms_outlined),
+            suffix: TextButton.icon(
+              onPressed: (_cooldown > 0 || _sending) ? null : _sendSms,
+              icon: _sending
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send),
+              label: Text(
+                _cooldown > 0 ? '等待${_cooldown}秒' : '获取验证码',
               ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _codeCtrl,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.sms_outlined),
-                      border: InputBorder.none,
-                      labelText: '验证码',
-                    ),
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: (_cooldown > 0 || _sending) ? null : _sendSms,
-                  icon: _sending
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send),
-                  label: Text(
-                    _cooldown > 0 ? '等待${_cooldown}秒' : '获取验证码',
-                  ),
-                ),
-              ],
             ),
           ),
           const SizedBox(height: Style.lg),
-          FilledButton.icon(
+          AppPrimaryButton(
             onPressed: _loading ? null : _login,
-            icon: _loading
+            expanded: true,
+            child: _loading
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Icon(Icons.login),
-            label: const Text('登录'),
-            style: FilledButton.styleFrom(
-              backgroundColor: biliPink,
-              padding: const EdgeInsets.symmetric(vertical: Style.md),
-            ),
+                : const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.login, size: 18, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('登录'),
+                    ],
+                  ),
           ),
           const SizedBox(height: Style.lg),
           Text(
@@ -568,7 +558,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
             '当前 dt 字段 RSA 加密为 stub，短信登录可能因风控失败，建议优先使用扫码或 Cookie 登录。',
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
+              color: cs.onSurface.withOpacity(0.4),
             ),
           ),
         ],
@@ -679,6 +669,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(Style.xl),
@@ -686,7 +677,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (_loading)
-              const CircularProgressIndicator(color: biliPink)
+              CircularProgressIndicator(color: cs.primary)
             else if (_qrUrl != null)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -720,18 +711,23 @@ class _QRLoginTabState extends State<_QRLoginTab> {
                 child: Text(
                   '剩余 ${_leftTime}s',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.outline,
+                    color: cs.outline,
                     fontSize: 12,
                   ),
                 ),
               ),
             const SizedBox(height: Style.lg),
             if (_leftTime <= 0 || _status.contains('过期'))
-              FilledButton.icon(
+              AppPrimaryButton(
                 onPressed: _refreshQR,
-                icon: const Icon(Icons.refresh),
-                label: const Text('刷新二维码'),
-                style: FilledButton.styleFrom(backgroundColor: biliPink),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.refresh, size: 18, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('刷新二维码'),
+                  ],
+                ),
               ),
           ],
         ),
@@ -826,6 +822,7 @@ class _CookieLoginTabState extends State<_CookieLoginTab> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Style.xl),
       child: Column(
@@ -843,38 +840,38 @@ class _CookieLoginTabState extends State<_CookieLoginTab> {
             '使用 App 端 Api 实现的功能将不可用。',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
+              color: cs.primary,
               fontSize: 13,
             ),
           ),
           const SizedBox(height: Style.lg),
-          TextField(
+          AppTextField(
             controller: _cookieCtrl,
+            label: 'Cookie',
             minLines: 1,
             maxLines: 8,
+            prefix: const Icon(Icons.cookie_outlined),
             inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.cookie_outlined),
-              border: UnderlineInputBorder(),
-              labelText: 'Cookie',
-            ),
           ),
           const SizedBox(height: Style.lg),
-          FilledButton.icon(
+          AppPrimaryButton(
             onPressed: _loading ? null : _login,
-            icon: _loading
+            expanded: true,
+            child: _loading
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Icon(Icons.login),
-            label: const Text('登录'),
-            style: FilledButton.styleFrom(
-              backgroundColor: biliPink,
-              padding: const EdgeInsets.symmetric(vertical: Style.md),
-            ),
+                : const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.login, size: 18, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('登录'),
+                    ],
+                  ),
           ),
         ],
       ),

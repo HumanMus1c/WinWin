@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_shapes.dart';
@@ -535,6 +536,10 @@ class AppTextField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.focusNode,
+    this.keyboardType,
+    this.inputFormatters,
+    this.minLines,
+    this.maxLines = 1,
   });
 
   final TextEditingController? controller;
@@ -546,6 +551,10 @@ class AppTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final FocusNode? focusNode;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? minLines;
+  final int? maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -559,6 +568,10 @@ class AppTextField extends StatelessWidget {
       obscureText: obscureText,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      minLines: minLines,
+      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
