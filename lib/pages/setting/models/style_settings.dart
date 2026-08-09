@@ -7,6 +7,7 @@ import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/theme_notifier.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
 import 'package:winwin/theme/app_font_notifier.dart';
+import 'package:winwin/theme/system_font_scanner.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/theme/ui_style_notifier.dart';
 
@@ -261,7 +262,8 @@ class _SliderDialogState extends State<_SliderDialog> {
 /// 字体选择对话框。
 ///
 /// 参照 BiliPai `AppearanceSettingsScreen` 的「应用字体」分区：
-/// - 预设字体单选列表（Windows 预装字体）
+/// - 系统字体单选列表（扫描 Windows 已安装的全部字体）
+/// - 搜索框过滤字体
 /// - 自定义字体导入入口（file_picker 选择 .ttf/.otf）
 /// - 恢复默认按钮（清除已导入的自定义字体）
 class _FontPickerDialog extends StatefulWidget {
@@ -276,11 +278,43 @@ class _FontPickerDialog extends StatefulWidget {
 class _FontPickerDialogState extends State<_FontPickerDialog> {
   late String _selected;
   bool _importing = false;
+  bool _scanning = true;
+  List<FontInfo> _allFonts = [];
+  List<FontInfo> _filteredFonts = [];
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _selected = AppFontNotifier.instance.value;
+    _loadFonts();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadFonts() async {
+    final fonts = await SystemFontScanner.scan();
+    if (!mounted) return;
+    setState(() {
+      _allFonts = fonts;
+      _filteredFonts = fonts;
+      _scanning = false;
+    });
+  }
+
+  void _onSearch(String query) {
+    final q = query.trim().toLowerCase();
+    setState(() {
+      _filteredFonts = q.isEmpty
+          ? _allFonts
+          : _allFonts
+              .where((f) => f.label.toLowerCase().contains(q))
+              .toList();
+    });
   }
 
   @override
@@ -291,81 +325,107 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
 
     return AlertDialog(
       title: const Text('应用字体'),
-      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+      contentPadding: EdgeInsets.zero,
       content: SizedBox(
-        width: 360,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 预设字体列表
-              RadioGroup<String>(
-                onChanged: (v) async {
-                  if (v == null) return;
-                  await notifier.setFontFamily(v);
-                  setState(() => _selected = v);
-                },
-                groupValue: _selected,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final preset in AppFontNotifier.presets)
-                      RadioListTile<String>(
-                        dense: true,
-                        value: preset.family,
-                        title: Text(
-                          preset.label,
-                          style: TextStyle(fontFamily: preset.family),
-                        ),
-                      ),
-                    if (hasCustom)
-                      RadioListTile<String>(
-                        dense: true,
-                        value: AppFontNotifier.customFontFamily,
-                        title: const Text('自定义字体（已导入）'),
-                        subtitle: Text(
-                          '点击「恢复默认」可移除',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.outline,
+        width: 420,
+        height: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 搜索框
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearch,
+                decoration: InputDecoration(
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  hintText: '搜索字体…',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+            // 字体列表
+            Expanded(
+              child: _scanning
+                  ? const Center(child: CircularProgressIndicator())
+                  : RadioGroup<String>(
+                      onChanged: (v) async {
+                        if (v == null) return;
+                        await notifier.setFontFamily(v);
+                        setState(() => _selected = v);
+                      },
+                      groupValue: _selected,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _filteredFonts.length + (hasCustom ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          // 自定义字体项放在列表末尾。
+                          if (index == _filteredFonts.length && hasCustom) {
+                            return RadioListTile<String>(
+                              dense: true,
+                              value: AppFontNotifier.customFontFamily,
+                              title: const Text('自定义字体（已导入）'),
+                              subtitle: Text(
+                                '点击「恢复默认」可移除',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme.colorScheme.outline,
+                                    ),
                               ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              // 导入 / 恢复默认
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    TextButton.icon(
-                      onPressed: _importing ? null : _importFont,
-                      icon: SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: _importing
-                            ? const CircularProgressIndicator(strokeWidth: 2)
-                            : const Icon(Icons.file_upload_outlined, size: 18),
-                      ),
-                      label: Text(_importing ? '导入中…' : '导入字体文件'),
-                    ),
-                    if (hasCustom) ...[
-                      const Spacer(),
-                      TextButton.icon(
-                        onPressed: () async {
-                          await notifier.clearCustomFont();
-                          setState(() => _selected = notifier.value);
+                            );
+                          }
+                          final font = _filteredFonts[index];
+                          final isDefault =
+                              font.family == AppFontNotifier.windowsDefault;
+                          return RadioListTile<String>(
+                            dense: true,
+                            value: font.family,
+                            title: Text(
+                              isDefault
+                                  ? '${font.label}（Windows 默认）'
+                                  : font.label,
+                              style: TextStyle(fontFamily: font.family),
+                            ),
+                          );
                         },
-                        icon: const Icon(Icons.restore, size: 18),
-                        label: const Text('恢复默认'),
                       ),
-                    ],
+                    ),
+            ),
+            const Divider(height: 1),
+            // 导入 / 恢复默认
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: _importing ? null : _importFont,
+                    icon: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: _importing
+                          ? const CircularProgressIndicator(strokeWidth: 2)
+                          : const Icon(Icons.file_upload_outlined, size: 18),
+                    ),
+                    label: Text(_importing ? '导入中…' : '导入字体文件'),
+                  ),
+                  if (hasCustom) ...[
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () async {
+                        await notifier.clearCustomFont();
+                        setState(() => _selected = notifier.value);
+                      },
+                      icon: const Icon(Icons.restore, size: 18),
+                      label: const Text('恢复默认'),
+                    ),
                   ],
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       actions: [

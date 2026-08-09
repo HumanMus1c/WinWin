@@ -43,14 +43,6 @@ class AppFontNotifier extends ValueNotifier<String> {
   /// 允许导入的字体文件扩展名。
   static const Set<String> allowedExtensions = {'.ttf', '.otf'};
 
-  /// 预设字体列表（Windows 预装）。
-  static const List<FontPreset> presets = [
-    FontPreset(family: windowsDefault, label: 'Segoe UI（Windows 默认）'),
-    FontPreset(family: 'Microsoft YaHei UI', label: '微软雅黑'),
-    FontPreset(family: 'SimSun', label: '宋体'),
-    FontPreset(family: 'KaiTi', label: '楷体'),
-  ];
-
   /// 自定义字体文件是否已加载到 FontLoader。
   bool _customFontLoaded = false;
 
@@ -180,15 +172,7 @@ class AppFontNotifier extends ValueNotifier<String> {
   /// 获取当前字体的显示名称（用于设置页 subtitle）。
   String get displayName {
     if (isCustomFont) return '自定义字体';
-    final preset = presets.where((e) => e.family == value).firstOrNull;
-    if (preset != null) return preset.label;
+    if (value == windowsDefault) return 'Segoe UI（Windows 默认）';
     return value.isEmpty ? '系统默认' : value;
   }
-}
-
-/// 预设字体选项。
-class FontPreset {
-  final String family;
-  final String label;
-  const FontPreset({required this.family, required this.label});
 }
