@@ -67,10 +67,18 @@ abstract final class UserHttp {
       final data = res.data as Map<String, dynamic>;
       if (data['code'] == 0) {
         final d = data['data'] as Map<String, dynamic>;
+        // bilibili 对大数字（粉丝/关注数）可能返回 String，统一安全转换。
+        int toInt(dynamic v) {
+          if (v == null) return 0;
+          if (v is int) return v;
+          if (v is double) return v.toInt();
+          if (v is String) return int.tryParse(v) ?? 0;
+          return 0;
+        }
         return Success({
-          'following': d['following'] as int? ?? 0,
-          'follower': d['follower'] as int? ?? 0,
-          'dynamic_count': d['dynamic_count'] as int? ?? 0,
+          'following': toInt(d['following']),
+          'follower': toInt(d['follower']),
+          'dynamic_count': toInt(d['dynamic_count']),
         });
       } else {
         return Error(data['message']?.toString() ?? '获取统计失败');

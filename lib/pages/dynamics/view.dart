@@ -11,6 +11,13 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 
+/// 推送动态页。
+void showDynamicsPage(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(builder: (_) => const DynamicsPage()),
+  );
+}
+
 /// 动态页（Phase 7.7.1）。
 ///
 /// 参照 PiliPlus 的 `DynamicsPage`：顶部 TabBar 切换动态类型，

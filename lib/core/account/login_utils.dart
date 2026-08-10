@@ -37,6 +37,7 @@ abstract final class LoginUtils {
     final res = await UserHttp.userInfo();
     if (res case Success(:final response)) {
       if (response.isLogin == true) {
+        await _mergeUserStat(response);
         Pref.userInfoCache = response;
         AccountService().onLogin(response);
         AppLogger.i('onLoginMain', 'web nav success, mid=${response.mid}, name=${response.name}');
@@ -51,6 +52,7 @@ abstract final class LoginUtils {
     final appRes = await UserHttp.userInfoApp();
     if (appRes case Success(:final response)) {
       if (response.isLogin == true) {
+        await _mergeUserStat(response);
         Pref.userInfoCache = response;
         AccountService().onLogin(response);
         AppLogger.i('onLoginMain', 'app endpoint success, mid=${response.mid}, name=${response.name}');
@@ -70,6 +72,26 @@ abstract final class LoginUtils {
 
     AppLogger.e('onLoginMain', 'all methods failed, no fallbackMid');
     return false;
+  }
+
+  /// 拉取用户关系统计（`/x/web-interface/nav/stat`）并合并到 [info]。
+  ///
+  /// `/x/web-interface/nav` 与 `/x/v2/account/myinfo` 均不含
+  /// following/follower/dynamic_count，需单独从 stat 接口获取后写入模型，
+  /// 否则个人页"动态/关注/粉丝"统计恒为 0。失败时仅记录日志，不阻断登录。
+  static Future<void> _mergeUserStat(UserInfoModel info) async {
+    final statRes = await UserHttp.userStat();
+    switch (statRes) {
+      case Success(:final response):
+        info
+          ..following = response['following'] ?? info.following
+          ..follower = response['follower'] ?? info.follower
+          ..dynamicCount = response['dynamic_count'] ?? info.dynamicCount;
+      case Error(:final errMsg):
+        AppLogger.w('onLoginMain', 'userStat merge failed: $errMsg');
+      case Loading():
+        break;
+    }
   }
 
   /// 主账号登出回调：清理持久化账号 + 清空缓存 + 广播登出态。

@@ -5,9 +5,11 @@ import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/account/login_utils.dart';
 import 'package:winwin/models/user/user_info.dart';
+import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
+import 'package:winwin/pages/relation/member_relation_page.dart';
 import 'package:winwin/pages/search/search_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/pages/toview/toview_page.dart';
@@ -82,7 +84,7 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 _UserInfoSection(info: info, isLogin: isLogin),
                 const SizedBox(height: 10),
-                _StatsRow(info: info, isLogin: isLogin),
+                _StatsRow(info: info, isLogin: isLogin, onGuarded: _guarded),
                 const SizedBox(height: 10),
                 _ActionGrid(
                   onGuarded: _guarded,
@@ -424,10 +426,15 @@ class _LevelBadge extends StatelessWidget {
 // ════════════════════════════════════════════════════════════════
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.info, required this.isLogin});
+  const _StatsRow({
+    required this.info,
+    required this.isLogin,
+    required this.onGuarded,
+  });
 
   final UserInfoModel? info;
   final bool isLogin;
+  final Future<void> Function(BuildContext, void Function(BuildContext)) onGuarded;
 
   @override
   Widget build(BuildContext context) {
@@ -440,21 +447,39 @@ class _StatsRow extends StatelessWidget {
           AppActionTile(
             count: isLogin ? _fmt(info?.dynamicCount) : dash,
             label: '动态',
-            onTap: () {},
+            onTap: () => onGuarded(context, (ctx) => showDynamicsPage(ctx)),
           ),
           AppActionTile(
             count: isLogin ? _fmt(info?.following) : dash,
             label: '关注',
-            onTap: () {},
+            onTap: () => onGuarded(
+              context,
+              (ctx) => _gotoRelation(ctx, RelationType.followings),
+            ),
           ),
           AppActionTile(
             count: isLogin ? _fmt(info?.follower) : dash,
             label: '粉丝',
-            onTap: () {},
+            onTap: () => onGuarded(
+              context,
+              (ctx) => _gotoRelation(ctx, RelationType.fans),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  /// 跳转关注/粉丝列表页。需要当前账号 mid；未加载时提示重试。
+  void _gotoRelation(BuildContext ctx, RelationType type) {
+    final mid = info?.mid;
+    if (mid == null || mid <= 0) {
+      ScaffoldMessenger.maybeOf(ctx)?.showSnackBar(
+        const SnackBar(content: Text('用户信息未加载，请稍后重试')),
+      );
+      return;
+    }
+    showMemberRelationPage(ctx, type: type, vmid: mid);
   }
 
   String _fmt(num? n) {
