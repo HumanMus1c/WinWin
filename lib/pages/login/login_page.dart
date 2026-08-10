@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:winwin/core/account/account.dart';
+import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_utils.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/login.dart';
-import 'package:winwin/http/user.dart';
 import 'package:winwin/models/common/account_type.dart';
 import 'package:winwin/pages/login/geetest_webview_dialog.dart';
 import 'package:winwin/theme/style.dart';
@@ -18,9 +18,9 @@ import 'package:winwin/ui/components/app_components.dart';
 /// 登录页（移植自 PiliPlus `lib/pages/login/`）。
 ///
 /// 与 PiliPlus 登录途径一致，提供 4 种登录方式：
-///   1. 密码登录（含 RSA 加密 stub + 极验风控 stub）
-///   2. 短信验证码登录（含极验风控 stub）
-///   3. 扫码登录（TV 端二维码）
+///   1. 密码登录（含 RSA 加密 stub + 极验风控）
+///   2. 短信验证码登录（含极验风控）
+///   3. 扫码登录（TV 端二维码，扫码失败自动刷新 + 手动刷新按钮）
 ///   4. Cookie 登录
 ///
 /// 不引入 GetX / flutter_smart_dialog / pretty_qr_code：
@@ -28,10 +28,13 @@ import 'package:winwin/ui/components/app_components.dart';
 ///   - 用 [SnackBar] 替代 SmartDialog.showToast
 ///   - QR 用在线图片服务渲染
 ///
+/// 极验验证码通过 [GeetestWebviewDialog]（flutter_inappwebview）实现，
+/// 密码登录与短信发送遇到风控（code=-105 / recaptcha_url）会弹出滑块验证，
+/// 验证通过后递归重试原请求（与 PiliPlus `getCaptcha + 回调` 模式一致）。
+///
 /// 已知限制（与 PiliPlus 对齐时的 stub）：
 ///   - RSA 密码加密未实现（需引入 `encrypt` 包），密码以 salt+plaintext 发送
-///   - 极验验证码 webview 未实现，遇到风控（code=-105 或 status=2）会提示
-///     "需要验证码但 webview 未实现"，用户需改用扫码/Cookie 登录
+///   - 密码登录返回 status==2（需安全中心手机号验证）的完整流程未实现
 Future<void> showLoginPage(BuildContext context) {
   return Navigator.of(context).push(
     MaterialPageRoute<void>(
@@ -63,7 +66,10 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  /// 登录成功后统一处理：写入账号 → 拉取用户信息 → 关闭页面。
+  /// 登录成功后统一处理：写入账号 → 激活 buvid → 拉取用户信息 → 关闭页面。
+  ///
+  /// 注意：onLoginMain() 现在由 Accounts.set() 内部调用（移植自 PiliPlus），
+  /// 不需要在此处单独调用。Accounts.set() 会先激活 buvid3，再调 onLoginMain()。
   Future<void> _setAccount(
     Map<String, dynamic> tokenInfo,
     List cookieInfo,
@@ -76,8 +82,8 @@ class _LoginPageState extends State<LoginPage> {
         {AccountType.main},
       );
       await account.onChange();
+      // Accounts.set 会依次执行：保存 → 激活 buvid → onLoginMain（拉取用户信息）
       await Accounts.set(AccountType.main, account);
-      await LoginUtils.onLoginMain();
       _toast('登录成功');
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -364,7 +370,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
             '根据 bilibili 官方登录接口规范，密码将在本地加盐、加密后传输。\n'
             '盐与公钥均由官方提供；以 RSA/ECB/PKCS1Padding 方式加密。\n'
             '账号密码仅用于该登录接口，不予保存；本地仅存储登录凭证。\n'
-            '当前 RSA 加密为 stub，密码登录可能因风控失败，建议优先使用扫码或 Cookie 登录。',
+            '当前 RSA 加密为 stub，密码登录可能因风控失败；遇到风控时会弹出极验滑块验证。',
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
               color: cs.onSurface.withOpacity(0.4),
@@ -412,12 +418,31 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
   bool _loading = false;
   bool _sending = false;
 
+  /// 极验验证码暂存：从 recaptcha_url 解析的 token，与验证成功后的
+  /// {validate, seccode, challenge}。重试 sendSms 时一并提交以通过风控。
+  /// 参考 PiliPlus `LoginPageController.sendSmsCode` 的递归重试模式。
+  String? _recaptchaToken;
+  String? _geeValidate;
+  String? _geeSeccode;
+  String? _geeChallenge;
+
   @override
   void dispose() {
     _telCtrl.dispose();
     _codeCtrl.dispose();
     _cooldownTimer?.cancel();
     super.dispose();
+  }
+
+  /// 校验极验参数是否齐全（gt/challenge/token 三者均非空）。
+  /// 与 PiliPlus `isGeeArgumentValid` 逻辑一致。
+  bool _isGeeArgumentValid(String? gt, String? challenge) {
+    return gt != null &&
+        gt.isNotEmpty &&
+        challenge != null &&
+        challenge.isNotEmpty &&
+        _recaptchaToken != null &&
+        _recaptchaToken!.isNotEmpty;
   }
 
   Future<void> _sendSms() async {
@@ -431,6 +456,10 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
       final res = await LoginHttp.sendSmsCode(
         cid: _countryId,
         tel: tel,
+        geeChallenge: _geeChallenge,
+        geeSeccode: _geeSeccode,
+        geeValidate: _geeValidate,
+        recaptchaToken: _recaptchaToken,
       );
       if (res['status'] == true) {
         widget.onToast('发送成功');
@@ -442,12 +471,65 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
           if (_cooldown <= 0) t.cancel();
         });
       } else {
-        // code==-105 或返回 recaptcha_url 表示需要极验验证码。
+        // code==0 但 recaptcha_url 非空，或 code==-105：需要极验验证码。
+        // 参考 PiliPlus sendSmsCode 的处理：解析 recaptcha_url → 弹极验 → 递归重试。
         final code = res['code'];
-        if (code == -105 || code == 0) {
-          widget.onToast(
-            '需要极验验证码，webview 未实现，请改用扫码或 Cookie 登录。',
+        if (code == 0 || code == -105) {
+          final dataMap = res['data'] as Map<String, dynamic>?;
+          final captureUrl = dataMap?['recaptcha_url'] as String?;
+          String? geeGt;
+          String? geeChallenge;
+          if (captureUrl != null && captureUrl.isNotEmpty) {
+            final captureUri = Uri.parse(captureUrl);
+            _recaptchaToken =
+                captureUri.queryParameters['recaptcha_token'];
+            geeGt = captureUri.queryParameters['gee_gt'];
+            geeChallenge = captureUri.queryParameters['gee_challenge'];
+          }
+
+          // 若 recaptcha_url 缺失或参数不全，回退到 preCapture 接口获取。
+          if (!_isGeeArgumentValid(geeGt, geeChallenge)) {
+            final preCaptureRes = await LoginHttp.preCapture();
+            if (preCaptureRes['status'] != true ||
+                preCaptureRes['data'] == null) {
+              widget.onToast(
+                '获取验证码失败，请改用扫码或 Cookie 登录\n'
+                '(${preCaptureRes['code']}) ${preCaptureRes['msg']}',
+              );
+              return;
+            }
+            final preData =
+                preCaptureRes['data'] as Map<String, dynamic>;
+            geeGt = preData['gee_gt'] as String?;
+            geeChallenge = preData['gee_challenge'] as String?;
+            _recaptchaToken = preData['recaptcha_token'] as String?;
+          }
+
+          if (!_isGeeArgumentValid(geeGt, geeChallenge)) {
+            widget.onToast('获取验证码失败，请改用扫码或 Cookie 登录');
+            return;
+          }
+
+          // 弹出极验 webview，等待用户完成滑块验证。
+          final result = await GeetestWebviewDialog.show(
+            context,
+            geeGt!,
+            geeChallenge!,
           );
+          if (result == null) {
+            widget.onToast('已取消验证码');
+            return;
+          }
+          _geeValidate = result['geetest_validate'] as String?;
+          _geeSeccode = result['geetest_seccode'] as String?;
+          _geeChallenge = result['geetest_challenge'] as String?;
+          if (_geeValidate == null || _geeSeccode == null) {
+            widget.onToast('验证码结果异常，请重试');
+            return;
+          }
+          // 极验通过后递归调用 _sendSms 重新提交发送验证码请求。
+          widget.onToast('验证成功，正在发送短信...');
+          await _sendSms();
         } else {
           widget.onToast(res['msg']?.toString() ?? '发送失败');
         }
@@ -600,7 +682,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
           Text(
             '手机号仅用于 bilibili 官方发送验证码与登录接口，不予保存；\n'
             '本地仅存储登录凭证。\n'
-            '当前 dt 字段 RSA 加密为 stub，短信登录可能因风控失败，建议优先使用扫码或 Cookie 登录。',
+            '遇到风控时会弹出极验滑块验证，验证通过后自动重试。',
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
               color: cs.onSurface.withOpacity(0.4),
@@ -859,24 +941,16 @@ class _CookieLoginTabState extends State<_CookieLoginTab> {
         },
       };
 
-      // 先验证 cookie 有效性（拉取用户信息）。
+      // Accounts.set 会依次执行：保存 → 激活 buvid → onLoginMain（拉取用户信息）
+      // onLoginMain 失败时会自动删除账号。
       final account = LoginAccount(jar, null, null, {AccountType.main});
       await Accounts.set(AccountType.main, account);
-      final res = await UserHttp.userInfo();
 
-      if (res case Success(:final response)) {
-        if (response.isLogin == true) {
-          await account.onChange();
-          await LoginUtils.onLoginMain();
-          widget.onToast('登录成功');
-          if (mounted) Navigator.of(context).pop();
-        } else {
-          await Accounts.deleteAll({account});
-          widget.onToast('Cookie 无效或已过期');
-        }
-      } else if (res case Error(:final errMsg)) {
-        await Accounts.deleteAll({account});
-        widget.onToast(errMsg ?? '登录失败');
+      if (AccountService().isLogin) {
+        widget.onToast('登录成功');
+        if (mounted) Navigator.of(context).pop();
+      } else {
+        widget.onToast('Cookie 无效或已过期');
       }
     } catch (e) {
       widget.onToast('登录失败：$e');

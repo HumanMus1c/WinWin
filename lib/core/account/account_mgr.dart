@@ -78,9 +78,24 @@ class AccountManager extends Interceptor {
       }
       return handler.next(options);
     } else {
+      // 移植自 BiliPai AppSessionCookieJar：除 loadForRequest 外，
+      // 还从 LoginAccount.keyCookies 直接注入 SESSDATA/bili_jct/
+      // DedeUserID 等关键 cookie，绕过 cookie_jar 的域名匹配。
+      // 这解决了 TV QR 登录后 web nav 返回 isLogin=false 的问题。
       account.cookieJar
           .loadForRequest(options.uri)
-          .then((cookies) {
+          .then((jarCookies) {
+            // 从 LoginAccount 直接获取关键 cookie。
+            final keyCookies = account is LoginAccount
+                ? account.keyCookies
+                : const <Cookie>[];
+            // 关键 cookie 优先：移除 jarCookies 中的同名 cookie。
+            final keyNames = keyCookies.map((c) => c.name).toSet();
+            final mergedCookies = [
+              ...jarCookies.where((c) => !keyNames.contains(c.name)),
+              ...keyCookies,
+            ];
+
             final previousCookies =
                 options.headers[HttpHeaders.cookieHeader] as String?;
             final newCookies = getCookies([
@@ -88,7 +103,7 @@ class AccountManager extends Interceptor {
                   ?.split(';')
                   .where((e) => e.isNotEmpty)
                   .map(Cookie.fromSetCookieValue),
-              ...cookies,
+              ...mergedCookies,
             ]);
             options.headers[HttpHeaders.cookieHeader] =
                 newCookies.isNotEmpty ? newCookies : '';

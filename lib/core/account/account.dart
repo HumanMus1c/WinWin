@@ -73,6 +73,34 @@ class LoginAccount extends Account {
   late final String csrf = cookieJar
       .domainCookies['bilibili.com']!['/']!['bili_jct']!.cookie.value;
 
+  /// 直接从 domainCookies 映射中提取关键鉴权 cookie，绕过
+  /// cookie_jar 的 loadForRequest 域名匹配（移植自 BiliPai
+  /// AppSessionCookieJar.loadForRequest 的注入式方案）。
+  ///
+  /// TV QR 登录返回的 cookie 存入 jar 后，loadForRequest 的域名
+  /// 匹配可能不稳定（导致 web nav 返回 isLogin=false）。此 getter
+  /// 直接从 domainCookies['bilibili.com']['/'] 读取，确保关键
+  /// cookie 始终被正确注入到每个请求中。
+  List<Cookie> get keyCookies {
+    final domainMap = cookieJar.domainCookies['bilibili.com']?['/'];
+    if (domainMap == null) return const [];
+    const names = [
+      'SESSDATA',
+      'bili_jct',
+      'DedeUserID',
+      'DedeUserID__ckMd5',
+      'buvid3',
+    ];
+    final result = <Cookie>[];
+    for (final name in names) {
+      final sc = domainMap[name];
+      if (sc != null) {
+        result.add(sc.cookie);
+      }
+    }
+    return result;
+  }
+
   bool _hasDelete = false;
 
   @override

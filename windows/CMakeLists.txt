@@ -1,5 +1,13 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
+
+# flutter_inappwebview_windows 插件在 add_custom_command(TARGET) 中使用了
+# DEPENDS 关键字，CMake 3.28+ 策略 CMP0175 会对此产生 dev 警告。
+# 该插件内部调用 cmake_policy(VERSION 3.14...3.25) 会重置父级作用域的策略设置，
+# 因此 cmake_policy(SET CMP0175 OLD) 无法生效。
+# 使用 CMAKE_SUPPRESS_DEVELOPER_WARNINGS 全局抑制所有 dev 警告。
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ON CACHE BOOL "" FORCE)
+
 project(winwin LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
@@ -55,6 +63,11 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 # Application build; see runner/CMakeLists.txt.
 add_subdirectory("runner")
 
+
+# flutter_inappwebview_windows 使用了已废弃的 <experimental/coroutine>，
+# 新版 MSVC 14.51 把它变成硬错误（STL1011）。在插件 target 创建之前定义
+# 全局宏以抑制该错误。宏定义影响此后所有 add_subdirectory 创建的 target。
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.

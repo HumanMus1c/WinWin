@@ -207,6 +207,11 @@ abstract final class Api {
   // 获取当前用户状态
   static const String userStatOwner = '/x/web-interface/nav/stat';
 
+  // app端获取用户信息（使用 access_key 鉴权，作为 TV QR 登录后 web nav
+  // 失败的回退方案）。
+  static const String userInfoApp =
+      '${HttpString.appBaseUrl}/x/v2/account/myinfo';
+
   // 收藏夹
   // https://api.bilibili.com/x/v3/fav/folder/created/list?pn=1&ps=10&up_mid=17340771
   static const String userFavFolder = '/x/v3/fav/folder/created/list';

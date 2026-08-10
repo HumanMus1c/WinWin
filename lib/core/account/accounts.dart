@@ -1,6 +1,8 @@
 import 'package:hive_ce/hive.dart';
 
 import 'package:winwin/core/account/account.dart';
+import 'package:winwin/core/account/login_utils.dart';
+import 'package:winwin/http/init.dart';
 import 'package:winwin/models/common/account_type.dart';
 
 abstract final class Accounts {
@@ -67,6 +69,18 @@ abstract final class Accounts {
     final oldAccount = accountMode[key.index]..type.remove(key);
     accountMode[key.index] = account..type.add(key);
     await Future.wait([?account.onChange(), ?oldAccount.onChange()]);
+    // 移植自 PiliPlus：设置账号时先激活 buvid3，再触发登录/登出回调。
+    // buvid 激活是 web API（如 /x/web-interface/nav）正常工作的前提。
+    if (!account.activated) await Request.buvidActive(account);
+    switch (key) {
+      case AccountType.main:
+        await (account.isLogin
+            ? LoginUtils.onLoginMain()
+            : LoginUtils.onLogoutMain());
+        break;
+      default:
+        break;
+    }
   }
 
   @pragma('vm:prefer-inline')

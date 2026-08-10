@@ -1,13 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/account_mgr.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_utils.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/http/api.dart';
 import 'package:winwin/http/constants.dart';
 import 'package:winwin/http/retry_interceptor.dart';
+import 'package:winwin/utils/utils.dart';
 
 /// Minimal Dio wrapper modeled after PiliPlus's `Request`.
 /// Phase 2 will add HTTP/2 support, brotli/gzip decoding, etc.
@@ -41,6 +45,42 @@ class Request {
 
     await Accounts.refresh();
     LoginUtils.setWebCookie();
+  }
+
+  /// 激活 buvid3 cookie（移植自 PiliPlus Request.buvidActive）。
+  ///
+  /// TV QR 登录返回的 cookie 中 buvid3 是客户端生成的，需要通过
+  /// `/x/internal/gaia-gateway/ExClimbWuzhi` 接口激活后才能被 web API
+  /// （如 `/x/web-interface/nav`）接受。未激活的 buvid3 会导致 web nav
+  /// 返回 isLogin=false，这是"登录成功但数据未同步"的根本原因。
+  static Future<void> buvidActive(Account account) async {
+    if (account.activated) return;
+    account.activated = true;
+    try {
+      final String randPngEnd = base64.encode([
+        ...Iterable<int>.generate(32, (_) => Utils.random.nextInt(256)),
+        0, 0, 0, 0, 73, 69, 78, 68,
+        ...Iterable<int>.generate(4, (_) => Utils.random.nextInt(256)),
+      ]);
+
+      final jsonData = json.encode({
+        '3064': 1,
+        '39c8': '333.1387.fp.risk',
+        '3c43': {
+          'adca': 'Linux',
+          'bfe9': randPngEnd.substring(randPngEnd.length - 50),
+        },
+      });
+
+      await Request().post(
+        Api.activateBuvidApi,
+        data: {'payload': jsonData},
+        options: Options(
+          extra: {'account': account},
+          contentType: Headers.jsonContentType,
+        ),
+      );
+    } catch (_) {}
   }
 
   Future<Response<T>> get<T>(
