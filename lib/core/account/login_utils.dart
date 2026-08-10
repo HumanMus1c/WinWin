@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/user.dart';
@@ -38,12 +39,12 @@ abstract final class LoginUtils {
       if (response.isLogin == true) {
         Pref.userInfoCache = response;
         AccountService().onLogin(response);
-        debugPrint('onLoginMain: web nav success, mid=${response.mid}');
+        AppLogger.i('onLoginMain', 'web nav success, mid=${response.mid}, name=${response.name}');
         return true;
       }
-      debugPrint('onLoginMain: web nav isLogin=false');
+      AppLogger.w('onLoginMain', 'web nav isLogin=false');
     } else if (res case Error(:final errMsg)) {
-      debugPrint('onLoginMain: web nav error: $errMsg');
+      AppLogger.w('onLoginMain', 'web nav error: $errMsg');
     }
 
     // 第二步：app 端接口（access_token 鉴权）。
@@ -52,22 +53,22 @@ abstract final class LoginUtils {
       if (response.isLogin == true) {
         Pref.userInfoCache = response;
         AccountService().onLogin(response);
-        debugPrint('onLoginMain: app endpoint success, mid=${response.mid}');
+        AppLogger.i('onLoginMain', 'app endpoint success, mid=${response.mid}, name=${response.name}');
         return true;
       }
     } else if (appRes case Error(:final errMsg)) {
-      debugPrint('onLoginMain: app endpoint error: $errMsg');
+      AppLogger.w('onLoginMain', 'app endpoint error: $errMsg');
     }
 
     // 第三步：最小模型兜底——绝不删除账号。
     if (fallbackMid != null && fallbackMid > 0) {
       final minimal = UserInfoModel(isLogin: true, mid: fallbackMid);
       AccountService().onLogin(minimal);
-      debugPrint('onLoginMain: using minimal model, mid=$fallbackMid');
+      AppLogger.w('onLoginMain', 'using minimal model, mid=$fallbackMid');
       return true;
     }
 
-    debugPrint('onLoginMain: all methods failed, no fallbackMid');
+    AppLogger.e('onLoginMain', 'all methods failed, no fallbackMid');
     return false;
   }
 

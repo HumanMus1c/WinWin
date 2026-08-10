@@ -4,6 +4,40 @@
 /// 含会员权限识别字段 [vipStatus] / [vipType]。
 ///
 /// 纯 model（无 Hive 注解），通过 JSON 字符串持久化到 GStorage.localCache。
+
+/// 安全类型转换：bilibili API 返回的数字字段可能是 int / double / String，
+/// 直接 `as int?` 会抛异常。此方法统一处理。
+int? _toInt(dynamic v) {
+  if (v == null) return null;
+  if (v is int) return v;
+  if (v is double) return v.toInt();
+  if (v is String) return int.tryParse(v);
+  return null;
+}
+
+/// 安全转换为 String，兼容 int / double / String。
+String? _toStr(dynamic v) {
+  if (v == null) return null;
+  if (v is String) return v;
+  return v.toString();
+}
+
+/// 安全转换为 num，兼容 int / double / String。
+num? _toNum(dynamic v) {
+  if (v == null) return null;
+  if (v is num) return v;
+  if (v is String) return num.tryParse(v);
+  return null;
+}
+
+/// 安全转换为 bool，兼容 bool / int (0/1)。
+bool? _toBool(dynamic v) {
+  if (v == null) return null;
+  if (v is bool) return v;
+  if (v is int) return v != 0;
+  return null;
+}
+
 class UserInfoModel {
   bool? isLogin;
   int? mid;
@@ -98,35 +132,35 @@ class UserInfoModel {
     // `/x/web-interface/nav` 返回的字段名：
     //   uname（用户名）、level_info.current_level（等级）、
     //   money（B币余额）、coins 不存在
-    // 修正：从 uname 读取用户名，从 level_info.current_level 读取等级
+    // bilibili API 返回的数字可能是 int/double/String，用安全转换。
     final levelInfoJson = json['level_info'] as Map<String, dynamic>?;
     return UserInfoModel(
-      isLogin: json['isLogin'] as bool?,
-      mid: json['mid'] as int?,
-      name: (json['uname'] ?? json['name']) as String?,
-      face: json['face'] as String?,
-      level: (json['level'] ?? levelInfoJson?['current_level']) as int?,
-      silence: json['silence'] as int?,
-      coins: json['coins'] as int?,
-      money: json['money'] as num?,
-      biliMid: (json['bili_mid'] ?? json['mid']?.toString()) as String?,
-      following: json['following'] as int?,
-      follower: json['follower'] as int?,
-      dynamicCount: json['dynamic_count'] as int?,
+      isLogin: _toBool(json['isLogin']),
+      mid: _toInt(json['mid']),
+      name: _toStr(json['uname'] ?? json['name']),
+      face: _toStr(json['face']),
+      level: _toInt(json['level'] ?? levelInfoJson?['current_level']),
+      silence: _toInt(json['silence']),
+      coins: _toInt(json['coins']),
+      money: _toNum(json['money']),
+      biliMid: _toStr(json['bili_mid'] ?? json['mid']),
+      following: _toInt(json['following']),
+      follower: _toInt(json['follower']),
+      dynamicCount: _toInt(json['dynamic_count']),
       email: json['email'] == null
           ? null
           : EmailPhoneInfo.fromJson(json['email'] as Map<String, dynamic>),
       phone: json['phone'] == null
           ? null
           : EmailPhoneInfo.fromJson(json['phone'] as Map<String, dynamic>),
-      vipDueDate: json['vipDueDate'] as int?,
-      vipStatus: json['vipStatus'] as int?,
-      vipType: json['vipType'] as int?,
-      vipPayType: json['vip_pay_type'] as int?,
-      vipThemeType: json['vip_theme_type'] as int?,
+      vipDueDate: _toInt(json['vipDueDate']),
+      vipStatus: _toInt(json['vipStatus']),
+      vipType: _toInt(json['vipType']),
+      vipPayType: _toInt(json['vip_pay_type']),
+      vipThemeType: _toInt(json['vip_theme_type']),
       vipLabel: json['vip_label'] as Map?,
-      vipAvatarSub: json['vip_avatar_subscript'] as int?,
-      vipNicknameColor: json['vip_nickname_color'] as String?,
+      vipAvatarSub: _toInt(json['vip_avatar_subscript']),
+      vipNicknameColor: _toStr(json['vip_nickname_color']),
       levelInfo: levelInfoJson == null
           ? null
           : LevelInfo.fromJson(levelInfoJson),
@@ -159,11 +193,11 @@ class LevelInfo {
 
   factory LevelInfo.fromJson(Map<String, dynamic> json) {
     return LevelInfo(
-      currentLevel: json['current_level'] as int?,
-      currentMin: json['current_min'] as int?,
-      currentExp: json['current_exp'] as int?,
-      identity: json['identity'] as String?,
-      nextExp: json['next_exp'] as int? ?? json['next_exp_string'] as int?,
+      currentLevel: _toInt(json['current_level']),
+      currentMin: _toInt(json['current_min']),
+      currentExp: _toInt(json['current_exp']),
+      identity: _toStr(json['identity']),
+      nextExp: _toInt(json['next_exp'] ?? json['next_exp_string']),
     );
   }
 }
@@ -185,10 +219,10 @@ class EmailPhoneInfo {
 
   factory EmailPhoneInfo.fromJson(Map<String, dynamic> json) {
     return EmailPhoneInfo(
-      value: json['value'] as String?,
-      status: json['status'] as bool?,
-      verified: json['verified'] as bool?,
-      type: json['type'] as String?,
+      value: _toStr(json['value']),
+      status: _toBool(json['status']),
+      verified: _toBool(json['verified']),
+      type: _toStr(json['type']),
     );
   }
 }
