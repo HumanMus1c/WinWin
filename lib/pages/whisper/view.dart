@@ -4,6 +4,10 @@ import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
+import 'package:winwin/pages/whisper/msg_feed/at_me_page.dart';
+import 'package:winwin/pages/whisper/msg_feed/like_me_page.dart';
+import 'package:winwin/pages/whisper/msg_feed/reply_me_page.dart';
+import 'package:winwin/pages/whisper/msg_feed/sys_msg_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 
@@ -101,6 +105,7 @@ class _WhisperPageState extends State<WhisperPage>
                     title: '私信',
                     count: _dmUnread,
                     color: iosBlue,
+                    onTap: () => _showTodo(context, '私信会话'),
                   ),
                   _buildSummaryTile(
                     theme,
@@ -108,6 +113,10 @@ class _WhisperPageState extends State<WhisperPage>
                     title: '系统通知',
                     count: _sysUnread,
                     color: iosTeal,
+                    onTap: () {
+                      _clearFeedUnread('system');
+                      showSysMsgPage(context);
+                    },
                   ),
                 ],
               ),
@@ -118,7 +127,7 @@ class _WhisperPageState extends State<WhisperPage>
                 child: Padding(
                   padding: EdgeInsets.all(Style.xxl),
                   child: Text(
-                    '点击上方入口查看详情\n完整私信会话需 IM SDK（待后续集成）',
+                    '点击上方入口查看回复 / 艾特 / 点赞 / 系统消息\n私信会话列表待后续集成',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey),
                   ),
@@ -140,31 +149,51 @@ class _WhisperPageState extends State<WhisperPage>
           label: '回复我的',
           count: _replyUnread,
           color: iosBlue,
-          onTap: () => _showTodo(context, '回复我的'),
+          onTap: () {
+            _clearFeedUnread('reply');
+            showReplyMePage(context);
+          },
         ),
         _EntryItem(
           icon: Icons.alternate_email_rounded,
           label: '艾特我的',
           count: _atUnread,
           color: iosOrange,
-          onTap: () => _showTodo(context, '艾特我的'),
+          onTap: () {
+            _clearFeedUnread('at');
+            showAtMePage(context);
+          },
         ),
         _EntryItem(
           icon: Icons.favorite_outline,
           label: '点赞我的',
           count: _likeUnread,
           color: iosPink,
-          onTap: () => _showTodo(context, '点赞我的'),
+          onTap: () {
+            _clearFeedUnread('like');
+            showLikeMePage(context);
+          },
         ),
         _EntryItem(
           icon: Icons.campaign_outlined,
           label: '系统消息',
           count: _sysUnread,
           color: iosTeal,
-          onTap: () => _showTodo(context, '系统消息'),
+          onTap: () {
+            _clearFeedUnread('system');
+            showSysMsgPage(context);
+          },
         ),
       ],
     );
+  }
+
+  /// 乐观清零某类消息流未读角标（实际未读数下次刷新恢复）。
+  void _clearFeedUnread(String key) {
+    final data = _feedUnreadState.dataOrNull;
+    if (data != null && (data[key] as num? ?? 0) > 0) {
+      setState(() => data[key] = 0);
+    }
   }
 
   Widget _buildSummaryTile(
@@ -173,6 +202,7 @@ class _WhisperPageState extends State<WhisperPage>
     required String title,
     required int count,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return ListTile(
       leading: Container(
@@ -205,14 +235,14 @@ class _WhisperPageState extends State<WhisperPage>
               Icons.keyboard_arrow_right_rounded,
               color: theme.colorScheme.outline,
             ),
-      onTap: () => _showTodo(context, title),
+      onTap: onTap,
     );
   }
 
   void _showTodo(BuildContext context, String title) {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(
-        content: Text('$title · 详情页待后续集成'),
+        content: Text('$title · 待后续集成'),
         duration: const Duration(seconds: 1),
       ),
     );
