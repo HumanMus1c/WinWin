@@ -19,20 +19,20 @@ abstract final class LoginUtils {
     debugPrint('setWebCookie: skipped (no WebView in Phase 1)');
   }
 
-  /// 主账号登录后回调：拉取用户信息（含会员权限）→ 加密持久化 → 广播。
+  /// 主账号登录后回调：拉取用户信息 → 加密持久化 → 广播登录态。
   ///
-  /// [fallbackMid]：由调用方提供的 mid（来自 QR/密码/短信登录响应）。
+  /// 拉取策略（三级回退）：
+  ///   1. web nav（`/x/web-interface/nav`，cookie 鉴权，含 vip 信息）
+  ///   2. app 端（`/x/v2/account/myinfo`，access_token 鉴权）
+  ///   3. 最小模型（仅 mid + isLogin=true）
   ///
-  /// 拉取策略：
-  ///   1. 优先尝试 web nav 接口（`/x/web-interface/nav`）—— 含完整 vip 信息。
-  ///   2. web nav 失败时回退到 app 端接口（`/x/v2/account/myinfo`）——
-  ///      使用 access_token 鉴权，TV QR 登录的 cookie 可能不被 web 接口接受，
-  ///      但 access_token 始终可用。
-  ///   3. 两者都失败时使用 fallbackMid 构造最小 UserInfoModel。
-  ///
-  /// 返回 true 表示登录态已成功设置（完整或最小），false 表示完全失败。
+  /// **不会删除账号**——即使所有 API 都失败，也用最小模型设置登录态，
+  /// 保证用户看到登录成功。账号删除仅在 [onLogoutMain] 中执行。
   static Future<bool> onLoginMain({int? fallbackMid}) async {
-    // 第一步：尝试 web nav 接口。
+    // 自动从 Accounts.main 获取 fallbackMid。
+    fallbackMid ??= Accounts.main.mid > 0 ? Accounts.main.mid : null;
+
+    // 第一步：web nav（cookie 鉴权）。
     final res = await UserHttp.userInfo();
     if (res case Success(:final response)) {
       if (response.isLogin == true) {
@@ -41,12 +41,12 @@ abstract final class LoginUtils {
         debugPrint('onLoginMain: web nav success, mid=${response.mid}');
         return true;
       }
-      debugPrint('onLoginMain: web nav isLogin=false, trying app endpoint');
+      debugPrint('onLoginMain: web nav isLogin=false');
     } else if (res case Error(:final errMsg)) {
-      debugPrint('onLoginMain: web nav error: $errMsg, trying app endpoint');
+      debugPrint('onLoginMain: web nav error: $errMsg');
     }
 
-    // 第二步：web nav 失败，回退到 app 端接口。
+    // 第二步：app 端接口（access_token 鉴权）。
     final appRes = await UserHttp.userInfoApp();
     if (appRes case Success(:final response)) {
       if (response.isLogin == true) {
@@ -59,24 +59,15 @@ abstract final class LoginUtils {
       debugPrint('onLoginMain: app endpoint error: $errMsg');
     }
 
-    // 第三步：两者都失败，使用 fallbackMid 设置最小登录态。
+    // 第三步：最小模型兜底——绝不删除账号。
     if (fallbackMid != null && fallbackMid > 0) {
       final minimal = UserInfoModel(isLogin: true, mid: fallbackMid);
       AccountService().onLogin(minimal);
-      debugPrint('onLoginMain: using minimal model with mid=$fallbackMid');
+      debugPrint('onLoginMain: using minimal model, mid=$fallbackMid');
       return true;
     }
 
-    // 没有 fallbackMid 时（如启动时 cookie 过期检查），且 web nav 返回
-    // "账号未登录"，删除账号。
-    if (res case Error(:final errMsg)) {
-      if (errMsg == '账号未登录') {
-        final account = Accounts.main;
-        if (account.isLogin) {
-          await Accounts.deleteAll({account});
-        }
-      }
-    }
+    debugPrint('onLoginMain: all methods failed, no fallbackMid');
     return false;
   }
 
