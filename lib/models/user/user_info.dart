@@ -95,16 +95,21 @@ class UserInfoModel {
       };
 
   factory UserInfoModel.fromJson(Map<String, dynamic> json) {
+    // `/x/web-interface/nav` 返回的字段名：
+    //   uname（用户名）、level_info.current_level（等级）、
+    //   money（B币余额）、coins 不存在
+    // 修正：从 uname 读取用户名，从 level_info.current_level 读取等级
+    final levelInfoJson = json['level_info'] as Map<String, dynamic>?;
     return UserInfoModel(
       isLogin: json['isLogin'] as bool?,
       mid: json['mid'] as int?,
-      name: json['name'] as String?,
+      name: (json['uname'] ?? json['name']) as String?,
       face: json['face'] as String?,
-      level: json['level'] as int?,
+      level: (json['level'] ?? levelInfoJson?['current_level']) as int?,
       silence: json['silence'] as int?,
       coins: json['coins'] as int?,
       money: json['money'] as num?,
-      biliMid: json['bili_mid'] as String?,
+      biliMid: (json['bili_mid'] ?? json['mid']?.toString()) as String?,
       following: json['following'] as int?,
       follower: json['follower'] as int?,
       dynamicCount: json['dynamic_count'] as int?,
@@ -122,9 +127,9 @@ class UserInfoModel {
       vipLabel: json['vip_label'] as Map?,
       vipAvatarSub: json['vip_avatar_subscript'] as int?,
       vipNicknameColor: json['vip_nickname_color'] as String?,
-      levelInfo: json['level_info'] == null
+      levelInfo: levelInfoJson == null
           ? null
-          : LevelInfo.fromJson(json['level_info'] as Map<String, dynamic>),
+          : LevelInfo.fromJson(levelInfoJson),
     );
   }
 }
