@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/constants.dart';
@@ -612,5 +613,172 @@ abstract final class MsgHttp {
     } else {
       return Error(res.data['message']?.toString() ?? '');
     }
+  }
+
+  /// 私信会话列表（get_sessions）。
+  ///
+  /// session_type：1=用户与系统 2=未关注 3=粉丝团 4=全部 5=拦截
+  /// 7=系统 8=陌生人 9=关注。用 [endTs] 游标分页（取上页返回的 last_ts），
+  /// [pn] 为辅助页码。返回原始 data（含 session_list / has_more / last_ts）。
+  static Future<LoadingState<Map<String, dynamic>>> sessionList({
+    int sessionType = 4,
+    int size = 20,
+    int pn = 1,
+    int? endTs,
+  }) async {
+    final res = await Request().get(
+      Api.sessionList,
+      queryParameters: {
+        'session_type': sessionType,
+        'group_fold': 1,
+        'unfollow_fold': 0,
+        'sort_rule': 2,
+        'size': size,
+        'pn': pn,
+        if (endTs != null && endTs > 0) 'end_ts': endTs,
+        'build': 0,
+        'mobi_app': 'web',
+        'web_location': 333.999,
+      },
+    );
+    if (res.data['code'] == 0) {
+      return Success(
+        (res.data['data'] as Map?)?.cast<String, dynamic>() ?? {},
+      );
+    } else {
+      return Error(res.data['message']?.toString() ?? '');
+    }
+  }
+
+  /// 私信消息记录（fetch_session_msgs，聊天历史）。
+  ///
+  /// [endSeqno] 向上翻更早的历史，[beginSeqno] 向下翻较新的消息。
+  /// 返回原始 data（含 messages / min_seqno / max_seqno / has_more 等）。
+  static Future<LoadingState<Map<String, dynamic>>> sessionMsg({
+    required int talkerId,
+    int sessionType = 1,
+    int size = 20,
+    int? beginSeqno,
+    int? endSeqno,
+  }) async {
+    final res = await Request().get(
+      Api.sessionMsg,
+      queryParameters: {
+        'talker_id': talkerId,
+        'session_type': sessionType,
+        'size': size,
+        'sender_device_id': 1,
+        if (beginSeqno != null && beginSeqno > 0) 'begin_seqno': beginSeqno,
+        if (endSeqno != null && endSeqno > 0) 'end_seqno': endSeqno,
+        'build': 0,
+        'mobi_app': 'web',
+      },
+    );
+    if (res.data['code'] == 0) {
+      return Success(
+        (res.data['data'] as Map?)?.cast<String, dynamic>() ?? {},
+      );
+    } else {
+      return Error(res.data['message']?.toString() ?? '');
+    }
+  }
+
+  /// dev_id 缓存（发送私信用，UUID v4，进程内复用）。
+  static String? _devIdCache;
+  static String _getDevId() => _devIdCache ??= const Uuid().v4();
+
+  /// 发送私信（web_im/send_msg）。
+  ///
+  /// [content] 须为与 [msgType] 对应的 JSON 字符串：文本消息用
+  /// `{"content":"..."}`（见 [sendTextMsg]），撤回用 msg_key（见 [withdrawMsg]）。
+  /// 与 removeMsg/setTop 同为 vc 域写操作，做 wbi 签名。
+  static Future<LoadingState<Map<String, dynamic>>> sendMsg({
+    required int receiverId,
+    int receiverType = 1,
+    int msgType = 1,
+    required String content,
+  }) async {
+    final csrf = Accounts.main.csrf;
+    final senderUid = Accounts.main.mid;
+    final ts = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final data = <String, Object>{
+      'msg[sender_uid]': senderUid,
+      'msg[receiver_id]': receiverId,
+      'msg[receiver_type]': receiverType,
+      'msg[msg_type]': msgType,
+      'msg[msg_status]': 0,
+      'msg[content]': content,
+      'msg[timestamp]': ts,
+      'msg[dev_id]': _getDevId(),
+      'msg[new_face_version]': 1,
+      'from_firework': 0,
+      'build': 0,
+      'mobi_app': 'web',
+      'csrf_token': csrf,
+      'csrf': csrf,
+    };
+    final signed = await WbiSign.makSign(data);
+    final res = await Request().post(
+      Api.sendMsg,
+      queryParameters: {
+        'w_rid': signed['w_rid'],
+        'wts': signed['wts'],
+      },
+      data: data,
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    );
+    final code = (res.data['code'] as num?)?.toInt() ?? -1;
+    if (code == 0) {
+      return Success(
+        (res.data['data'] as Map?)?.cast<String, dynamic>() ?? {},
+      );
+    } else {
+      return Error(_sendMsgErrorMsg(code, res.data['message']?.toString() ?? ''));
+    }
+  }
+
+  /// 发送文本私信（自动包装为 `{"content":"..."}`）。
+  static Future<LoadingState<Map<String, dynamic>>> sendTextMsg({
+    required int receiverId,
+    required String text,
+    int receiverType = 1,
+  }) {
+    return sendMsg(
+      receiverId: receiverId,
+      receiverType: receiverType,
+      msgType: 1,
+      content: jsonEncode({'content': text}),
+    );
+  }
+
+  /// 撤回私信（msg_type=5，content 为 msg_key）。
+  static Future<LoadingState<Map<String, dynamic>>> withdrawMsg({
+    required int receiverId,
+    required Object msgKey,
+    int receiverType = 1,
+  }) {
+    return sendMsg(
+      receiverId: receiverId,
+      receiverType: receiverType,
+      msgType: 5,
+      content: '$msgKey',
+    );
+  }
+
+  /// 发送私信错误码 → 中文提示（移植自 BiliPai MessageRepository）。
+  static String _sendMsgErrorMsg(int code, String message) {
+    return switch (code) {
+      -101 => '请先登录',
+      -400 => '请求参数错误',
+      21007 => '消息过长，无法发送',
+      21015 => '需绑定手机号才能发送消息',
+      21020 => '发送频率过快，请稍后再试',
+      21026 => '不能给自己发消息',
+      21046 => '发送过于频繁，请24小时后再试',
+      21047 => '对方未关注你，最多发送1条消息',
+      25003 => '对方隐私设置限制，无法发送',
+      25005 => '已拉黑对方，请先解除拉黑',
+      _ => message.isEmpty ? '发送失败 ($code)' : message,
+    };
   }
 }
