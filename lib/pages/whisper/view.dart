@@ -97,10 +97,8 @@ class _WhisperPageState extends State<WhisperPage>
               ),
             ),
             const SliverToBoxAdapter(child: Divider(height: 1)),
-            SliverToBoxAdapter(
-              child: SessionListSection(
-                onRefreshUnread: () => _clearDmUnread(),
-              ),
+            SessionListSliver(
+              onRefreshUnread: () => _clearDmUnread(),
             ),
             const SliverFillRemaining(
               hasScrollBody: false,

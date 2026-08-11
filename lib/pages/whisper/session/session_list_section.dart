@@ -10,17 +10,17 @@ import 'package:winwin/pages/whisper/session/message_preview_parser.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 
-/// 可内嵌的会话列表组件（用于消息页直接展示）。
-class SessionListSection extends StatefulWidget {
-  const SessionListSection({super.key, this.onRefreshUnread});
+/// 可内嵌的会话列表 Sliver（用于消息页直接展示）。
+class SessionListSliver extends StatefulWidget {
+  const SessionListSliver({super.key, this.onRefreshUnread});
 
   final VoidCallback? onRefreshUnread;
 
   @override
-  State<SessionListSection> createState() => _SessionListSectionState();
+  State<SessionListSliver> createState() => _SessionListSliverState();
 }
 
-class _SessionListSectionState extends State<SessionListSection> {
+class _SessionListSliverState extends State<SessionListSliver> {
   final List<Map<String, dynamic>> _sessions = [];
   int _selectedType = 4;
   int _endTs = 0;
@@ -154,82 +154,89 @@ class _SessionListSectionState extends State<SessionListSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return SliverMainAxisGroup(
+      slivers: [
         // 分类 chips
-        SizedBox(
-          height: 44,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: Style.sm),
-            children: [
-              for (final c in _categories)
-                Padding(
-                  padding: const EdgeInsets.only(right: 6, top: 6),
-                  child: ChoiceChip(
-                    label: Text(c.label),
-                    selected: c.type == _selectedType,
-                    onSelected: (_) => _selectCategory(c.type),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+              children: [
+                for (final c in _categories)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6, top: 6),
+                    child: ChoiceChip(
+                      label: Text(c.label),
+                      selected: c.type == _selectedType,
+                      onSelected: (_) => _selectCategory(c.type),
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
-        const Divider(height: 1),
+        const SliverToBoxAdapter(child: Divider(height: 1)),
         // 会话列表
-        _loading && _sessions.isEmpty
-            ? const Padding(
-                padding: EdgeInsets.all(Style.xxl),
-                child: Center(child: CircularProgressIndicator(color: biliPink)),
-              )
-            : _error != null && _sessions.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(Style.xxl),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
-                          const SizedBox(height: Style.sm),
-                          TextButton(
-                            onPressed: () => _load(refresh: true),
-                            child: const Text('重试'),
-                          ),
-                        ],
-                      ),
+        if (_loading && _sessions.isEmpty)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(Style.xxl),
+              child: Center(child: CircularProgressIndicator(color: biliPink)),
+            ),
+          )
+        else if (_error != null && _sessions.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(Style.xxl),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+                    const SizedBox(height: Style.sm),
+                    TextButton(
+                      onPressed: () => _load(refresh: true),
+                      child: const Text('重试'),
                     ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _sessions.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == _sessions.length) {
-                        if (_hasMore) {
-                          _load();
-                          return const Padding(
-                            padding: EdgeInsets.all(Style.md),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: biliPink,
-                              ),
-                            ),
-                          );
-                        }
-                        return _sessions.isEmpty
-                            ? const MsgFeedEmptyView()
-                            : const SizedBox.shrink();
-                      }
-                      return _SessionTile(
-                        session: _sessions[index],
-                        onToggleTop: () => _toggleTop(_sessions[index]),
-                        onToggleDnd: () => _toggleDnd(_sessions[index]),
-                        onRemove: () => _removeSession(_sessions[index], index),
-                      );
-                    },
-                  ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else if (_sessions.isEmpty && !_hasMore)
+          const SliverToBoxAdapter(child: MsgFeedEmptyView())
+        else
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                if (index == _sessions.length) {
+                  // 加载更多指示器
+                  if (_hasMore) {
+                    _load();
+                    return const Padding(
+                      padding: EdgeInsets.all(Style.md),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: biliPink,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }
+                return _SessionTile(
+                  session: _sessions[index],
+                  onToggleTop: () => _toggleTop(_sessions[index]),
+                  onToggleDnd: () => _toggleDnd(_sessions[index]),
+                  onRemove: () => _removeSession(_sessions[index], index),
+                );
+              },
+              childCount: _sessions.length + (_hasMore ? 1 : 0),
+            ),
+          ),
       ],
     );
   }
