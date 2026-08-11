@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:winwin/http/loading_state.dart';
@@ -224,12 +225,13 @@ class MsgFeedAvatar extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return ClipOval(
       child: src != null && src!.isNotEmpty
-          ? Image.network(
-              src!,
+          ? CachedNetworkImage(
+              imageUrl: src!,
               width: size,
               height: size,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _fallback(cs),
+              placeholder: (_, __) => _fallback(cs),
+              errorWidget: (_, __, ___) => _fallback(cs),
             )
           : _fallback(cs),
     );

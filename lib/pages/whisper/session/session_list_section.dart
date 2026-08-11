@@ -27,6 +27,7 @@ class _SessionListSliverState extends State<SessionListSliver> {
   bool _hasMore = true;
   bool _loading = true;
   String? _error;
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -41,11 +42,13 @@ class _SessionListSliverState extends State<SessionListSliver> {
       _sessions.clear();
       setState(() => _loading = true);
     }
-    if (!_hasMore) return;
+    if (!_hasMore || _isLoadingMore) return;
+    _isLoadingMore = true;
     final res = await MsgHttp.sessionList(
       sessionType: _selectedType,
       endTs: _endTs > 0 ? _endTs : null,
     );
+    _isLoadingMore = false;
     if (!mounted) return;
     switch (res) {
       case Success(:final response):
@@ -96,6 +99,11 @@ class _SessionListSliverState extends State<SessionListSliver> {
       _load(refresh: true);
     });
   }
+
+  // 回调处理方法 - 避免闭包创建
+  void _handleToggleTop(int index) => _toggleTop(_sessions[index]);
+  void _handleToggleDnd(int index) => _toggleDnd(_sessions[index]);
+  void _handleRemove(int index) => _removeSession(_sessions[index], index);
 
   Future<void> _toggleTop(Map<String, dynamic> session) async {
     final talkerId = session['talker_id'];
@@ -212,26 +220,30 @@ class _SessionListSliverState extends State<SessionListSliver> {
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 if (index == _sessions.length) {
-                  // 加载更多指示器
-                  if (_hasMore) {
-                    _load();
-                    return const Padding(
-                      padding: EdgeInsets.all(Style.md),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: biliPink,
-                        ),
-                      ),
-                    );
+                  // 加载更多指示器 - 使用 addPostFrameCallback 避免在 build 中调用 _load
+                  if (_hasMore && !_isLoadingMore) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && _hasMore && !_isLoadingMore) {
+                        _load();
+                      }
+                    });
                   }
-                  return const SizedBox.shrink();
+                  return const Padding(
+                    padding: EdgeInsets.all(Style.md),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: biliPink,
+                      ),
+                    ),
+                  );
                 }
                 return _SessionTile(
                   session: _sessions[index],
-                  onToggleTop: () => _toggleTop(_sessions[index]),
-                  onToggleDnd: () => _toggleDnd(_sessions[index]),
-                  onRemove: () => _removeSession(_sessions[index], index),
+                  index: index,
+                  onToggleTop: _handleToggleTop,
+                  onToggleDnd: _handleToggleDnd,
+                  onRemove: _handleRemove,
                 );
               },
               childCount: _sessions.length + (_hasMore ? 1 : 0),
@@ -262,15 +274,17 @@ class _Category {
 class _SessionTile extends StatelessWidget {
   const _SessionTile({
     required this.session,
+    required this.index,
     required this.onToggleTop,
     required this.onToggleDnd,
     required this.onRemove,
   });
 
   final Map<String, dynamic> session;
-  final VoidCallback onToggleTop;
-  final VoidCallback onToggleDnd;
-  final VoidCallback onRemove;
+  final int index;
+  final void Function(int) onToggleTop;
+  final void Function(int) onToggleDnd;
+  final void Function(int) onRemove;
 
   Map? get _account => session['account_info'] as Map?;
   Map? get _lastMsg => session['last_msg'] as Map?;
@@ -370,9 +384,9 @@ class _SessionTile extends StatelessWidget {
             onSelected: (v) {
               switch (v) {
                 case 'top':
-                  onToggleTop();
+                  onToggleTop(index);
                 case 'dnd':
-                  onToggleDnd();
+                  onToggleDnd(index);
                 case 'remove':
                   _confirmRemove(context);
               }
@@ -428,6 +442,6 @@ class _SessionTile extends StatelessWidget {
         ],
       ),
     );
-    if (ok == true) onRemove();
+    if (ok == true) onRemove(index);
   }
 }
