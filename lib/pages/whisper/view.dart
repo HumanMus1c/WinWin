@@ -108,17 +108,6 @@ class _WhisperPageState extends State<WhisperPage>
                     color: iosBlue,
                     onTap: () => showSessionListPage(context),
                   ),
-                  _buildSummaryTile(
-                    theme,
-                    icon: Icons.system_update_alt_outlined,
-                    title: '系统通知',
-                    count: _sysUnread,
-                    color: iosTeal,
-                    onTap: () {
-                      _clearFeedUnread('system');
-                      showSysMsgPage(context);
-                    },
-                  ),
                 ],
               ),
             ),
