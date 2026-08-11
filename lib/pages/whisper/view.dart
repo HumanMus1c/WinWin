@@ -8,6 +8,7 @@ import 'package:winwin/pages/whisper/msg_feed/at_me_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/like_me_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/reply_me_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/sys_msg_page.dart';
+import 'package:winwin/pages/whisper/session/session_list_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 
@@ -105,7 +106,7 @@ class _WhisperPageState extends State<WhisperPage>
                     title: '私信',
                     count: _dmUnread,
                     color: iosBlue,
-                    onTap: () => _showTodo(context, '私信会话'),
+                    onTap: () => showSessionListPage(context),
                   ),
                   _buildSummaryTile(
                     theme,
@@ -127,7 +128,7 @@ class _WhisperPageState extends State<WhisperPage>
                 child: Padding(
                   padding: EdgeInsets.all(Style.xxl),
                   child: Text(
-                    '点击上方入口查看回复 / 艾特 / 点赞 / 系统消息\n私信会话列表待后续集成',
+                    '点击上方入口查看回复 / 艾特 / 点赞 / 系统消息\n点击「私信」查看会话列表',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey),
                   ),
