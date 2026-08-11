@@ -5,6 +5,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart'
     show MsgFeedAvatar, MsgFeedEmptyView, MsgFeedErrorView, msgFeedTime;
+import 'package:winwin/pages/whisper/session/chat_detail_page.dart';
 import 'package:winwin/pages/whisper/session/message_preview_parser.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
@@ -286,6 +287,12 @@ class _SessionTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(
         horizontal: Style.safeSpace,
         vertical: Style.xs,
+      ),
+      onTap: () => showChatDetailPage(
+        context,
+        talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
+        sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
+        title: _name,
       ),
       leading: Stack(
         clipBehavior: Clip.none,
