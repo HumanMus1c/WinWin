@@ -243,8 +243,8 @@ class _SessionListPageState extends State<SessionListPage> {
   }
 }
 
-class _SessionTile extends StatelessWidget {
-  const _SessionTile({
+class SessionTile extends StatelessWidget {
+  const SessionTile({
     required this.session,
     required this.onToggleTop,
     required this.onToggleDnd,
