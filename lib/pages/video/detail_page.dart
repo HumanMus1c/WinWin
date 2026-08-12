@@ -21,6 +21,7 @@ import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_panel.dart';
 import 'package:winwin/pages/video/send_danmaku_panel.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
@@ -731,6 +732,18 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     final theme = Theme.of(context);
     final opacity = forceOpaque ? 1.0 : _scrollRatio.clamp(0.0, 1.0);
     final overVideo = opacity < 0.5;
+    // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏拍平到页面背景后，
+    // 为标题/返回箭头选出达标可读色（覆盖在播放器上时仍用白色）。
+    final barContrast = resolveAccessibleContainerColors(
+      containerColor: theme.scaffoldBackgroundColor
+          .withValues(alpha: opacity * 0.95),
+      contentColor: theme.colorScheme.onSurface,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      fallbackContentColors: [
+        theme.colorScheme.onInverseSurface,
+        theme.colorScheme.scrim,
+      ],
+    );
     return Positioned(
       top: 0,
       left: 0,
@@ -758,9 +771,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               IconButton(
                 icon: Icon(
                   Icons.arrow_back,
-                  color: overVideo
-                      ? Colors.white
-                      : theme.colorScheme.onSurface,
+                  color: overVideo ? Colors.white : barContrast.contentColor,
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
@@ -771,7 +782,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   child: Text(
                     (upName?.isNotEmpty ?? false) ? upName! : '视频详情',
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: barContrast.contentColor,
+                    ),
                   ),
                 ),
               ),

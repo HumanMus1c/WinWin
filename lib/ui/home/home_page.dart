@@ -13,6 +13,7 @@ import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
@@ -140,6 +141,17 @@ class _HomeTopBarState extends State<_HomeTopBar> {
     final style = InheritedUiStyle.of(context);
     final renderer = resolvePrimitiveRenderer(style);
 
+    // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏 surface 拍平到
+    // 页面背景后，为前景色（图标/文字）选出达标的可读色。
+    final barColor = cs.surface.withValues(alpha: 0.72);
+    final barContrast = resolveAccessibleContainerColors(
+      containerColor: barColor,
+      contentColor: cs.onSurfaceVariant,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      fallbackContentColors: [cs.onSurface, cs.onInverseSurface],
+    );
+    final barContentColor = barContrast.contentColor;
+
     final barRadius = switch (renderer) {
       PrimitiveRenderer.ios => Style.radiusFloating,
       _ => chrome.containerRadius,
@@ -151,7 +163,7 @@ class _HomeTopBarState extends State<_HomeTopBar> {
       child: Container(
         height: Style.topBarHeight,
         decoration: BoxDecoration(
-          color: cs.surface.withValues(alpha: 0.72),
+          color: barColor,
           borderRadius: BorderRadius.circular(barRadius),
           border: Border.all(
             color: cs.outline.withValues(alpha: renderer == PrimitiveRenderer.miuix ? 0 : 0.1),
@@ -225,12 +237,12 @@ class _HomeTopBarState extends State<_HomeTopBar> {
                       const SizedBox(width: 12),
                       Icon(Icons.search,
                           size: 18,
-                          color: cs.onSurfaceVariant),
+                          color: barContentColor),
                       const SizedBox(width: 6),
                       Text(
                         '搜索视频、UP主...',
                         style: TextStyle(
-                          color: cs.onSurfaceVariant,
+                          color: barContentColor,
                           fontSize: 13,
                         ),
                       ),
@@ -251,7 +263,7 @@ class _HomeTopBarState extends State<_HomeTopBar> {
                   ),
                 ),
                 child: Icon(Icons.settings,
-                    color: cs.onSurfaceVariant, size: 22),
+                    color: barContentColor, size: 22),
               ),
             ),
           ],
