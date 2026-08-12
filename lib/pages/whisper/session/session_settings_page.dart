@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/theme/style.dart';
@@ -52,6 +53,8 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
   }
 
   Future<void> _loadDnd() async {
+    // 项目约定：触碰网络前等待 bootstrap（幂等），防 dio 未初始化。
+    await ensureBootstrap();
     final res = await MsgHttp.getSessionSs(talkerUid: widget.talkerId);
     if (!mounted) return;
     if (res case Success(:final response)) {

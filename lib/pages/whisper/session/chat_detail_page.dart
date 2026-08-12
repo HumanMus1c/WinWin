@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/video/detail_page.dart';
@@ -81,6 +82,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
+    // 项目约定：触碰网络前等待 bootstrap（幂等），防 dio 未初始化。
+    await ensureBootstrap();
     if (refresh) {
       _hasMore = true;
       _messages.clear();

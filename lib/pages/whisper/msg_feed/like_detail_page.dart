@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
@@ -45,6 +46,8 @@ class _LikeDetailPageState extends State<LikeDetailPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
+    // 项目约定：触碰网络前等待 bootstrap（幂等），防 dio 未初始化。
+    await ensureBootstrap();
     if (refresh) {
       _pn = 1;
       _lastMid = 0;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart'
@@ -46,6 +47,9 @@ class _SessionListSectionState extends State<SessionListSection> {
   }
 
   Future<void> _load({bool refresh = false, int dupRetry = 0}) async {
+    // 启动时本页可能先于 bootstrap 完成前构建（main 不阻塞 runApp），
+    // 须先等 Dio 初始化，否则 Request.dio LateInitializationError 导致白屏。
+    await ensureBootstrap();
     if (refresh) {
       _endTs = 0;
       _hasMore = true;

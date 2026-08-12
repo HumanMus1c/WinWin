@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
@@ -34,6 +35,8 @@ class _SysMsgPageState extends State<SysMsgPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
+    // 项目约定：触碰网络前等待 bootstrap（幂等），防 dio 未初始化。
+    await ensureBootstrap();
     if (refresh) {
       _cursor = null;
       _hasMore = true;

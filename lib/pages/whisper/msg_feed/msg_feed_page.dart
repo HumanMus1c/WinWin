@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/theme/colors.dart';
@@ -75,6 +76,8 @@ class _MsgFeedPageState extends State<MsgFeedPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
+    // 项目约定：触碰网络前等待 bootstrap（幂等），防 dio 未初始化。
+    await ensureBootstrap();
     if (refresh) {
       _cursor = null;
       _cursorTime = null;
