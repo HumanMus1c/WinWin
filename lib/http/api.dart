@@ -697,7 +697,9 @@ abstract final class Api {
   static const String unfavFolder = '/x/v3/fav/folder/unfav';
 
   // static const String videoTags = '/x/tag/archive/tags';
-  static const String videoTags = '/x/web-interface/view/detail/tag';
+  // 稿件标签：对标 BiliPai getVideoTags，改用 `/x/tag/archive/tags`
+  //（view/detail/tag 需传 aid 且返回结构不同，详情页按 bvid 拉取）。
+  static const String videoTags = '/x/tag/archive/tags';
 
   static const String reportMember =
       '${HttpString.spaceBaseUrl}/ajax/report/add';

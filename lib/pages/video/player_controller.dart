@@ -157,7 +157,8 @@ class WinWinPlayerController {
   /// 心跳定时器：每 5 秒上报一次播放进度。
   Timer? _heartBeatTimer;
   /// 上次心跳上报时的播放状态，用于检测状态变化。
-  bool _lastHeartBeatPlaying = false;
+  /// null 表示尚未上报过任何心跳（首次状态变化报 play_type=0）。
+  bool? _lastHeartBeatPlaying;
   /// 累计播放时长（秒），用于满足 "playing ≥5s" 触发条件。
   int _playingAccumSec = 0;
   /// 是否已上报过结束（play_type=-1），避免重复。
@@ -325,7 +326,7 @@ class WinWinPlayerController {
   void _startHeartBeat() {
     _heartBeatTimer?.cancel();
     _playingAccumSec = 0;
-    _lastHeartBeatPlaying = false;
+    _lastHeartBeatPlaying = null;
     _reportedEnd = false;
     _heartBeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (_disposed) return;
@@ -338,10 +339,14 @@ class WinWinPlayerController {
       if (isPlaying) {
         _playingAccumSec += 5;
       }
-      // 状态变化（playing↔paused）≥2s（即本周期检测到变化）时上报。
-      if (isPlaying != _lastHeartBeatPlaying) {
+      // 状态变化（playing↔paused）时上报：首次变化报 0（开始），
+      // 其后 1=暂停 / 2=继续（参照 PiliPlus 心跳语义）。
+      if (_lastHeartBeatPlaying != isPlaying) {
+        final playType = _lastHeartBeatPlaying == null
+            ? 0
+            : (isPlaying ? 2 : 1);
         _lastHeartBeatPlaying = isPlaying;
-        _sendHeartBeat(playType: isPlaying ? 2 : 1);
+        _sendHeartBeat(playType: playType);
         return;
       }
       // 持续播放中且累计 ≥5s：上报心跳进度。

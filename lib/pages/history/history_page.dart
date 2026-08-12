@@ -5,6 +5,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/history.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/history/history_models.dart';
+import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
@@ -103,6 +104,27 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
+  /// 打开历史项：仅 archive 类型且有 bvid 的稿件可跳转详情页续播，
+  /// 直播/专栏/番剧等类型暂不支持。
+  void _openItem(HistoryItem item) {
+    final bvid = item.history.bvid;
+    final business = item.history.business;
+    final isArchive = business == 'archive' ||
+        business == null ||
+        business.isEmpty;
+    if (bvid == null || bvid.isEmpty || !isArchive) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('暂不支持打开该类型记录')),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VideoDetailPage(bvid: bvid, cover: item.cover),
+      ),
+    );
+  }
+
   Future<void> _clearAll() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -183,6 +205,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       return _HistoryTile(
                         item: _items[index],
                         onDelete: () => _deleteItem(_items[index]),
+                        onTap: () => _openItem(_items[index]),
                       );
                     },
                   ),
@@ -207,10 +230,15 @@ class _HistoryPageState extends State<HistoryPage> {
 }
 
 class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({required this.item, required this.onDelete});
+  const _HistoryTile({
+    required this.item,
+    required this.onDelete,
+    this.onTap,
+  });
 
   final HistoryItem item;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -224,7 +252,7 @@ class _HistoryTile extends StatelessWidget {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (_) => onDelete(),
-      child: VideoCardH(videoItem: item),
+      child: VideoCardH(videoItem: item, onTap: onTap),
     );
   }
 }

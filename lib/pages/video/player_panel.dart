@@ -353,6 +353,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ),
               ),
               _buildCenterOverlay(),
+              // BiliPai centerPlayButton：暂停时居中显示大播放按钮
+              //（点击由手势层 _onVideoTap 接管，此处仅视觉展示）。
+              _buildCenterPlayButton(),
               // Phase 4.3：手势反馈叠加层。
               _buildDoubleTapFeedback(),
               _buildLongPressSpeedFeedback(),
@@ -624,14 +627,60 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
+  /// BiliPai 风格中央大播放按钮：就绪且暂停时显示，
+  /// 点击穿透到手势层（_onVideoTap → playOrPause）。
+  Widget _buildCenterPlayButton() {
+    final c = widget.controller;
+    return ValueListenableBuilder<bool>(
+      valueListenable: c.playing,
+      builder: (context, isPlaying, _) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: c.ready,
+          builder: (context, isReady, _) {
+            if (!isReady || isPlaying) return const SizedBox.shrink();
+            return const Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Color(0x8C000000),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(Style.md),
+                      child: Icon(
+                        Icons.play_arrow_rounded,
+                        color: Colors.white,
+                        size: 44,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   /// 底部控制条。
   Widget _buildControlBar() {
     final c = widget.controller;
+    // BiliPai 底部控制条：透明→黑渐变遮罩（bottomScrim），而非整块纯色。
     return Container(
-      color: const Color(0x99000000),
-      padding: const EdgeInsets.symmetric(
-        horizontal: Style.md,
-        vertical: Style.xs,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Color(0xD9000000)],
+        ),
+      ),
+      padding: const EdgeInsets.only(
+        left: Style.sm,
+        right: Style.sm,
+        top: Style.xl,
+        bottom: Style.xs,
       ),
       child: Row(
         children: [
@@ -639,6 +688,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
             valueListenable: c.playing,
             builder: (context, isPlaying, _) {
               return IconButton(
+                iconSize: 24,
+                visualDensity: VisualDensity.compact,
                 icon: Icon(
                   isPlaying ? Icons.pause : Icons.play_arrow,
                   color: Colors.white,
@@ -651,8 +702,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
           const SizedBox(width: Style.sm),
           Expanded(child: _buildProgressSlider()),
           const SizedBox(width: Style.sm),
-          IconButton(
-            icon: const Icon(Icons.volume_up, color: Colors.white),
+          _iconButton(
+            icon: Icons.volume_up,
+            tooltip: '音量',
             onPressed: _toggleVolumePopup,
           ),
           _buildAudioTrackButton(),
@@ -661,36 +713,35 @@ class _PlayerPanelState extends State<PlayerPanel> {
           _buildSubtitleButton(),
           _buildSpeedButton(),
           _buildChapterButton(),
-          IconButton(
+          _iconButton(
+            icon: Icons.comment_outlined,
             tooltip: '发弹幕',
-            icon: const Icon(Icons.comment_outlined, color: Colors.white),
             onPressed: () => showSendDanmakuPanel(context, controller: c),
           ),
-          IconButton(
+          _iconButton(
+            icon: Icons.tune,
             tooltip: '弹幕设置',
-            icon: const Icon(Icons.tune, color: Colors.white),
             onPressed: () => showDanmakuSettingsPanel(
               context,
               controller: c,
               fullscreen: widget.fullscreen,
             ),
           ),
-          IconButton(
+          _iconButton(
+            icon: Icons.lock_outline,
             tooltip: '锁定控制条',
-            icon: const Icon(Icons.lock_outline, color: Colors.white),
             onPressed: _toggleLock,
           ),
           // Phase 4.6：桌面伪 PiP（非全屏时可用）。
           if (!widget.fullscreen)
-            IconButton(
+            _iconButton(
+              icon: Icons.picture_in_picture_alt,
               tooltip: '画中画',
-              icon: const Icon(
-                Icons.picture_in_picture_alt,
-                color: Colors.white,
-              ),
               onPressed: () => DesktopPipController.instance.togglePip(),
             ),
           IconButton(
+            iconSize: 22,
+            visualDensity: VisualDensity.compact,
             icon: Icon(
               widget.fullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
               color: Colors.white,
@@ -702,6 +753,22 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
+  /// 控制条图标按钮统一风格：20px 图标 + 紧凑密度（对齐 BiliPai 底栏）。
+  Widget _iconButton({
+    required IconData icon,
+    required VoidCallback? onPressed,
+    String? tooltip,
+    Color color = Colors.white,
+  }) {
+    return IconButton(
+      iconSize: 20,
+      visualDensity: VisualDensity.compact,
+      tooltip: tooltip,
+      icon: Icon(icon, color: color),
+      onPressed: onPressed,
+    );
+  }
+
   Widget _buildTimeText() {
     final c = widget.controller;
     return ListenableBuilder(
@@ -709,9 +776,20 @@ class _PlayerPanelState extends State<PlayerPanel> {
       builder: (context, _) {
         final pos = DurationUtils.formatDuration(c.position.value.inSeconds);
         final dur = DurationUtils.formatDuration(c.duration.value.inSeconds);
-        return Text(
-          '$pos / $dur',
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        // B 站风格：当前时间纯白，总时长降饱和。
+        return Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: pos,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              TextSpan(
+                text: ' / $dur',
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -828,12 +906,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// AnimatedOpacity 渐显/渐隐）。
   Widget _buildDanmakuToggleButton() {
     final enabled = Pref.enableShowDanmaku;
-    return IconButton(
+    return _iconButton(
+      icon: enabled ? Icons.subtitles_outlined : Icons.subtitles_off,
       tooltip: enabled ? '关闭弹幕' : '开启弹幕',
-      icon: Icon(
-        enabled ? Icons.subtitles_outlined : Icons.subtitles_off,
-        color: Colors.white,
-      ),
       onPressed: _toggleDanmaku,
     );
   }
@@ -846,13 +921,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
       builder: (context, _) {
         final hasSubtitles = c.subtitle.available.isNotEmpty;
         final isActive = c.subtitle.current != null;
-        return IconButton(
+        return _iconButton(
+          icon:
+              isActive ? Icons.closed_caption : Icons.closed_caption_outlined,
           tooltip: '字幕',
-          icon: Icon(
-            isActive ? Icons.closed_caption : Icons.closed_caption_outlined,
-            color: isActive ? biliPink : Colors.white,
-            size: 20,
-          ),
+          color: isActive ? biliPink : Colors.white,
           onPressed: hasSubtitles
               ? () => showSubtitleSettingsPanel(
                     context,
@@ -954,6 +1027,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return PopupMenuButton<String>(
       tooltip: '音轨',
       icon: const Icon(Icons.graphic_eq, color: Colors.white, size: 20),
+      iconSize: 20,
+      padding: const EdgeInsets.all(Style.sm),
       onSelected: (value) {
         if (value == '__normalize') {
           c.setAudioNormalize(!c.audioNormalizeEnabled);
@@ -1021,6 +1096,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return PopupMenuButton<double>(
       tooltip: '章节',
       icon: const Icon(Icons.bookmarks_outlined, color: Colors.white, size: 20),
+      iconSize: 20,
+      padding: const EdgeInsets.all(Style.sm),
       onSelected: (sec) => c.seek(Duration(seconds: sec.round())),
       itemBuilder: (context) => [
         for (final vp in chapters)

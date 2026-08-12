@@ -15,6 +15,7 @@ import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
+import 'package:winwin/models/video/video_tag.dart';
 import 'package:winwin/utils/global_data.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/utils.dart';
@@ -255,6 +256,27 @@ abstract final class VideoHttp {
     }
   }
 
+  /// 稿件标签列表（`/x/tag/archive/tags`，对标 BiliPai getVideoTags）。
+  ///
+  /// 仅需 [bvid]，无需 WBI 签名。失败返回 Error，由调用方静默降级。
+  static Future<LoadingState<List<VideoTag>>> videoTags({
+    required String bvid,
+  }) async {
+    final res = await Request().get(
+      Api.videoTags,
+      queryParameters: {'bvid': bvid},
+    );
+    if (res.data['code'] == 0) {
+      final list = (res.data['data'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(VideoTag.fromJson)
+          .toList();
+      return Success(list);
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
   // 评论列表 web端（pagination_str 无需 wbi 签名）
   static Future<LoadingState<ReplyMainData>> replyMain({
     required int oid,
@@ -380,7 +402,8 @@ abstract final class VideoHttp {
   /// 用于向 B 站上报播放进度，支持多端历史记录同步。
   /// [aid] 稿件 avid，[cid] 分 P cid，[playType] 播放类型：
   ///   0=开始播放/心跳，1=暂停，2=继续，3=结束
-  /// [progressSec] 当前播放位置（秒），用于服务端记录进度。
+  /// [progressSec] 当前播放位置（秒），经 `played_time`/`real_time`
+  /// 字段下发（参照 PiliPlus heartBeat，服务端仅识别 played_time）。
   /// 未登录时不调用。
   static Future<LoadingState> heartBeat({
     required int aid,
@@ -400,7 +423,10 @@ abstract final class VideoHttp {
         'did': LoginHttp.buvid,
         's_locale': 'zh-CN',
         'csrf': account.csrf,
-        if (progressSec != null) 'rt': progressSec,
+        if (progressSec != null) ...{
+          'played_time': progressSec,
+          'real_time': progressSec,
+        },
         'start_ts': now,
         'play_type': playType,
         'type': 3,

@@ -6,6 +6,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/fav.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/fav/fav_models.dart';
+import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
@@ -220,6 +221,23 @@ class _FavDetailPageState extends State<FavDetailPage> {
     }
   }
 
+  /// 打开收藏夹视频项：跳转视频详情页；
+  /// 已失效资源（无 bvid）提示不可打开。
+  void _openItem(FavDetailItem item) {
+    final bvid = item.bvid;
+    if (bvid == null || bvid.isEmpty) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('该资源已失效，无法打开')),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VideoDetailPage(bvid: bvid, cover: item.cover),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -250,7 +268,10 @@ class _FavDetailPageState extends State<FavDetailPage> {
                     return const SizedBox.shrink();
                   }
                   final item = _items[index];
-                  return _FavVideoTile(item: item);
+                  return _FavVideoTile(
+                    item: item,
+                    onTap: () => _openItem(item),
+                  );
                 },
               ),
             ),
@@ -259,13 +280,14 @@ class _FavDetailPageState extends State<FavDetailPage> {
 }
 
 class _FavVideoTile extends StatelessWidget {
-  const _FavVideoTile({required this.item});
+  const _FavVideoTile({required this.item, this.onTap});
 
   final FavDetailItem item;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return VideoCardH(videoItem: item);
+    return VideoCardH(videoItem: item, onTap: onTap);
   }
 }
 

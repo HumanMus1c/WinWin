@@ -20,8 +20,10 @@ import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
+import 'package:winwin/models/video/video_tag.dart';
 import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
+import 'package:winwin/pages/search/search_result_page.dart';
 import 'package:winwin/pages/video/coin_dialog.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
 import 'package:winwin/pages/video/player_controller.dart';
@@ -116,12 +118,16 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 由 [_loadDetail] 拉取后缓存，供后续 Phase 使用。
   PlayInfoModel? _playInfo;
 
+  /// 稿件标签（对标 BiliPai videoTags，`/x/tag/archive/tags`）。
+  List<VideoTag> _tags = const [];
+
   @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
     _loadDetail();
     _loadRelated();
+    _loadTags();
   }
 
   @override
@@ -231,14 +237,24 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           // 同时缓存字幕列表 / 章节标记供 Phase 4.4 / 4.5 使用。
           Duration? startProgress;
           final aid = response.aid;
+          // 稿件总时长（秒），用于判定上次进度是否已接近播完。
+          final detailDurSec = response.duration ?? 0;
           try {
             final infoRes =
                 await VideoHttp.playInfo(bvid: widget.bvid, cid: cid);
             if (!mounted) return;
             if (infoRes case Success(:final response)) {
               _playInfo = response;
+              // last_play_time 单位为毫秒（参照 PiliPlus
+              // Duration(milliseconds: data.lastPlayTime)）；
+              // 已接近播完（距结尾 ≤10s）时不续播，从头开始。
               if (response.lastPlayTime > 0) {
-                startProgress = Duration(seconds: response.lastPlayTime);
+                final lastSec = response.lastPlayTime ~/ 1000;
+                if (detailDurSec <= 0 || lastSec < detailDurSec - 10) {
+                  startProgress = Duration(
+                    milliseconds: response.lastPlayTime,
+                  );
+                }
               }
             }
           } catch (_) {
@@ -288,6 +304,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         setState(() => _relatedState = res);
       case Loading():
         break;
+    }
+  }
+
+  /// 拉取稿件标签（对标 BiliPai loadVideoTags，失败静默降级不展示）。
+  Future<void> _loadTags() async {
+    final res = await VideoHttp.videoTags(bvid: widget.bvid);
+    if (!mounted) return;
+    if (res case Success(:final response)) {
+      if (response.isNotEmpty) setState(() => _tags = response);
     }
   }
 
@@ -843,11 +868,24 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             sliver: SliverList(
                               delegate: SliverChildBuilderDelegate(
                                 (context, index) {
-                                  // 0: 信息, 1: 简介, 2: 评论头, 3+: 评论列表 + 尾部
-                                  if (index == 0) return _buildInfoSection(response);
-                                  if (index == 1) return _buildDescSection(response);
-                                  if (index == 2) return _buildReplyHeader(response);
-                                  final replyIndex = index - 3;
+                                  // 0: 信息, 1: 简介, 2: 标签(可选),
+                                  // 其后: 评论头 + 评论列表 + 尾部
+                                  final hasTags = _tags.isNotEmpty;
+                                  final replyHeaderIndex = hasTags ? 3 : 2;
+                                  if (index == 0) {
+                                    return _buildInfoSection(response);
+                                  }
+                                  if (index == 1) {
+                                    return _buildDescSection(response);
+                                  }
+                                  if (hasTags && index == 2) {
+                                    return _buildTagsSection();
+                                  }
+                                  if (index == replyHeaderIndex) {
+                                    return _buildReplyHeader(response);
+                                  }
+                                  final replyIndex =
+                                      index - replyHeaderIndex - 1;
                                   if (replyIndex < _replies.length) {
                                     if (replyIndex == _replies.length - 1) {
                                       _maybeLoadMoreReplies();
@@ -856,7 +894,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                   }
                                   return _buildReplyTrailer();
                                 },
-                                childCount: 3 + _replies.length + 1,
+                                childCount:
+                                    (_tags.isNotEmpty ? 3 : 2) +
+                                    _replies.length +
+                                    1,
                               ),
                             ),
                           ),
@@ -1256,6 +1297,50 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 onPressed: () =>
                     setState(() => _descExpanded = !_descExpanded),
                 child: Text(_descExpanded ? '收起' : '展开'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 稿件标签行（对标 BiliPai VideoTagsRow：最多取 10 个，
+  /// 14dp 圆角 chip + surfaceVariant 底色，点击按标签名搜索）。
+  Widget _buildTagsSection() {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: Style.md),
+      child: Wrap(
+        spacing: Style.sm,
+        runSpacing: Style.sm,
+        children: [
+          for (final tag in _tags.take(10))
+            Material(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.8,
+              ),
+              borderRadius: BorderRadius.circular(Style.radiusLg),
+              child: InkWell(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        SearchResultPage(keyword: tag.tagName ?? ''),
+                  ),
+                ),
+                borderRadius: BorderRadius.circular(Style.radiusLg),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: Text(
+                    tag.tagName ?? '',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
               ),
             ),
         ],

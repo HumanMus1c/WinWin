@@ -5,6 +5,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/toview.dart';
 import 'package:winwin/models/toview/toview_models.dart';
+import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
@@ -98,6 +99,22 @@ class _ToviewPageState extends State<ToviewPage> {
     }
   }
 
+  /// 打开稍后再看项：跳转视频详情页（番剧等无 bvid 类型暂不支持）。
+  void _openItem(LaterItem item) {
+    final bvid = item.bvid;
+    if (bvid == null || bvid.isEmpty) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('暂不支持打开该类型内容')),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VideoDetailPage(bvid: bvid, cover: item.pic),
+      ),
+    );
+  }
+
   Future<void> _clearAll() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -179,6 +196,7 @@ class _ToviewPageState extends State<ToviewPage> {
                       return _ToviewTile(
                         item: _items[index],
                         onRemove: () => _removeItem(_items[index]),
+                        onTap: () => _openItem(_items[index]),
                       );
                     },
                   ),
@@ -203,10 +221,15 @@ class _ToviewPageState extends State<ToviewPage> {
 }
 
 class _ToviewTile extends StatelessWidget {
-  const _ToviewTile({required this.item, required this.onRemove});
+  const _ToviewTile({
+    required this.item,
+    required this.onRemove,
+    this.onTap,
+  });
 
   final LaterItem item;
   final VoidCallback onRemove;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -220,7 +243,7 @@ class _ToviewTile extends StatelessWidget {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (_) => onRemove(),
-      child: VideoCardH(videoItem: item),
+      child: VideoCardH(videoItem: item, onTap: onTap),
     );
   }
 }
