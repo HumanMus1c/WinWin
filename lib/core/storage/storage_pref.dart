@@ -50,6 +50,14 @@ abstract final class Pref {
   static int get customColor =>
       _setting.get(SettingBoxKey.customColor, defaultValue: 0);
 
+  // ---------- onboarding ----------
+  /// 用户协议是否已确认（版本化 key，默认 false 使新/老用户首次启动都会弹门禁）。
+  static bool get userAgreementAck =>
+      _setting.get(SettingBoxKey.userAgreementAckV1, defaultValue: false);
+
+  static Future<void> setUserAgreementAck(bool value) =>
+      _setting.put(SettingBoxKey.userAgreementAckV1, value);
+
   // ---------- network ----------
   static bool get enableHttp2 =>
       _setting.get(SettingBoxKey.enableHttp2, defaultValue: false);

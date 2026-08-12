@@ -6,7 +6,9 @@ import 'package:fvp/mdk.dart' as mdk;
 
 import 'core/bootstrap.dart';
 import 'core/log/app_logger.dart';
+import 'core/storage/storage_pref.dart';
 import 'core/window/window_state_controller.dart';
+import 'pages/onboarding/user_agreement_page.dart';
 import 'pages/setting/theme_notifier.dart';
 import 'pages/video/desktop_pip.dart';
 import 'theme/app_font_notifier.dart';
@@ -111,13 +113,60 @@ class WinWinApp extends StatelessWidget {
                     darkTheme: AppTheme.darkFor(uiStyle, fontFamily: fontFamily),
                     themeMode: themeMode,
                     navigatorObservers: [routeObserver],
-                    home: const AppRoot(),
+                    home: const AgreementGate(child: AppRoot()),
                   ),
                 );
               },
             );
           },
         );
+      },
+    );
+  }
+}
+
+/// 用户协议门禁壳层。
+///
+/// 在 [ensureBootstrap] 完成前显示加载占位（此时 Hive 尚未就绪，无法读取确认状态）；
+/// 已确认 → 直接渲染 [child]（AppRoot）；未确认 → 展示 [UserAgreementPage]，
+/// 确认后写回持久化并切换到主界面。不阻塞 runApp，遵守现有 bootstrap 约定。
+class AgreementGate extends StatefulWidget {
+  const AgreementGate({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<AgreementGate> createState() => _AgreementGateState();
+}
+
+class _AgreementGateState extends State<AgreementGate> {
+  /// null = bootstrap 进行中；true/false = 已读取确认状态。
+  bool? _acked;
+
+  @override
+  void initState() {
+    super.initState();
+    ensureBootstrap().then((_) {
+      if (!mounted) return;
+      setState(() => _acked = Pref.userAgreementAck);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final acked = _acked;
+    if (acked == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (acked) {
+      return widget.child;
+    }
+    return UserAgreementPage(
+      onAgreed: () async {
+        await Pref.setUserAgreementAck(true);
+        if (mounted) setState(() => _acked = true);
       },
     );
   }
