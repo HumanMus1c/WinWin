@@ -16,6 +16,7 @@ import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
 import 'package:winwin/utils/global_data.dart';
 import 'package:winwin/utils/id_utils.dart';
+import 'package:winwin/utils/utils.dart';
 import 'package:winwin/utils/wbi_sign.dart';
 
 abstract final class VideoHttp {
@@ -190,6 +191,10 @@ abstract final class VideoHttp {
     required int cid,
     int qn = 80,
   }) async {
+    // 风控规避参数（对齐 PiliPlus）：缺少 dm_img_* / gaia 参数时，
+    // playurl 会被风控拦截或降级，表现为无法切换到 480P 以上画质。
+    final dmImgStr = Utils.base64EncodeRandomString(16, 64);
+    final dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
     final params = await WbiSign.makSign({
       'avid': ?avid,
       'bvid': ?bvid,
@@ -200,7 +205,13 @@ abstract final class VideoHttp {
       'fourk': 1,
       'fnver': 0,
       'voice_balance': 0,
+      'gaia_source': 'pre-load',
+      'isGaiaAvoided': true,
       'web_location': 1315873,
+      'dm_img_list': '[]',
+      'dm_img_str': dmImgStr,
+      'dm_cover_img_str': dmCoverImgStr,
+      'dm_img_inter': '{"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
     });
     final res = await Request().get(
       Api.playUrl,
