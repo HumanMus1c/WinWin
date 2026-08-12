@@ -7,6 +7,7 @@ import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/common/widgets/video_card/video_card_h.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/main.dart';
@@ -72,6 +73,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// Phase 7.6.3：VideoHeader 收缩比例（0.0=展开，1.0=pin），用于顶栏渐变。
   double _scrollRatio = 0.0;
 
+  /// 折叠自动暂停：本次是否由折叠触发暂停（展开时仅恢复该情形，不覆盖手动暂停）。
+  bool _autoPausedByCollapse = false;
+
   /// 页面被新路由覆盖前的播放状态，用于返回时决定是否自动播放。
   bool _wasPlaying = false;
   /// 页面被覆盖前记录的播放位置，用于返回时恢复进度。
@@ -108,6 +112,26 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     scrollController.dispose();
     _commentCtrl.dispose();
     super.dispose();
+  }
+
+  /// 播放器折叠自动暂停（对标 BiliPai PlayerCollapseAutoPausePolicy）。
+  ///
+  /// 折叠到 pin 态（ratio≈1）且正在播放时自动暂停并置位 [_autoPausedByCollapse]；
+  /// 展开回落（ratio<0.5）且本次确系折叠自动暂停时恢复播放并复位。
+  /// 全屏态与手动暂停均不触发，避免覆盖用户意图。
+  void _handleCollapseAutoPause(double r) {
+    if (_fullscreen) return;
+    final ctrl = playerController;
+    if (ctrl == null || !Pref.collapseAutoPause) return;
+    if (r >= 0.98) {
+      if (ctrl.playing.value) {
+        ctrl.pause();
+        _autoPausedByCollapse = true;
+      }
+    } else if (r < 0.5 && _autoPausedByCollapse) {
+      ctrl.play();
+      _autoPausedByCollapse = false;
+    }
   }
 
   // ─────────────────────────── RouteAware ───────────────────────────
@@ -513,6 +537,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             maxExtent: maxExtent,
                             minExtent: minExtent,
                             onScrollRatioChange: (r) {
+                              _handleCollapseAutoPause(r);
                               if ((r - _scrollRatio).abs() > 0.01) {
                                 setState(() => _scrollRatio = r);
                               }
@@ -589,6 +614,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                         maxExtent: maxExtent,
                         minExtent: minExtent,
                         onScrollRatioChange: (r) {
+                          _handleCollapseAutoPause(r);
                           if ((r - _scrollRatio).abs() > 0.01) {
                             setState(() => _scrollRatio = r);
                           }

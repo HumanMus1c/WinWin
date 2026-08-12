@@ -742,6 +742,16 @@ class WinWinPlayerController {
     }
   }
 
+  /// 恢复播放（仅在暂停态生效），用于折叠自动暂停后展开时恢复。
+  /// 与 [playOrPause] 不同，此方法不引入切换语义，避免误触其它状态。
+  void play() {
+    final player = _player;
+    if (player == null || _disposed) return;
+    if (player.state == mdk.PlaybackState.paused) {
+      player.state = mdk.PlaybackState.playing;
+    }
+  }
+
   void seek(Duration to) {
     final player = _player;
     if (player == null || _disposed) return;

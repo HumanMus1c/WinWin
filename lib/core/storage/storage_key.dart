@@ -26,6 +26,7 @@ abstract final class SettingBoxKey {
       fullScreenSCWidth = 'fullScreenSCWidth',
       keyboardControl = 'keyboardControl',
       pauseOnMinimize = 'pauseOnMinimize',
+      collapseAutoPause = 'collapseAutoPause',
       pgcSkipType = 'pgcSkipType',
       audioPlayMode = 'audioPlayMode',
       showBatteryLevel = 'showBatteryLevel',

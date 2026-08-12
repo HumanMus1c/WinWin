@@ -75,4 +75,11 @@ List<SettingsModel> get playSettings => [
         setKey: SettingBoxKey.pauseOnMinimize,
         defaultVal: false,
       ),
+      const SwitchModel(
+        title: '播放器折叠时自动暂停',
+        subtitle: '详情页滚动使播放器收缩为小窗时自动暂停，展开后自动恢复',
+        leading: Icon(Icons.picture_in_picture_outlined),
+        setKey: SettingBoxKey.collapseAutoPause,
+        defaultVal: true,
+      ),
     ];

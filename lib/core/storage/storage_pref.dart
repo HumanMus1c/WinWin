@@ -176,6 +176,10 @@ abstract final class Pref {
   static bool get enableBackgroundPlay =>
       _setting.get(SettingBoxKey.enableBackgroundPlay, defaultValue: true);
 
+  /// 播放器折叠（pin）时自动暂停；展开仅恢复本次被自动暂停的播放。
+  static bool get collapseAutoPause =>
+      _setting.get(SettingBoxKey.collapseAutoPause, defaultValue: true);
+
   // ---------- danmaku ----------
   static bool get enableShowDanmaku =>
       _setting.get(SettingBoxKey.enableShowDanmaku, defaultValue: true);
