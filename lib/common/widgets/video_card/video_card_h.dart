@@ -137,12 +137,14 @@ class VideoCardH extends StatelessWidget {
         '';
 
     // 统计数回退：stat.view/danmu → cntInfo.play/danmaku（FavDetailItem）。
+    // 部分模型无 danmu 字段（如 RelatedVideoStat/Stat 仅有 danmaku），
+    // 直接访问会抛 NoSuchMethodError，必须用 [_opt] 容错。
     final dynamic stat = _opt(() => videoItem.stat);
     final dynamic cntInfo = _opt(() => videoItem.cntInfo);
-    final int? playCount = (stat?.view as num?)?.toInt() ??
+    final int? playCount = _opt(() => (stat?.view as num?)?.toInt()) ??
         _opt(() => (cntInfo?.play as num?)?.toInt());
-    final int? danmakuCount = (stat?.danmu as num?)?.toInt() ??
-        (stat?.danmaku as num?)?.toInt() ??
+    final int? danmakuCount = _opt(() => (stat?.danmu as num?)?.toInt()) ??
+        _opt(() => (stat?.danmaku as num?)?.toInt()) ??
         _opt(() => (cntInfo?.danmaku as num?)?.toInt());
 
     return Column(
