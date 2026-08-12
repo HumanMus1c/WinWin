@@ -26,6 +26,9 @@ class VideoDetailData {
   VideoStat? stat;
   List<VideoPage>? pages;
 
+  /// 当前登录用户对该稿件的互动状态（仅登录态返回）。
+  VideoReqUser? reqUser;
+
   VideoDetailData.fromJson(Map<String, Object?> json) {
     bvid = json['bvid'] as String?;
     aid = _asInt(json['aid']);
@@ -43,6 +46,33 @@ class VideoDetailData {
     pages = (json['pages'] as List?)
         ?.map((e) => VideoPage.fromJson(e as _Json))
         .toList();
+    final reqUserJson = json['req_user'];
+    reqUser = reqUserJson is _Json
+        ? VideoReqUser.fromJson(reqUserJson)
+        : null;
+  }
+}
+
+/// 当前登录用户对稿件的互动状态（`req_user`，对标 BiliPai
+/// VideoInteractionUseCase.checkInteractionStatus 的初始态来源）。
+class VideoReqUser {
+  /// 是否已收藏
+  bool? favorite;
+
+  /// 是否已点赞
+  bool? like;
+
+  /// 已投币数量
+  int? coin;
+
+  /// 是否已关注UP主（0=未关注 1=已关注）
+  int? follow;
+
+  VideoReqUser.fromJson(Map<String, dynamic> json) {
+    favorite = json['favorite'] == true;
+    like = json['like'] == true;
+    coin = _asInt(json['coin']);
+    follow = _asInt(json['follow']);
   }
 }
 
@@ -110,6 +140,31 @@ class VideoDetailResponse {
         ? VideoDetailData.fromJson(dataJson)
         : null;
   }
+}
+
+/// 一键三连结果（`/x/web-interface/archive/like/triple`）。
+class UgcTriple {
+  bool like;
+  bool coin;
+  bool fav;
+
+  /// 实际投币数（三连为 2）
+  int multiply;
+
+  UgcTriple({
+    this.like = false,
+    this.coin = false,
+    this.fav = false,
+    this.multiply = 0,
+  });
+
+  bool get allSuccess => like && coin && fav;
+
+  UgcTriple.fromJson(Map<String, dynamic> json)
+    : like = json['like'] == true,
+      coin = json['coin'] == true,
+      fav = json['fav'] == true || json['favorite'] == true,
+      multiply = _asInt(json['multiply']) ?? 0;
 }
 
 /// 数字字段容忍解析：int/num/数字字符串均可。

@@ -38,11 +38,15 @@ class PlayerPanel extends StatefulWidget {
     required this.controller,
     this.fullscreen = false,
     this.onToggleFullscreen,
+    this.onEscape,
   });
 
   final WinWinPlayerController controller;
   final bool fullscreen;
   final VoidCallback? onToggleFullscreen;
+
+  /// Esc 键回调（固定语义：返回上一级）。
+  final VoidCallback? onEscape;
 
   @override
   State<PlayerPanel> createState() => _PlayerPanelState();
@@ -301,6 +305,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
       controller: c,
       enabled: !_locked,
       onToggleFullscreen: widget.onToggleFullscreen,
+      onEscape: widget.onEscape,
       onToggleDanmaku: _toggleDanmaku,
       onLockToggle: (locked) => setState(() {
         _locked = locked;

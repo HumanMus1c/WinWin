@@ -1,27 +1,33 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/common/widgets/video_card/video_card_h.dart';
+import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/toview.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/main.dart';
 import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
+import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
+import 'package:winwin/pages/video/coin_dialog.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_panel.dart';
 import 'package:winwin/pages/video/send_danmaku_panel.dart';
+import 'package:winwin/pages/video/video_action_row.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
@@ -77,6 +83,23 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   bool _fullscreen = false;
   bool _descExpanded = false;
+
+  // ── 稿件互动状态（对标 BiliPai VideoInteractionUseCase，
+  //    初始值来自 detail 接口 req_user）──
+  /// 是否已点赞
+  bool _hasLike = false;
+
+  /// 是否已点踩
+  bool _hasDislike = false;
+
+  /// 已投币数量
+  int _coinNum = 0;
+
+  /// 是否已收藏
+  bool _hasFav = false;
+
+  /// 是否在稍后再看列表（null=未知/未登录）
+  bool? _inWatchLater;
 
   /// Phase 7.6.3：VideoHeader 收缩比例（0.0=展开，1.0=pin），用于顶栏渐变。
   double _scrollRatio = 0.0;
@@ -237,6 +260,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           }
           ctrl.load(start: startProgress);
         }
+        // 互动初始态（对标 BiliPai checkInteractionStatus，来自 req_user）。
+        _hasLike = response.reqUser?.like ?? false;
+        _coinNum = response.reqUser?.coin ?? 0;
+        _hasFav = response.reqUser?.favorite ?? false;
+        _hasDislike = false;
+        _loadWatchLaterStatus(response.aid);
         setState(() => _detailState = Success(response));
         if (response.aid != null) {
           _loadReplies(oid: response.aid!);
@@ -299,6 +328,228 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (aid == null) return;
     setState(() => _replyFailed = false);
     _loadReplies(oid: aid, nextOffset: _nextOffset);
+  }
+
+  // ─────────────────── 稿件互动（对标 BiliPai VideoInteractionUseCase）───
+
+  /// 查询当前稿件是否在稍后再看列表（仅登录态，分页扫描直到命中或到底）。
+  Future<void> _loadWatchLaterStatus(int? aid) async {
+    if (aid == null || !Accounts.main.isLogin) return;
+    for (int pn = 1; pn <= 5; pn++) {
+      final res = await ToviewHttp.toviewList(page: pn);
+      if (!mounted) return;
+      if (res case Success(:final response)) {
+        final list = response.list ?? const [];
+        if (list.any((i) => i.aid == aid)) {
+          setState(() => _inWatchLater = true);
+          return;
+        }
+        if (list.length < 20) break; // 已到尾页
+      } else {
+        break;
+      }
+    }
+    if (!mounted) return;
+    setState(() => _inWatchLater = false);
+  }
+
+  /// 更新稿件 stat 计数（乐观更新/回滚共用，[fn] 内直接改写字段）。
+  void _adjustStat(void Function(VideoStat stat) fn) {
+    final stat = _detailState.dataOrNull?.stat;
+    if (stat == null) return;
+    setState(() => fn(stat));
+  }
+
+  /// （取消）点赞；点赞与点踩互斥，点赞时自动清除点踩态。
+  Future<void> _actionLike() async {
+    final aid = _detailState.dataOrNull?.aid;
+    if (aid == null) return;
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+    final wasLiked = _hasLike;
+    _adjustStat((s) {
+      _hasLike = !wasLiked;
+      _hasDislike = false;
+      s.like = (s.like ?? 0) + (wasLiked ? -1 : 1);
+    });
+    final res = await VideoHttp.likeVideo(aid: aid, type: wasLiked);
+    if (!mounted) return;
+    switch (res) {
+      case Success(:final response):
+        if (response != null && response.isNotEmpty) _toast(response);
+      case Error(:final errMsg):
+        // 回滚乐观更新。
+        _adjustStat((s) {
+          _hasLike = wasLiked;
+          s.like = (s.like ?? 0) + (wasLiked ? 1 : -1);
+        });
+        _toast(errMsg ?? '操作失败');
+      case Loading():
+        break;
+    }
+  }
+
+  /// 长按点赞一键三连：点赞 + 投币×2 + 收藏默认收藏夹。
+  Future<void> _actionTriple() async {
+    final aid = _detailState.dataOrNull?.aid;
+    if (aid == null) return;
+    if (_hasLike && _coinNum >= 2 && _hasFav) {
+      _toast('已完成三连');
+      return;
+    }
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+    final res = await VideoHttp.ugcTriple(bvid: widget.bvid, aid: aid);
+    if (!mounted) return;
+    switch (res) {
+      case Success(:final response):
+        _adjustStat((s) {
+          if (response.like && !_hasLike) s.like = (s.like ?? 0) + 1;
+          if (response.coin) {
+            final add =
+                (response.multiply > 0 ? response.multiply : 2) - _coinNum;
+            if (add > 0) s.coin = (s.coin ?? 0) + add;
+          }
+          if (response.fav && !_hasFav) s.favorite = (s.favorite ?? 0) + 1;
+          _hasLike = _hasLike || response.like;
+          if (response.coin) _coinNum = 2;
+          _hasFav = _hasFav || response.fav;
+          _hasDislike = false;
+        });
+        _toast(response.allSuccess ? '三连成功' : '三连部分成功');
+      case Error(:final errMsg):
+        _toast(errMsg ?? '三连失败');
+      case Loading():
+        break;
+    }
+  }
+
+  /// 投币入口：弹对话框选择数量与是否同时点赞。
+  Future<void> _actionCoin() async {
+    final aid = _detailState.dataOrNull?.aid;
+    if (aid == null) return;
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+    if (_coinNum >= 2) {
+      _toast('达到投币上限啦~');
+      return;
+    }
+    showCoinDialog(context, onPay: (count, withLike) => _doCoin(aid, count, withLike));
+  }
+
+  Future<void> _doCoin(int aid, int count, bool withLike) async {
+    final remain = 2 - _coinNum;
+    final actual = count > remain ? remain : count;
+    if (actual <= 0) {
+      _toast('达到投币上限啦~');
+      return;
+    }
+    final res = await VideoHttp.coinVideo(
+      aid: aid,
+      multiply: actual,
+      selectLike: withLike ? 1 : 0,
+    );
+    if (!mounted) return;
+    switch (res) {
+      case Success():
+        _adjustStat((s) {
+          s.coin = (s.coin ?? 0) + actual;
+          _coinNum += actual;
+          if (withLike && !_hasLike) {
+            _hasLike = true;
+            s.like = (s.like ?? 0) + 1;
+          }
+        });
+        _toast('投币成功');
+      case Error(:final errMsg):
+        _toast(errMsg ?? '投币失败');
+      case Loading():
+        break;
+    }
+  }
+
+  /// （取消）点踩；点踩时自动取消点赞（B 站语义二者互斥）。
+  Future<void> _actionDislike() async {
+    final aid = _detailState.dataOrNull?.aid;
+    if (aid == null) return;
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+    final wasDisliked = _hasDislike;
+    final cancelledLike = !wasDisliked && _hasLike;
+    _adjustStat((s) {
+      _hasDislike = !wasDisliked;
+      if (cancelledLike) {
+        _hasLike = false;
+        s.like = (s.like ?? 0) - 1;
+      }
+    });
+    final res = await VideoHttp.dislikeVideo(aid: aid, type: wasDisliked);
+    if (!mounted) return;
+    if (res case Error(:final errMsg)) {
+      // 回滚乐观更新。
+      _adjustStat((s) {
+        _hasDislike = wasDisliked;
+        if (cancelledLike) {
+          _hasLike = true;
+          s.like = (s.like ?? 0) + 1;
+        }
+      });
+      _toast(errMsg ?? '操作失败');
+    }
+  }
+
+  /// 收藏：弹出收藏夹选择面板（复用收藏夹页 showFavPanel，
+  /// 对标 BiliPai FavoriteFolderSheet 多选收藏夹）。
+  Future<void> _actionFav() async {
+    final aid = _detailState.dataOrNull?.aid;
+    if (aid == null) return;
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+    showFavPanel(context, rid: aid, onSuccess: (isFav) {
+      if (!mounted) return;
+      _adjustStat((s) {
+        if (isFav != _hasFav) {
+          _hasFav = isFav;
+          s.favorite = (s.favorite ?? 0) + (isFav ? 1 : -1);
+        }
+      });
+    });
+  }
+
+  /// 分享：复制视频链接到剪贴板 + 尽力而为上报分享计数。
+  Future<void> _actionShare() async {
+    final aid = _detailState.dataOrNull?.aid;
+    await Clipboard.setData(
+      ClipboardData(text: 'https://www.bilibili.com/video/${widget.bvid}'),
+    );
+    if (!mounted) return;
+    _toast('视频链接已复制');
+    if (aid != null && Accounts.main.isLogin) {
+      // 上报失败不影响体验，不 await。
+      VideoHttp.shareVideo(aid: aid);
+    }
+  }
+
+  /// 切换稍后再看（对标 BiliPai toggleWatchLater）。
+  Future<void> _actionWatchLater() async {
+    final aid = _detailState.dataOrNull?.aid;
+    if (aid == null) return;
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+    final inList = _inWatchLater ?? false;
+    final res = inList
+        ? await ToviewHttp.delToview(aid.toString())
+        : await ToviewHttp.addToview(aid: aid);
+    if (!mounted) return;
+    switch (res) {
+      case Success():
+        setState(() => _inWatchLater = !inList);
+        _toast(inList ? '已从稍后再看移除' : 'yeah！稍后再看');
+      case Error(:final errMsg):
+        _toast(errMsg ?? '操作失败');
+      case Loading():
+        break;
+    }
   }
 
   // ─────────────────────────── 评论点赞 ───────────────────────────
@@ -485,6 +736,16 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     setState(() => _fullscreen = !_fullscreen);
   }
 
+  /// Esc 键固定语义：返回上一级。
+  /// 全屏态退出全屏回到默认布局；默认布局退出详情页。
+  void _handleEscape() {
+    if (_fullscreen) {
+      setState(() => _fullscreen = false);
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
   // ─────────────────────────── 布局 ───────────────────────────
 
   @override
@@ -500,6 +761,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     controller: playerController!,
                     fullscreen: true,
                     onToggleFullscreen: _toggleFullscreen,
+                    onEscape: _handleEscape,
                   ),
                 ),
               ],
@@ -843,6 +1105,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       controller: controller,
       fullscreen: _fullscreen,
       onToggleFullscreen: _toggleFullscreen,
+      onEscape: _handleEscape,
     );
   }
 
@@ -935,6 +1198,24 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 child: const Text('关注'),
               ),
             ],
+          ),
+          const Divider(height: Style.xl),
+          // 互动行：点赞/投币/收藏/点踩/分享/稍后再看
+          //（对标 BiliPai ActionButtonsRow）。
+          VideoActionRow(
+            stat: stat,
+            hasLike: _hasLike,
+            hasDislike: _hasDislike,
+            coinNum: _coinNum,
+            hasFav: _hasFav,
+            inWatchLater: _inWatchLater,
+            onLike: _actionLike,
+            onTriple: _actionTriple,
+            onCoin: _actionCoin,
+            onDislike: _actionDislike,
+            onFav: _actionFav,
+            onShare: _actionShare,
+            onWatchLater: _actionWatchLater,
           ),
         ],
       ),

@@ -26,6 +26,7 @@ class PlayerFocus extends StatefulWidget {
     required this.controller,
     required this.child,
     this.onToggleFullscreen,
+    this.onEscape,
     this.onScreenshot,
     this.onToggleDanmaku,
     this.onLockToggle,
@@ -35,6 +36,9 @@ class PlayerFocus extends StatefulWidget {
   final WinWinPlayerController controller;
   final Widget child;
   final VoidCallback? onToggleFullscreen;
+
+  /// Esc 键回调（固定语义：返回上一级——全屏态退出全屏，否则退出页面）。
+  final VoidCallback? onEscape;
   final VoidCallback? onScreenshot;
   final VoidCallback? onToggleDanmaku;
   final ValueChanged<bool>? onLockToggle;
@@ -103,9 +107,9 @@ class _PlayerFocusState extends State<PlayerFocus> {
       widget.onLockToggle?.call(!_focusNode.canRequestFocus);
       return true;
     }
-    // Esc = 退出全屏
+    // Esc = 返回上一级（全屏态退出全屏，否则退出页面；不再切换全屏）
     if (key == LogicalKeyboardKey.escape) {
-      widget.onToggleFullscreen?.call();
+      widget.onEscape?.call();
       return true;
     }
     // ← = 后退 10s

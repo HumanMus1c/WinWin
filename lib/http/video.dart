@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:winwin/common/constants.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
+import 'package:winwin/http/browser_ua.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/login.dart';
@@ -437,6 +438,154 @@ abstract final class VideoHttp {
       },
       options: Options(
         contentType: Headers.formUrlEncodedContentType,
+        extra: {'account': account},
+      ),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  // ─────────────────── 稿件互动（对标 BiliPai VideoInteractionUseCase）───
+
+  /// （取消）点赞（APP 端 `/x/v2/view/like`，移植自 PiliPlus）。
+  ///
+  /// [type] 为当前是否已点赞：已赞→传 0 取消，未赞→传 1 点赞。
+  /// 返回服务端 toast 文案（可能为 null）。
+  static Future<LoadingState<String?>> likeVideo({
+    required int aid,
+    required bool type,
+  }) async {
+    final account = Accounts.main;
+    if (!account.isLogin) return const Error('请先登录');
+    final res = await Request().post(
+      Api.likeVideo,
+      data: {'aid': aid.toString(), 'like': type ? '0' : '1'},
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+        extra: {'account': account},
+      ),
+    );
+    if (res.data['code'] == 0) {
+      return Success(res.data['data']?['toast'] as String?);
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  /// （取消）点踩（APP 端 `/x/v2/view/dislike`，移植自 PiliPlus）。
+  ///
+  /// 仅 APP 接口支持，需要 accessKey；[type] 为当前是否已点踩。
+  static Future<LoadingState<void>> dislikeVideo({
+    required int aid,
+    required bool type,
+  }) async {
+    final account = Accounts.main;
+    if (!account.isLogin) return const Error('请先登录');
+    if ((account.accessKey ?? '').isEmpty) {
+      return const Error('请退出账号后重新登录');
+    }
+    final res = await Request().post(
+      Api.dislikeVideo,
+      data: {'aid': aid.toString(), 'dislike': type ? '0' : '1'},
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+        extra: {'account': account},
+      ),
+    );
+    if (res.data is! String && res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data is String ? res.data : res.data['message']);
+    }
+  }
+
+  /// 投币（APP 端 `/x/v2/view/coin/add`，移植自 PiliPlus）。
+  ///
+  /// [multiply] 投币数量（上限 2），[selectLike] 1=投币同时点赞。
+  static Future<LoadingState<void>> coinVideo({
+    required int aid,
+    required int multiply,
+    int selectLike = 0,
+  }) async {
+    final account = Accounts.main;
+    if (!account.isLogin) return const Error('请先登录');
+    final res = await Request().post(
+      Api.coinVideo,
+      data: {
+        'aid': aid.toString(),
+        'multiply': multiply.toString(),
+        'select_like': selectLike.toString(),
+      },
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+        extra: {'account': account},
+      ),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  /// 一键三连（Web 端 `/x/web-interface/archive/like/triple`，
+  /// 移植自 PiliPlus）：点赞 + 投币×2 + 收藏默认收藏夹。
+  static Future<LoadingState<UgcTriple>> ugcTriple({
+    required String bvid,
+    required int aid,
+  }) async {
+    final account = Accounts.main;
+    if (!account.isLogin) return const Error('请先登录');
+    final res = await Request().post(
+      Api.ugcTriple,
+      data: {
+        'aid': aid,
+        'eab_x': 2,
+        'ramval': 0,
+        'source': 'web_normal',
+        'ga': 1,
+        'csrf': account.csrf,
+      },
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+        headers: {
+          'origin': 'https://www.bilibili.com',
+          'referer': 'https://www.bilibili.com/video/$bvid',
+          'user-agent': BrowserUa.pc,
+        },
+        extra: {'account': account},
+      ),
+    );
+    if (res.data['code'] == 0) {
+      return Success(
+        UgcTriple.fromJson(
+          (res.data['data'] as Map?)?.cast<String, dynamic>() ?? {},
+        ),
+      );
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  /// 分享上报（Web 端 `/x/web-interface/share/add`）。
+  ///
+  /// 桌面端分享 = 复制链接到剪贴板 + 向服务端上报分享计数（尽力而为）。
+  static Future<LoadingState<void>> shareVideo({required int aid}) async {
+    final account = Accounts.main;
+    if (!account.isLogin) return const Error('未登录');
+    final res = await Request().post(
+      Api.shareVideo,
+      data: {'aid': aid, 'csrf': account.csrf, 'web_location': '333.788'},
+      options: Options(
+        contentType: Headers.formUrlEncodedContentType,
+        headers: {
+          'origin': 'https://www.bilibili.com',
+          'referer': 'https://www.bilibili.com',
+          'user-agent': BrowserUa.pc,
+        },
         extra: {'account': account},
       ),
     );
