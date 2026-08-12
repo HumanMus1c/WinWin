@@ -6,6 +6,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/history/history_models.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/app_empty_state.dart';
 
 /// 历史记录页面（移植自 PiliPlus `lib/pages/history/`）。
 ///
@@ -153,21 +154,14 @@ class _HistoryPageState extends State<HistoryPage> {
       body: _loading && _items.isEmpty
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!),
-                      const SizedBox(height: Style.md),
-                      FilledButton(
-                        onPressed: () => _load(refresh: true),
-                        style: FilledButton.styleFrom(backgroundColor: biliPink),
-                        child: const Text('重试'),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
+              ? _buildError()
+              : _items.isEmpty
+                  ? const AppEmptyState(
+                      icon: Icons.history_rounded,
+                      title: '暂无观看记录',
+                      subtitle: '看过的视频会出现在这里',
+                    )
+                  : RefreshIndicator(
                   color: biliPink,
                   onRefresh: () => _load(refresh: true),
                   child: ListView.builder(
@@ -192,6 +186,21 @@ class _HistoryPageState extends State<HistoryPage> {
                     },
                   ),
                 ),
+    );
+  }
+
+  /// 错误/未登录态：未登录用语义空态，其余用统一错误态（含重试）。
+  Widget _buildError() {
+    if (_error == '请先登录') {
+      return const AppEmptyState(
+        icon: Icons.account_circle_outlined,
+        title: '请先登录',
+        subtitle: '登录后可查看历史记录',
+      );
+    }
+    return AppErrorState(
+      message: _error ?? '加载失败',
+      onRetry: () => _load(refresh: true),
     );
   }
 }

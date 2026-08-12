@@ -7,6 +7,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/fav/fav_models.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/app_empty_state.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`）。
 ///
@@ -85,8 +86,14 @@ class _FavPageState extends State<FavPage> {
       body: _loading && _folders.isEmpty
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _error != null && _folders.isEmpty
-              ? _ErrorView(error: _error!, onRetry: () => _load(refresh: true))
-              : RefreshIndicator(
+              ? _buildError()
+              : _folders.isEmpty
+                  ? const AppEmptyState(
+                      icon: Icons.folder_off_outlined,
+                      title: '暂无收藏夹',
+                      subtitle: '去创建或收藏喜欢的视频吧',
+                    )
+                  : RefreshIndicator(
                   color: biliPink,
                   onRefresh: () => _load(refresh: true),
                   child: ListView.builder(
@@ -120,6 +127,21 @@ class _FavPageState extends State<FavPage> {
       MaterialPageRoute<void>(
         builder: (_) => FavDetailPage(folder: folder),
       ),
+    );
+  }
+
+  /// 错误/未登录态：未登录用语义空态，其余用统一错误态（含重试）。
+  Widget _buildError() {
+    if (_error == '请先登录') {
+      return const AppEmptyState(
+        icon: Icons.account_circle_outlined,
+        title: '请先登录',
+        subtitle: '登录后可查看我的收藏',
+      );
+    }
+    return AppErrorState(
+      message: _error ?? '加载失败',
+      onRetry: () => _load(refresh: true),
     );
   }
 }
@@ -203,7 +225,12 @@ class _FavDetailPageState extends State<FavDetailPage> {
       appBar: AppBar(title: Text(widget.folder.title)),
       body: _loading && _items.isEmpty
           ? const Center(child: CircularProgressIndicator(color: biliPink))
-          : RefreshIndicator(
+          : _items.isEmpty
+              ? const AppEmptyState(
+                  icon: Icons.folder_off_outlined,
+                  title: '该收藏夹暂无视频',
+                )
+              : RefreshIndicator(
               color: biliPink,
               onRefresh: () => _load(refresh: true),
               child: ListView.builder(
@@ -448,31 +475,6 @@ class _FavPanelState extends State<_FavPanel> {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.error, required this.onRetry});
-
-  final String error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(error, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: Style.md),
-          FilledButton(
-            onPressed: onRetry,
-            style: FilledButton.styleFrom(backgroundColor: biliPink),
-            child: const Text('重试'),
           ),
         ],
       ),

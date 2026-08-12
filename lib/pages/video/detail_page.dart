@@ -22,6 +22,7 @@ import 'package:winwin/pages/video/player_panel.dart';
 import 'package:winwin/pages/video/send_danmaku_panel.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -1452,13 +1453,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             Loading() => _buildRightSkeleton(),
             Error(:final errMsg) => _buildError(errMsg, _loadRelated),
             Success(:final response) => response.isEmpty
-                ? Center(
-                    child: Text(
-                      '暂无相关推荐',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
+                ? const AppEmptyState(
+                    title: '暂无相关推荐',
+                    subtitle: '换个视频看看吧',
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(

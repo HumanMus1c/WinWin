@@ -6,6 +6,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/app_empty_state.dart';
 
 /// 消息流加载器（游标分页）：回复我 / 艾特我 / 点赞我 共用此签名。
 typedef MsgFeedLoader = Future<LoadingState<Map<String, dynamic>>> Function({
@@ -200,18 +201,16 @@ class MsgFeedErrorView extends StatelessWidget {
   }
 }
 
-/// 空态视图。
+/// 空态视图（统一接入 [AppEmptyState]，通知语义图标）。
 class MsgFeedEmptyView extends StatelessWidget {
   const MsgFeedEmptyView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.all(Style.xxl),
-      child: Center(
-        child: Text('暂无消息', style: TextStyle(color: cs.outline)),
-      ),
+    return const AppEmptyState(
+      icon: Icons.notifications_none_rounded,
+      title: '暂无消息',
+      subtitle: '新的消息会出现在这里',
     );
   }
 }
