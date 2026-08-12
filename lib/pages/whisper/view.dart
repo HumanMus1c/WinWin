@@ -73,48 +73,37 @@ class _WhisperPageState extends State<WhisperPage>
       (_feedUnreadState.dataOrNull?['like'] as num?)?.toInt() ?? 0;
   int get _sysUnread =>
       (_feedUnreadState.dataOrNull?['system'] as num?)?.toInt() ?? 0;
-  int get _dmUnread =>
-      (_unreadState.dataOrNull?['follow_unread'] as num?)?.toInt() ?? 0;
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final theme = Theme.of(context);
+    // 四类互动入口固定在顶部，仅下方会话列表可滚动。
     return Scaffold(
-      appBar: AppBar(title: const Text('消息')),
-      body: AppRefreshIndicator(
-        onRefresh: _load,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Style.safeSpace,
-                  vertical: Style.md,
-                ),
-                child: _buildEntries(theme),
+      appBar: AppBar(
+        title: const Text('消息'),
+        // 下方列表滚动时标题栏不叠加 surfaceTint 变色。
+        scrolledUnderElevation: 0,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Style.safeSpace,
+              vertical: Style.md,
+            ),
+            child: _buildEntries(theme),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: AppRefreshIndicator(
+              onRefresh: _load,
+              child: SessionListSection(
+                onRefreshUnread: () => _clearDmUnread(),
               ),
             ),
-            const SliverToBoxAdapter(child: Divider(height: 1)),
-            SessionListSliver(
-              onRefreshUnread: () => _clearDmUnread(),
-            ),
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(Style.xxl),
-                  child: Text(
-                    '点击上方入口查看回复 / 艾特 / 点赞 / 系统消息\n下方为私信会话列表',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -181,58 +170,6 @@ class _WhisperPageState extends State<WhisperPage>
     if (data != null && (data['follow_unread'] as num? ?? 0) > 0) {
       setState(() => data['follow_unread'] = 0);
     }
-  }
-
-  Widget _buildSummaryTile(
-    ThemeData theme, {
-    required IconData icon,
-    required String title,
-    required int count,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: color, size: 18),
-      ),
-      title: Text(title),
-      trailing: count > 0
-          ? Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.error,
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: Text(
-                count > 99 ? '99+' : '$count',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            )
-          : Icon(
-              Icons.keyboard_arrow_right_rounded,
-              color: theme.colorScheme.outline,
-            ),
-      onTap: onTap,
-    );
-  }
-
-  void _showTodo(BuildContext context, String title) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(
-        content: Text('$title · 待后续集成'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
   }
 }
 

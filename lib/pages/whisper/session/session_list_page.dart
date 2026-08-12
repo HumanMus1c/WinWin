@@ -7,6 +7,8 @@ import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart'
     show MsgFeedAvatar, MsgFeedEmptyView, MsgFeedErrorView, msgFeedTime;
 import 'package:winwin/pages/whisper/session/chat_detail_page.dart';
 import 'package:winwin/pages/whisper/session/message_preview_parser.dart';
+import 'package:winwin/pages/whisper/session/session_account_resolver.dart';
+import 'package:winwin/pages/whisper/session/session_pagination_policy.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 
@@ -15,9 +17,9 @@ import 'package:winwin/theme/style.dart';
 /// 蓝本：BiliPai `InboxScreen` + `InboxSessionPaginationPolicy`。
 /// 分类 chips 切换 session_type；end_ts 游标分页（session_ts 归一化为微秒 -1）。
 void showSessionListPage(BuildContext context) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const SessionListPage()),
-  );
+  Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => const SessionListPage()));
 }
 
 class _Category {
@@ -26,8 +28,12 @@ class _Category {
   final int type;
 }
 
+/// 特别关注筛选类的客户端标记（非服务端 session_type）。
+const _specialCategoryType = -10;
+
 const _categories = <_Category>[
   _Category('全部', 4),
+  _Category('特别关注', _specialCategoryType),
   _Category('关注', 9),
   _Category('未关注', 2),
   _Category('陌生人', 8),
@@ -45,11 +51,18 @@ class SessionListPage extends StatefulWidget {
 
 class _SessionListPageState extends State<SessionListPage> {
   final List<Map<String, dynamic>> _sessions = [];
+
+  /// 特别关注筛选模式下维护的完整合并列表（仅显示其中特别关注会话）。
+  final List<Map<String, dynamic>> _mergedAll = [];
+  Set<int>? _specialMids;
   int _selectedType = 4;
   int _endTs = 0; // 游标（微秒）
   bool _hasMore = true;
   bool _loading = true;
+  bool _isLoadingMore = false;
   String? _error;
+
+  bool get _isSpecialMode => _selectedType == _specialCategoryType;
 
   @override
   void initState() {
@@ -57,33 +70,78 @@ class _SessionListPageState extends State<SessionListPage> {
     _load();
   }
 
-  Future<void> _load({bool refresh = false}) async {
+  Future<void> _load({bool refresh = false, int dupRetry = 0}) async {
     if (refresh) {
       _endTs = 0;
       _hasMore = true;
       _sessions.clear();
+      _mergedAll.clear();
       setState(() => _loading = true);
     }
-    if (!_hasMore) return;
+    if (!_hasMore || _isLoadingMore) return;
+    _isLoadingMore = true;
+    final requestedEndTs = _endTs;
+    // 特别关注筛选依赖分组 mid 全集，先拉取（进程内缓存）。
+    if (_isSpecialMode && _specialMids == null) {
+      _specialMids = await SessionAccountResolver.fetchSpecialMids() ?? {};
+      if (!mounted) {
+        _isLoadingMore = false;
+        return;
+      }
+    }
     final res = await MsgHttp.sessionList(
-      sessionType: _selectedType,
-      endTs: _endTs > 0 ? _endTs : null,
+      sessionType: _isSpecialMode ? 4 : _selectedType,
+      // size 对齐 BiliPai 取 100：置顶会话会在每页重复返回，
+      // 页容量太小会导致整页去重后提前终止翻页、会话大量缺失。
+      size: 100,
+      endTs: requestedEndTs > 0 ? requestedEndTs : null,
     );
+    _isLoadingMore = false;
     if (!mounted) return;
     switch (res) {
       case Success(:final response):
-        final list = (response['session_list'] as List?)
+        final incoming =
+            (response['session_list'] as List?)
                 ?.map((e) => (e as Map).cast<String, dynamic>())
                 .toList() ??
             const [];
-        final nextEndTs = _resolveNextEndTs(list);
+        // mergePage：置顶优先排序 + 按会话键去重 + 严格递减游标。
+        final merged = SessionPaginationPolicy.mergePage(
+          existing: refresh ? const [] : _mergedAll,
+          incoming: incoming,
+          responseHasMore: response['has_more'] == 1,
+          requestedEndTs: requestedEndTs,
+          canRetryDuplicatePage: dupRetry < 3,
+        );
         setState(() {
           _loading = false;
           _error = null;
-          _sessions.addAll(list);
-          _hasMore = (response['has_more'] == 1) && nextEndTs > 0;
-          _endTs = nextEndTs;
+          _mergedAll
+            ..clear()
+            ..addAll(merged.sessions);
+          _sessions
+            ..clear()
+            ..addAll(
+              _isSpecialMode
+                  ? _mergedAll.where(_isSpecialSession)
+                  : merged.sessions,
+            );
+          _hasMore = merged.hasMore;
+          _endTs = merged.nextEndTs;
         });
+        // 整页重复时用更早的游标自动重试（对齐 BiliPai 分页策略）。
+        if (merged.shouldRetry) {
+          _load(dupRetry: dupRetry + 1);
+          return;
+        }
+        // 异步补全会话用户信息（get_sessions 通常不带 account_info）
+        final filled = await SessionAccountResolver.fillSessionAccounts(
+          merged.sessions,
+        );
+        final specialUpdated = await SessionAccountResolver.fillSpecialFollows(
+          merged.sessions,
+        );
+        if (mounted && (filled || specialUpdated)) setState(() {});
       case Error(:final errMsg):
         setState(() {
           _loading = false;
@@ -94,19 +152,9 @@ class _SessionListPageState extends State<SessionListPage> {
     }
   }
 
-  /// 下一页游标：末条会话 session_ts 归一化为微秒后 -1（严格更早，避免边界重复）。
-  int _resolveNextEndTs(List<Map<String, dynamic>> sessions) {
-    if (sessions.isEmpty) return 0;
-    final last = sessions.last;
-    final raw = (last['session_ts'] as num?)?.toInt() ?? 0;
-    return _normalizeSessionTs(raw) > 0 ? _normalizeSessionTs(raw) - 1 : 0;
-  }
-
-  static int _normalizeSessionTs(int ts) {
-    if (ts <= 0) return 0;
-    if (ts >= 1000000000000000) return ts; // 已是微秒
-    if (ts >= 1000000000000) return ts * 1000; // 毫秒 → 微秒
-    return ts * 1000000; // 秒 → 微秒（极少）
+  bool _isSpecialSession(Map<String, dynamic> s) {
+    final talkerId = (s['talker_id'] as num?)?.toInt() ?? 0;
+    return talkerId > 0 && (_specialMids?.contains(talkerId) ?? false);
   }
 
   void _selectCategory(int type) {
@@ -165,14 +213,15 @@ class _SessionListPageState extends State<SessionListPage> {
 
   void _toast(LoadingState res) {
     final msg = res is Error ? (res.errMsg ?? '操作失败') : '操作失败';
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(msg)));
   }
 
   static int _nowMicros() => DateTime.now().microsecondsSinceEpoch;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('私信')),
       body: Column(
@@ -200,42 +249,53 @@ class _SessionListPageState extends State<SessionListPage> {
           // 会话列表
           Expanded(
             child: _loading && _sessions.isEmpty
-                ? const Center(child: CircularProgressIndicator(color: biliPink))
+                ? const Center(
+                    child: CircularProgressIndicator(color: biliPink),
+                  )
                 : _error != null && _sessions.isEmpty
-                    ? MsgFeedErrorView(
-                        error: _error!, onRetry: () => _load(refresh: true))
-                    : RefreshIndicator(
-                        color: biliPink,
-                        onRefresh: () => _load(refresh: true),
-                        child: ListView.builder(
-                          itemCount: _sessions.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == _sessions.length) {
-                              if (_hasMore) {
-                                _load();
-                                return const Padding(
-                                  padding: EdgeInsets.all(Style.md),
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: biliPink,
-                                    ),
+                ? MsgFeedErrorView(
+                    error: _error!,
+                    onRetry: () => _load(refresh: true),
+                  )
+                : RefreshIndicator(
+                    color: biliPink,
+                    onRefresh: () => _load(refresh: true),
+                    child: Material(
+                      // hover 高亮绘制在最近的 Material 祖先上，在视口内提供
+                      // 透明 Material 并硬裁剪，避免滚动时高亮泄漏到固定栏区域。
+                      type: MaterialType.transparency,
+                      clipBehavior: Clip.hardEdge,
+                      child: ListView.builder(
+                        itemCount: _sessions.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == _sessions.length) {
+                            if (_hasMore) {
+                              _load();
+                              return const Padding(
+                                padding: EdgeInsets.all(Style.md),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: biliPink,
                                   ),
-                                );
-                              }
-                              return _sessions.isEmpty
-                                  ? const MsgFeedEmptyView()
-                                  : const SizedBox.shrink();
+                                ),
+                              );
                             }
-                            return _SessionTile(
-                              session: _sessions[index],
-                              onToggleTop: () => _toggleTop(_sessions[index]),
-                              onToggleDnd: () => _toggleDnd(_sessions[index]),
-                              onRemove: () => _removeSession(_sessions[index], index),
-                            );
-                          },
-                        ),
+                            return _sessions.isEmpty
+                                ? const MsgFeedEmptyView()
+                                : const SizedBox.shrink();
+                          }
+                          return _SessionTile(
+                            session: _sessions[index],
+                            onToggleTop: () => _toggleTop(_sessions[index]),
+                            onToggleDnd: () => _toggleDnd(_sessions[index]),
+                            onRemove: () =>
+                                _removeSession(_sessions[index], index),
+                          );
+                        },
                       ),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -243,8 +303,8 @@ class _SessionListPageState extends State<SessionListPage> {
   }
 }
 
-class SessionTile extends StatelessWidget {
-  const SessionTile({
+class _SessionTile extends StatelessWidget {
+  const _SessionTile({
     required this.session,
     required this.onToggleTop,
     required this.onToggleDnd,
@@ -256,22 +316,11 @@ class SessionTile extends StatelessWidget {
   final VoidCallback onToggleDnd;
   final VoidCallback onRemove;
 
-  Map? get _account => session['account_info'] as Map?;
   Map? get _lastMsg => session['last_msg'] as Map?;
 
-  String get _name {
-    final n = _account?['name']?.toString();
-    if (n != null && n.isNotEmpty) return n;
-    return session['group_name']?.toString() ?? '未知会话';
-  }
+  String get _name => SessionAccountResolver.displayName(session);
 
-  String get _avatar {
-    final a = _account?['pic_url']?.toString();
-    if (a != null && a.isNotEmpty) return a;
-    final f = _account?['face']?.toString();
-    if (f != null && f.isNotEmpty) return f;
-    return session['group_cover']?.toString() ?? '';
-  }
+  String get _avatar => SessionAccountResolver.displayAvatar(session);
 
   @override
   Widget build(BuildContext context) {
@@ -279,6 +328,7 @@ class SessionTile extends StatelessWidget {
     final unread = (session['unread_count'] as num?)?.toInt() ?? 0;
     final isPinned = ((session['top_ts'] as num?)?.toInt() ?? 0) > 0;
     final isDnd = (session['is_dnd'] as num?)?.toInt() == 1;
+    final isSpecial = SessionAccountResolver.isSpecialFollow(session);
     final msgType = (_lastMsg?['msg_type'] as num?)?.toInt() ?? 1;
     final content = _lastMsg?['content']?.toString();
     final ts = (_lastMsg?['timestamp'] as num?)?.toInt();
@@ -307,7 +357,10 @@ class SessionTile extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.error,
-                  border: Border.all(color: theme.scaffoldBackgroundColor, width: 1.5),
+                  border: Border.all(
+                    color: theme.scaffoldBackgroundColor,
+                    width: 1.5,
+                  ),
                   borderRadius: BorderRadius.circular(100),
                 ),
                 child: Text(
@@ -329,6 +382,7 @@ class SessionTile extends StatelessWidget {
             ),
           ),
           if (isPinned) _flag(theme, '置顶'),
+          if (isSpecial) _flag(theme, '特别关注', color: biliPink),
           if (isDnd) _flag(theme, '免打扰'),
         ],
       ),
@@ -336,8 +390,9 @@ class SessionTile extends StatelessWidget {
         MessagePreviewParser.parseSessionPreview(content, msgType),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.bodySmall
-            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -345,12 +400,16 @@ class SessionTile extends StatelessWidget {
           if (ts != null && ts > 0)
             Text(
               msgFeedTime(ts),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert,
-                size: 20, color: theme.colorScheme.outline),
+            icon: Icon(
+              Icons.more_vert,
+              size: 20,
+              color: theme.colorScheme.outline,
+            ),
             onSelected: (v) {
               switch (v) {
                 case 'top':
@@ -378,21 +437,18 @@ class SessionTile extends StatelessWidget {
     );
   }
 
-  Widget _flag(ThemeData theme, String text) => Container(
-        margin: const EdgeInsets.only(left: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(2),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 10,
-            color: theme.colorScheme.primary,
-          ),
-        ),
-      );
+  Widget _flag(ThemeData theme, String text, {Color? color}) {
+    final c = color ?? theme.colorScheme.primary;
+    return Container(
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Text(text, style: TextStyle(fontSize: 10, color: c)),
+    );
+  }
 
   Future<void> _confirmRemove(BuildContext context) async {
     final ok = await showDialog<bool>(

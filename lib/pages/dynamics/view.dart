@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
+import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -110,13 +111,31 @@ class _DynTabPageState extends State<_DynTabPage>
   @override
   void initState() {
     super.initState();
+    // 根导航 tab 为常驻实例：登录态变化时自动刷新，
+    // 避免启动时未登录加载失败后一直停留在错误态。
+    AccountService().addListener(_onAccountChanged);
     _load(refresh: true);
   }
 
   @override
   void dispose() {
+    AccountService().removeListener(_onAccountChanged);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onAccountChanged() {
+    if (!mounted) return;
+    if (AccountService().isLogin) {
+      _load(refresh: true);
+    } else {
+      setState(() {
+        _items.clear();
+        _offset = null;
+        _hasMore = true;
+        _state = const Error('请先登录');
+      });
+    }
   }
 
   Future<void> _load({required bool refresh}) async {

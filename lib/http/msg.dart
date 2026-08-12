@@ -683,6 +683,62 @@ abstract final class MsgHttp {
     }
   }
 
+  /// 批量获取私信用户卡片（account/v1/user/cards）。
+  ///
+  /// 会话列表接口（get_sessions）对普通用户会话通常不返回 account_info，
+  /// 消息中心网页版用本接口按 uids 批量补齐昵称与头像。
+  /// 返回原始 data 数组（每项含 mid / name / face）。
+  static Future<LoadingState<List<Map<String, dynamic>>>> sessionAccountCards({
+    required List<int> uids,
+  }) async {
+    if (uids.isEmpty) return Success(const []);
+    final res = await Request().get(
+      Api.sessionAccountList,
+      queryParameters: {
+        'uids': uids.join(','),
+        'build': 0,
+        'mobi_app': 'web',
+      },
+    );
+    if (res.data['code'] == 0) {
+      final data = res.data['data'];
+      return Success(
+        data is List
+            ? data
+                .whereType<Map>()
+                .map((e) => e.cast<String, dynamic>())
+                .toList()
+            : const [],
+      );
+    } else {
+      return Error(res.data['message']?.toString() ?? '');
+    }
+  }
+
+  /// 单个用户名片（x/web-interface/card），批量接口未覆盖时逐个兜底。
+  ///
+  /// 返回 `{name, face}`，请求失败或用户不存在时返回 Error。
+  static Future<LoadingState<Map<String, dynamic>>> userCard({
+    required int mid,
+  }) async {
+    final res = await Request().get(
+      Api.memberCardInfo,
+      queryParameters: {'mid': mid, 'photo': true},
+    );
+    if (res.data['code'] == 0) {
+      final card = res.data['data']?['card'];
+      if (card is Map) {
+        return Success({
+          'name': card['name']?.toString() ?? '',
+          'face': card['face']?.toString() ?? '',
+        });
+      }
+      return Error('');
+    } else {
+      return Error(res.data['message']?.toString() ?? '');
+    }
+  }
+
   /// dev_id 缓存（发送私信用，UUID v4，进程内复用）。
   static String? _devIdCache;
   static String _getDevId() => _devIdCache ??= const Uuid().v4();

@@ -20,6 +20,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/theme/ui_style_notifier.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 
 /// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术按 [UiStyle] 三风格切换。
 ///
@@ -46,7 +47,13 @@ import 'package:winwin/ui/components/app_components.dart';
 /// 所有控件（[AppActionTile] / [AppProgressBar] / [AppGroup] / [AppListItem]）
 /// 均读取 [InheritedUiStyle.of] 后用 [resolvePrimitiveRenderer] 分发三风格。
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({super.key, this.onNavigate});
+
+  /// 切换到根导航 tab（动态/历史等）。
+  ///
+  /// 传入时「动态」「历史记录」入口切换到对应根级共享实例，
+  /// 与导航栏入口内容保持一致；未传入时回退为 push 独立页面。
+  final ValueChanged<AppPage>? onNavigate;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -84,10 +91,16 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 _UserInfoSection(info: info, isLogin: isLogin),
                 const SizedBox(height: 10),
-                _StatsRow(info: info, isLogin: isLogin, onGuarded: _guarded),
+                _StatsRow(
+                  info: info,
+                  isLogin: isLogin,
+                  onGuarded: _guarded,
+                  onNavigate: widget.onNavigate,
+                ),
                 const SizedBox(height: 10),
                 _ActionGrid(
                   onGuarded: _guarded,
+                  onNavigate: widget.onNavigate,
                 ),
                 const SizedBox(height: Style.md),
                 _SettingsGroup(
@@ -430,11 +443,13 @@ class _StatsRow extends StatelessWidget {
     required this.info,
     required this.isLogin,
     required this.onGuarded,
+    this.onNavigate,
   });
 
   final UserInfoModel? info;
   final bool isLogin;
   final Future<void> Function(BuildContext, void Function(BuildContext)) onGuarded;
+  final ValueChanged<AppPage>? onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -447,7 +462,13 @@ class _StatsRow extends StatelessWidget {
           AppActionTile(
             count: isLogin ? _fmt(info?.dynamicCount) : dash,
             label: '动态',
-            onTap: () => onGuarded(context, (ctx) => showDynamicsPage(ctx)),
+            // 切换到根导航「动态」tab，与导航栏入口共用同一实例。
+            onTap: () => onGuarded(
+              context,
+              (ctx) => onNavigate != null
+                  ? onNavigate!(AppPage.dynamic)
+                  : showDynamicsPage(ctx),
+            ),
           ),
           AppActionTile(
             count: isLogin ? _fmt(info?.following) : dash,
@@ -494,9 +515,10 @@ class _StatsRow extends StatelessWidget {
 // ════════════════════════════════════════════════════════════════
 
 class _ActionGrid extends StatelessWidget {
-  const _ActionGrid({required this.onGuarded});
+  const _ActionGrid({required this.onGuarded, this.onNavigate});
 
   final Future<void> Function(BuildContext, void Function(BuildContext)) onGuarded;
+  final ValueChanged<AppPage>? onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -513,7 +535,13 @@ class _ActionGrid extends StatelessWidget {
           AppActionTile(
             icon: Icons.history,
             label: '历史记录',
-            onTap: () => onGuarded(context, showHistoryPage),
+            // 切换到根导航「历史」tab，与导航栏入口共用同一实例。
+            onTap: () => onGuarded(
+              context,
+              (ctx) => onNavigate != null
+                  ? onNavigate!(AppPage.history)
+                  : showHistoryPage(ctx),
+            ),
           ),
           AppActionTile(
             icon: Icons.bookmark_outline,

@@ -18,6 +18,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_panel.dart';
+import 'package:winwin/pages/video/send_danmaku_panel.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/duration_utils.dart';
@@ -471,17 +472,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 ),
               ],
             )
-          : Column(
+          : Row(
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(flex: 7, child: _buildLeftColumn(upName)),
-                      Expanded(flex: 3, child: _buildRightColumn()),
-                    ],
-                  ),
-                ),
-                _buildCommentInputBar(),
+                Expanded(flex: 7, child: _buildLeftColumn(upName)),
+                Expanded(flex: 3, child: _buildRightColumn()),
               ],
             ),
     );
@@ -500,57 +494,74 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           ],
         ),
       Error(:final errMsg) => _buildError(errMsg, _loadDetail),
-      Success(:final response) => Stack(
+      Success(:final response) => Column(
           children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final maxExtent = constraints.maxWidth * 9 / 16;
-                final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
-                return CustomScrollView(
-                  controller: scrollController,
-                  slivers: [
-                    VideoHeader(
-                      maxExtent: maxExtent,
-                      minExtent: minExtent,
-                      onScrollRatioChange: (r) {
-                        if ((r - _scrollRatio).abs() > 0.01) {
-                          setState(() => _scrollRatio = r);
-                        }
-                      },
-                      child: _buildPlayerContent(response),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        Style.safeSpace,
-                        Style.sm,
-                        Style.cardSpace,
-                        Style.xxl * 2,
-                      ),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            // 0: 信息, 1: 简介, 2: 评论头, 3+: 评论列表 + 尾部
-                            if (index == 0) return _buildInfoSection(response);
-                            if (index == 1) return _buildDescSection(response);
-                            if (index == 2) return _buildReplyHeader(response);
-                            final replyIndex = index - 3;
-                            if (replyIndex < _replies.length) {
-                              if (replyIndex == _replies.length - 1) {
-                                _maybeLoadMoreReplies();
+            Expanded(
+              child: Stack(
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final maxExtent = constraints.maxWidth * 9 / 16;
+                      final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
+                      return CustomScrollView(
+                        controller: scrollController,
+                        slivers: [
+                          VideoHeader(
+                            maxExtent: maxExtent,
+                            minExtent: minExtent,
+                            onScrollRatioChange: (r) {
+                              if ((r - _scrollRatio).abs() > 0.01) {
+                                setState(() => _scrollRatio = r);
                               }
-                              return _buildReplyTile(_replies[replyIndex]);
-                            }
-                            return _buildReplyTrailer();
-                          },
-                          childCount: 3 + _replies.length + 1,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
+                            },
+                            child: _buildPlayerContent(response),
+                          ),
+                          // 弹幕发送栏：紧贴视频下方，宽度与视频一致
+                          //（Sliver 横向撑满左栏 = 播放器宽度）。
+                          if (playerController != null)
+                            SliverToBoxAdapter(
+                              child: SendDanmakuPanel(
+                                controller: playerController!,
+                                inline: true,
+                              ),
+                            ),
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(
+                              Style.safeSpace,
+                              Style.sm,
+                              Style.cardSpace,
+                              Style.xxl * 2,
+                            ),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  // 0: 信息, 1: 简介, 2: 评论头, 3+: 评论列表 + 尾部
+                                  if (index == 0) return _buildInfoSection(response);
+                                  if (index == 1) return _buildDescSection(response);
+                                  if (index == 2) return _buildReplyHeader(response);
+                                  final replyIndex = index - 3;
+                                  if (replyIndex < _replies.length) {
+                                    if (replyIndex == _replies.length - 1) {
+                                      _maybeLoadMoreReplies();
+                                    }
+                                    return _buildReplyTile(_replies[replyIndex]);
+                                  }
+                                  return _buildReplyTrailer();
+                                },
+                                childCount: 3 + _replies.length + 1,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  _buildGradientTopBar(upName),
+                ],
+              ),
             ),
-            _buildGradientTopBar(upName),
+            // 评论输入栏：固定在左栏底部，宽度与评论区容器对齐。
+            _buildCommentInputBar(),
           ],
         ),
     };
@@ -1108,14 +1119,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
   }
 
-  /// 底部评论输入栏。
+  /// 评论输入栏（固定在左栏底部，默认给当前稿件发布一级评论；
+  /// 水平内边距与评论区 SliverPadding 一致，宽度对齐评论区容器）。
   Widget _buildCommentInputBar() {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         Style.safeSpace,
         Style.xs,
-        Style.safeSpace,
+        Style.cardSpace,
         Style.xs,
       ),
       decoration: BoxDecoration(
@@ -1144,7 +1156,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     horizontal: Style.md,
                     vertical: Style.sm,
                   ),
-                  hintText: _replyHint ?? '发一条友善的弹幕吧~',
+                  hintText: _replyHint ?? '发一条友善的评论吧~',
                   hintStyle: TextStyle(
                     fontSize: 13,
                     color: theme.colorScheme.onSurfaceVariant,

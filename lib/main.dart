@@ -6,6 +6,7 @@ import 'package:fvp/mdk.dart' as mdk;
 
 import 'core/bootstrap.dart';
 import 'core/log/app_logger.dart';
+import 'core/window/window_state_controller.dart';
 import 'pages/setting/theme_notifier.dart';
 import 'pages/video/desktop_pip.dart';
 import 'theme/app_font_notifier.dart';
@@ -65,6 +66,8 @@ void main() async {
       UiStyleNotifier.instance.refresh();
       // 字体设置：从持久化存储读取并加载自定义字体（如有）。
       AppFontNotifier.instance.refresh();
+      // 恢复上次窗口尺寸/位置/最大化状态，并开始监听变更以持久化。
+      WindowStateController.instance.restoreAndListen();
     }),
   );
 

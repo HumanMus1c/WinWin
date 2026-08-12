@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:winwin/pages/dynamics/view.dart';
+import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/whisper/view.dart';
 import 'home/home_page.dart';
 import 'main_layout.dart';
@@ -12,7 +13,9 @@ import 'components/frosted_bottom_bar.dart';
 /// Phase 7.4：用 PiliPlus 风格的 [MainLayout] 三槽位壳层替换原 `Stack`。
 /// 宽屏自动启用侧边 [AppNavRail]，窄屏显示底部浮动栏（滚动联动显隐）。
 ///
-/// Phase 7.7：动态/消息页接入实现；番剧/直播作为首页子 tab；历史暂保留占位。
+/// Phase 7.7：动态/消息页接入实现；番剧/直播作为首页子 tab。
+/// 动态/历史为根级共享实例：「我的」页入口通过 [ProfilePage.onNavigate]
+/// 切换到同一 tab，保证两个入口内容始终一致。
 class AppRoot extends StatefulWidget {
   const AppRoot({super.key});
 
@@ -36,9 +39,9 @@ class _AppRootState extends State<AppRoot> {
           children: [
             HomePage(onGotoProfile: () => _onSelect(_indexOf(AppPage.profile))),
             const DynamicsPage(),
-            _PlaceholderPage(label: navDestinations[2].label),
+            const HistoryPage(),
             const WhisperPage(),
-            const ProfilePage(),
+            ProfilePage(onNavigate: (p) => _onSelect(_indexOf(p))),
           ],
         ),
       ),
@@ -49,26 +52,3 @@ class _AppRootState extends State<AppRoot> {
 int _indexOf(AppPage page) =>
     navDestinations.indexWhere((d) => d.page == page);
 
-/// 未实现页面的占位（历史 / 听视频等待后续实现）。
-class _PlaceholderPage extends StatelessWidget {
-  const _PlaceholderPage({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.construction_outlined, size: 48, color: cs.outline),
-          const SizedBox(height: 12),
-          Text(
-            '$label · 待实现',
-            style: TextStyle(color: cs.outline),
-          ),
-        ],
-      ),
-    );
-  }
-}

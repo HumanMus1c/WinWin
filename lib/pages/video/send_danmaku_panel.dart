@@ -13,7 +13,9 @@ import 'package:winwin/theme/style.dart';
 /// showModalBottomSheet。保留核心能力：文本输入（≤100 字）、模式切换
 /// （滚动/顶部/底部）、颜色预设选择、发送成功后本地回显。
 ///
-/// 弹出方式：[showSendDanmakuPanel]，由播放器控制条「发弹幕」按钮调用。
+/// 弹出方式：[showSendDanmakuPanel]，由播放器控制条「发弹幕」按钮调用
+/// （全屏态使用）；内联模式见 [SendDanmakuPanel.inline]，嵌入视频页
+/// 播放器正下方。
 void showSendDanmakuPanel(
   BuildContext context, {
   required WinWinPlayerController controller,
@@ -26,21 +28,29 @@ void showSendDanmakuPanel(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: _SendDanmakuPanel(controller: controller),
+      child: SendDanmakuPanel(controller: controller),
     ),
   );
 }
 
-class _SendDanmakuPanel extends StatefulWidget {
-  const _SendDanmakuPanel({required this.controller});
+class SendDanmakuPanel extends StatefulWidget {
+  const SendDanmakuPanel({
+    super.key,
+    required this.controller,
+    this.inline = false,
+  });
 
   final WinWinPlayerController controller;
 
+  /// true：内联嵌入视频页播放器正下方（不自动聚焦、发送成功不关闭面板，
+  /// 仅清空输入框）；false：底部弹窗模式（「发弹幕」按钮弹出）。
+  final bool inline;
+
   @override
-  State<_SendDanmakuPanel> createState() => _SendDanmakuPanelState();
+  State<SendDanmakuPanel> createState() => _SendDanmakuPanelState();
 }
 
-class _SendDanmakuPanelState extends State<_SendDanmakuPanel> {
+class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
   late final TextEditingController _textController;
   late final ValueNotifier<int> _mode;
   late final ValueNotifier<Color> _color;
@@ -123,7 +133,13 @@ class _SendDanmakuPanelState extends State<_SendDanmakuPanel> {
           color: color,
         );
         _toast('发送成功');
-        Navigator.of(context).pop();
+        if (widget.inline) {
+          // 内联模式：不关闭面板，仅清空输入框。
+          _textController.clear();
+          setState(() {});
+        } else {
+          Navigator.of(context).pop();
+        }
       case Error(:final errMsg):
         _toast(errMsg ?? '发送失败');
       case Loading():
@@ -145,13 +161,17 @@ class _SendDanmakuPanelState extends State<_SendDanmakuPanel> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final inline = widget.inline;
     return Container(
-      constraints: const BoxConstraints(maxWidth: 560),
+      // 内联模式宽度由外层（视频宽度）决定，弹窗模式限制最大宽度。
+      constraints: inline ? null : const BoxConstraints(maxWidth: 560),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(Style.radiusMd),
-        ),
+        borderRadius: inline
+            ? null
+            : const BorderRadius.vertical(
+                top: Radius.circular(Style.radiusMd),
+              ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -159,7 +179,11 @@ class _SendDanmakuPanelState extends State<_SendDanmakuPanel> {
           _buildInputRow(theme),
           const Divider(height: 1),
           _buildOptions(theme),
-          SizedBox(height: MediaQuery.of(context).padding.bottom + Style.sm),
+          SizedBox(
+            height: inline
+                ? Style.sm
+                : MediaQuery.of(context).padding.bottom + Style.sm,
+          ),
         ],
       ),
     );
@@ -178,7 +202,8 @@ class _SendDanmakuPanelState extends State<_SendDanmakuPanel> {
             child: TextField(
               controller: _textController,
               focusNode: _focusNode,
-              autofocus: true,
+              // 内联模式不自动聚焦，避免进入视频页时抢占焦点。
+              autofocus: !widget.inline,
               maxLength: 100,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _onSend(),
