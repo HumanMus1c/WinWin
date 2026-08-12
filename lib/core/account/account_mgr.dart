@@ -243,14 +243,23 @@ class AccountManager extends Interceptor {
         path.contains('biliimg.com');
   }
 
-  Account _findAccount(String path) => ApiType.loginApi.contains(path)
-      ? AnonymousAccount()
-      : Accounts.get(
-          AccountType.values.firstWhere(
-            (i) => ApiType.apiTypeSet[i]?.contains(path) == true,
-            orElse: () => AccountType.main,
-          ),
-        );
+  Account _findAccount(String path) {
+    if (ApiType.loginApi.contains(path)) return AnonymousAccount();
+    final account = Accounts.get(
+      AccountType.values.firstWhere(
+        (i) => ApiType.apiTypeSet[i]?.contains(path) == true,
+        orElse: () => AccountType.main,
+      ),
+    );
+    // WinWin 是单账号客户端，登录只绑定 main 槽位，video/heartbeat
+    // 等槽位保持匿名，导致 playurl 等接口不带 SESSDATA、画质被限制在
+    // 480P。槽位未绑定登录账号时回退到主账号（与 Accounts.history 的
+    // 回退语义一致）。
+    if (!account.isLogin && Accounts.main.isLogin) {
+      return Accounts.main;
+    }
+    return account;
+  }
 
   static Future<String> dioError(DioException error) async {
     switch (error.type) {
