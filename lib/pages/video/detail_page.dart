@@ -493,7 +493,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             _buildGradientTopBar(upName, forceOpaque: true),
           ],
         ),
-      Error(:final errMsg) => _buildError(errMsg, _loadDetail),
+      // 参照 PiliPlus/BiliPai：稿件信息接口失败（稿件不可见/已删除等）时，
+      // 错误局部化到视频播放区域，页面其余部分（顶栏返回按钮、
+      // 右栏相关推荐）保持可用，不再用错误页替换整个左栏。
+      Error(:final errMsg, :final code) => _buildErrorLayout(upName, code, errMsg),
       Success(:final response) => Column(
           children: [
             Expanded(
@@ -564,6 +567,135 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             _buildCommentInputBar(),
           ],
         ),
+    };
+  }
+
+  /// 稿件信息错误态的左栏布局（参照 BiliPai VideoDetailScreenStateHolder：
+  /// 错误仅占据播放区域，下方保留简介占位卡片，顶栏返回与右栏推荐不受影响）。
+  Widget _buildErrorLayout(String? upName, int? code, String? errMsg) {
+    return Column(
+      children: [
+        Expanded(
+          child: Stack(
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxExtent = constraints.maxWidth * 9 / 16;
+                  final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
+                  return CustomScrollView(
+                    controller: scrollController,
+                    slivers: [
+                      VideoHeader(
+                        maxExtent: maxExtent,
+                        minExtent: minExtent,
+                        onScrollRatioChange: (r) {
+                          if ((r - _scrollRatio).abs() > 0.01) {
+                            setState(() => _scrollRatio = r);
+                          }
+                        },
+                        child: _buildPlayerError(code, errMsg),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          Style.safeSpace,
+                          Style.sm,
+                          Style.cardSpace,
+                          Style.xxl * 2,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            _buildDetailErrorCard(code, errMsg),
+                          ]),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              _buildGradientTopBar(upName),
+            ],
+          ),
+        ),
+        // 错误态无 aid：评论发送不可用，输入栏置灰展示。
+        _buildCommentInputBar(enabled: false),
+      ],
+    );
+  }
+
+  /// 播放区域错误 UI（参照 BiliPai `VideoPlaybackUiState.Error` 的播放器内
+  /// 错误展示：图标 + 友好文案 + 重试按钮，仅占据视频区域）。
+  Widget _buildPlayerError(int? code, String? errMsg) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Style.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.videocam_off_outlined,
+              size: 44,
+              color: Colors.white54,
+            ),
+            const SizedBox(height: Style.md),
+            Text(
+              _friendlyVideoError(code, errMsg),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, color: Colors.white70),
+            ),
+            const SizedBox(height: Style.lg),
+            FilledButton.tonal(
+              onPressed: _loadDetail,
+              child: const Text('点击重试'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 错误态的简介占位卡片：展示 bvid 与错误原因，说明评论区不可用。
+  Widget _buildDetailErrorCard(int? code, String? errMsg) {
+    final theme = Theme.of(context);
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.bvid,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.headlineSmall,
+          ),
+          const SizedBox(height: Style.sm),
+          Text(
+            _friendlyVideoError(code, errMsg),
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: Style.sm),
+          Text(
+            '稿件信息加载失败，评论与互动暂不可用',
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 参照 BiliPai 的视频错误分类（VideoLoadError.fromApiCode / classifyPlayUrlError）：
+  /// 已知错误码映射为用户友好文案，其余展示接口原始 message。
+  static String _friendlyVideoError(int? code, String? errMsg) {
+    return switch (code) {
+      -404 => '视频不存在或已被删除',
+      62002 => '稿件不可见',
+      62004 => '稿件审核中，暂不可播放',
+      62012 => '该稿件仅UP主自己可见',
+      _ => errMsg ?? '视频信息加载失败',
     };
   }
 
@@ -1121,7 +1253,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 评论输入栏（固定在左栏底部，默认给当前稿件发布一级评论；
   /// 水平内边距与评论区 SliverPadding 一致，宽度对齐评论区容器）。
-  Widget _buildCommentInputBar() {
+  /// [enabled]=false 时置灰（稿件信息加载失败态，无 aid 不可发评论）。
+  Widget _buildCommentInputBar({bool enabled = true}) {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -1146,6 +1279,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             Expanded(
               child: TextField(
                 controller: _commentCtrl,
+                enabled: enabled,
                 onTap: () async {
                   // 点击输入框时检查登录态。
                   if (!await LoginGuard.requireLogin(context)) return;
@@ -1156,7 +1290,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     horizontal: Style.md,
                     vertical: Style.sm,
                   ),
-                  hintText: _replyHint ?? '发一条友善的评论吧~',
+                  hintText: enabled
+                      ? (_replyHint ?? '发一条友善的评论吧~')
+                      : '稿件不可用，暂无法评论',
                   hintStyle: TextStyle(
                     fontSize: 13,
                     color: theme.colorScheme.onSurfaceVariant,
@@ -1180,7 +1316,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             ),
             const SizedBox(width: Style.sm),
             FilledButton(
-              onPressed: _sendingComment ? null : _sendComment,
+              onPressed: enabled && !_sendingComment ? _sendComment : null,
               style: FilledButton.styleFrom(
                 backgroundColor: biliPink,
                 padding: const EdgeInsets.symmetric(

@@ -161,7 +161,9 @@ abstract final class VideoHttp {
     if (data.code == 0 && data.data != null) {
       return Success(data.data!);
     } else {
-      return Error(data.message);
+      // 透传错误码：62002 稿件不可见 / 62004 审核中 / 62012 仅UP主可见等，
+      // 详情页据此在播放区域展示针对性错误（参照 BiliPai VideoLoadError.fromApiCode）。
+      return Error(data.message, code: data.code);
     }
   }
 
