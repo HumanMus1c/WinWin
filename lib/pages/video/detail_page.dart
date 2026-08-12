@@ -29,6 +29,10 @@ import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
+/// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
+/// （对标 BiliPai Tablet/Phone 按宽度分发）。
+const double kDetailNarrowBreakpoint = 900;
+
 /// 视频详情页 — 桌面宽屏双栏布局。
 ///
 /// 左栏（flex 7）：播放器、标题/数据/UP、简介、评论列表；
@@ -500,11 +504,20 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 ),
               ],
             )
-          : Row(
-              children: [
-                Expanded(flex: 7, child: _buildLeftColumn(upName)),
-                Expanded(flex: 3, child: _buildRightColumn()),
-              ],
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                // 窄屏断点适配：窄于 [kDetailNarrowBreakpoint] 时单列布局，
+                // 相关推荐追加到左栏滚动视图尾部（复用 _relatedState）。
+                if (constraints.maxWidth < kDetailNarrowBreakpoint) {
+                  return _buildLeftColumn(upName, appendRelated: true);
+                }
+                return Row(
+                  children: [
+                    Expanded(flex: 7, child: _buildLeftColumn(upName)),
+                    Expanded(flex: 3, child: _buildRightColumn()),
+                  ],
+                );
+              },
             ),
     );
   }
@@ -513,7 +526,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 左栏：CustomScrollView + VideoHeader(pin 播放器) + slivers(信息/简介/评论)。
   /// 顶部叠加渐变工具栏（基于 _scrollRatio 显隐）。
-  Widget _buildLeftColumn(String? upName) {
+  /// [appendRelated] 为 true（窄屏单列布局）时尾部追加相关推荐 slivers。
+  Widget _buildLeftColumn(String? upName, {bool appendRelated = false}) {
     return switch (_detailState) {
       Loading() => Stack(
           children: [
@@ -584,6 +598,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               ),
                             ),
                           ),
+                          // 窄屏单列布局：相关推荐追加在尾部。
+                          if (appendRelated) ..._buildRelatedSlivers(),
                         ],
                       );
                     },
@@ -1492,33 +1508,128 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     itemCount: response.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: Style.sm),
-                    itemBuilder: (context, index) {
-                      final item = response[index];
-                      final bvid = item.bvid;
-                      return VideoCardH(
-                        videoItem: item,
-                        heroTag: bvid != null ? 'cover_$bvid' : null,
-                        coverWidth: 150,
-                        showStat: false,
-                        onTap: bvid == null
-                            ? null
-                            : () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => VideoDetailPage(
-                                      bvid: bvid,
-                                      cover: item.pic,
-                                    ),
-                                  ),
-                                );
-                              },
-                      );
-                    },
+                    itemBuilder: (context, index) =>
+                        _buildRelatedTile(response[index]),
                   ),
           },
         ),
       ],
+    );
+  }
+
+  /// 相关推荐卡片（宽栏列表与窄屏 sliver 段落共用）。
+  Widget _buildRelatedTile(RelatedVideoItem item) {
+    final bvid = item.bvid;
+    return VideoCardH(
+      videoItem: item,
+      heroTag: bvid != null ? 'cover_$bvid' : null,
+      coverWidth: 150,
+      showStat: false,
+      onTap: bvid == null
+          ? null
+          : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => VideoDetailPage(
+                    bvid: bvid,
+                    cover: item.pic,
+                  ),
+                ),
+              );
+            },
+    );
+  }
+
+  /// 相关推荐 sliver 段落（窄屏单列布局追加在左栏滚动视图尾部，
+  /// 数据复用 [_relatedState]，不重新请求）。
+  List<Widget> _buildRelatedSlivers() {
+    final theme = Theme.of(context);
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(
+          Style.safeSpace,
+          Style.lg,
+          Style.safeSpace,
+          Style.sm,
+        ),
+        sliver: SliverToBoxAdapter(
+          child: Text(
+            '相关推荐',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+      switch (_relatedState) {
+        Loading() => SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+            sliver: SliverList.separated(
+              itemCount: 6,
+              separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
+              itemBuilder: (context, index) => _buildRelatedSkeletonItem(),
+            ),
+          ),
+        Error(:final errMsg) => SliverToBoxAdapter(
+            child: SizedBox(
+              height: 240,
+              child: _buildError(errMsg, _loadRelated),
+            ),
+          ),
+        Success(:final response) => response.isEmpty
+            ? const SliverToBoxAdapter(
+                child: AppEmptyState(
+                  title: '暂无相关推荐',
+                  subtitle: '换个视频看看吧',
+                ),
+              )
+            : SliverPadding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+                sliver: SliverList.separated(
+                  itemCount: response.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
+                  itemBuilder: (context, index) =>
+                      _buildRelatedTile(response[index]),
+                ),
+              ),
+      },
+      // 尾部留白，与左栏原有底部间距对齐。
+      const SliverToBoxAdapter(child: SizedBox(height: Style.xxl * 2)),
+    ];
+  }
+
+  /// 相关推荐骨架单项（宽栏 [_buildRightSkeleton] 与窄屏 sliver 共用）。
+  Widget _buildRelatedSkeletonItem() {
+    final color = ColorScheme.of(context).onInverseSurface;
+    return Skeleton(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 150,
+            height: 150 * 10 / 16,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(Style.radiusSm),
+            ),
+          ),
+          const SizedBox(width: Style.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(width: double.infinity, height: 13, color: color),
+                const SizedBox(height: Style.xs),
+                Container(width: 120, height: 13, color: color),
+                const SizedBox(height: Style.md),
+                Container(width: 80, height: 11, color: color),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1588,7 +1699,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   Widget _buildRightSkeleton() {
-    final color = ColorScheme.of(context).onInverseSurface;
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(
         Style.cardSpace,
@@ -1598,34 +1708,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       ),
       itemCount: 6,
       separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
-      itemBuilder: (context, index) => Skeleton(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 150,
-              height: 150 * 10 / 16,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-              ),
-            ),
-            const SizedBox(width: Style.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(width: double.infinity, height: 13, color: color),
-                  const SizedBox(height: Style.xs),
-                  Container(width: 120, height: 13, color: color),
-                  const SizedBox(height: Style.md),
-                  Container(width: 80, height: 11, color: color),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      itemBuilder: (context, index) => _buildRelatedSkeletonItem(),
     );
   }
 
