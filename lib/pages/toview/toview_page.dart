@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/common/widgets/video_card/video_card_h.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/toview.dart';
@@ -219,35 +220,7 @@ class _ToviewTile extends StatelessWidget {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (_) => onRemove(),
-      child: ListTile(
-        leading: item.pic != null && item.pic!.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: Image.network(
-                  item.pic!,
-                  width: 120,
-                  height: 68,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 120,
-                    height: 68,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.play_circle_outline),
-                  ),
-                ),
-              )
-            : null,
-        title: Text(
-          item.title ?? '',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          '${item.owner?.name ?? ''} · ${item.stat?.view ?? 0}播放',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
+      child: VideoCardH(videoItem: item),
     );
   }
 }

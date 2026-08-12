@@ -12,8 +12,10 @@ import 'package:winwin/utils/num_utils.dart';
 /// 横向列表场景。左侧封面（16:9 固定宽度）+ 右侧文本信息。
 ///
 /// [videoItem] 为 dynamic，兼容多种模型（RelatedVideoItem / HistoryItem /
-/// RcmdVideoItemModel 等）。预期字段：cover/pic, title, duration, owner.name,
-/// stat.view, stat.danmu, bvid, progress（可选，0-1）。
+/// LaterItem / FavDetailItem / RcmdVideoItemModel 等）。预期字段：
+/// cover/pic, title, duration, owner.name（回退 upper.name / authorName）,
+/// stat.view（回退 cntInfo.play）, stat.danmu/danmaku（回退 cntInfo.danmaku）,
+/// bvid, progress（可选，0-1 比例或已看秒数，后者需配合 duration 归一化）。
 ///
 /// 三风格自适应：圆角由 [AppShapes] 解析，时长/进度角标用 [PBadge]。
 class VideoCardH extends StatelessWidget {
@@ -50,9 +52,14 @@ class VideoCardH extends StatelessWidget {
     final theme = Theme.of(context);
     final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
     final radius = shapes.medium;
-    final int duration = (videoItem.duration as num?)?.toInt() ?? 0;
-    // progress 为可选字段（仅 HistoryItem 等模型提供），缺失时返回 null。
-    final double? progress = _opt(() => videoItem.progress as num?)?.toDouble();
+    final int duration =
+        (_opt(() => videoItem.duration as num?) ?? 0).toInt();
+    // progress 为可选字段（仅 HistoryItem / LaterItem 提供），缺失时返回 null。
+    // HistoryItem 存已看秒数（>1），需配合 duration 归一化为 0-1 比例。
+    double? progress = _opt(() => videoItem.progress as num?)?.toDouble();
+    if (progress != null && progress > 1 && duration > 0) {
+      progress = progress / duration;
+    }
 
     return Card(
       child: InkWell(
@@ -119,10 +126,24 @@ class VideoCardH extends StatelessWidget {
 
   Widget _buildTextContent(ThemeData theme) {
     final String title = videoItem.title?.toString() ?? '';
-    final dynamic owner = videoItem.owner;
-    final String ownerName = owner?.name?.toString() ?? '';
-    final dynamic stat = videoItem.stat;
     final cs = theme.colorScheme;
+
+    // UP 主名多模型回退：owner.name → upper.name（FavDetailItem）→
+    // authorName（HistoryItem）。字段缺失时 [_opt] 归一化为 null。
+    final dynamic owner = _opt(() => videoItem.owner);
+    final String ownerName = owner?.name?.toString() ??
+        _opt(() => videoItem.upper?.name as String?) ??
+        _opt(() => videoItem.authorName as String?) ??
+        '';
+
+    // 统计数回退：stat.view/danmu → cntInfo.play/danmaku（FavDetailItem）。
+    final dynamic stat = _opt(() => videoItem.stat);
+    final dynamic cntInfo = _opt(() => videoItem.cntInfo);
+    final int? playCount = (stat?.view as num?)?.toInt() ??
+        _opt(() => (cntInfo?.play as num?)?.toInt());
+    final int? danmakuCount = (stat?.danmu as num?)?.toInt() ??
+        (stat?.danmaku as num?)?.toInt() ??
+        _opt(() => (cntInfo?.danmaku as num?)?.toInt());
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,17 +177,14 @@ class VideoCardH extends StatelessWidget {
               Icon(Icons.play_circle_outlined, size: 13, color: cs.outline),
               const SizedBox(width: 3),
               Text(
-                NumUtils.formatNum((stat?.view as num?)?.toInt()),
+                NumUtils.formatNum(playCount),
                 style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
               ),
               const SizedBox(width: 8),
               Icon(Icons.subtitles_outlined, size: 13, color: cs.outline),
               const SizedBox(width: 3),
               Text(
-                NumUtils.formatNum(
-                  (stat?.danmu as num?)?.toInt() ??
-                      (stat?.danmaku as num?)?.toInt(),
-                ),
+                NumUtils.formatNum(danmakuCount),
                 style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
               ),
             ],

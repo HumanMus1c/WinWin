@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/common/widgets/video_card/video_card_h.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/history.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -223,47 +224,7 @@ class _HistoryTile extends StatelessWidget {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (_) => onDelete(),
-      child: ListTile(
-        leading: item.cover != null && item.cover!.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: Image.network(
-                  item.cover!,
-                  width: 120,
-                  height: 68,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 120,
-                    height: 68,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.play_circle_outline),
-                  ),
-                ),
-              )
-            : null,
-        title: Text(
-          item.title ?? '',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          '${item.authorName ?? ''} · ${_formatTime(item.viewAt)}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
+      child: VideoCardH(videoItem: item),
     );
-  }
-
-  String _formatTime(int? timestamp) {
-    if (timestamp == null) return '';
-    final dt = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inHours < 1) return '${diff.inMinutes}分钟前';
-    if (diff.inDays < 1) return '${diff.inHours}小时前';
-    if (diff.inDays < 30) return '${diff.inDays}天前';
-    return '${dt.month}-${dt.day}';
   }
 }

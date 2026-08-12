@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/common/widgets/video_card/video_card_h.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/fav.dart';
@@ -264,35 +265,7 @@ class _FavVideoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: item.cover != null && item.cover!.isNotEmpty
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(Style.radiusSm),
-              child: Image.network(
-                item.cover!,
-                width: 120,
-                height: 68,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 120,
-                  height: 68,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.play_circle_outline),
-                ),
-              ),
-            )
-          : null,
-      title: Text(
-        item.title ?? '',
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        '${item.upper?.name ?? ''} · ${item.cntInfo?.play ?? 0}播放',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
+    return VideoCardH(videoItem: item);
   }
 }
 
