@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -750,45 +752,55 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       right: 0,
       child: SafeArea(
         bottom: false,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          height: kToolbarHeight,
-          decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor
-                .withValues(alpha: opacity * 0.95),
-            border: opacity > 0.5
-                ? Border(
-                    bottom: BorderSide(
-                      color: theme.colorScheme.outlineVariant
-                          .withValues(alpha: 0.3),
-                      width: 0.5,
-                    ),
-                  )
-                : null,
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: Icon(
-                  Icons.arrow_back,
-                  color: overVideo ? Colors.white : barContrast.contentColor,
-                ),
-                onPressed: () => Navigator.pop(context),
+        // 毛玻璃顶栏（降级版）：模糊强度随 _scrollRatio 渐显（sigma 0→20），
+        // 与 FrostedBottomBar 同质感参数；ClipRect 限定模糊区域。
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: 20 * opacity,
+              sigmaY: 20 * opacity,
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              height: kToolbarHeight,
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor
+                    .withValues(alpha: opacity * 0.95),
+                border: opacity > 0.5
+                    ? Border(
+                        bottom: BorderSide(
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.3),
+                          width: 0.5,
+                        ),
+                      )
+                    : null,
               ),
-              Expanded(
-                child: AnimatedOpacity(
-                  opacity: opacity,
-                  duration: const Duration(milliseconds: 150),
-                  child: Text(
-                    (upName?.isNotEmpty ?? false) ? upName! : '视频详情',
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: barContrast.contentColor,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.arrow_back,
+                      color: overVideo ? Colors.white : barContrast.contentColor,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Expanded(
+                    child: AnimatedOpacity(
+                      opacity: opacity,
+                      duration: const Duration(milliseconds: 150),
+                      child: Text(
+                        (upName?.isNotEmpty ?? false) ? upName! : '视频详情',
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: barContrast.contentColor,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

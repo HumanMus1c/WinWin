@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:winwin/core/account/account_service.dart';
@@ -160,9 +162,15 @@ class _HomeTopBarState extends State<_HomeTopBar> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Style.lg, vertical: Style.sm),
-      child: Container(
-        height: Style.topBarHeight,
-        decoration: BoxDecoration(
+      // 毛玻璃顶栏（Frosted Top Bar）：与 FrostedBottomBar 同质感参数
+      // （sigma 20 + surface α0.72），ClipRRect 限定模糊区域。
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(barRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            height: Style.topBarHeight,
+            decoration: BoxDecoration(
           color: barColor,
           borderRadius: BorderRadius.circular(barRadius),
           border: Border.all(
@@ -267,6 +275,8 @@ class _HomeTopBarState extends State<_HomeTopBar> {
               ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );
