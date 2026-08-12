@@ -108,7 +108,12 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
           onTap: widget.onTap == null ? switchChange : () => widget.onTap!(context),
           title: Text(widget.title, style: titleStyle),
           subtitle: widget.subtitle != null
-              ? Text(widget.subtitle!, style: subTitleStyle)
+              ? Text(
+                  widget.subtitle!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: subTitleStyle,
+                )
               : null,
           leading: widget.leading,
           trailing: trailing,

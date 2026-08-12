@@ -41,11 +41,15 @@ class _NormalItemState extends State<NormalItem> {
     if (text != null) {
       subtitle = Text(
         text,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: theme.textTheme.labelMedium?.copyWith(
           color: theme.colorScheme.outline,
         ),
       );
     }
+    // trailing 限宽防溢出（对标 BiliPai 数值 maxWidth 200dp）。
+    final trailing = widget.getTrailing?.call(theme);
     return ListTile(
       contentPadding: widget.contentPadding,
       onTap: widget.onTap == null ? null : () => widget.onTap!(context, refresh),
@@ -55,7 +59,12 @@ class _NormalItemState extends State<NormalItem> {
       ),
       subtitle: subtitle,
       leading: widget.leading,
-      trailing: widget.getTrailing?.call(theme),
+      trailing: trailing == null
+          ? null
+          : ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 200),
+              child: trailing,
+            ),
     );
   }
 
