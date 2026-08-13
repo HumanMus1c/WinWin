@@ -41,11 +41,12 @@ import 'package:winwin/utils/num_utils.dart';
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
 const double kDetailNarrowBreakpoint = 900;
 
-/// 视频详情页 — 桌面宽屏双栏布局。
+/// 视频详情页 — 桌面宽屏双栏布局（对标 BiliPai TabletVideoLayout）。
 ///
-/// 左栏（flex 7）：播放器、标题/数据/UP、简介、评论列表；
-/// 右栏（flex 3）：相关视频。视觉沿用 BiliPai 的 iOS 风格
-/// （圆角卡片、safeSpace 边距、扁平无阴影）。
+/// 左栏（flex 7）：播放器、弹幕发送栏、标题/数据/UP、简介、标签；
+/// 右栏（flex 3）：评论 (N) / 相关推荐双 Tab。窄屏断点以下
+/// 退化为单列（评论内联左栏，推荐追加尾部）。视觉沿用 BiliPai 的
+/// iOS 风格（圆角卡片、safeSpace 边距、扁平无阴影）。
 class VideoDetailPage extends StatefulWidget {
   const VideoDetailPage({super.key, required this.bvid, this.cover});
 
@@ -57,7 +58,7 @@ class VideoDetailPage extends StatefulWidget {
 }
 
 class _VideoDetailPageState extends State<VideoDetailPage>
-    with RouteAware, WindowListener {
+    with RouteAware, WindowListener, SingleTickerProviderStateMixin {
   final ScrollController scrollController = ScrollController();
   WinWinPlayerController? playerController;
 
@@ -69,6 +70,14 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   bool _replyEnd = false;
   bool _loadingReplies = false;
   bool _replyFailed = false;
+
+  /// 评论排序模式（对标 BiliPai CommentSortHeader 最热/最新切换）：
+  /// 3=最热（默认），2=最新。切换时清空列表重新加载。
+  int _replyMode = 3;
+
+  /// 宽屏右栏 Tab 控制器（对标 BiliPai TabletSecondaryContent：
+  /// 评论 (N) / 相关推荐 双 Tab）。窄屏单列布局不使用。
+  late final TabController _rightTabCtrl;
 
   /// 楼中楼展开状态：key = 根评论 rpid，value = 二级回复列表。
   final Map<int, List<ReplyItemModel>> _subReplies = {};
@@ -124,6 +133,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   @override
   void initState() {
     super.initState();
+    _rightTabCtrl = TabController(length: 2, vsync: this);
     windowManager.addListener(this);
     _loadDetail();
     _loadRelated();
@@ -143,6 +153,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   void dispose() {
     routeObserver.unsubscribe(this);
     windowManager.removeListener(this);
+    _rightTabCtrl.dispose();
     // 退出时如果处于 PiP 模式，恢复窗口。
     DesktopPipController.instance.exitPip();
     playerController?.dispose();
@@ -322,7 +333,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (_replies.isNotEmpty) {
       setState(() {}); // 让尾部 spinner 立即出现
     }
-    final res = await VideoHttp.replyMain(oid: oid, nextOffset: nextOffset);
+    final res = await VideoHttp.replyMain(
+      oid: oid,
+      nextOffset: nextOffset,
+      mode: _replyMode,
+    );
     if (!mounted) return;
     _loadingReplies = false;
     switch (res) {
@@ -353,6 +368,22 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (aid == null) return;
     setState(() => _replyFailed = false);
     _loadReplies(oid: aid, nextOffset: _nextOffset);
+  }
+
+  /// 切换评论排序（最热/最新，对标 BiliPai setSortMode）：
+  /// 清空已加载列表与分页状态后重新拉取首页。
+  void _switchReplyMode(int mode) {
+    if (mode == _replyMode || _loadingReplies) return;
+    final aid = _detailState.dataOrNull?.aid;
+    if (aid == null) return;
+    setState(() {
+      _replyMode = mode;
+      _replies.clear();
+      _nextOffset = null;
+      _replyEnd = false;
+      _replyFailed = false;
+    });
+    _loadReplies(oid: aid);
   }
 
   // ─────────────────── 稿件互动（对标 BiliPai VideoInteractionUseCase）───
@@ -825,7 +856,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       // 参照 PiliPlus/BiliPai：稿件信息接口失败（稿件不可见/已删除等）时，
       // 错误局部化到视频播放区域，页面其余部分（顶栏返回按钮、
       // 右栏相关推荐）保持可用，不再用错误页替换整个左栏。
-      Error(:final errMsg, :final code) => _buildErrorLayout(upName, code, errMsg),
+      Error(:final errMsg, :final code) =>
+        _buildErrorLayout(upName, code, errMsg, narrow: appendRelated),
       Success(:final response) => Column(
           children: [
             Expanded(
@@ -868,10 +900,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             sliver: SliverList(
                               delegate: SliverChildBuilderDelegate(
                                 (context, index) {
-                                  // 0: 信息, 1: 简介, 2: 标签(可选),
-                                  // 其后: 评论头 + 评论列表 + 尾部
+                                  // 0: 信息, 1: 简介, 2: 标签(可选)。
+                                  // 宽屏（对标 BiliPai TabletVideoLayout）评论区
+                                  // 迁入右栏 Tab，仅窄屏单列布局在左栏内联：
+                                  // 其后追加 评论头 + 评论列表 + 尾部。
                                   final hasTags = _tags.isNotEmpty;
-                                  final replyHeaderIndex = hasTags ? 3 : 2;
+                                  final baseCount = hasTags ? 3 : 2;
                                   if (index == 0) {
                                     return _buildInfoSection(response);
                                   }
@@ -881,6 +915,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                   if (hasTags && index == 2) {
                                     return _buildTagsSection();
                                   }
+                                  if (!appendRelated) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  final replyHeaderIndex = baseCount;
                                   if (index == replyHeaderIndex) {
                                     return _buildReplyHeader(response);
                                   }
@@ -894,10 +932,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                   }
                                   return _buildReplyTrailer();
                                 },
-                                childCount:
-                                    (_tags.isNotEmpty ? 3 : 2) +
-                                    _replies.length +
-                                    1,
+                                childCount: appendRelated
+                                    ? (_tags.isNotEmpty ? 3 : 2) +
+                                          _replies.length +
+                                          1
+                                    : (_tags.isNotEmpty ? 3 : 2),
                               ),
                             ),
                           ),
@@ -911,8 +950,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 ],
               ),
             ),
-            // 评论输入栏：固定在左栏底部，宽度与评论区容器对齐。
-            _buildCommentInputBar(),
+            // 评论输入栏：窄屏单列布局固定在左栏底部；
+            // 宽屏布局评论区在右栏 Tab，输入栏随之迁入右栏
+            //（见 _buildRightColumn）。
+            if (appendRelated) _buildCommentInputBar(),
           ],
         ),
     };
@@ -920,7 +961,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 稿件信息错误态的左栏布局（参照 BiliPai VideoDetailScreenStateHolder：
   /// 错误仅占据播放区域，下方保留简介占位卡片，顶栏返回与右栏推荐不受影响）。
-  Widget _buildErrorLayout(String? upName, int? code, String? errMsg) {
+  Widget _buildErrorLayout(
+    String? upName,
+    int? code,
+    String? errMsg, {
+    bool narrow = false,
+  }) {
     return Column(
       children: [
         Expanded(
@@ -966,7 +1012,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           ),
         ),
         // 错误态无 aid：评论发送不可用，输入栏置灰展示。
-        _buildCommentInputBar(enabled: false),
+        // 宽屏布局评论区在右栏，错误态右栏不展示输入栏（见 _buildRightColumn）。
+        if (narrow) _buildCommentInputBar(enabled: false),
       ],
     );
   }
@@ -1357,11 +1404,18 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         Style.xs,
         Style.sm,
       ),
-      child: Text(
-        count != null ? '评论 ${NumUtils.formatNum(count)}' : '评论',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        children: [
+          Text(
+            count != null ? '评论 ${NumUtils.formatNum(count)}' : '评论',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          // 窄屏内联评论区同样支持 最热/最新排序切换。
+          _buildCommentSortRow(),
+        ],
       ),
     );
   }
@@ -1835,52 +1889,146 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   // ─────────────────────────── 右栏（相关视频） ───────────────────────────
 
-  /// 右栏相关推荐：Phase 7.6.5 改用 [VideoCardH] 自适应水平卡片。
+  /// 右栏（对标 BiliPai TabletSecondaryContent）：评论 (N) / 相关推荐双 Tab。
+  /// 评论 Tab 含 最热/最新排序行 + 评论列表 + 底部输入栏；
+  /// 稿件信息未就绪（Loading/Error）时评论 Tab 展示占位/不可用提示。
   Widget _buildRightColumn() {
     final theme = Theme.of(context);
+    final replyCount = _detailState.dataOrNull?.stat?.reply;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Style.cardSpace,
-            Style.lg,
-            Style.safeSpace,
-            Style.sm,
+        TabBar(
+          controller: _rightTabCtrl,
+          labelColor: theme.colorScheme.onSurface,
+          unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+          indicatorColor: theme.colorScheme.primary,
+          indicatorSize: TabBarIndicatorSize.label,
+          dividerColor: theme.colorScheme.outlineVariant.withValues(
+            alpha: 0.3,
           ),
-          child: Text(
-            '相关推荐',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+          tabs: [
+            Tab(
+              text: replyCount != null
+                  ? '评论 ${NumUtils.formatNum(replyCount)}'
+                  : '评论',
             ),
-          ),
+            const Tab(text: '相关推荐'),
+          ],
         ),
         Expanded(
-          child: switch (_relatedState) {
-            Loading() => _buildRightSkeleton(),
-            Error(:final errMsg) => _buildError(errMsg, _loadRelated),
-            Success(:final response) => response.isEmpty
-                ? const AppEmptyState(
-                    title: '暂无相关推荐',
-                    subtitle: '换个视频看看吧',
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
-                      Style.cardSpace,
-                      0,
-                      Style.safeSpace,
-                      Style.xxl * 2,
-                    ),
-                    itemCount: response.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: Style.sm),
-                    itemBuilder: (context, index) =>
-                        _buildRelatedTile(response[index]),
-                  ),
-          },
+          child: TabBarView(
+            controller: _rightTabCtrl,
+            children: [_buildCommentTab(), _buildRelatedTab()],
+          ),
         ),
       ],
     );
+  }
+
+  /// 评论 Tab（对标 BiliPai 平板评论页）：
+  /// 最热/最新排序行 + 评论列表 + 底部输入栏。
+  /// 稿件信息未就绪（无 aid）时评论不可用，展示占位提示。
+  Widget _buildCommentTab() {
+    if (_detailState.dataOrNull == null) {
+      return switch (_detailState) {
+        Loading() => const Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        _ => const AppEmptyState(
+            title: '评论区不可用',
+            subtitle: '稿件信息加载失败',
+          ),
+      };
+    }
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Style.sm, Style.xs, Style.sm, 0),
+          child: _buildCommentSortRow(),
+        ),
+        Expanded(child: _buildReplyListView()),
+        _buildCommentInputBar(),
+      ],
+    );
+  }
+
+  /// 评论排序行（对标 BiliPai CommentSortHeader）：
+  /// 最热(3) / 最新(2) 文本切换，选中项加粗强调。
+  Widget _buildCommentSortRow() {
+    final theme = Theme.of(context);
+    Widget sortBtn(String label, int mode) {
+      final selected = _replyMode == mode;
+      return TextButton(
+        onPressed: () => _switchReplyMode(mode),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+            color: selected
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      );
+    }
+    return Row(children: [sortBtn('最热', 3), sortBtn('最新', 2)]);
+  }
+
+  /// 评论列表（宽屏右栏 Tab 用；窄屏单列布局用 sliver 版）。
+  /// 尾部统一交给 [_buildReplyTrailer]（spinner/重试/空态/到底）。
+  Widget _buildReplyListView() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(
+        Style.cardSpace,
+        Style.xs,
+        Style.safeSpace,
+        Style.md,
+      ),
+      itemCount: _replies.length + 1,
+      itemBuilder: (context, index) {
+        if (index == _replies.length) return _buildReplyTrailer();
+        if (index == _replies.length - 1) _maybeLoadMoreReplies();
+        return _buildReplyTile(_replies[index]);
+      },
+    );
+  }
+
+  /// 相关推荐 Tab（原右栏列表，Phase 7.6.5 的 [VideoCardH] 卡片不变）。
+  Widget _buildRelatedTab() {
+    return Padding(
+      padding: const EdgeInsets.only(top: Style.sm),
+      child: _buildRelatedBody(),
+    );
+  }
+
+  /// 相关推荐列表主体（宽栏 Tab 与降级右栏共用）。
+  Widget _buildRelatedBody() {
+    return switch (_relatedState) {
+      Loading() => _buildRightSkeleton(),
+      Error(:final errMsg) => _buildError(errMsg, _loadRelated),
+      Success(:final response) => response.isEmpty
+          ? const AppEmptyState(
+              title: '暂无相关推荐',
+              subtitle: '换个视频看看吧',
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(
+                Style.cardSpace,
+                0,
+                Style.safeSpace,
+                Style.xxl * 2,
+              ),
+              itemCount: response.length,
+              separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
+              itemBuilder: (context, index) =>
+                  _buildRelatedTile(response[index]),
+            ),
+    };
   }
 
   /// 相关推荐卡片（宽栏列表与窄屏 sliver 段落共用）。

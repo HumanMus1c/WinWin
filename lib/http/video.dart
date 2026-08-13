@@ -289,14 +289,16 @@ abstract final class VideoHttp {
   }
 
   // 评论列表 web端（pagination_str 无需 wbi 签名）
+  // [mode]：排序模式（对标 BiliPai CommentSortHeader）：3=最热，2=最新。
   static Future<LoadingState<ReplyMainData>> replyMain({
     required int oid,
     String? nextOffset,
+    int mode = 3,
   }) async {
     final res = await Request().get(
       Api.replyMain,
       queryParameters: {
-        'mode': 3,
+        'mode': mode,
         'type': 1,
         'oid': oid,
         'ps': 20,
