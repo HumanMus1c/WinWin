@@ -20,3 +20,15 @@ Thumbs.db
 
 # Kotlin
 *.kotlin_metadata
+
+# Flutter build artifacts
+.dart_tool/flutter_build/
+.dart_tool/hooks_runner/
+.flutter-plugins-dependencies
+windows/flutter/ephemeral/
+
+# Tooling
+.codegraph/
+
+# Logs
+*.log
