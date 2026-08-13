@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 const Color biliPink = Color(0xFFFA7298);
 const Color biliPinkDark = Color(0xFFE45A82);
 
+/// B 站播放器品牌蓝（进度条滑块 / 倍速高亮），对标 BiliPai 播放控件主色。
+const Color biliBlue = Color(0xFF00AEEC);
+
 // ── iOS System Colors ──
 const Color iosBlue = Color(0xFF007AFF);
 const Color iosPink = Color(0xFFFF2D55);
