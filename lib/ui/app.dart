@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/history/history_page.dart';
@@ -30,19 +31,38 @@ class _AppRootState extends State<AppRoot> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: MainLayout(
-        currentIndex: _currentIndex,
-        onSelect: _onSelect,
-        body: IndexedStack(
-          index: _currentIndex,
-          children: [
-            HomePage(onGotoProfile: () => _onSelect(_indexOf(AppPage.profile))),
-            const DynamicsPage(),
-            const HistoryPage(),
-            const WhisperPage(),
-            ProfilePage(onNavigate: (p) => _onSelect(_indexOf(p))),
-          ],
+    // Esc 全局返回上一级：键盘事件从焦点节点向上冒泡，对话框/底部弹层
+    // 的 ModalRoute 自带 Esc 关闭快捷键、播放器内 PlayerFocus 自行消费
+    // Esc（全屏态退出全屏），均先于本层处理；未消费时才由这里兜底
+    // pop 当前路由，实现程序全局的 Esc 返回。
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
+          final navigator = Navigator.of(context);
+          if (navigator.canPop()) {
+            navigator.pop();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
+        body: MainLayout(
+          currentIndex: _currentIndex,
+          onSelect: _onSelect,
+          body: IndexedStack(
+            index: _currentIndex,
+            children: [
+              HomePage(onGotoProfile: () => _onSelect(_indexOf(AppPage.profile))),
+              const DynamicsPage(),
+              const HistoryPage(),
+              const WhisperPage(),
+              ProfilePage(onNavigate: (p) => _onSelect(_indexOf(p))),
+            ],
+          ),
         ),
       ),
     );

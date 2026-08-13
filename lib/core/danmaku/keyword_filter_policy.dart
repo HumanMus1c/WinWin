@@ -307,7 +307,7 @@ DanmakuBlockRuleImportResult _parseDanmakuBlockRuleXmlImport(String raw) {
   try {
     // 轻量 XML 解析：提取 <item ...>...</item> / <filter ...>...</filter>。
     final itemPattern = RegExp(
-      r'<(item|filter)\b[^>]*enabled=["\']?([^"\'>\s]*)["\']?[^>]*>([\s\S]*?)</\1>',
+      "<(item|filter)\\b[^>]*enabled=[\"']?([^\"'>\\s]*)[\"']?[^>]*>([\\s\\S]*?)</\\1>",
       caseSensitive: false,
     );
     for (final match in itemPattern.allMatches(raw)) {
@@ -321,7 +321,7 @@ DanmakuBlockRuleImportResult _parseDanmakuBlockRuleXmlImport(String raw) {
     }
     // 兼容自闭合或无闭合标签的 <item value="..."/> 格式。
     final attrPattern = RegExp(
-      r'<(?:item|filter)\b[^>]*\bvalue=["\']([^"\']+)["\'][^>]*/?>',
+      "<(?:item|filter)\\b[^>]*\\bvalue=[\"']([^\"']+)[\"'][^>]*/?>",
       caseSensitive: false,
     );
     for (final match in attrPattern.allMatches(raw)) {

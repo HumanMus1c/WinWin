@@ -914,25 +914,24 @@ class _PlayerPanelState extends State<PlayerPanel> {
   }
 
   /// Phase 4.4：字幕按钮 — 打开字幕选择 + 样式设置面板。
+  /// 常驻可点（对标 BiliPai）：无在线字幕轨道时面板仍弹出，
+  /// 展示空态提示与样式设置，避免因风控/无字幕导致按钮置灰不可用。
   Widget _buildSubtitleButton() {
     final c = widget.controller;
     return ListenableBuilder(
       listenable: c.subtitle,
       builder: (context, _) {
-        final hasSubtitles = c.subtitle.available.isNotEmpty;
         final isActive = c.subtitle.current != null;
         return _iconButton(
           icon:
               isActive ? Icons.closed_caption : Icons.closed_caption_outlined,
           tooltip: '字幕',
           color: isActive ? biliPink : Colors.white,
-          onPressed: hasSubtitles
-              ? () => showSubtitleSettingsPanel(
-                    context,
-                    controller: c,
-                    fullscreen: widget.fullscreen,
-                  )
-              : null,
+          onPressed: () => showSubtitleSettingsPanel(
+            context,
+            controller: c,
+            fullscreen: widget.fullscreen,
+          ),
         );
       },
     );

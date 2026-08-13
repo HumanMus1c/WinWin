@@ -240,10 +240,21 @@ abstract final class VideoHttp {
     required String bvid,
     required int cid,
   }) async {
+    // 风控规避参数（对齐 videoUrl 与 BiliPai WbiUtils.appendRiskFingerprintParams）：
+    // /x/player/wbi/* 系列缺少 dm_img_* / gaia 参数时会被风控拒绝或降级，
+    // 表现为字幕列表/章节标记静默丢失、字幕面板无法弹出。
+    final dmImgStr = Utils.base64EncodeRandomString(16, 64);
+    final dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
     final params = await WbiSign.makSign({
       'bvid': bvid,
       'cid': cid,
-      'web_location': '1315873',
+      'web_location': '333.976',
+      'gaia_source': 'pre-load',
+      'isGaiaAvoided': true,
+      'dm_img_list': '[]',
+      'dm_img_str': dmImgStr,
+      'dm_cover_img_str': dmCoverImgStr,
+      'dm_img_inter': '{"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
     });
     final res = await Request().get(
       Api.playInfo,

@@ -284,6 +284,8 @@ class _HomeTopBarState extends State<_HomeTopBar> {
 }
 
 /// Horizontally scrollable category tabs — 使用 [HomeTabType.defaultOrder]。
+/// 外层包裹与顶栏同款毛玻璃材质容器（sigma 20 + surface α0.72），
+/// 形状/阴影按 [UiStyle] 解析，与 [_HomeTopBar] 视觉一致。
 class _CategoryTabRow extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelect;
@@ -295,38 +297,86 @@ class _CategoryTabRow extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final chrome = theme.extension<AppChrome>() ?? AppChrome.ios;
+    final style = InheritedUiStyle.of(context);
+    final renderer = resolvePrimitiveRenderer(style);
     final tabs = HomeTabType.defaultOrder;
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: Style.lg),
-        itemCount: tabs.length,
-        separatorBuilder: (_, __) => const SizedBox(width: Style.sm),
-        itemBuilder: (context, index) {
-          final isSelected = index == selectedIndex;
-          final baseColor = cs.primary;
-          return GestureDetector(
-            onTap: () => onSelect(index),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSelected ? baseColor.withValues(alpha: 0.28) : Colors.transparent,
-                borderRadius: shapes.pillBorder,
-              ),
-              child: Text(
-                tabs[index].label,
-                style: TextStyle(
-                  color: isSelected
-                      ? baseColor
-                      : cs.onSurfaceVariant.withValues(alpha: 0.78),
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+
+    // 毛玻璃容器对比度策略（与 _HomeTopBar 同参）。
+    final barColor = cs.surface.withValues(alpha: 0.72);
+    final barContrast = resolveAccessibleContainerColors(
+      containerColor: barColor,
+      contentColor: cs.onSurfaceVariant,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      fallbackContentColors: [cs.onSurface, cs.onInverseSurface],
+    );
+    final contentColor = barContrast.contentColor;
+    final barRadius = switch (renderer) {
+      PrimitiveRenderer.ios => Style.radiusFloating,
+      _ => chrome.containerRadius,
+    };
+    final showShadow = renderer != PrimitiveRenderer.miuix;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Style.lg),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(barRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            height: 36,
+            decoration: BoxDecoration(
+              color: barColor,
+              borderRadius: BorderRadius.circular(barRadius),
+              border: Border.all(
+                color: cs.outline.withValues(
+                  alpha: renderer == PrimitiveRenderer.miuix ? 0 : 0.1,
                 ),
+                width: 0.5,
               ),
+              boxShadow: showShadow
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : const [],
             ),
-          );
-        },
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: Style.md),
+              itemCount: tabs.length,
+              separatorBuilder: (_, __) => const SizedBox(width: Style.sm),
+              itemBuilder: (context, index) {
+                final isSelected = index == selectedIndex;
+                final baseColor = cs.primary;
+                return GestureDetector(
+                  onTap: () => onSelect(index),
+                  child: Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: isSelected ? baseColor.withValues(alpha: 0.28) : Colors.transparent,
+                      borderRadius: shapes.pillBorder,
+                    ),
+                    child: Text(
+                      tabs[index].label,
+                      style: TextStyle(
+                        color: isSelected
+                            ? baseColor
+                            : contentColor.withValues(alpha: 0.78),
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
       ),
     );
   }

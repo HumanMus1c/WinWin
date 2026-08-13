@@ -123,6 +123,19 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
               selected: sub.current == null,
               onTap: () => sub.select(null),
             ),
+            if (sub.available.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: Style.xs,
+                  horizontal: Style.md,
+                ),
+                child: Text(
+                  '当前视频暂无可用字幕',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ),
             for (final item in sub.available)
               _SubtitleOptionTile(
                 label: item.lanDoc.isEmpty ? item.lan : item.lanDoc,
