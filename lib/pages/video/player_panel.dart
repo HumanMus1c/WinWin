@@ -664,10 +664,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// 底部控制条。
+  /// 底部控制条（BiliPai 风格）：进度条置顶 + 下方左右分区控制行。
   Widget _buildControlBar() {
     final c = widget.controller;
-    // BiliPai 底部控制条：透明→黑渐变遮罩（bottomScrim），而非整块纯色。
+    // BiliPai 底部控制条：透明→黑渐变遮罩（bottomScrim）。
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -679,77 +679,93 @@ class _PlayerPanelState extends State<PlayerPanel> {
       padding: const EdgeInsets.only(
         left: Style.sm,
         right: Style.sm,
-        top: Style.xl,
+        top: Style.lg,
         bottom: Style.xs,
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          ValueListenableBuilder<bool>(
-            valueListenable: c.playing,
-            builder: (context, isPlaying, _) {
-              return IconButton(
-                iconSize: 24,
+          // 第一行：进度条（全宽）
+          _buildProgressSlider(),
+          const SizedBox(height: Style.xs),
+          // 第二行：控制按钮（左右分区）
+          Row(
+            children: [
+              // 左侧：播放/暂停 + 时间 + 弹幕开关
+              _buildPlayPauseButton(),
+              const SizedBox(width: Style.sm),
+              _buildTimeText(),
+              const SizedBox(width: Style.md),
+              _buildDanmakuChip(),
+              const Spacer(),
+              // 右侧：音频标签 + 画质 + 倍速 + 字幕 + 功能按钮
+              _buildAudioCodecLabel(),
+              _buildQualityLabel(),
+              _buildSpeedLabel(),
+              _buildSubtitleChip(),
+              const SizedBox(width: Style.sm),
+              _iconButton(
+                icon: Icons.comment_outlined,
+                tooltip: '发弹幕',
+                onPressed: () => showSendDanmakuPanel(context, controller: c),
+              ),
+              _iconButton(
+                icon: Icons.tune,
+                tooltip: '弹幕设置',
+                onPressed: () => showDanmakuSettingsPanel(
+                  context,
+                  controller: c,
+                  fullscreen: widget.fullscreen,
+                ),
+              ),
+              _iconButton(
+                icon: Icons.volume_up,
+                tooltip: '音量',
+                onPressed: _toggleVolumePopup,
+              ),
+              _iconButton(
+                icon: Icons.lock_outline,
+                tooltip: '锁定控制条',
+                onPressed: _toggleLock,
+              ),
+              if (!widget.fullscreen)
+                _iconButton(
+                  icon: Icons.picture_in_picture_alt,
+                  tooltip: '画中画',
+                  onPressed: () => DesktopPipController.instance.togglePip(),
+                ),
+              IconButton(
+                iconSize: 22,
                 visualDensity: VisualDensity.compact,
                 icon: Icon(
-                  isPlaying ? Icons.pause : Icons.play_arrow,
+                  widget.fullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
                   color: Colors.white,
                 ),
-                onPressed: c.playOrPause,
-              );
-            },
-          ),
-          _buildTimeText(),
-          const SizedBox(width: Style.sm),
-          Expanded(child: _buildProgressSlider()),
-          const SizedBox(width: Style.sm),
-          _iconButton(
-            icon: Icons.volume_up,
-            tooltip: '音量',
-            onPressed: _toggleVolumePopup,
-          ),
-          _buildAudioTrackButton(),
-          _buildQualityButton(),
-          _buildDanmakuToggleButton(),
-          _buildSubtitleButton(),
-          _buildSpeedButton(),
-          _buildChapterButton(),
-          _iconButton(
-            icon: Icons.comment_outlined,
-            tooltip: '发弹幕',
-            onPressed: () => showSendDanmakuPanel(context, controller: c),
-          ),
-          _iconButton(
-            icon: Icons.tune,
-            tooltip: '弹幕设置',
-            onPressed: () => showDanmakuSettingsPanel(
-              context,
-              controller: c,
-              fullscreen: widget.fullscreen,
-            ),
-          ),
-          _iconButton(
-            icon: Icons.lock_outline,
-            tooltip: '锁定控制条',
-            onPressed: _toggleLock,
-          ),
-          // Phase 4.6：桌面伪 PiP（非全屏时可用）。
-          if (!widget.fullscreen)
-            _iconButton(
-              icon: Icons.picture_in_picture_alt,
-              tooltip: '画中画',
-              onPressed: () => DesktopPipController.instance.togglePip(),
-            ),
-          IconButton(
-            iconSize: 22,
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              widget.fullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
-              color: Colors.white,
-            ),
-            onPressed: widget.onToggleFullscreen,
+                onPressed: widget.onToggleFullscreen,
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  /// 播放/暂停按钮。
+  Widget _buildPlayPauseButton() {
+    final c = widget.controller;
+    return ValueListenableBuilder<bool>(
+      valueListenable: c.playing,
+      builder: (context, isPlaying, _) {
+        return IconButton(
+          iconSize: 24,
+          visualDensity: VisualDensity.compact,
+          icon: Icon(
+            isPlaying ? Icons.pause : Icons.play_arrow,
+            color: Colors.white,
+          ),
+          onPressed: c.playOrPause,
+        );
+      },
     );
   }
 
@@ -815,10 +831,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 trackHeight: 3,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                activeTrackColor: biliPink,
+                activeTrackColor: biliBlue,
                 inactiveTrackColor: Colors.white24,
-                thumbColor: biliPink,
-                overlayColor: const Color(0x33FA7298),
+                thumbColor: biliBlue,
+                overlayColor: const Color(0x3300AEEC),
               ),
               child: Slider(
                 value: value,
@@ -861,19 +877,23 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  Widget _buildQualityButton() {
+  /// BiliPai 风格画质文字标签：点击弹出画质选择菜单。
+  Widget _buildQualityLabel() {
     final c = widget.controller;
     return ValueListenableBuilder<int>(
       valueListenable: c.qualityVersion,
       builder: (context, _, _) {
         final labels = c.qualityLabels;
         final current = c.currentQualityIndex;
-        if (labels.isEmpty) {
-          return const SizedBox.shrink();
-        }
+        if (labels.isEmpty) return const SizedBox.shrink();
         return PopupMenuButton<int>(
           tooltip: '画质',
           onSelected: c.switchQuality,
+          color: const Color(0xE61A1A1A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Style.radiusSm),
+            side: const BorderSide(color: Colors.white12),
+          ),
           itemBuilder: (context) => [
             for (int i = 0; i < labels.length; i++)
               PopupMenuItem<int>(
@@ -881,7 +901,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 child: Text(
                   labels[i],
                   style: TextStyle(
-                    color: i == current ? biliPink : null,
+                    color: i == current ? biliBlue : Colors.white70,
                     fontWeight:
                         i == current ? FontWeight.bold : FontWeight.normal,
                   ),
@@ -902,35 +922,184 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// 弹幕开关按钮：切换 Pref.enableShowDanmaku（弹幕层经
-  /// AnimatedOpacity 渐显/渐隐）。
-  Widget _buildDanmakuToggleButton() {
+  /// BiliPai 风格弹幕开关圆角 chip：
+  /// 开启时 primary α0.22 背景 + 图标 + "开" 文字，关闭时白色半透明 + "关"。
+  Widget _buildDanmakuChip() {
     final enabled = Pref.enableShowDanmaku;
-    return _iconButton(
-      icon: enabled ? Icons.subtitles_outlined : Icons.subtitles_off,
-      tooltip: enabled ? '关闭弹幕' : '开启弹幕',
-      onPressed: _toggleDanmaku,
+    return GestureDetector(
+      onTap: _toggleDanmaku,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.sm,
+          vertical: Style.xs,
+        ),
+        decoration: BoxDecoration(
+          color: enabled ? biliBlue.withOpacity(0.22) : Colors.white12,
+          borderRadius: BorderRadius.circular(Style.radiusFull),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              enabled ? Icons.chat_bubble : Icons.chat_bubble_outline,
+              size: 14,
+              color: enabled ? biliBlue : Colors.white70,
+            ),
+            const SizedBox(width: Style.xs),
+            Text(
+              enabled ? '开' : '关',
+              style: TextStyle(
+                color: enabled ? biliBlue : Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  /// Phase 4.4：字幕按钮 — 打开字幕选择 + 样式设置面板。
-  /// 常驻可点（对标 BiliPai）：无在线字幕轨道时面板仍弹出，
-  /// 展示空态提示与样式设置，避免因风控/无字幕导致按钮置灰不可用。
-  Widget _buildSubtitleButton() {
+  /// BiliPai 风格字幕 chip：有字幕时高亮，点击打开字幕面板。
+  Widget _buildSubtitleChip() {
     final c = widget.controller;
     return ListenableBuilder(
       listenable: c.subtitle,
       builder: (context, _) {
         final isActive = c.subtitle.current != null;
-        return _iconButton(
-          icon:
-              isActive ? Icons.closed_caption : Icons.closed_caption_outlined,
-          tooltip: '字幕',
-          color: isActive ? biliPink : Colors.white,
-          onPressed: () => showSubtitleSettingsPanel(
+        return GestureDetector(
+          onTap: () => showSubtitleSettingsPanel(
             context,
             controller: c,
             fullscreen: widget.fullscreen,
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Style.sm,
+              vertical: Style.xs,
+            ),
+            decoration: BoxDecoration(
+              color: isActive ? biliBlue.withOpacity(0.22) : Colors.white12,
+              borderRadius: BorderRadius.circular(Style.radiusFull),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isActive ? Icons.closed_caption : Icons.closed_caption_outlined,
+                  size: 14,
+                  color: isActive ? biliBlue : Colors.white70,
+                ),
+                const SizedBox(width: Style.xs),
+                Text(
+                  '字幕',
+                  style: TextStyle(
+                    color: isActive ? biliBlue : Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// BiliPai 风格音频编码标签：显示当前音轨编码（如 "AAC"），点击打开音轨菜单。
+  Widget _buildAudioCodecLabel() {
+    final c = widget.controller;
+    return ValueListenableBuilder<bool>(
+      valueListenable: c.ready,
+      builder: (context, ready, _) {
+        if (!ready) return const SizedBox.shrink();
+        final codec = c.audioCodecLabel;
+        if (codec == null) return const SizedBox.shrink();
+        final tracks = c.audioTracks;
+        // 单轨时仅显示标签，多轨时弹出菜单。
+        if (tracks.length <= 1) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+            child: Text(
+              codec,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          );
+        }
+        return PopupMenuButton<String>(
+          tooltip: '音轨',
+          color: const Color(0xE61A1A1A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Style.radiusSm),
+            side: const BorderSide(color: Colors.white12),
+          ),
+          onSelected: (value) {
+            if (value == '__normalize') {
+              c.setAudioNormalize(!c.audioNormalizeEnabled);
+            } else {
+              final idx = int.tryParse(value);
+              if (idx != null) c.switchAudioTrack(idx);
+            }
+          },
+          itemBuilder: (context) {
+            final active = c.activeAudioTrackIndices;
+            final activeIndex = active.isNotEmpty ? active.first : -1;
+            return [
+              for (final t in tracks)
+                PopupMenuItem<String>(
+                  value: t.index.toString(),
+                  child: Row(
+                    children: [
+                      Icon(
+                        t.index == activeIndex
+                            ? Icons.check
+                            : Icons.radio_button_unchecked,
+                        size: 18,
+                        color: t.index == activeIndex ? biliBlue : null,
+                      ),
+                      const SizedBox(width: Style.xs),
+                      Flexible(
+                        child: Text(
+                          t.title,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color:
+                                t.index == activeIndex ? biliBlue : Colors.white70,
+                            fontWeight: t.index == activeIndex
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: '__normalize',
+                child: Row(
+                  children: [
+                    Icon(
+                      c.audioNormalizeEnabled
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
+                      size: 18,
+                      color: c.audioNormalizeEnabled ? biliBlue : null,
+                    ),
+                    const SizedBox(width: Style.xs),
+                    const Text('音频归一化'),
+                  ],
+                ),
+              ),
+            ];
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+            child: Text(
+              codec,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
           ),
         );
       },
@@ -1015,77 +1184,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return weights[idx];
   }
 
-  /// Phase 4.7：音轨选择 + 音频归一化开关。
-  /// 仅当存在多条音轨时显示按钮；单轨时隐藏。
-  Widget _buildAudioTrackButton() {
-    final c = widget.controller;
-    final tracks = c.audioTracks;
-    if (tracks.length <= 1) return const SizedBox.shrink();
-    final active = c.activeAudioTrackIndices;
-    final activeIndex = active.isNotEmpty ? active.first : -1;
-    return PopupMenuButton<String>(
-      tooltip: '音轨',
-      icon: const Icon(Icons.graphic_eq, color: Colors.white, size: 20),
-      iconSize: 20,
-      padding: const EdgeInsets.all(Style.sm),
-      onSelected: (value) {
-        if (value == '__normalize') {
-          c.setAudioNormalize(!c.audioNormalizeEnabled);
-        } else {
-          final idx = int.tryParse(value);
-          if (idx != null) c.switchAudioTrack(idx);
-        }
-      },
-      itemBuilder: (context) => [
-        for (final t in tracks)
-          PopupMenuItem<String>(
-            value: t.index.toString(),
-            child: Row(
-              children: [
-                Icon(
-                  t.index == activeIndex
-                      ? Icons.check
-                      : Icons.radio_button_unchecked,
-                  size: 18,
-                  color: t.index == activeIndex ? biliPink : null,
-                ),
-                const SizedBox(width: Style.xs),
-                Flexible(
-                  child: Text(
-                    t.title,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color:
-                          t.index == activeIndex ? biliPink : null,
-                      fontWeight: t.index == activeIndex
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        const PopupMenuDivider(),
-        PopupMenuItem<String>(
-          value: '__normalize',
-          child: Row(
-            children: [
-              Icon(
-                c.audioNormalizeEnabled
-                    ? Icons.check_box
-                    : Icons.check_box_outline_blank,
-                size: 18,
-                color: c.audioNormalizeEnabled ? biliPink : null,
-              ),
-              const SizedBox(width: Style.xs),
-              const Text('音频归一化'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+
 
   /// Phase 4.5：章节列表按钮 — PopupMenu 显示章节，点击跳转。
   Widget _buildChapterButton() {
@@ -1121,8 +1220,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// 倍速菜单：speedList 选项、当前值打勾，选中后 setPlaybackSpeed。
-  Widget _buildSpeedButton() {
+  /// BiliPai 风格倍速文字标签：1.0x 时显示"倍速"，非 1.0x 时显示实际速度并高亮。
+  Widget _buildSpeedLabel() {
     final c = widget.controller;
     return ValueListenableBuilder<double>(
       valueListenable: c.playbackSpeed,
@@ -1130,20 +1229,31 @@ class _PlayerPanelState extends State<PlayerPanel> {
         return PopupMenuButton<double>(
           tooltip: '倍速',
           onSelected: c.setPlaybackSpeed,
+          color: const Color(0xE61A1A1A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Style.radiusSm),
+            side: const BorderSide(color: Colors.white12),
+          ),
           itemBuilder: (context) => [
             for (final v in c.speedList)
               CheckedPopupMenuItem<double>(
                 value: v,
                 checked: v == speed,
-                child: Text('${v.toStringAsFixed(1)}x'),
+                child: Text(
+                  '${v.toStringAsFixed(1)}x',
+                  style: TextStyle(
+                    color: v == speed ? biliBlue : Colors.white70,
+                    fontWeight: v == speed ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
               ),
           ],
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: Style.sm),
             child: Text(
-              '${speed.toStringAsFixed(1)}x',
+              speed == 1.0 ? '倍速' : '${speed.toStringAsFixed(1)}x',
               style: TextStyle(
-                color: speed == 1.0 ? Colors.white70 : biliPink,
+                color: speed == 1.0 ? Colors.white70 : biliBlue,
                 fontSize: 12,
                 fontWeight: speed == 1.0 ? FontWeight.normal : FontWeight.bold,
               ),

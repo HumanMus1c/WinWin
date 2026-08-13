@@ -845,6 +845,36 @@ class WinWinPlayerController {
     return player.activeAudioTracks;
   }
 
+  /// 当前激活音轨的编码标签（如 "AAC"、"FLAC"），用于控制条显示。
+  /// 无可用音轨或编码信息时返回 null。
+  String? get audioCodecLabel {
+    final player = _player;
+    if (player == null) return null;
+    final audio = player.mediaInfo.audio;
+    if (audio == null || audio.isEmpty) return null;
+    final activeIndices = player.activeAudioTracks;
+    final activeIndex = activeIndices.isNotEmpty ? activeIndices.first : 0;
+    // 查找激活的音轨，找不到则取第一条。
+    final stream = audio.firstWhere(
+      (s) => s.index == activeIndex,
+      orElse: () => audio.first,
+    );
+    final codec = stream.codec?.codec?.toLowerCase();
+    if (codec == null || codec.isEmpty) return null;
+    // 编码名映射：FFmpeg 原始字符串 → 显示标签。
+    return switch (codec) {
+      'aac' => 'AAC',
+      'flac' => 'FLAC',
+      'mp3' => 'MP3',
+      'opus' => 'OPUS',
+      'ac3' => 'AC3',
+      'eac3' => 'EAC3',
+      'dts' => 'DTS',
+      'truehd' => 'TrueHD',
+      _ => codec.toUpperCase(),
+    };
+  }
+
   /// 切换音频轨道（内嵌轨道）。
   void switchAudioTrack(int index) {
     final player = _player;
