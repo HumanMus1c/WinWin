@@ -251,6 +251,13 @@ abstract final class Pref {
       _localCache.put(LocalCacheKey.danmakuFilterRules, value);
 
   // ---------- subtitle ----------
+  /// 字幕是否开启（用户手动开关，记忆上次状态）。
+  static bool get subtitleEnabled =>
+      _setting.get(SettingBoxKey.subtitleEnabled, defaultValue: true);
+
+  static set subtitleEnabled(bool value) =>
+      _setting.put(SettingBoxKey.subtitleEnabled, value);
+
   static double get subtitleFontScale =>
       _setting.get(SettingBoxKey.subtitleFontScale, defaultValue: 1.0);
 

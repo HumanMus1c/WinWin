@@ -169,6 +169,7 @@ abstract final class SettingBoxKey {
       userAgreementAckV1 = 'userAgreementAckV1';
 
   static const String subtitlePreferenceV2 = 'subtitlePreferenceV2',
+      subtitleEnabled = 'subtitleEnabled',
       enableDragSubtitle = 'enableDragSubtitle',
       subtitlePaddingH = 'subtitlePaddingH',
       subtitlePaddingB = 'subtitlePaddingB',

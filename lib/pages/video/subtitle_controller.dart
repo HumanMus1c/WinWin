@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/models/video/play_info.dart';
 
 /// 字幕 AI 偏好策略（对应 SettingBoxKey.subtitlePreferenceV2）。
@@ -68,10 +69,15 @@ class SubtitleController extends ChangeNotifier {
   static final Map<String, List<SubtitleCue>> _cache = {};
 
   /// 设置可用字幕列表（来自 playInfo 接口）。
-  /// 根据 [SubtitlePreference] 自动选择默认字幕。
+  /// 根据 [SubtitlePreference] 和用户开关状态自动选择默认字幕。
   void setAvailable(List<SubtitleItem> subtitles) {
     _available = subtitles;
-    _current = _selectByPreference(subtitles);
+    // 如果用户手动关闭了字幕，保持关闭状态
+    if (!Pref.subtitleEnabled) {
+      _current = null;
+    } else {
+      _current = _selectByPreference(subtitles);
+    }
     _cues = const [];
     _loaded = false;
     notifyListeners();
@@ -106,10 +112,13 @@ class SubtitleController extends ChangeNotifier {
   }
 
   /// 切换到指定字幕（null = 关闭字幕）。
+  /// 会同步更新用户开关状态到持久化存储。
   Future<void> select(SubtitleItem? item) async {
     _current = item;
     _cues = const [];
     _loaded = false;
+    // 记忆用户的手动开关状态
+    Pref.subtitleEnabled = item != null;
     notifyListeners();
     if (item != null) {
       await loadSubtitle(item);

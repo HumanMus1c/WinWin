@@ -18,6 +18,7 @@ import 'package:winwin/pages/video/send_danmaku_panel.dart';
 import 'package:winwin/pages/video/subtitle_settings_panel.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/utils/duration_utils.dart';
 
 /// Duration 没有 clamp 方法，手动实现（用于 seek 位置限制）。
@@ -734,14 +735,16 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   tooltip: '画中画',
                   onPressed: () => DesktopPipController.instance.togglePip(),
                 ),
-              IconButton(
-                iconSize: 22,
-                visualDensity: VisualDensity.compact,
-                icon: Icon(
+              HoverContainer(
+                onTap: widget.onToggleFullscreen,
+                borderRadius: 6.0,
+                padding: const EdgeInsets.all(6),
+                hoverColor: Colors.white.withValues(alpha: 0.12),
+                child: Icon(
                   widget.fullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
                   color: Colors.white,
+                  size: 22,
                 ),
-                onPressed: widget.onToggleFullscreen,
               ),
             ],
           ),
@@ -756,32 +759,37 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return ValueListenableBuilder<bool>(
       valueListenable: c.playing,
       builder: (context, isPlaying, _) {
-        return IconButton(
-          iconSize: 24,
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
+        return HoverContainer(
+          onTap: c.playOrPause,
+          borderRadius: 6.0,
+          padding: const EdgeInsets.all(6),
+          hoverColor: Colors.white.withValues(alpha: 0.12),
+          child: Icon(
             isPlaying ? Icons.pause : Icons.play_arrow,
             color: Colors.white,
+            size: 24,
           ),
-          onPressed: c.playOrPause,
         );
       },
     );
   }
 
-  /// 控制条图标按钮统一风格：20px 图标 + 紧凑密度（对齐 BiliPai 底栏）。
+  /// 控制条图标按钮统一风格：20px 图标 + 紧凑密度 + hover 效果。
   Widget _iconButton({
     required IconData icon,
     required VoidCallback? onPressed,
     String? tooltip,
     Color color = Colors.white,
   }) {
-    return IconButton(
-      iconSize: 20,
-      visualDensity: VisualDensity.compact,
-      tooltip: tooltip,
-      icon: Icon(icon, color: color),
-      onPressed: onPressed,
+    return HoverContainer(
+      onTap: onPressed,
+      borderRadius: 6.0,
+      padding: const EdgeInsets.all(6),
+      hoverColor: Colors.white.withValues(alpha: 0.12),
+      child: Tooltip(
+        message: tooltip ?? '',
+        child: Icon(icon, color: color, size: 20),
+      ),
     );
   }
 
@@ -908,8 +916,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ),
               ),
           ],
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+          child: HoverContainer(
+            borderRadius: 6.0,
+            padding: const EdgeInsets.symmetric(horizontal: Style.sm, vertical: 4),
+            hoverColor: Colors.white.withValues(alpha: 0.12),
             child: Text(
               (current >= 0 && current < labels.length)
                   ? labels[current]
@@ -926,8 +936,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// 开启时 primary α0.22 背景 + 图标 + "开" 文字，关闭时白色半透明 + "关"。
   Widget _buildDanmakuChip() {
     final enabled = Pref.enableShowDanmaku;
-    return GestureDetector(
+    return HoverContainer(
       onTap: _toggleDanmaku,
+      borderRadius: Style.radiusFull,
+      padding: const EdgeInsets.symmetric(
+        horizontal: Style.sm,
+        vertical: Style.xs,
+      ),
+      hoverColor: Colors.white.withValues(alpha: 0.12),
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: Style.sm,
@@ -967,12 +983,18 @@ class _PlayerPanelState extends State<PlayerPanel> {
       listenable: c.subtitle,
       builder: (context, _) {
         final isActive = c.subtitle.current != null;
-        return GestureDetector(
+        return HoverContainer(
           onTap: () => showSubtitleSettingsPanel(
             context,
             controller: c,
             fullscreen: widget.fullscreen,
           ),
+          borderRadius: Style.radiusFull,
+          padding: const EdgeInsets.symmetric(
+            horizontal: Style.sm,
+            vertical: Style.xs,
+          ),
+          hoverColor: Colors.white.withValues(alpha: 0.12),
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: Style.sm,
@@ -1094,8 +1116,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
               ),
             ];
           },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+          child: HoverContainer(
+            borderRadius: 6.0,
+            padding: const EdgeInsets.symmetric(horizontal: Style.sm, vertical: 4),
+            hoverColor: Colors.white.withValues(alpha: 0.12),
             child: Text(
               codec,
               style: const TextStyle(color: Colors.white70, fontSize: 12),
@@ -1248,8 +1272,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ),
               ),
           ],
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+          child: HoverContainer(
+            borderRadius: 6.0,
+            padding: const EdgeInsets.symmetric(horizontal: Style.sm, vertical: 4),
+            hoverColor: Colors.white.withValues(alpha: 0.12),
             child: Text(
               speed == 1.0 ? '倍速' : '${speed.toStringAsFixed(1)}x',
               style: TextStyle(

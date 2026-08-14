@@ -341,55 +341,165 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
 
   // ─────────────────────────── 内联模式 ───────────────────────────
 
-  /// 内联模式：输入行 + 颜色/位置/大小选项，宽度由外层（视频宽度）决定。
+  /// 内联模式：单行输入框 + 发送按钮（样式对齐评论发送栏）。
+  /// 设置面板（颜色/位置/大小）改为 hover 发送按钮时弹出。
   Widget _buildInline() {
     final theme = Theme.of(context);
     return Container(
-      color: theme.colorScheme.surface,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildInputRow(theme),
-          const Divider(height: 1),
-          Padding(
+      padding: const EdgeInsets.fromLTRB(
+        Style.safeSpace,
+        Style.xs,
+        Style.cardSpace,
+        Style.xs,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _textController,
+                focusNode: _focusNode,
+                maxLength: 100,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _onSend(),
+                onChanged: (_) => setState(() {}),
+                style: theme.textTheme.bodyLarge,
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: Style.md,
+                    vertical: Style.sm,
+                  ),
+                  hintText: _danmakuPlaceholder(Accounts.main.isLogin),
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  counterText: '',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(100),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceContainer
+                      .withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+            const SizedBox(width: Style.sm),
+            _buildInlineSendButton(theme),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 内联模式发送按钮：hover 时弹出设置面板（颜色/位置/大小）。
+  Widget _buildInlineSendButton(ThemeData theme) {
+    return Builder(
+      builder: (ctx) => MouseRegion(
+        onEnter: (_) => _showInlineSettings(ctx),
+        child: FilledButton(
+          onPressed: _canSend ? _onSend : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: biliPink,
             padding: const EdgeInsets.symmetric(
-              horizontal: Style.md,
+              horizontal: Style.lg,
               vertical: Style.sm,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildColorSection(theme),
-                const SizedBox(height: Style.sm),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildChipSection(
-                        theme,
-                        '位置',
-                        _modeOptions,
-                        _mode,
+            minimumSize: const Size(0, 40),
+          ),
+          child: ValueListenableBuilder<bool>(
+            valueListenable: _sending,
+            builder: (context, sending, _) {
+              return sending
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
                       ),
-                    ),
-                    const SizedBox(width: Style.md),
-                    Expanded(
-                      child: _buildChipSection(
+                    )
+                  : const Text('发送');
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 内联模式：hover 发送按钮时弹出设置面板（Overlay）。
+  void _showInlineSettings(BuildContext buttonContext) {
+    final renderBox = buttonContext.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final buttonPosition = renderBox.localToGlobal(Offset.zero);
+    final buttonSize = renderBox.size;
+
+    OverlayEntry? entry;
+    entry = OverlayEntry(
+      builder: (context) {
+        final theme = Theme.of(context);
+        // 面板在按钮正上方，右对齐按钮右边缘
+        final panelWidth = 300.0;
+        final panelLeft = (buttonPosition.dx + buttonSize.width - panelWidth)
+            .clamp(8.0, double.infinity);
+        return Stack(
+          children: [
+            // 透明遮罩，点击外部关闭
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => entry?.remove(),
+              child: Container(color: Colors.transparent),
+            ),
+            // 设置面板
+            Positioned(
+              left: panelLeft,
+              bottom: MediaQuery.of(context).size.height -
+                  buttonPosition.dy +
+                  4,
+              width: panelWidth,
+              child: Material(
+                color: theme.colorScheme.surface,
+                elevation: 8,
+                borderRadius: BorderRadius.circular(Style.radiusMd),
+                child: Padding(
+                  padding: const EdgeInsets.all(Style.md),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildColorSection(theme),
+                      const SizedBox(height: Style.sm),
+                      _buildChipSection(theme, '位置', _modeOptions, _mode),
+                      const SizedBox(height: Style.sm),
+                      _buildChipSection(
                         theme,
                         '大小',
                         _fontSizeOptions,
                         _fontSize,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: Style.sm),
-        ],
-      ),
+          ],
+        );
+      },
     );
+    Overlay.of(buttonContext).insert(entry);
   }
 
   /// 顶部输入行：文本框 + 清空 + 发送。
