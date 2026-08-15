@@ -142,6 +142,8 @@ class WinWinPlayerController {
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   Timer? _pollTimer;
   bool _disposed = false;
+  /// 是否已被销毁（公开访问器，供 UI 层检查）。
+  bool get disposed => _disposed;
   /// 是否正在加载/切换 media：为 true 时忽略 onEvent 的 error 事件，
   /// 避免旧 media 卸载产生的错误事件污染 [error]（真正的失败由 prepare
   /// 返回值 < 0 判断）。
@@ -951,8 +953,8 @@ class WinWinPlayerController {
       _sharedPlayer?.dispose();
       _sharedPlayer = null;
     }
-    qualityVersion.dispose();
-    danmakuReloadSignal.dispose();
-    subtitle.dispose();
+    // 不 dispose 任何 ValueNotifier，让 GC 自动回收
+    // 避免 UI 中的 ValueListenableBuilder 访问已 dispose 的 ValueNotifier
+    // 导致崩溃
   }
 }

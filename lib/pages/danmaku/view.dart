@@ -100,14 +100,19 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
   @override
   void dispose() {
     final c = widget.controller;
+    // 总是移除监听器，即使 controller 已销毁
+    // 因为 ValueNotifier 仍然存在，只是不再变化
     c.danmakuReloadSignal.removeListener(_onReload);
     c.position.removeListener(_onPosition);
     c.playing.removeListener(_onPlaying);
     c.seekCount.removeListener(_onSeek);
     c.danmaku?.localEcho.removeListener(_onLocalEcho);
-    c.danmaku?.dispose();
-    c.danmaku = null;
-    c.danmakuEngine = null;
+    // 只在 controller 未销毁时清理 danmaku 相关资源
+    if (!c.disposed) {
+      c.danmaku?.dispose();
+      c.danmaku = null;
+      c.danmakuEngine = null;
+    }
     super.dispose();
   }
 
@@ -157,10 +162,14 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
+    // 安全检查：controller 已销毁时不渲染
+    if (c.disposed) return const SizedBox.shrink();
     return IgnorePointer(
       child: ValueListenableBuilder<double>(
         valueListenable: c.danmakuOpacity,
         builder: (context, opacity, _) {
+          // 再次检查，防止在 builder 执行期间 controller 被销毁
+          if (c.disposed) return const SizedBox.shrink();
           return AnimatedOpacity(
             opacity: Pref.enableShowDanmaku
                 ? opacity.clamp(0.0, 1.0).toDouble()

@@ -47,10 +47,10 @@ const List<({int value, String label})> _colorOptions = [
   (value: 0xFFFFFF, label: '白色'),
   (value: 0xFE0302, label: '红色'),
   (value: 0xFF7204, label: '橙色'),
-  (value: 0xFFAA02, label: '黄色'),
+  (value: 0xFFAA02, label: '金色'),
   (value: 0x00CC00, label: '绿色'),
   (value: 0x00A1D6, label: '蓝色'),
-  (value: 0xCC0273, label: '紫红'),
+  (value: 0xCC0273, label: '紫色'),
   (value: 0x222222, label: '黑色'),
   (value: _vipGradualColor, label: '会员渐变'),
 ];
@@ -97,6 +97,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
   late final ValueNotifier<int> _fontSize;
   final ValueNotifier<bool> _sending = ValueNotifier(false);
   final FocusNode _focusNode = FocusNode();
+  OverlayEntry? _settingsOverlay;
 
   /// 弹窗模式的设置区折叠态（对标 BiliPai showSettings，默认收起）。
   bool _showSettings = false;
@@ -112,6 +113,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
 
   @override
   void dispose() {
+    _settingsOverlay?.remove();
     _textController.dispose();
     _mode.dispose();
     _color.dispose();
@@ -341,8 +343,8 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
 
   // ─────────────────────────── 内联模式 ───────────────────────────
 
-  /// 内联模式：单行输入框 + 发送按钮（样式对齐评论发送栏）。
-  /// 设置面板（颜色/位置/大小）改为 hover 发送按钮时弹出。
+  /// 内联模式：单行输入框 + 设置按钮 + 发送按钮（样式对齐评论发送栏）。
+  /// 设置面板（颜色/位置/大小）通过点击设置按钮展开。
   Widget _buildInline() {
     final theme = Theme.of(context);
     return Container(
@@ -397,6 +399,8 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
               ),
             ),
             const SizedBox(width: Style.sm),
+            _buildInlineSettingsButton(theme),
+            const SizedBox(width: Style.xs),
             _buildInlineSendButton(theme),
           ],
         ),
@@ -404,55 +408,63 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
     );
   }
 
-  /// 内联模式发送按钮：hover 时弹出设置面板（颜色/位置/大小）。
-  Widget _buildInlineSendButton(ThemeData theme) {
+  /// 内联模式设置按钮：点击展开弹幕样式设置面板。
+  Widget _buildInlineSettingsButton(ThemeData theme) {
     return Builder(
-      builder: (ctx) => MouseRegion(
-        onEnter: (_) => _showInlineSettings(ctx),
-        child: FilledButton(
-          onPressed: _canSend ? _onSend : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: biliPink,
-            padding: const EdgeInsets.symmetric(
-              horizontal: Style.lg,
-              vertical: Style.sm,
-            ),
-            minimumSize: const Size(0, 40),
-          ),
-          child: ValueListenableBuilder<bool>(
-            valueListenable: _sending,
-            builder: (context, sending, _) {
-              return sending
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('发送');
-            },
-          ),
-        ),
+      builder: (ctx) => IconButton(
+        icon: const Icon(Icons.palette_outlined, size: 20),
+        tooltip: '弹幕样式',
+        onPressed: () => _showInlineSettings(ctx),
       ),
     );
   }
 
-  /// 内联模式：hover 发送按钮时弹出设置面板（Overlay）。
+  /// 内联模式发送按钮。
+  Widget _buildInlineSendButton(ThemeData theme) {
+    return FilledButton(
+      onPressed: _canSend ? _onSend : null,
+      style: FilledButton.styleFrom(
+        backgroundColor: biliPink,
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.lg,
+          vertical: Style.sm,
+        ),
+        minimumSize: const Size(0, 40),
+      ),
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _sending,
+        builder: (context, sending, _) {
+          return sending
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('发送');
+        },
+      ),
+    );
+  }
+
+  /// 内联模式：点击设置按钮时弹出弹幕样式设置面板（Overlay）。
   void _showInlineSettings(BuildContext buttonContext) {
+    // 如果已有 overlay，先移除
+    _settingsOverlay?.remove();
+    
     final renderBox = buttonContext.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
     final buttonPosition = renderBox.localToGlobal(Offset.zero);
     final buttonSize = renderBox.size;
 
-    OverlayEntry? entry;
-    entry = OverlayEntry(
+    _settingsOverlay = OverlayEntry(
       builder: (context) {
         final theme = Theme.of(context);
         // 面板在按钮正上方，右对齐按钮右边缘
-        final panelWidth = 300.0;
+        final panelWidth = 340.0;
         final panelLeft = (buttonPosition.dx + buttonSize.width - panelWidth)
             .clamp(8.0, double.infinity);
         return Stack(
@@ -460,37 +472,82 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
             // 透明遮罩，点击外部关闭
             GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: () => entry?.remove(),
+              onTap: () {
+                _settingsOverlay?.remove();
+                _settingsOverlay = null;
+              },
               child: Container(color: Colors.transparent),
             ),
-            // 设置面板
+            // 设置面板（PiliPlus 风格）
             Positioned(
               left: panelLeft,
               bottom: MediaQuery.of(context).size.height -
                   buttonPosition.dy +
-                  4,
+                  8,
               width: panelWidth,
               child: Material(
-                color: theme.colorScheme.surface,
-                elevation: 8,
-                borderRadius: BorderRadius.circular(Style.radiusMd),
-                child: Padding(
-                  padding: const EdgeInsets.all(Style.md),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildColorSection(theme),
-                      const SizedBox(height: Style.sm),
-                      _buildChipSection(theme, '位置', _modeOptions, _mode),
-                      const SizedBox(height: Style.sm),
-                      _buildChipSection(
-                        theme,
-                        '大小',
-                        _fontSizeOptions,
-                        _fontSize,
+                color: theme.colorScheme.surfaceContainerHighest,
+                elevation: 12,
+                shadowColor: Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.2),
+                        width: 1,
                       ),
-                    ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 标题
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.palette_outlined,
+                                size: 18,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '弹幕样式',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // 分隔线
+                          Container(
+                            height: 1,
+                            color: theme.colorScheme.outlineVariant
+                                .withValues(alpha: 0.3),
+                          ),
+                          const SizedBox(height: 16),
+                          // 颜色选择
+                          _buildColorSection(theme),
+                          const SizedBox(height: 20),
+                          // 位置选择
+                          _buildChipSection(theme, '位置', _modeOptions, _mode),
+                          const SizedBox(height: 20),
+                          // 字号选择
+                          _buildChipSection(
+                            theme,
+                            '字号',
+                            _fontSizeOptions,
+                            _fontSize,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -499,7 +556,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
         );
       },
     );
-    Overlay.of(buttonContext).insert(entry);
+    Overlay.of(buttonContext).insert(_settingsOverlay!);
   }
 
   /// 顶部输入行：文本框 + 清空 + 发送。
@@ -617,14 +674,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: isVip ? _vipGradient : null,
-          color: isVip
-              ? null
-              : Color.from(
-                  alpha: 1.0,
-                  red: ((option.value >> 16) & 0xFF).toDouble(),
-                  green: ((option.value >> 8) & 0xFF).toDouble(),
-                  blue: (option.value & 0xFF).toDouble(),
-                ),
+          color: isVip ? null : Color(0xFF000000 | option.value),
           border: isSelected
               ? Border.all(width: 2, color: biliPink)
               : null,

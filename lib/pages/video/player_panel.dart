@@ -55,10 +55,12 @@ class PlayerPanel extends StatefulWidget {
 
 class _PlayerPanelState extends State<PlayerPanel> {
   Timer? _hideTimer;
+  Timer? _feedbackTimer;
   final ValueNotifier<bool> _controlsVisible = ValueNotifier(true);
   bool _draggingProgress = false;
   double _dragSeconds = 0;
   bool _volumePopupOpen = false;
+  bool _chapterPanelOpen = false;
 
   // ── Phase 4.3 手势反馈状态 ──
   /// 双击快进/快退波纹反馈：(isForward, deltaSec)，null 表示无反馈。
@@ -81,6 +83,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
   @override
   void dispose() {
     _hideTimer?.cancel();
+    _feedbackTimer?.cancel();
+    _dragFeedbackTimer?.cancel();
     _controlsVisible.dispose();
     _doubleTapFeedback.dispose();
     _longPressSpeedFeedback.dispose();
@@ -93,9 +97,13 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// 双击快进/快退反馈：短暂显示波纹 + 时间提示。
   void _onDoubleTapFeedback(bool isForward, int deltaSec) {
     _doubleTapFeedback.value = (isForward: isForward, deltaSec: deltaSec);
+    // 取消之前的 timer，防止重复触发
+    _feedbackTimer?.cancel();
     // 800ms 后自动清除反馈。
-    Timer(const Duration(milliseconds: 800), () {
-      _doubleTapFeedback.value = null;
+    _feedbackTimer = Timer(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        _doubleTapFeedback.value = null;
+      }
     });
   }
 
@@ -171,6 +179,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   void _maybeAutoHide() {
     if (!mounted) return;
+    // 检查 controller 是否已 dispose
+    if (widget.controller.disposed) return;
     final c = widget.controller;
     // 锁定状态 / 播放中 / 未拖动进度 / 未打开音量弹层时才自动隐藏。
     if (!_locked &&
@@ -293,7 +303,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
     // 500ms 后清除拖动反馈。
     _dragFeedbackTimer?.cancel();
     _dragFeedbackTimer = Timer(const Duration(milliseconds: 500), () {
-      _dragSeekFeedback.value = null;
+      if (mounted) {
+        _dragSeekFeedback.value = null;
+      }
     });
   }
 
@@ -302,6 +314,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
+    // 安全检查：controller 已销毁时不渲染，避免访问已释放的资源
+    if (c.disposed) {
+      return const ColoredBox(color: Colors.black);
+    }
     return PlayerFocus(
       controller: c,
       enabled: !_locked,
@@ -362,6 +378,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
               _buildLongPressSpeedFeedback(),
               _buildDragSeekFeedback(),
               if (_volumePopupOpen) _buildVolumePopup(),
+              // Phase 4.5：章节悬浮面板。
+              if (_chapterPanelOpen) _buildChapterPanel(),
               // Phase 4.3：锁定指示器（锁定时显示解锁按钮）。
               if (_locked) _buildLockIndicator(),
               if (!_locked)
@@ -1136,6 +1154,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return ListenableBuilder(
       listenable: Listenable.merge([c.subtitle, c.position]),
       builder: (context, _) {
+        // 安全检查：controller 已销毁时不渲染
+        if (c.disposed) return const SizedBox.shrink();
         final cue = c.subtitle.currentCue(c.position.value);
         if (cue == null) return const SizedBox.shrink();
         final text = cue.text.trim();
@@ -1210,37 +1230,169 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
 
 
-  /// Phase 4.5：章节列表按钮 — PopupMenu 显示章节，点击跳转。
+  /// Phase 4.5：章节列表按钮 — 点击显示右侧悬浮面板。
   Widget _buildChapterButton() {
     final c = widget.controller;
     final chapters = c.viewPoints;
     if (chapters.isEmpty) return const SizedBox.shrink();
-    return PopupMenuButton<double>(
-      tooltip: '章节',
-      icon: const Icon(Icons.bookmarks_outlined, color: Colors.white, size: 20),
-      iconSize: 20,
-      padding: const EdgeInsets.all(Style.sm),
-      onSelected: (sec) => c.seek(Duration(seconds: sec.round())),
-      itemBuilder: (context) => [
-        for (final vp in chapters)
-          PopupMenuItem<double>(
-            value: vp.from,
-            child: Text(
-              '${DurationUtils.formatDuration(vp.from.toInt())}  ${vp.title}',
-              style: TextStyle(
-                fontSize: 13,
-                color: vp.contains(c.position.value.inSeconds.toDouble())
-                    ? biliPink
-                    : null,
-                fontWeight: vp.contains(
-                  c.position.value.inSeconds.toDouble(),
-                )
-                    ? FontWeight.bold
-                    : FontWeight.normal,
+    return HoverContainer(
+      onTap: () {
+        setState(() => _chapterPanelOpen = !_chapterPanelOpen);
+      },
+      borderRadius: 6.0,
+      padding: const EdgeInsets.all(6),
+      hoverColor: Colors.white.withValues(alpha: 0.12),
+      child: const Icon(
+        Icons.bookmarks_outlined,
+        color: Colors.white,
+        size: 20,
+      ),
+    );
+  }
+
+  /// 章节悬浮面板 — 黑色半透明背景，显示章节列表。
+  Widget _buildChapterPanel() {
+    if (!_chapterPanelOpen) return const SizedBox.shrink();
+    
+    final c = widget.controller;
+    // 安全检查：controller 已销毁时不渲染。
+    if (c.disposed) return const SizedBox.shrink();
+    
+    final chapters = c.viewPoints;
+    if (chapters.isEmpty) return const SizedBox.shrink();
+
+    return Positioned(
+      right: 0,
+      top: 0,
+      bottom: 0,
+      child: Container(
+        width: 300,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.85),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(Style.radiusMd),
+            bottomLeft: Radius.circular(Style.radiusMd),
+          ),
+        ),
+        child: Column(
+          children: [
+            // 标题栏
+            Container(
+              padding: const EdgeInsets.all(Style.md),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    width: 0.5,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.bookmarks_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: Style.sm),
+                  const Text(
+                    '章节',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  HoverContainer(
+                    onTap: () {
+                      setState(() => _chapterPanelOpen = false);
+                    },
+                    borderRadius: 6.0,
+                    padding: const EdgeInsets.all(4),
+                    hoverColor: Colors.white.withValues(alpha: 0.12),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-      ],
+            // 章节列表
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: Style.sm),
+                itemCount: chapters.length,
+                itemBuilder: (context, index) {
+                  final vp = chapters[index];
+                  final isCurrent = vp.contains(
+                    c.position.value.inSeconds.toDouble(),
+                  );
+                  return HoverContainer(
+                    onTap: () {
+                      c.seek(Duration(seconds: vp.from.round()));
+                    },
+                    borderRadius: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Style.md,
+                      vertical: Style.sm,
+                    ),
+                    hoverColor: Colors.white.withValues(alpha: 0.08),
+                    child: Row(
+                      children: [
+                        // 时间范围
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              DurationUtils.formatDuration(vp.from.toInt()),
+                              style: TextStyle(
+                                color: isCurrent
+                                    ? biliPink
+                                    : Colors.white.withValues(alpha: 0.7),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              DurationUtils.formatDuration(vp.to.toInt()),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.5),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: Style.md),
+                        // 章节标题
+                        Expanded(
+                          child: Text(
+                            vp.title,
+                            style: TextStyle(
+                              color: isCurrent
+                                  ? biliPink
+                                  : Colors.white.withValues(alpha: 0.9),
+                              fontSize: 14,
+                              fontWeight: isCurrent
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
