@@ -1,6 +1,70 @@
 import 'dart:math';
 
 import 'package:flutter/rendering.dart';
+import 'package:winwin/theme/style.dart';
+
+/// 网格布局辅助代理集（对齐 PiliPlus Grid 与 BiliPai 响应式多列规范）。
+abstract final class Grid {
+  static const double smallCardWidth = 240.0;
+
+  /// 纵向卡片网格代理（如推荐流/热门流/关注流/动态视频流），适用于 [VideoCardV]。
+  static SliverGridDelegateWithExtentAndRatio videoCardVDelegate({
+    double maxCrossAxisExtent = 240.0,
+    double mainAxisExtent = 90.0,
+    double childAspectRatio = Style.aspectRatio,
+    double mainAxisSpacing = Style.cardSpace,
+    double crossAxisSpacing = Style.cardSpace,
+  }) =>
+      SliverGridDelegateWithExtentAndRatio(
+        maxCrossAxisExtent: maxCrossAxisExtent,
+        mainAxisSpacing: mainAxisSpacing,
+        crossAxisSpacing: crossAxisSpacing,
+        childAspectRatio: childAspectRatio,
+        mainAxisExtent: mainAxisExtent,
+      );
+
+  /// 横向卡片网格代理（如收藏夹详情视频列表/历史记录等），适用于 [VideoCardH]。
+  static SliverGridDelegateWithMaxCrossAxisExtent videoCardHDelegate({
+    double maxCrossAxisExtent = 420.0,
+    double mainAxisExtent = 108.0,
+    double mainAxisSpacing = Style.cardSpace,
+    double crossAxisSpacing = Style.cardSpace,
+  }) =>
+      SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: maxCrossAxisExtent,
+        mainAxisExtent: mainAxisExtent,
+        mainAxisSpacing: mainAxisSpacing,
+        crossAxisSpacing: crossAxisSpacing,
+      );
+
+  /// 文件夹卡片网格代理（如我的收藏夹列表），适用于文件夹封面卡片。
+  static SliverGridDelegateWithMaxCrossAxisExtent folderCardDelegate({
+    double maxCrossAxisExtent = 380.0,
+    double mainAxisExtent = 104.0,
+    double mainAxisSpacing = Style.cardSpace,
+    double crossAxisSpacing = Style.cardSpace,
+  }) =>
+      SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: maxCrossAxisExtent,
+        mainAxisExtent: mainAxisExtent,
+        mainAxisSpacing: mainAxisSpacing,
+        crossAxisSpacing: crossAxisSpacing,
+      );
+
+  /// 全动态多列卡片网格代理（如「全部」动态流），适用于 [_DynCard]。
+  static SliverGridDelegateWithMaxCrossAxisExtent dynCardDelegate({
+    double maxCrossAxisExtent = 520.0,
+    double? mainAxisExtent,
+    double mainAxisSpacing = Style.cardSpace,
+    double crossAxisSpacing = Style.cardSpace,
+  }) =>
+      SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: maxCrossAxisExtent,
+        mainAxisExtent: mainAxisExtent,
+        mainAxisSpacing: mainAxisSpacing,
+        crossAxisSpacing: crossAxisSpacing,
+      );
+}
 
 /// A [SliverGridDelegate] that lays out tiles with a maximum cross-axis
 /// extent while honoring both [childAspectRatio] and an additional fixed

@@ -32,9 +32,14 @@ class VideoCardV extends StatelessWidget {
   /// Hero 共享元素 tag（非空时启用封面转场）。建议传 `'cover_$bvid'`。
   final Object? heroTag;
 
+  String? get _cover =>
+      _opt(() => videoItem.cover as String?) ??
+      _opt(() => videoItem.pic as String?);
+
   @override
   Widget build(BuildContext context) {
-    final int duration = (videoItem.duration as num?)?.toInt() ?? 0;
+    final int duration =
+        (_opt(() => videoItem.duration as num?) ?? 0).toInt();
     final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.ios;
     final radius = shapes.medium;
     return Card(
@@ -54,7 +59,7 @@ class VideoCardV extends StatelessWidget {
                     clipBehavior: Clip.none,
                     children: [
                       NetworkImgLayer(
-                        src: videoItem.cover as String?,
+                        src: _cover,
                         width: maxWidth,
                         height: maxHeight,
                         borderRadius: BorderRadius.vertical(
@@ -86,10 +91,15 @@ class VideoCardV extends StatelessWidget {
   Widget _content(BuildContext context) {
     final theme = Theme.of(context);
     final String title = videoItem.title?.toString() ?? '';
-    final String? rcmdReason = videoItem.rcmdReason as String?;
-    final bool isFollowed = videoItem.isFollowed == true;
-    final dynamic owner = videoItem.owner;
-    final String ownerName = owner?.name?.toString() ?? '';
+    final String? rcmdReason = _opt(() => videoItem.rcmdReason as String?);
+    final bool isFollowed = _opt(() => videoItem.isFollowed == true) ?? false;
+    final dynamic owner = _opt(() => videoItem.owner) ??
+        _opt(() => videoItem.upper) ??
+        _opt(() => videoItem.author);
+    final String ownerName = _opt(() => owner?.name?.toString()) ??
+        _opt(() => videoItem.authorName as String?) ??
+        '';
+    final int? mid = _opt(() => (owner?.mid as num?)?.toInt());
 
     return Expanded(
       child: Padding(
@@ -113,43 +123,43 @@ class VideoCardV extends StatelessWidget {
                   PBadge(text: rcmdReason, type: PBadgeType.badge),
                 if (isFollowed)
                   PBadge(text: '已关注', type: PBadgeType.badge),
-                Flexible(
-                  child: GestureDetector(
-                    onTap: () {
-                      final mid = owner?.mid;
-                      if (mid != null && mid > 0) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MemberSpacePage(mid: mid),
+                if (ownerName.isNotEmpty)
+                  Flexible(
+                    child: GestureDetector(
+                      onTap: () {
+                        if (mid != null && mid > 0) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MemberSpacePage(mid: mid),
+                            ),
+                          );
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondaryContainer
+                              .withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        child: Text(
+                          ownerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          semanticsLabel: 'UP：$ownerName',
+                          style: TextStyle(
+                            height: 1.5,
+                            fontSize: theme.textTheme.labelMedium?.fontSize,
+                            color: theme.colorScheme.outline,
                           ),
-                        );
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.secondaryContainer
-                            .withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(100),
-                      ),
-                      child: Text(
-                        ownerName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        semanticsLabel: 'UP：$ownerName',
-                        style: TextStyle(
-                          height: 1.5,
-                          fontSize: theme.textTheme.labelMedium?.fontSize,
-                          color: theme.colorScheme.outline,
                         ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ],
@@ -159,7 +169,16 @@ class VideoCardV extends StatelessWidget {
   }
 
   Widget _videoStat(ThemeData theme) {
-    final dynamic stat = videoItem.stat;
+    final dynamic stat = _opt(() => videoItem.stat);
+    final dynamic cntInfo = _opt(() => videoItem.cntInfo);
+    final int? view = _opt(() => (stat?.view as num?)?.toInt()) ??
+        _opt(() => (cntInfo?.play as num?)?.toInt()) ??
+        _opt(() => (videoItem.play as num?)?.toInt());
+    final int? danmu = _opt(() => (stat?.danmu as num?)?.toInt()) ??
+        _opt(() => (stat?.danmaku as num?)?.toInt()) ??
+        _opt(() => (cntInfo?.danmaku as num?)?.toInt()) ??
+        _opt(() => (videoItem.danmaku as num?)?.toInt());
+
     final Color color = theme.colorScheme.outline.withValues(alpha: 0.8);
     final TextStyle style = TextStyle(fontSize: 12, color: color);
     return Row(
@@ -167,16 +186,24 @@ class VideoCardV extends StatelessWidget {
       children: [
         Icon(Icons.play_circle_outlined, size: 13, color: color),
         Text(
-          NumUtils.formatNum((stat?.view as num?)?.toInt()),
+          NumUtils.formatNum(view),
           style: style,
         ),
         const SizedBox(width: 4),
         Icon(Icons.subtitles_outlined, size: 13, color: color),
         Text(
-          NumUtils.formatNum((stat?.danmu as num?)?.toInt()),
+          NumUtils.formatNum(danmu),
           style: style,
         ),
       ],
     );
+  }
+}
+
+T? _opt<T>(T? Function() read) {
+  try {
+    return read();
+  } catch (_) {
+    return null;
   }
 }

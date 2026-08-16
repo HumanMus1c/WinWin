@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 
-import 'package:winwin/common/widgets/video_card/video_card_h.dart';
-import 'package:winwin/core/account/account_service.dart';
+import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/fav.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/fav/fav_models.dart';
+import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
+import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
+import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/num_utils.dart';
 
-/// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`）。
-///
-/// WinWin 精简版：收藏夹列表 + 点击进入视频列表详情。
+/// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
 void showFavPage(BuildContext context) {
   Navigator.of(context).push(
     MaterialPageRoute<void>(builder: (_) => const FavPage()),
@@ -28,6 +31,7 @@ class FavPage extends StatefulWidget {
 }
 
 class _FavPageState extends State<FavPage> {
+  final ScrollController _scrollController = ScrollController();
   final List<FavFolderInfo> _folders = [];
   int _page = 1;
   bool _hasMore = true;
@@ -38,6 +42,12 @@ class _FavPageState extends State<FavPage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _load({bool refresh = false}) async {
@@ -81,6 +91,14 @@ class _FavPageState extends State<FavPage> {
     }
   }
 
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200 && _hasMore && !_loading) {
+      _load();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,32 +113,48 @@ class _FavPageState extends State<FavPage> {
                       title: '暂无收藏夹',
                       subtitle: '去创建或收藏喜欢的视频吧',
                     )
-                  : RefreshIndicator(
-                  color: biliPink,
-                  onRefresh: () => _load(refresh: true),
-                  child: ListView.builder(
-                    itemCount: _folders.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == _folders.length) {
-                        if (_hasMore) {
-                          _load();
-                          return const Padding(
-                            padding: EdgeInsets.all(Style.md),
-                            child: Center(
-                              child: CircularProgressIndicator(strokeWidth: 2, color: biliPink),
+                  : NotificationListener<ScrollNotification>(
+                      onNotification: (n) {
+                        if (n is ScrollEndNotification) _onScroll();
+                        return false;
+                      },
+                      child: RefreshIndicator(
+                        color: biliPink,
+                        onRefresh: () => _load(refresh: true),
+                        child: CustomScrollView(
+                          controller: _scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          slivers: [
+                            SliverPadding(
+                              padding: const EdgeInsets.all(Style.safeSpace),
+                              sliver: SliverGrid.builder(
+                                gridDelegate: Grid.folderCardDelegate(),
+                                itemCount: _folders.length,
+                                itemBuilder: (context, index) {
+                                  final folder = _folders[index];
+                                  return _FavFolderCard(
+                                    folder: folder,
+                                    onTap: () => _openDetail(folder),
+                                  );
+                                },
+                              ),
                             ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      }
-                      final folder = _folders[index];
-                      return _FavFolderTile(
-                        folder: folder,
-                        onTap: () => _openDetail(folder),
-                      );
-                    },
-                  ),
-                ),
+                            if (_hasMore)
+                              const SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: EdgeInsets.all(Style.md),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: biliPink,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
     );
   }
 
@@ -148,28 +182,97 @@ class _FavPageState extends State<FavPage> {
   }
 }
 
-class _FavFolderTile extends StatelessWidget {
-  const _FavFolderTile({required this.folder, required this.onTap});
+/// 收藏夹文件夹卡片（宫格排版，对齐 PiliPlus FavVideoItem）。
+class _FavFolderCard extends StatelessWidget {
+  const _FavFolderCard({required this.folder, required this.onTap});
 
   final FavFolderInfo folder;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      leading: Icon(
-        folder.isPublic ? Icons.folder_outlined : Icons.lock_outline,
-        color: biliPink,
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final radius = shapes.medium;
+    final hasCover = folder.cover.isNotEmpty;
+
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.all(radius),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 封面
+              ClipRRect(
+                borderRadius: BorderRadius.all(radius),
+                child: SizedBox(
+                  width: 120,
+                  height: 120 * 9 / 16,
+                  child: hasCover
+                      ? NetworkImgLayer(
+                          src: folder.cover,
+                          width: 120,
+                          height: 120 * 9 / 16,
+                          borderRadius: BorderRadius.all(radius),
+                        )
+                      : Container(
+                          color: cs.secondaryContainer.withValues(alpha: 0.4),
+                          child: Icon(
+                            folder.isPublic
+                                ? Icons.folder_outlined
+                                : Icons.lock_outline,
+                            size: 32,
+                            color: biliPink,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // 文本描述
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      folder.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          '${folder.mediaCount} 个内容',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: cs.outline,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        PBadge(
+                          text: folder.isPublic ? '公开' : '私密',
+                          type: PBadgeType.badge,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      title: Text(folder.title),
-      subtitle: Text('${folder.mediaCount} 个内容 · ${folder.isPublic ? "公开" : "私密"}'),
-      trailing: const Icon(Icons.chevron_right),
     );
   }
 }
 
-// ── 收藏夹详情（视频列表） ──
+// ── 收藏夹详情（视频列表宫格） ──
 
 class FavDetailPage extends StatefulWidget {
   const FavDetailPage({super.key, required this.folder});
@@ -181,6 +284,7 @@ class FavDetailPage extends StatefulWidget {
 }
 
 class _FavDetailPageState extends State<FavDetailPage> {
+  final ScrollController _scrollController = ScrollController();
   final List<FavDetailItem> _items = [];
   int _page = 1;
   bool _hasMore = true;
@@ -190,6 +294,12 @@ class _FavDetailPageState extends State<FavDetailPage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _load({bool refresh = false}) async {
@@ -221,6 +331,14 @@ class _FavDetailPageState extends State<FavDetailPage> {
     }
   }
 
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200 && _hasMore && !_loading) {
+      _load();
+    }
+  }
+
   /// 打开收藏夹视频项：跳转视频详情页；
   /// 已失效资源（无 bvid）提示不可打开。
   void _openItem(FavDetailItem item) {
@@ -238,10 +356,34 @@ class _FavDetailPageState extends State<FavDetailPage> {
     );
   }
 
+  /// 播放全部视频（从第一个有效视频开始播放）。
+  void _playAll() {
+    final firstValid = _items.firstWhere(
+      (item) => item.bvid != null && item.bvid!.isNotEmpty,
+      orElse: () => FavDetailItem(),
+    );
+    if (firstValid.bvid != null && firstValid.bvid!.isNotEmpty) {
+      _openItem(firstValid);
+    } else {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('该收藏夹暂无可用视频')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.folder.title)),
+      floatingActionButton: _items.isNotEmpty
+          ? FloatingActionButton.extended(
+              onPressed: _playAll,
+              backgroundColor: biliPink,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.playlist_play),
+              label: const Text('播放全部'),
+            )
+          : null,
       body: _loading && _items.isEmpty
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _items.isEmpty
@@ -249,45 +391,286 @@ class _FavDetailPageState extends State<FavDetailPage> {
                   icon: Icons.folder_off_outlined,
                   title: '该收藏夹暂无视频',
                 )
-              : RefreshIndicator(
-              color: biliPink,
-              onRefresh: () => _load(refresh: true),
-              child: ListView.builder(
-                itemCount: _items.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == _items.length) {
-                    if (_hasMore) {
-                      _load();
-                      return const Padding(
-                        padding: EdgeInsets.all(Style.md),
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2, color: biliPink),
+              : NotificationListener<ScrollNotification>(
+                  onNotification: (n) {
+                    if (n is ScrollEndNotification) _onScroll();
+                    return false;
+                  },
+                  child: RefreshIndicator(
+                    color: biliPink,
+                    onRefresh: () => _load(refresh: true),
+                    child: CustomScrollView(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        // 头部概览信息区
+                        SliverToBoxAdapter(
+                          child: _buildHeaderInfo(),
                         ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  }
-                  final item = _items[index];
-                  return _FavVideoTile(
-                    item: item,
-                    onTap: () => _openItem(item),
-                  );
-                },
+                        // 视频列表多列宫格
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(
+                            Style.safeSpace,
+                            0,
+                            Style.safeSpace,
+                            80,
+                          ),
+                          sliver: SliverGrid.builder(
+                            gridDelegate: Grid.videoCardHDelegate(
+                              maxCrossAxisExtent: 440.0,
+                              mainAxisExtent: 110.0,
+                            ),
+                            itemCount: _items.length,
+                            itemBuilder: (context, index) {
+                              final item = _items[index];
+                              return _FavVideoCard(
+                                item: item,
+                                onTap: () => _openItem(item),
+                              );
+                            },
+                          ),
+                        ),
+                        if (_hasMore)
+                          const SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.all(Style.md),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: biliPink,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+    );
+  }
+
+  /// 顶部文件夹概览信息卡片
+  Widget _buildHeaderInfo() {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final folder = widget.folder;
+    final upper = folder.upper;
+
+    return Padding(
+      padding: const EdgeInsets.all(Style.safeSpace),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(Style.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (folder.cover.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(Style.radiusSm),
+                  child: NetworkImgLayer(
+                    src: folder.cover,
+                    width: 110,
+                    height: 70,
+                  ),
+                ),
+              const SizedBox(width: Style.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      folder.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (upper?.name != null && upper!.name!.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          if (upper.mid != null && upper.mid! > 0) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MemberSpacePage(mid: upper.mid!),
+                              ),
+                            );
+                          }
+                        },
+                        child: Text(
+                          '创建者：${upper.name}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: cs.primary,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '共 ${folder.mediaCount} 条视频 · ${folder.isPublic ? "公开" : "私密"}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: cs.outline,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _FavVideoTile extends StatelessWidget {
-  const _FavVideoTile({required this.item, this.onTap});
+/// 收藏夹单个视频横向卡片（对齐 FavVideoCardH 与 BiliPai FavoritePersonalCard）。
+class _FavVideoCard extends StatelessWidget {
+  const _FavVideoCard({required this.item, this.onTap});
 
   final FavDetailItem item;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return VideoCardH(videoItem: item, onTap: onTap);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final radius = shapes.medium;
+    final duration = item.duration ?? 0;
+    final isInvalid = item.bvid == null || item.bvid!.isEmpty;
+    final upper = item.upper;
+    final cnt = item.cntInfo;
+
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.all(radius),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 封面
+              ClipRRect(
+                borderRadius: BorderRadius.all(radius),
+                child: SizedBox(
+                  width: 140,
+                  height: 140 * 9 / 16,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: NetworkImgLayer(
+                          src: item.cover,
+                          width: 140,
+                          height: 140 * 9 / 16,
+                          borderRadius: BorderRadius.all(radius),
+                          heroTag: item.bvid != null ? 'cover_${item.bvid}' : null,
+                        ),
+                      ),
+                      if (duration > 0)
+                        Positioned(
+                          right: 4,
+                          bottom: 4,
+                          child: PBadge(
+                            text: DurationUtils.formatDuration(duration),
+                            type: PBadgeType.duration,
+                          ),
+                        ),
+                      if (isInvalid)
+                        Positioned(
+                          left: 4,
+                          top: 4,
+                          child: PBadge(
+                            text: '已失效',
+                            type: PBadgeType.badge,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // 右侧描述
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      item.title ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        height: 1.35,
+                        color: isInvalid ? cs.outline : null,
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (upper?.name != null && upper!.name!.isNotEmpty)
+                          Row(
+                            children: [
+                              Icon(Icons.person_outline, size: 12, color: cs.outline),
+                              const SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  upper.name!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: cs.outline,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            if (cnt?.play != null) ...[
+                              Icon(
+                                Icons.play_circle_outlined,
+                                size: 12,
+                                color: cs.outline,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                NumUtils.formatNum(cnt!.play),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: cs.outline,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            if (cnt?.danmaku != null) ...[
+                              Icon(
+                                Icons.subtitles_outlined,
+                                size: 12,
+                                color: cs.outline,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                NumUtils.formatNum(cnt!.danmaku),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: cs.outline,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
