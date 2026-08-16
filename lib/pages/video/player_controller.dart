@@ -117,9 +117,10 @@ class WinWinPlayerController {
   final SubtitleController subtitle = SubtitleController();
 
   /// 章节标记列表（Phase 4.5，来自 playInfo view_points）。
-  /// 由 [setViewPoints] 设置，供面板在进度条上渲染章节标记。
-  List<ViewPoint> _viewPoints = const [];
-  List<ViewPoint> get viewPoints => _viewPoints;
+  /// 由 [setViewPoints] 设置，供面板在进度条与章节面板中渲染。
+  final ValueNotifier<List<ViewPoint>> viewPointsNotifier =
+      ValueNotifier(const []);
+  List<ViewPoint> get viewPoints => viewPointsNotifier.value;
 
   /// 是否启用 SponsorBlock 自动跳过（默认 true，用户可在设置中关闭）。
   bool sponsorBlockEnabled = Pref.enableSponsorBlock;
@@ -788,13 +789,13 @@ class WinWinPlayerController {
 
   /// Phase 4.5：设置章节标记（来自 playInfo view_points）。
   void setViewPoints(List<ViewPoint> points) {
-    _viewPoints = List.unmodifiable(points);
+    viewPointsNotifier.value = List.unmodifiable(points);
   }
 
   /// Phase 4.5：查找当前播放位置对应的章节标题（无则返回 null）。
   String? currentChapterTitle() {
     final posSec = position.value.inSeconds.toDouble();
-    for (final vp in _viewPoints) {
+    for (final vp in viewPointsNotifier.value) {
       if (vp.contains(posSec)) return vp.title;
     }
     return null;

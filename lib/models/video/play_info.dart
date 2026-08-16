@@ -28,16 +28,38 @@ class PlayInfoModel {
   factory PlayInfoModel.fromJson(Map<String, dynamic> json) {
     final viewPointsJson = json['view_points'];
     final subtitleJson = json['subtitle'];
+    List<ViewPoint> parsedPoints = const [];
+    if (viewPointsJson is List) {
+      final rawList = viewPointsJson
+          .whereType<Map>()
+          .map((e) => ViewPoint.fromJson(e.cast<String, dynamic>()))
+          .toList()
+        ..sort((a, b) => a.from.compareTo(b.from));
+
+      final fixedList = <ViewPoint>[];
+      for (int i = 0; i < rawList.length; i++) {
+        var vp = rawList[i];
+        if (vp.to <= vp.from) {
+          if (i + 1 < rawList.length && rawList[i + 1].from > vp.from) {
+            vp = ViewPoint(
+              from: vp.from,
+              to: rawList[i + 1].from,
+              title: vp.title,
+              type: vp.type,
+            );
+          }
+        }
+        if (vp.to > vp.from || vp.title.isNotEmpty) {
+          fixedList.add(vp);
+        }
+      }
+      parsedPoints = fixedList;
+    }
+
     return PlayInfoModel(
       lastPlayTime: _asInt(json['last_play_time']) ?? 0,
       lastPlayCid: _asInt(json['last_play_cid']),
-      viewPoints: viewPointsJson is List
-          ? viewPointsJson
-              .whereType<Map>()
-              .map((e) => ViewPoint.fromJson(e.cast<String, dynamic>()))
-              .where((v) => v.to > v.from)
-              .toList()
-          : const [],
+      viewPoints: parsedPoints,
       subtitle: subtitleJson is Map
           ? SubtitleInfo.fromJson(subtitleJson.cast<String, dynamic>())
           : null,
@@ -71,10 +93,17 @@ class ViewPoint {
       positionSec >= from && positionSec < to;
 
   factory ViewPoint.fromJson(Map<String, dynamic> json) {
+    final from = _asDouble(json['from']) ?? 0;
+    var to = _asDouble(json['to']) ?? 0;
+    final dur = _asDouble(json['duration']);
+    if (to <= from && dur != null && dur > 0) {
+      to = from + dur;
+    }
+    final rawTitle = json['title'] ?? json['content'] ?? '';
     return ViewPoint(
-      from: _asDouble(json['from']) ?? 0,
-      to: _asDouble(json['to']) ?? 0,
-      title: json['title']?.toString() ?? '',
+      from: from,
+      to: to,
+      title: rawTitle.toString(),
       type: json['type']?.toString() ?? '',
     );
   }

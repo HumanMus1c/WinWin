@@ -182,11 +182,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
     // 检查 controller 是否已 dispose
     if (widget.controller.disposed) return;
     final c = widget.controller;
-    // 锁定状态 / 播放中 / 未拖动进度 / 未打开音量弹层时才自动隐藏。
+    // 锁定状态 / 播放中 / 未拖动进度 / 未打开音量弹层 / 未打开章节面板时才自动隐藏。
     if (!_locked &&
         c.playing.value &&
         !_draggingProgress &&
-        !_volumePopupOpen) {
+        !_volumePopupOpen &&
+        !_chapterPanelOpen) {
       _controlsVisible.value = false;
     }
   }
@@ -322,7 +323,13 @@ class _PlayerPanelState extends State<PlayerPanel> {
       controller: c,
       enabled: !_locked,
       onToggleFullscreen: widget.onToggleFullscreen,
-      onEscape: widget.onEscape,
+      onEscape: () {
+        if (_chapterPanelOpen) {
+          setState(() => _chapterPanelOpen = false);
+          return;
+        }
+        widget.onEscape?.call();
+      },
       onToggleDanmaku: _toggleDanmaku,
       onLockToggle: (locked) => setState(() {
         _locked = locked;
@@ -339,69 +346,75 @@ class _PlayerPanelState extends State<PlayerPanel> {
         onExit: (_) => _hideControlsNow(),
         child: ColoredBox(
           color: Colors.black,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _buildVideoSurface(c),
-              // 弹幕层（IgnorePointer，不拦截鼠标/点击）。
-              Positioned.fill(
-                child: WinWinDanmaku(
-                  controller: c,
-                  fullscreen: widget.fullscreen,
-                ),
-              ),
-              // Phase 4.4：字幕层（底部居中，IgnorePointer 不拦截手势）。
-              Positioned.fill(
-                child: IgnorePointer(child: _buildSubtitleLayer(c)),
-              ),
-              // Phase 4.3：手势层 — 单击(播放/暂停) + 双击(快进/快退) +
-              // 长按(3x倍速) + 水平拖动(快进)。
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _onVideoTap,
-                  onDoubleTapDown: _onDoubleTapDown,
-                  onDoubleTap: _onDoubleTap,
-                  onLongPressStart: (_) => _onLongPressStart(),
-                  onLongPressEnd: (_) => _onLongPressEnd(),
-                  onHorizontalDragStart: _onHorizontalDragStart,
-                  onHorizontalDragUpdate: _onHorizontalDragUpdate,
-                  onHorizontalDragEnd: _onHorizontalDragEnd,
-                ),
-              ),
-              _buildCenterOverlay(),
-              // BiliPai centerPlayButton：暂停时居中显示大播放按钮
-              //（点击由手势层 _onVideoTap 接管，此处仅视觉展示）。
-              _buildCenterPlayButton(),
-              // Phase 4.3：手势反馈叠加层。
-              _buildDoubleTapFeedback(),
-              _buildLongPressSpeedFeedback(),
-              _buildDragSeekFeedback(),
-              if (_volumePopupOpen) _buildVolumePopup(),
-              // Phase 4.5：章节悬浮面板。
-              if (_chapterPanelOpen) _buildChapterPanel(),
-              // Phase 4.3：锁定指示器（锁定时显示解锁按钮）。
-              if (_locked) _buildLockIndicator(),
-              if (!_locked)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable: _controlsVisible,
-                    builder: (context, visible, _) {
-                      return AnimatedOpacity(
-                        opacity: visible ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 200),
-                        child: IgnorePointer(
-                          ignoring: !visible,
-                          child: _buildControlBar(),
-                        ),
-                      );
-                    },
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final panelWidth =
+                  (constraints.maxWidth / 3).clamp(240.0, 560.0);
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildVideoSurface(c),
+                  // 弹幕层（IgnorePointer，不拦截鼠标/点击）。
+                  Positioned.fill(
+                    child: WinWinDanmaku(
+                      controller: c,
+                      fullscreen: widget.fullscreen,
+                    ),
                   ),
-                ),
-            ],
+                  // Phase 4.4：字幕层（底部居中，IgnorePointer 不拦截手势）。
+                  Positioned.fill(
+                    child: IgnorePointer(child: _buildSubtitleLayer(c)),
+                  ),
+                  // Phase 4.3：手势层 — 单击(播放/暂停) + 双击(快进/快退) +
+                  // 长按(3x倍速) + 水平拖动(快进)。
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _onVideoTap,
+                      onDoubleTapDown: _onDoubleTapDown,
+                      onDoubleTap: _onDoubleTap,
+                      onLongPressStart: (_) => _onLongPressStart(),
+                      onLongPressEnd: (_) => _onLongPressEnd(),
+                      onHorizontalDragStart: _onHorizontalDragStart,
+                      onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                      onHorizontalDragEnd: _onHorizontalDragEnd,
+                    ),
+                  ),
+                  _buildCenterOverlay(),
+                  // BiliPai centerPlayButton：暂停时居中显示大播放按钮
+                  //（点击由手势层 _onVideoTap 接管，此处仅视觉展示）。
+                  _buildCenterPlayButton(),
+                  // Phase 4.3：手势反馈叠加层。
+                  _buildDoubleTapFeedback(),
+                  _buildLongPressSpeedFeedback(),
+                  _buildDragSeekFeedback(),
+                  if (_volumePopupOpen) _buildVolumePopup(),
+                  // Phase 4.5：章节悬浮面板（覆盖右侧 1/3 区域）。
+                  _buildChapterPanel(panelWidth),
+                  // Phase 4.3：锁定指示器（锁定时显示解锁按钮）。
+                  if (_locked) _buildLockIndicator(),
+                  if (!_locked)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: _controlsVisible,
+                        builder: (context, visible, _) {
+                          return AnimatedOpacity(
+                            opacity: visible ? 1.0 : 0.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: IgnorePointer(
+                              ignoring: !visible,
+                              child: _buildControlBar(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -433,7 +446,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   vertical: Style.md,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
+                  color: Colors.black.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(Style.radiusSm),
                 ),
                 child: Row(
@@ -508,7 +521,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   vertical: Style.md,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
+                  color: Colors.black.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(Style.radiusSm),
                 ),
                 child: Column(
@@ -717,10 +730,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
               const SizedBox(width: Style.md),
               _buildDanmakuChip(),
               const Spacer(),
-              // 右侧：音频标签 + 画质 + 倍速 + 字幕 + 功能按钮
+              // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
               _buildAudioCodecLabel(),
               _buildQualityLabel(),
               _buildSpeedLabel(),
+              _buildChapterButton(),
               _buildSubtitleChip(),
               const SizedBox(width: Style.sm),
               _iconButton(
@@ -840,7 +854,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
   Widget _buildProgressSlider() {
     final c = widget.controller;
     return ListenableBuilder(
-      listenable: Listenable.merge([c.position, c.duration]),
+      listenable: Listenable.merge([
+        c.position,
+        c.duration,
+        c.viewPointsNotifier,
+      ]),
       builder: (context, _) {
         final durSec = c.duration.value.inSeconds.toDouble();
         final maxSec = durSec > 0 ? durSec : 1.0;
@@ -968,7 +986,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
           vertical: Style.xs,
         ),
         decoration: BoxDecoration(
-          color: enabled ? biliBlue.withOpacity(0.22) : Colors.white12,
+          color: enabled ? biliBlue.withValues(alpha: 0.22) : Colors.white12,
           borderRadius: BorderRadius.circular(Style.radiusFull),
         ),
         child: Row(
@@ -1019,7 +1037,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               vertical: Style.xs,
             ),
             decoration: BoxDecoration(
-              color: isActive ? biliBlue.withOpacity(0.22) : Colors.white12,
+              color: isActive ? biliBlue.withValues(alpha: 0.22) : Colors.white12,
               borderRadius: BorderRadius.circular(Style.radiusFull),
             ),
             child: Row(
@@ -1182,7 +1200,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 vertical: Style.xs,
               ),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(bgOpacity),
+                color: Colors.black.withValues(alpha: bgOpacity),
                 borderRadius: BorderRadius.circular(Style.radiusXs),
               ),
               child: Text(
@@ -1230,169 +1248,290 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
 
 
-  /// Phase 4.5：章节列表按钮 — 点击显示右侧悬浮面板。
+  /// 章节列表按钮（BiliPai 风格圆角 chip）：有章节时显示，点击打开/关闭章节面板。
   Widget _buildChapterButton() {
     final c = widget.controller;
-    final chapters = c.viewPoints;
-    if (chapters.isEmpty) return const SizedBox.shrink();
-    return HoverContainer(
-      onTap: () {
-        setState(() => _chapterPanelOpen = !_chapterPanelOpen);
+    return ValueListenableBuilder<List<ViewPoint>>(
+      valueListenable: c.viewPointsNotifier,
+      builder: (context, chapters, _) {
+        if (chapters.isEmpty) return const SizedBox.shrink();
+        final isOpen = _chapterPanelOpen;
+        return HoverContainer(
+          onTap: () {
+            setState(() => _chapterPanelOpen = !_chapterPanelOpen);
+            _onPointerActivity();
+          },
+          borderRadius: Style.radiusFull,
+          padding: const EdgeInsets.symmetric(
+            horizontal: Style.sm,
+            vertical: Style.xs,
+          ),
+          hoverColor: Colors.white.withValues(alpha: 0.12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Style.sm,
+              vertical: Style.xs,
+            ),
+            decoration: BoxDecoration(
+              color: isOpen ? biliBlue.withValues(alpha: 0.22) : Colors.white12,
+              borderRadius: BorderRadius.circular(Style.radiusFull),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isOpen ? Icons.bookmarks : Icons.bookmarks_outlined,
+                  size: 14,
+                  color: isOpen ? biliBlue : Colors.white70,
+                ),
+                const SizedBox(width: Style.xs),
+                Text(
+                  '章节',
+                  style: TextStyle(
+                    color: isOpen ? biliBlue : Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       },
-      borderRadius: 6.0,
-      padding: const EdgeInsets.all(6),
-      hoverColor: Colors.white.withValues(alpha: 0.12),
-      child: const Icon(
-        Icons.bookmarks_outlined,
-        color: Colors.white,
-        size: 20,
-      ),
     );
   }
 
-  /// 章节悬浮面板 — 黑色半透明背景，显示章节列表。
-  Widget _buildChapterPanel() {
-    if (!_chapterPanelOpen) return const SizedBox.shrink();
-    
+  /// 章节悬浮面板 — 覆盖视频画面右侧 1/3 区域的黑色半透明面板，每行展示「时间节点范围 - 章节标题」。
+  Widget _buildChapterPanel(double panelWidth) {
     final c = widget.controller;
-    // 安全检查：controller 已销毁时不渲染。
-    if (c.disposed) return const SizedBox.shrink();
-    
-    final chapters = c.viewPoints;
-    if (chapters.isEmpty) return const SizedBox.shrink();
-
-    return Positioned(
-      right: 0,
-      top: 0,
-      bottom: 0,
-      child: Container(
-        width: 300,
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.85),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(Style.radiusMd),
-            bottomLeft: Radius.circular(Style.radiusMd),
-          ),
-        ),
-        child: Column(
-          children: [
-            // 标题栏
-            Container(
-              padding: const EdgeInsets.all(Style.md),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    width: 0.5,
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.bookmarks_outlined,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  const SizedBox(width: Style.sm),
-                  const Text(
-                    '章节',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+    return ValueListenableBuilder<List<ViewPoint>>(
+      valueListenable: c.viewPointsNotifier,
+      builder: (context, chapters, _) {
+        if (chapters.isEmpty) return const SizedBox.shrink();
+        return AnimatedPositioned(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          right: _chapterPanelOpen ? 0 : -panelWidth - 10,
+          top: 0,
+          bottom: 0,
+          width: panelWidth,
+          child: IgnorePointer(
+            ignoring: !_chapterPanelOpen,
+            child: MouseRegion(
+              onHover: (_) => _onPointerActivity(),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {}, // 吸收点击，防止穿透到视频触发暂停
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xE6141414), // 黑色半透明
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(Style.radiusMd),
+                      bottomLeft: Radius.circular(Style.radiusMd),
                     ),
-                  ),
-                  const Spacer(),
-                  HoverContainer(
-                    onTap: () {
-                      setState(() => _chapterPanelOpen = false);
-                    },
-                    borderRadius: 6.0,
-                    padding: const EdgeInsets.all(4),
-                    hoverColor: Colors.white.withValues(alpha: 0.12),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 18,
+                    border: Border(
+                      left: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        width: 0.8,
+                      ),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(-4, 0),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            // 章节列表
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: Style.sm),
-                itemCount: chapters.length,
-                itemBuilder: (context, index) {
-                  final vp = chapters[index];
-                  final isCurrent = vp.contains(
-                    c.position.value.inSeconds.toDouble(),
-                  );
-                  return HoverContainer(
-                    onTap: () {
-                      c.seek(Duration(seconds: vp.from.round()));
-                    },
-                    borderRadius: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: Style.md,
-                      vertical: Style.sm,
-                    ),
-                    hoverColor: Colors.white.withValues(alpha: 0.08),
-                    child: Row(
-                      children: [
-                        // 时间范围
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Column(
+                    children: [
+                      // 顶部标题栏
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Style.md,
+                          vertical: Style.md,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              width: 0.5,
+                            ),
+                          ),
+                        ),
+                        child: Row(
                           children: [
+                            const Icon(
+                              Icons.bookmarks_outlined,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            const SizedBox(width: Style.sm),
                             Text(
-                              DurationUtils.formatDuration(vp.from.toInt()),
-                              style: TextStyle(
-                                color: isCurrent
-                                    ? biliPink
-                                    : Colors.white.withValues(alpha: 0.7),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                              '章节 (${chapters.length})',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              DurationUtils.formatDuration(vp.to.toInt()),
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5),
-                                fontSize: 11,
+                            const Spacer(),
+                            HoverContainer(
+                              onTap: () {
+                                setState(() => _chapterPanelOpen = false);
+                              },
+                              borderRadius: 6.0,
+                              padding: const EdgeInsets.all(4),
+                              hoverColor: Colors.white.withValues(alpha: 0.12),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white70,
+                                size: 18,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(width: Style.md),
-                        // 章节标题
-                        Expanded(
-                          child: Text(
-                            vp.title,
-                            style: TextStyle(
-                              color: isCurrent
-                                  ? biliPink
-                                  : Colors.white.withValues(alpha: 0.9),
-                              fontSize: 14,
-                              fontWeight: isCurrent
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                      ),
+                      // 章节列表
+                      Expanded(
+                        child: ListenableBuilder(
+                          listenable: c.position,
+                          builder: (context, _) {
+                            final currentSec =
+                                c.position.value.inSeconds.toDouble();
+                            return ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: Style.xs,
+                                horizontal: Style.xs,
+                              ),
+                              itemCount: chapters.length,
+                              itemBuilder: (context, index) {
+                                final vp = chapters[index];
+                                final isCurrent = vp.contains(currentSec);
+                                final fromStr = DurationUtils.formatDuration(
+                                  vp.from.toInt(),
+                                );
+                                final toStr = DurationUtils.formatDuration(
+                                  vp.to.toInt(),
+                                );
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 2,
+                                  ),
+                                  child: HoverContainer(
+                                    onTap: () {
+                                      c.seek(Duration(seconds: vp.from.round()));
+                                    },
+                                    borderRadius: Style.radiusSm,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: Style.sm,
+                                      vertical: Style.sm,
+                                    ),
+                                    color: isCurrent
+                                        ? biliPink.withValues(alpha: 0.14)
+                                        : Colors.transparent,
+                                    hoverColor: isCurrent
+                                        ? biliPink.withValues(alpha: 0.22)
+                                        : Colors.white.withValues(alpha: 0.08),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        // 播放状态指示或序号
+                                        SizedBox(
+                                          width: 22,
+                                          child: isCurrent
+                                              ? const Icon(
+                                                  Icons.play_arrow_rounded,
+                                                  color: biliPink,
+                                                  size: 18,
+                                                )
+                                              : Text(
+                                                  '${index + 1}'.padLeft(2, '0'),
+                                                  style: TextStyle(
+                                                    color: Colors.white.withValues(
+                                                      alpha: 0.35,
+                                                    ),
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                        ),
+                                        const SizedBox(width: Style.xs),
+                                        // 时间节点范围
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isCurrent
+                                                ? biliPink.withValues(
+                                                    alpha: 0.22,
+                                                  )
+                                                : Colors.white.withValues(
+                                                    alpha: 0.06,
+                                                  ),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            '$fromStr - $toStr',
+                                            style: TextStyle(
+                                              color: isCurrent
+                                                  ? biliPink
+                                                  : Colors.white.withValues(
+                                                      alpha: 0.8,
+                                                    ),
+                                              fontSize: 11,
+                                              fontWeight: isCurrent
+                                                  ? FontWeight.w600
+                                                  : FontWeight.normal,
+                                              fontFeatures: const [
+                                                FontFeature.tabularFigures(),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: Style.sm),
+                                        // 章节标题
+                                        Expanded(
+                                          child: Text(
+                                            vp.title.isEmpty
+                                                ? '章节 ${index + 1}'
+                                                : vp.title,
+                                            style: TextStyle(
+                                              color: isCurrent
+                                                  ? biliPink
+                                                  : Colors.white.withValues(
+                                                      alpha: 0.9,
+                                                    ),
+                                              fontSize: 13,
+                                              fontWeight: isCurrent
+                                                  ? FontWeight.w600
+                                                  : FontWeight.normal,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
-                      ],
-                    ),
-                  );
-                },
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
