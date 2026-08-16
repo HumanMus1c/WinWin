@@ -57,9 +57,23 @@ class _SearchPanelState extends State<SearchPanel>
     super.dispose();
   }
 
+  void _checkAutoLoad() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_hasMore || _loading || !_firstLoaded) return;
+      if (_scrollController.hasClients) {
+        final pos = _scrollController.position;
+        if (pos.maxScrollExtent <= 0) {
+          _loadMore();
+        }
+      }
+    });
+  }
+
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 300) {
       _loadMore();
     }
   }
@@ -95,6 +109,7 @@ class _SearchPanelState extends State<SearchPanel>
           break;
       }
     });
+    _checkAutoLoad();
   }
 
   void _loadMore() {
@@ -128,6 +143,9 @@ class _SearchPanelState extends State<SearchPanel>
         padding: const EdgeInsets.all(Style.md),
         itemCount: _items.length + 1,
         itemBuilder: (context, index) {
+          if (index >= _items.length - 2) {
+            _loadMore();
+          }
           if (index == _items.length) {
             return _buildFooter();
           }

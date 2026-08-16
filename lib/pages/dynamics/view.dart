@@ -116,14 +116,29 @@ class _DynTabPageState extends State<_DynTabPage>
   void initState() {
     super.initState();
     AccountService().addListener(_onAccountChanged);
+    _scrollController.addListener(_onScroll);
     _load(refresh: true);
   }
 
   @override
   void dispose() {
     AccountService().removeListener(_onAccountChanged);
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _checkAutoLoad() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_hasMore || _loading) return;
+      if (_scrollController.hasClients) {
+        final pos = _scrollController.position;
+        if (pos.maxScrollExtent <= 0) {
+          _load(refresh: false);
+        }
+      }
+    });
   }
 
   void _onAccountChanged() {
@@ -161,6 +176,7 @@ class _DynTabPageState extends State<_DynTabPage>
         _offset = response.hasMore ? response.offset : null;
         _hasMore = response.hasMore;
         setState(() => _state = Success(response));
+        _checkAutoLoad();
       case Error():
         setState(() => _state = res);
       case Loading():
@@ -182,7 +198,9 @@ class _DynTabPageState extends State<_DynTabPage>
     super.build(context);
     return NotificationListener<ScrollNotification>(
       onNotification: (n) {
-        if (n is ScrollEndNotification) _onScroll();
+        if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
+          _onScroll();
+        }
         return false;
       },
       child: AppRefreshIndicator(

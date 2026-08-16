@@ -37,18 +37,34 @@ class _ToviewPageState extends State<ToviewPage> {
   int? _totalCount;
   bool _hasMore = true;
   bool _loading = true;
+  bool _isLoadingMore = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _checkAutoLoad() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_hasMore || _loading || _isLoadingMore) return;
+      if (_scrollController.hasClients) {
+        final pos = _scrollController.position;
+        if (pos.maxScrollExtent <= 0) {
+          _load();
+        }
+      }
+    });
   }
 
   Future<void> _load({bool refresh = false}) async {
@@ -56,12 +72,19 @@ class _ToviewPageState extends State<ToviewPage> {
       _page = 1;
       _hasMore = true;
       _items.clear();
+      _loading = true;
+      _isLoadingMore = false;
+      setState(() {});
+    } else {
+      if (!_hasMore || _loading || _isLoadingMore) return;
+      _isLoadingMore = true;
+      setState(() {});
     }
-    if (!_hasMore) return;
 
     if (!Accounts.main.isLogin) {
       setState(() {
         _loading = false;
+        _isLoadingMore = false;
         _error = '请先登录';
       });
       return;
@@ -74,6 +97,7 @@ class _ToviewPageState extends State<ToviewPage> {
       case Success(:final response):
         setState(() {
           _loading = false;
+          _isLoadingMore = false;
           _error = null;
           _totalCount = response.count;
           if (response.list != null) _items.addAll(response.list!);
@@ -81,10 +105,14 @@ class _ToviewPageState extends State<ToviewPage> {
               (response.list?.isNotEmpty ?? false);
           _page++;
         });
+        _checkAutoLoad();
       case Error(:final errMsg):
         setState(() {
           _loading = false;
-          _error = errMsg ?? '加载失败';
+          _isLoadingMore = false;
+          if (_items.isEmpty) {
+            _error = errMsg ?? '加载失败';
+          }
         });
       case Loading():
         break;
@@ -92,9 +120,13 @@ class _ToviewPageState extends State<ToviewPage> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 200 && _hasMore && !_loading) {
+    if (!_hasMore || _loading || _isLoadingMore) return;
+    if (_scrollController.hasClients) {
+      final pos = _scrollController.position;
+      if (pos.pixels >= pos.maxScrollExtent - 300) {
+        _load();
+      }
+    } else {
       _load();
     }
   }
@@ -220,7 +252,9 @@ class _ToviewPageState extends State<ToviewPage> {
                     )
                   : NotificationListener<ScrollNotification>(
                       onNotification: (n) {
-                        if (n is ScrollEndNotification) _onScroll();
+                        if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
+                          _onScroll();
+                        }
                         return false;
                       },
                       child: RefreshIndicator(
@@ -244,6 +278,9 @@ class _ToviewPageState extends State<ToviewPage> {
                                 ),
                                 itemCount: _items.length,
                                 itemBuilder: (context, index) {
+                                  if (index >= _items.length - 2) {
+                                    _onScroll();
+                                  }
                                   final item = _items[index];
                                   return _ToviewCard(
                                     item: item,
@@ -253,7 +290,7 @@ class _ToviewPageState extends State<ToviewPage> {
                                 },
                               ),
                             ),
-                            if (_hasMore)
+                            if (_isLoadingMore)
                               const SliverToBoxAdapter(
                                 child: Padding(
                                   padding: EdgeInsets.all(Style.md),
@@ -261,6 +298,21 @@ class _ToviewPageState extends State<ToviewPage> {
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       color: biliPink,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else if (!_hasMore && _items.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: Style.md),
+                                  child: Center(
+                                    child: Text(
+                                      '没有更多了',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context).colorScheme.outline,
+                                      ),
                                     ),
                                   ),
                                 ),

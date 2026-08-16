@@ -36,18 +36,34 @@ class _FavPageState extends State<FavPage> {
   int _page = 1;
   bool _hasMore = true;
   bool _loading = true;
+  bool _isLoadingMore = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _checkAutoLoad() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_hasMore || _loading || _isLoadingMore) return;
+      if (_scrollController.hasClients) {
+        final pos = _scrollController.position;
+        if (pos.maxScrollExtent <= 0) {
+          _load();
+        }
+      }
+    });
   }
 
   Future<void> _load({bool refresh = false}) async {
@@ -55,12 +71,19 @@ class _FavPageState extends State<FavPage> {
       _page = 1;
       _hasMore = true;
       _folders.clear();
+      _loading = true;
+      _isLoadingMore = false;
+      setState(() {});
+    } else {
+      if (!_hasMore || _loading || _isLoadingMore) return;
+      _isLoadingMore = true;
+      setState(() {});
     }
-    if (!_hasMore) return;
 
     if (!Accounts.main.isLogin) {
       setState(() {
         _loading = false;
+        _isLoadingMore = false;
         _error = '请先登录';
       });
       return;
@@ -76,15 +99,20 @@ class _FavPageState extends State<FavPage> {
       case Success(:final response):
         setState(() {
           _loading = false;
+          _isLoadingMore = false;
           _error = null;
           if (response.list != null) _folders.addAll(response.list!);
           _hasMore = response.hasMore == true;
           _page++;
         });
+        _checkAutoLoad();
       case Error(:final errMsg):
         setState(() {
           _loading = false;
-          _error = errMsg ?? '加载失败';
+          _isLoadingMore = false;
+          if (_folders.isEmpty) {
+            _error = errMsg ?? '加载失败';
+          }
         });
       case Loading():
         break;
@@ -92,9 +120,13 @@ class _FavPageState extends State<FavPage> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 200 && _hasMore && !_loading) {
+    if (!_hasMore || _loading || _isLoadingMore) return;
+    if (_scrollController.hasClients) {
+      final pos = _scrollController.position;
+      if (pos.pixels >= pos.maxScrollExtent - 300) {
+        _load();
+      }
+    } else {
       _load();
     }
   }
@@ -115,7 +147,9 @@ class _FavPageState extends State<FavPage> {
                     )
                   : NotificationListener<ScrollNotification>(
                       onNotification: (n) {
-                        if (n is ScrollEndNotification) _onScroll();
+                        if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
+                          _onScroll();
+                        }
                         return false;
                       },
                       child: RefreshIndicator(
@@ -131,6 +165,9 @@ class _FavPageState extends State<FavPage> {
                                 gridDelegate: Grid.folderCardDelegate(),
                                 itemCount: _folders.length,
                                 itemBuilder: (context, index) {
+                                  if (index >= _folders.length - 2) {
+                                    _onScroll();
+                                  }
                                   final folder = _folders[index];
                                   return _FavFolderCard(
                                     folder: folder,
@@ -139,7 +176,7 @@ class _FavPageState extends State<FavPage> {
                                 },
                               ),
                             ),
-                            if (_hasMore)
+                            if (_isLoadingMore)
                               const SliverToBoxAdapter(
                                 child: Padding(
                                   padding: EdgeInsets.all(Style.md),
@@ -147,6 +184,21 @@ class _FavPageState extends State<FavPage> {
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       color: biliPink,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else if (!_hasMore && _folders.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: Style.md),
+                                  child: Center(
+                                    child: Text(
+                                      '没有更多了',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context).colorScheme.outline,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -289,17 +341,33 @@ class _FavDetailPageState extends State<FavDetailPage> {
   int _page = 1;
   bool _hasMore = true;
   bool _loading = true;
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _checkAutoLoad() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_hasMore || _loading || _isLoadingMore) return;
+      if (_scrollController.hasClients) {
+        final pos = _scrollController.position;
+        if (pos.maxScrollExtent <= 0) {
+          _load();
+        }
+      }
+    });
   }
 
   Future<void> _load({bool refresh = false}) async {
@@ -307,8 +375,14 @@ class _FavDetailPageState extends State<FavDetailPage> {
       _page = 1;
       _hasMore = true;
       _items.clear();
+      _loading = true;
+      _isLoadingMore = false;
+      setState(() {});
+    } else {
+      if (!_hasMore || _loading || _isLoadingMore) return;
+      _isLoadingMore = true;
+      setState(() {});
     }
-    if (!_hasMore) return;
 
     final res = await FavHttp.favDetail(
       mediaId: widget.folder.id,
@@ -320,21 +394,30 @@ class _FavDetailPageState extends State<FavDetailPage> {
       case Success(:final response):
         setState(() {
           _loading = false;
+          _isLoadingMore = false;
           if (response.medias != null) _items.addAll(response.medias!);
           _hasMore = response.hasMore == true;
           _page++;
         });
+        _checkAutoLoad();
       case Error():
-        setState(() => _loading = false);
+        setState(() {
+          _loading = false;
+          _isLoadingMore = false;
+        });
       case Loading():
         break;
     }
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 200 && _hasMore && !_loading) {
+    if (!_hasMore || _loading || _isLoadingMore) return;
+    if (_scrollController.hasClients) {
+      final pos = _scrollController.position;
+      if (pos.pixels >= pos.maxScrollExtent - 300) {
+        _load();
+      }
+    } else {
       _load();
     }
   }
@@ -393,7 +476,9 @@ class _FavDetailPageState extends State<FavDetailPage> {
                 )
               : NotificationListener<ScrollNotification>(
                   onNotification: (n) {
-                    if (n is ScrollEndNotification) _onScroll();
+                    if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
+                      _onScroll();
+                    }
                     return false;
                   },
                   child: RefreshIndicator(
@@ -422,6 +507,9 @@ class _FavDetailPageState extends State<FavDetailPage> {
                             ),
                             itemCount: _items.length,
                             itemBuilder: (context, index) {
+                              if (index >= _items.length - 2) {
+                                _onScroll();
+                              }
                               final item = _items[index];
                               return _FavVideoCard(
                                 item: item,
@@ -430,7 +518,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
                             },
                           ),
                         ),
-                        if (_hasMore)
+                        if (_isLoadingMore)
                           const SliverToBoxAdapter(
                             child: Padding(
                               padding: EdgeInsets.all(Style.md),
@@ -438,6 +526,21 @@ class _FavDetailPageState extends State<FavDetailPage> {
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   color: biliPink,
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (!_hasMore && _items.isNotEmpty)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: Style.md),
+                              child: Center(
+                                child: Text(
+                                  '没有更多了',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).colorScheme.outline,
+                                  ),
                                 ),
                               ),
                             ),

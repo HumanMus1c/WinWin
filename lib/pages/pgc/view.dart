@@ -34,14 +34,28 @@ class _PgcPageState extends State<PgcPage>
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    _scrollController = ScrollController()..addListener(_onScroll);
     _load(refresh: true);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _checkAutoLoad() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_hasMore || _loading) return;
+      if (_scrollController.hasClients) {
+        final pos = _scrollController.position;
+        if (pos.maxScrollExtent <= 0) {
+          _load(refresh: false);
+        }
+      }
+    });
   }
 
   Future<void> _load({required bool refresh}) async {
@@ -67,6 +81,7 @@ class _PgcPageState extends State<PgcPage>
           _page++;
         }
         setState(() => _state = Success(response));
+        _checkAutoLoad();
       case Error():
         setState(() => _state = res);
       case Loading():
@@ -78,7 +93,7 @@ class _PgcPageState extends State<PgcPage>
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 200) {
+    if (pos.pixels >= pos.maxScrollExtent - 240) {
       _load(refresh: false);
     }
   }
@@ -103,7 +118,9 @@ class _PgcPageState extends State<PgcPage>
         onRefresh: () => _load(refresh: true),
         child: NotificationListener<ScrollNotification>(
           onNotification: (n) {
-            if (n is ScrollEndNotification) _onScroll();
+            if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
+              _onScroll();
+            }
             return false;
           },
           child: switch (_state) {
@@ -126,6 +143,9 @@ class _PgcPageState extends State<PgcPage>
                           gridDelegate: gridDelegate,
                           delegate: SliverChildBuilderDelegate(
                             (context, i) {
+                              if (i >= _items.length - 2) {
+                                _onScroll();
+                              }
                               if (i == _items.length) return _buildTrailer();
                               return _PgcCard(item: _items[i]);
                             },
