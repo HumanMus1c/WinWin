@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 
-import 'package:winwin/common/widgets/video_card/video_card_h.dart';
+import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/history.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/history/history_models.dart';
+import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
+import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
+import 'package:winwin/utils/date_utils.dart';
+import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/utils/grid.dart';
 
-/// 历史记录页面（移植自 PiliPlus `lib/pages/history/`）。
-///
-/// WinWin 精简版：游标分页列表 + 单条删除 + 清空。
+/// 历史记录页面（移植自 PiliPlus `lib/pages/history/`，重构为自适应多列宫格排版）。
 void showHistoryPage(BuildContext context) {
   Navigator.of(context).push(
     MaterialPageRoute<void>(builder: (_) => const HistoryPage()),
@@ -27,6 +31,7 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  final ScrollController _scrollController = ScrollController();
   final List<HistoryItem> _items = [];
   int? _max;
   int? _viewAt;
@@ -38,6 +43,12 @@ class _HistoryPageState extends State<HistoryPage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _load({bool refresh = false}) async {
@@ -86,6 +97,14 @@ class _HistoryPageState extends State<HistoryPage> {
         });
       case Loading():
         break;
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200 && _hasMore && !_loading) {
+      _load();
     }
   }
 
@@ -175,7 +194,7 @@ class _HistoryPageState extends State<HistoryPage> {
         ],
       ),
       body: _loading && _items.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: biliPink))
+          ? _buildSkeleton()
           : _error != null && _items.isEmpty
               ? _buildError()
               : _items.isEmpty
@@ -184,32 +203,111 @@ class _HistoryPageState extends State<HistoryPage> {
                       title: '暂无观看记录',
                       subtitle: '看过的视频会出现在这里',
                     )
-                  : RefreshIndicator(
-                  color: biliPink,
-                  onRefresh: () => _load(refresh: true),
-                  child: ListView.builder(
-                    itemCount: _items.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == _items.length) {
-                        if (_hasMore) {
-                          _load();
-                          return const Padding(
-                            padding: EdgeInsets.all(Style.md),
-                            child: Center(
-                              child: CircularProgressIndicator(strokeWidth: 2, color: biliPink),
+                  : NotificationListener<ScrollNotification>(
+                      onNotification: (n) {
+                        if (n is ScrollEndNotification) _onScroll();
+                        return false;
+                      },
+                      child: RefreshIndicator(
+                        color: biliPink,
+                        onRefresh: () => _load(refresh: true),
+                        child: CustomScrollView(
+                          controller: _scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          slivers: [
+                            SliverPadding(
+                              padding: const EdgeInsets.all(Style.safeSpace),
+                              sliver: SliverGrid.builder(
+                                gridDelegate: Grid.videoCardHDelegate(
+                                  maxCrossAxisExtent: 440.0,
+                                  mainAxisExtent: 110.0,
+                                ),
+                                itemCount: _items.length,
+                                itemBuilder: (context, index) {
+                                  final item = _items[index];
+                                  return _HistoryCard(
+                                    item: item,
+                                    onDelete: () => _deleteItem(item),
+                                    onTap: () => _openItem(item),
+                                  );
+                                },
+                              ),
                             ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      }
-                      return _HistoryTile(
-                        item: _items[index],
-                        onDelete: () => _deleteItem(_items[index]),
-                        onTap: () => _openItem(_items[index]),
-                      );
-                    },
-                  ),
+                            if (_hasMore)
+                              const SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: EdgeInsets.all(Style.md),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: biliPink,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+    );
+  }
+
+  Widget _buildSkeleton() {
+    return CustomScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(Style.safeSpace),
+          sliver: SliverGrid.builder(
+            gridDelegate: Grid.videoCardHDelegate(
+              maxCrossAxisExtent: 440.0,
+              mainAxisExtent: 110.0,
+            ),
+            itemCount: 12,
+            itemBuilder: (context, index) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(Style.radiusSm),
+                      child: Container(
+                        width: 140,
+                        height: 140 * 9 / 16,
+                        color: Colors.grey.withValues(alpha: 0.15),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Container(
+                            height: 14,
+                            width: double.infinity,
+                            color: Colors.grey.withValues(alpha: 0.15),
+                          ),
+                          Container(
+                            height: 12,
+                            width: 100,
+                            color: Colors.grey.withValues(alpha: 0.15),
+                          ),
+                          Container(
+                            height: 10,
+                            width: 60,
+                            color: Colors.grey.withValues(alpha: 0.15),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -229,8 +327,9 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 }
 
-class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({
+/// 历史记录多列横向卡片（对齐 PiliPlus 与 BiliPai 历史卡片规范）。
+class _HistoryCard extends StatelessWidget {
+  const _HistoryCard({
     required this.item,
     required this.onDelete,
     this.onTap,
@@ -242,17 +341,156 @@ class _HistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dismissible(
-      key: ValueKey('${item.history.oid}_${item.viewAt}'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: Style.lg),
-        color: Colors.red,
-        child: const Icon(Icons.delete, color: Colors.white),
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final radius = shapes.medium;
+    final duration = item.duration ?? 0;
+    final progress = item.progress ?? 0;
+    final bvid = item.history.bvid;
+    final authorName = item.authorName ?? '';
+    final authorMid = item.authorMid ?? 0;
+
+    double progressFraction = 0.0;
+    if (progress > 0 && duration > 0) {
+      progressFraction = (progress / duration).clamp(0.0, 1.0);
+    } else if (progress == -1) {
+      progressFraction = 1.0;
+    }
+
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.all(radius),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 封面与进度
+              ClipRRect(
+                borderRadius: BorderRadius.all(radius),
+                child: SizedBox(
+                  width: 140,
+                  height: 140 * 9 / 16,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: NetworkImgLayer(
+                          src: item.cover,
+                          width: 140,
+                          height: 140 * 9 / 16,
+                          borderRadius: BorderRadius.all(radius),
+                          heroTag: bvid != null && bvid.isNotEmpty ? 'cover_$bvid' : null,
+                        ),
+                      ),
+                      if (duration > 0)
+                        Positioned(
+                          right: 4,
+                          bottom: 4,
+                          child: PBadge(
+                            text: DurationUtils.formatDuration(duration),
+                            type: PBadgeType.duration,
+                          ),
+                        ),
+                      if (progressFraction > 0)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: LinearProgressIndicator(
+                            value: progressFraction,
+                            minHeight: 2.5,
+                            backgroundColor: Colors.black38,
+                            valueColor: AlwaysStoppedAnimation(cs.primary),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // 右侧描述
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      item.title ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        height: 1.35,
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (authorName.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              if (authorMid > 0) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => MemberSpacePage(mid: authorMid),
+                                  ),
+                                );
+                              }
+                            },
+                            child: Row(
+                              children: [
+                                Icon(Icons.person_outline, size: 12, color: cs.outline),
+                                const SizedBox(width: 2),
+                                Flexible(
+                                  child: Text(
+                                    authorName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: cs.outline,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            if (item.viewAt != null && item.viewAt! > 0)
+                              Text(
+                                DateFormatUtils.dateFormat(item.viewAt),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: cs.outline,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 14),
+                              tooltip: '删除此记录',
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 24,
+                                minHeight: 24,
+                              ),
+                              color: cs.outline,
+                              onPressed: onDelete,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      onDismissed: (_) => onDelete(),
-      child: VideoCardH(videoItem: item, onTap: onTap),
     );
   }
 }
