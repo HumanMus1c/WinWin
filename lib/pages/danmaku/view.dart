@@ -107,12 +107,9 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     c.playing.removeListener(_onPlaying);
     c.seekCount.removeListener(_onSeek);
     c.danmaku?.localEcho.removeListener(_onLocalEcho);
-    // 只在 controller 未销毁时清理 danmaku 相关资源
-    if (!c.disposed) {
-      c.danmaku?.dispose();
-      c.danmaku = null;
-      c.danmakuEngine = null;
-    }
+    c.danmaku?.dispose();
+    c.danmaku = null;
+    c.danmakuEngine = null;
     super.dispose();
   }
 

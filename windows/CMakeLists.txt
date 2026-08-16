@@ -68,6 +68,7 @@ add_subdirectory("runner")
 # 新版 MSVC 14.51 把它变成硬错误（STL1011）。在插件 target 创建之前定义
 # 全局宏以抑制该错误。宏定义影响此后所有 add_subdirectory 创建的 target。
 add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+add_compile_options(/FS)
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.

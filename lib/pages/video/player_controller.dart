@@ -648,6 +648,7 @@ class WinWinPlayerController {
         }
       }
 
+      if (_disposed) return;
       player.state =
           autoplay ? mdk.PlaybackState.playing : mdk.PlaybackState.paused;
       ready.value = true;
@@ -939,6 +940,7 @@ class WinWinPlayerController {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    unawaited(reportCurrentProgress());
     detachListeners();
     _pollTimer?.cancel();
     _pollTimer = null;
@@ -946,12 +948,20 @@ class WinWinPlayerController {
     _heartBeatTimer = null;
     sponsorBlock?.dispose();
     sponsorBlock = null;
+    danmaku?.dispose();
+    danmaku = null;
+    danmakuEngine = null;
     // 引用计数递减，归零时才真正释放全局单例 mdk.Player。
     _playerCount--;
     if (_playerCount <= 0) {
       _playerCount = 0;
+      // 关键：在释放 mdk.Player / 销毁纹理前，必须先将播放器状态同步置为 stopped
+      // 停止后台解码和视频渲染循环，避免 fvp 释放纹理时并发渲染导致 EXCEPTION_ACCESS_VIOLATION 崩溃
+      _sharedPlayer?.state = mdk.PlaybackState.stopped;
       _sharedPlayer?.dispose();
       _sharedPlayer = null;
+    } else {
+      _sharedPlayer?.state = mdk.PlaybackState.paused;
     }
     // 不 dispose 任何 ValueNotifier，让 GC 自动回收
     // 避免 UI 中的 ValueListenableBuilder 访问已 dispose 的 ValueNotifier
