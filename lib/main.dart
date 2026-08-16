@@ -1,4 +1,5 @@
 import 'dart:async' show unawaited;
+import 'dart:io' show pid;
 
 import 'package:catcher_2/catcher_2.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:fvp/mdk.dart' as mdk;
 
 import 'core/bootstrap.dart';
 import 'core/log/app_logger.dart';
+import 'core/log/sync_trace.dart';
 import 'core/storage/storage_pref.dart';
 import 'core/window/window_state_controller.dart';
 import 'pages/onboarding/user_agreement_page.dart';
@@ -32,6 +34,10 @@ void main() async {
   // 日志系统初始化（L2-L4）：内存环形缓冲 + 异步落盘。
   // 不阻塞 runApp：LogCollector.init 失败时降级为仅内存缓冲，不影响启动。
   unawaited(AppLogger.init());
+
+  // 同步崩溃安全追踪（诊断用）：关键生命周期埋点，瞬死不丢尾部。
+  unawaited(SyncTrace.init());
+  SyncTrace.log('main', 'app starting, pid=$pid');
 
   // L6：fvp 播放器日志接入。
   // setLogHandler 接收 mdk 内部日志，分级映射到 AppLogger（error→e, warning→w, ...）。

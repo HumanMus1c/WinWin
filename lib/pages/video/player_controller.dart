@@ -8,6 +8,7 @@ import 'package:fvp/mdk.dart' as mdk;
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/cache/play_url_cache.dart';
+import 'package:winwin/core/log/sync_trace.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/player/sponsorblock_usecase.dart';
 import 'package:winwin/core/policy/stream_selection_policy.dart';
@@ -55,6 +56,10 @@ class WinWinPlayerController {
   // ── 全局单例 mdk 播放器（跨页面共享，参照 PiliPlus PlPlayerController）──
   static mdk.Player? _sharedPlayer;
   static int _playerCount = 0;
+
+  /// 共享 player 延迟销毁时长：等引擎光栅线程排空对视频纹理的合成，
+  /// 避开 fvp ReleaseRT 立即销毁纹理对象与光栅并发的崩溃竞态（见 dispose）。
+  static const Duration _sharedTeardownDelay = Duration(milliseconds: 400);
 
   /// 当前 controller 访问的播放器（即全局单例）。
   mdk.Player? get _player => _sharedPlayer;
@@ -940,6 +945,7 @@ class WinWinPlayerController {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    SyncTrace.log('PlayerCtrl', 'dispose enter, playerCount=$_playerCount');
     unawaited(reportCurrentProgress());
     detachListeners();
     _pollTimer?.cancel();
@@ -955,12 +961,39 @@ class WinWinPlayerController {
     _playerCount--;
     if (_playerCount <= 0) {
       _playerCount = 0;
-      // 关键：在释放 mdk.Player / 销毁纹理前，必须先将播放器状态同步置为 stopped
-      // 停止后台解码和视频渲染循环，避免 fvp 释放纹理时并发渲染导致 EXCEPTION_ACCESS_VIOLATION 崩溃
-      _sharedPlayer?.state = mdk.PlaybackState.stopped;
-      _sharedPlayer?.dispose();
+      final player = _sharedPlayer;
       _sharedPlayer = null;
+      if (player != null) {
+        SyncTrace.log('PlayerCtrl', 'last ref: set state=stopped');
+        // 先置 stopped：停止 mdk 解码循环与渲染回调（setState 本身是异步请求，
+        // 但能让渲染回调尽快停发）。
+        player.state = mdk.PlaybackState.stopped;
+        SyncTrace.log(
+          'PlayerCtrl',
+          'teardown deferred by ${_sharedTeardownDelay.inMilliseconds}ms',
+        );
+        // 延迟销毁共享 player（防御性措施）：
+        // fvp 的 ReleaseRT 处理器在 UnregisterTexture 后立即销毁
+        // TexturePlayer（D3D11 纹理/表面描述符/回调表），与引擎光栅线程的
+        // 合成存在理论竞态（fvp#321 同族）。页面 dispose 发生在 pop 转场
+        // 结束、纹理离开 layer tree 之后，延迟 400ms（>20 帧 @60fps）让
+        // 光栅管线排空后再释放，彻底关闭该窗口。
+        // 注：返回崩溃的真正根因是 Flutter 3.47 Windows 默认启用的
+        // Impeller 渲染后端对外部纹理的转场缺陷（已在
+        // windows/runner/main.cpp 禁用 Impeller 回退 Skia 规避），
+        // 本延迟为第二道防线。无障碍桥假设已被对照实验排除。
+        AppLogger.w(
+          'PlayerController',
+          'shared player teardown deferred by ${_sharedTeardownDelay.inMilliseconds}ms for raster drain',
+        );
+        Future.delayed(_sharedTeardownDelay, () {
+          SyncTrace.log('PlayerCtrl', 'delayed dispose: calling fvp dispose');
+          player.dispose();
+          SyncTrace.log('PlayerCtrl', 'delayed dispose: fvp dispose returned');
+        });
+      }
     } else {
+      SyncTrace.log('PlayerCtrl', 'refs remain=$_playerCount, set paused');
       _sharedPlayer?.state = mdk.PlaybackState.paused;
     }
     // 不 dispose 任何 ValueNotifier，让 GC 自动回收

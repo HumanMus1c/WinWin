@@ -11,6 +11,7 @@ import 'package:winwin/common/widgets/video_card/video_card_h.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/log/sync_trace.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/toview.dart';
@@ -151,15 +152,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   @override
   void dispose() {
+    SyncTrace.log('DetailPage', 'dispose enter');
     routeObserver.unsubscribe(this);
     windowManager.removeListener(this);
     _rightTabCtrl.dispose();
     // 退出时如果处于 PiP 模式，恢复窗口。
     DesktopPipController.instance.exitPip();
+    SyncTrace.log('DetailPage', 'dispose before playerController.dispose');
     playerController?.dispose();
+    SyncTrace.log('DetailPage', 'dispose after playerController.dispose');
     scrollController.dispose();
     _commentCtrl.dispose();
     super.dispose();
+    SyncTrace.log('DetailPage', 'dispose done');
   }
 
   /// 播放器折叠自动暂停（对标 BiliPai PlayerCollapseAutoPausePolicy）。
@@ -795,6 +800,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// Esc 键固定语义：返回上一级。
   /// 全屏态退出全屏回到默认布局；默认布局退出详情页。
   void _handleEscape() {
+    SyncTrace.log('DetailPage', 'escape pressed, fullscreen=$_fullscreen');
     if (_fullscreen) {
       setState(() => _fullscreen = false);
     } else {
@@ -1149,7 +1155,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       Icons.arrow_back,
                       color: overVideo ? Colors.white : barContrast.contentColor,
                     ),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      SyncTrace.log('DetailPage', 'back button pressed');
+                      Navigator.pop(context);
+                    },
                   ),
                   Expanded(
                     child: AnimatedOpacity(
