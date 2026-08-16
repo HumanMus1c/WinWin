@@ -11,6 +11,7 @@ class HoverContainer extends StatefulWidget {
     this.onTap,
     this.borderRadius = 4.0,
     this.padding = EdgeInsets.zero,
+    this.color,
     this.hoverColor,
     this.enabled = true,
   });
@@ -19,6 +20,7 @@ class HoverContainer extends StatefulWidget {
   final VoidCallback? onTap;
   final double borderRadius;
   final EdgeInsetsGeometry padding;
+  final Color? color;
   final Color? hoverColor;
   final bool enabled;
 
@@ -50,7 +52,8 @@ class _HoverContainerState extends State<HoverContainer> {
           duration: const Duration(milliseconds: 150),
           padding: widget.padding,
           decoration: BoxDecoration(
-            color: _isHovering ? hoverColor : Colors.transparent,
+            color:
+                _isHovering ? hoverColor : (widget.color ?? Colors.transparent),
             borderRadius: BorderRadius.circular(widget.borderRadius),
           ),
           child: widget.child,
