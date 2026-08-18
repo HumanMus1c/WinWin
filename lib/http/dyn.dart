@@ -1,13 +1,16 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
+import 'package:winwin/common/constants.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/models/dynamics/dyn_type.dart';
 
 /// 动态流 HTTP（移植自 PiliPlus `lib/http/dynamic.dart`，精简为桌面端所需）。
 ///
-/// 仅保留关注动态流、单条动态详情、用户空间动态三个接口。
-/// 数据模型按 WinWin 实际渲染需要提取关键字段，不保留完整 modules 结构。
+/// 包含关注动态流、单条动态详情、用户空间动态三个接口。
 abstract final class DynHttp {
   /// 关注动态流（`/x/polymer/web-dynamic/v1/feed/all`）。
   ///
@@ -27,7 +30,7 @@ abstract final class DynHttp {
           'type': type,
           'offset': offset ?? '',
           'page': 1,
-          'features': 'itemOpusStyle',
+          'features': Constants.dynFeatures,
         },
       );
       final data = res.data as Map<String, dynamic>;
@@ -86,7 +89,7 @@ abstract final class DynHttp {
           'host_mid': hostMid,
           'offset': offset ?? '',
           'page': 1,
-          'features': 'itemOpusStyle',
+          'features': Constants.dynFeatures,
         },
       );
       final data = res.data as Map<String, dynamic>;
@@ -126,34 +129,80 @@ class DynFeedData {
 }
 
 /// 单条动态。
-///
-/// 仅提取 WinWin 渲染所需字段：动态 id、类型、作者、视频信息（AV 类型动态）。
-/// 其他类型动态（专栏/图片等）保留原始 raw 供按需解析。
 class DynItemModel {
   /// 动态 id 字符串。
   final String id;
-  /// 动态类型（DYNAMIC_TYPE_AV / DYNAMIC_TYPE_DRAW / DYNAMIC_TYPE_WORD 等）。
+  /// 动态类型（DYNAMIC_TYPE_AV / DYNAMIC_TYPE_FORWARD / DYNAMIC_TYPE_DRAW 等）。
   final String type;
   /// 作者信息。
   final DynAuthor? author;
-  /// 视频信息（仅 DYNAMIC_TYPE_AV 类型存在）。
+  /// 视频信息（仅 DYNAMIC_TYPE_AV 或内嵌视频存在）。
   final DynArchive? archive;
+  /// 图文动态图片信息（仅 DYNAMIC_TYPE_DRAW 存在）。
+  final DynDraw? draw;
+  /// 专栏动态信息（仅 DYNAMIC_TYPE_ARTICLE 存在）。
+  final DynArticle? article;
+  /// Opus 新版图文/文章信息。
+  final DynOpus? opus;
+  /// 直播推荐信息。
+  final DynLiveRcmd? liveRcmd;
   /// 文本描述（动态正文）。
   final String? text;
+  /// 富文本节点（@、表情、网页链接、商品链接、BV 链接等）。
+  final List<DynRichTextNode> richTextNodes;
+  /// 附加模块（商品卡、投票等）。
+  final DynAdditional? additional;
+  /// 互动数据（点赞、转发、评论）。
+  final DynStat? stat;
   /// 发布时间（Unix 时间戳，秒）。
   final int? pubTs;
+  /// 转发动态的原动态（嵌套一层）。
+  final DynItemModel? orig;
+  /// Major 类型。
+  final String? majorType;
 
   DynItemModel({
     required this.id,
     required this.type,
     this.author,
     this.archive,
+    this.draw,
+    this.article,
+    this.opus,
+    this.liveRcmd,
     this.text,
+    this.richTextNodes = const [],
+    this.additional,
+    this.stat,
     this.pubTs,
+    this.orig,
+    this.majorType,
   });
 
   /// 是否为视频动态。
-  bool get isVideo => type == 'DYNAMIC_TYPE_AV';
+  bool get isVideo =>
+      type == DynType.av ||
+      (majorType == DynMajorType.archive && archive?.bvid != null);
+
+  /// 是否为转发动态。
+  bool get isForward => type == DynType.forward || orig != null;
+
+  /// 是否为图文动态（旧版图文）。
+  bool get isDraw =>
+      type == DynType.draw || majorType == DynMajorType.draw;
+
+  /// 是否为专栏（旧版专栏）。
+  bool get isArticle =>
+      type == DynType.article || majorType == DynMajorType.article;
+
+  /// 是否为 Opus（新版图文/文章）。
+  bool get isOpus => majorType == DynMajorType.opus || opus != null;
+
+  /// 是否为直播推荐。
+  bool get isLive =>
+      type == DynType.liveRcmd ||
+      majorType == DynMajorType.liveRcmd ||
+      liveRcmd != null;
 
   factory DynItemModel.fromJson(Map<String, dynamic> json) {
     final modules = json['modules'] as Map<String, dynamic>? ?? {};
@@ -163,14 +212,39 @@ class DynItemModel {
         modules['module_dynamic'] as Map<String, dynamic>? ?? {};
     final desc = moduleDynamic['desc'] as Map<String, dynamic>? ?? {};
     final major = moduleDynamic['major'] as Map<String, dynamic>? ?? {};
+    final additional = moduleDynamic['additional'] as Map<String, dynamic>?;
+    final moduleStat = modules['module_stat'] as Map<String, dynamic>?;
+
+    final rawRichNodes = desc['rich_text_nodes'] as List?;
+    final richNodes = rawRichNodes
+            ?.map((e) => DynRichTextNode.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const <DynRichTextNode>[];
+
+    final rawOrig = json['orig'];
+    final origItem = rawOrig is Map<String, dynamic>
+        ? DynItemModel.fromJson(rawOrig)
+        : null;
+
+    final majorTypeStr = major['type']?.toString();
 
     return DynItemModel(
-      id: json['id_str']?.toString() ?? '',
+      id: json['id_str']?.toString() ?? json['id']?.toString() ?? '',
       type: json['type']?.toString() ?? '',
+      majorType: majorTypeStr,
       author: DynAuthor.fromJson(moduleAuthor),
       archive: DynArchive.fromMajor(major),
+      draw: DynDraw.fromMajor(major),
+      article: DynArticle.fromMajor(major),
+      opus: DynOpus.fromMajor(major),
+      liveRcmd: DynLiveRcmd.fromMajor(major),
       text: desc['text']?.toString(),
+      richTextNodes: richNodes,
+      additional:
+          additional != null ? DynAdditional.fromJson(additional) : null,
+      stat: moduleStat != null ? DynStat.fromJson(moduleStat) : null,
       pubTs: _asInt(moduleAuthor['pub_ts'] ?? moduleAuthor['pub_action']),
+      orig: origItem,
     );
   }
 }
@@ -180,14 +254,16 @@ class DynAuthor {
   final int? mid;
   final String? name;
   final String? face;
+  final String? pubAction;
 
-  DynAuthor({this.mid, this.name, this.face});
+  DynAuthor({this.mid, this.name, this.face, this.pubAction});
 
   factory DynAuthor.fromJson(Map<String, dynamic> json) {
     return DynAuthor(
       mid: _asInt(json['mid']),
       name: json['name']?.toString(),
       face: json['face']?.toString(),
+      pubAction: json['pub_action']?.toString(),
     );
   }
 }
@@ -212,15 +288,273 @@ class DynArchive {
 
   /// 从 major 节点解析：major.archive 为视频稿件。
   factory DynArchive.fromMajor(Map<String, dynamic> major) {
-    if (major['type'] != 'MAJOR_TYPE_ARCHIVE') return DynArchive();
+    if (major['type'] != DynMajorType.archive) return DynArchive();
     final archive = major['archive'] as Map<String, dynamic>? ?? {};
+    return DynArchive.fromVideoMap(archive);
+  }
+
+  factory DynArchive.fromVideoMap(Map<String, dynamic> map) {
     return DynArchive(
-      bvid: archive['bvid']?.toString(),
-      title: archive['title']?.toString(),
-      cover: archive['cover']?.toString(),
-      durationText: archive['duration_text']?.toString(),
-      play: _asInt(archive['play']),
-      danmaku: _asInt(archive['danmaku']),
+      bvid: map['bvid']?.toString(),
+      title: map['title']?.toString(),
+      cover: map['cover']?.toString(),
+      durationText: map['duration_text']?.toString(),
+      play: _asInt(map['play']),
+      danmaku: _asInt(map['danmaku']),
+    );
+  }
+}
+
+/// 图文动态单张图片。
+class DynDrawItem {
+  final String? src;
+  final double? width;
+  final double? height;
+  final double? size;
+
+  DynDrawItem({this.src, this.width, this.height, this.size});
+
+  factory DynDrawItem.fromJson(Map<String, dynamic> json) {
+    return DynDrawItem(
+      src: json['src']?.toString() ?? json['url']?.toString(),
+      width: _asDouble(json['width']),
+      height: _asDouble(json['height']),
+      size: _asDouble(json['size']),
+    );
+  }
+}
+
+/// 图文动态图片列表（MAJOR_TYPE_DRAW）。
+class DynDraw {
+  final List<DynDrawItem> items;
+
+  DynDraw({this.items = const []});
+
+  factory DynDraw.fromMajor(Map<String, dynamic> major) {
+    if (major['type'] != DynMajorType.draw) return DynDraw();
+    final draw = major['draw'] as Map<String, dynamic>? ?? {};
+    final rawItems = draw['items'] as List?;
+    return DynDraw(
+      items: rawItems
+              ?.map((e) => DynDrawItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+  }
+}
+
+/// 专栏动态（MAJOR_TYPE_ARTICLE）。
+class DynArticle {
+  final int? id;
+  final String? title;
+  final String? desc;
+  final List<String> covers;
+  final String? label;
+
+  DynArticle({
+    this.id,
+    this.title,
+    this.desc,
+    this.covers = const [],
+    this.label,
+  });
+
+  factory DynArticle.fromMajor(Map<String, dynamic> major) {
+    if (major['type'] != DynMajorType.article) return DynArticle();
+    final article = major['article'] as Map<String, dynamic>? ?? {};
+    final rawCovers = article['covers'] as List?;
+    return DynArticle(
+      id: _asInt(article['id']),
+      title: article['title']?.toString(),
+      desc: article['desc']?.toString(),
+      covers: rawCovers?.map((e) => e.toString()).toList() ?? const [],
+      label: article['label']?.toString(),
+    );
+  }
+}
+
+/// Opus 新版图文/文章（MAJOR_TYPE_OPUS）。
+class DynOpus {
+  final String? jumpUrl;
+  final String? title;
+  final String? summaryText;
+  final List<DynDrawItem> pics;
+  final DynArchive? video;
+
+  DynOpus({
+    this.jumpUrl,
+    this.title,
+    this.summaryText,
+    this.pics = const [],
+    this.video,
+  });
+
+  factory DynOpus.fromMajor(Map<String, dynamic> major) {
+    if (major['type'] != DynMajorType.opus) return DynOpus();
+    final opus = major['opus'] as Map<String, dynamic>? ?? {};
+    final summary = opus['summary'] as Map<String, dynamic>? ?? {};
+    final rawPics = opus['pics'] as List?;
+    final video = opus['video'] as Map<String, dynamic>?;
+
+    return DynOpus(
+      jumpUrl: opus['jump_url']?.toString(),
+      title: opus['title']?.toString(),
+      summaryText: summary['text']?.toString(),
+      pics: rawPics
+              ?.map((e) => DynDrawItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      video: video != null ? DynArchive.fromVideoMap(video) : null,
+    );
+  }
+}
+
+/// 直播推荐（MAJOR_TYPE_LIVE_RCMD）。
+class DynLiveRcmd {
+  final int? roomId;
+  final String? title;
+  final String? cover;
+  final String? uname;
+  final String? watchedShow;
+  final int? liveStatus;
+
+  DynLiveRcmd({
+    this.roomId,
+    this.title,
+    this.cover,
+    this.uname,
+    this.watchedShow,
+    this.liveStatus,
+  });
+
+  factory DynLiveRcmd.fromMajor(Map<String, dynamic> major) {
+    if (major['type'] != DynMajorType.liveRcmd) return DynLiveRcmd();
+    final liveRcmd = major['live_rcmd'] as Map<String, dynamic>? ?? {};
+    Map<String, dynamic> liveInfo = {};
+    if (liveRcmd['content'] is String) {
+      try {
+        final decoded = jsonDecode(liveRcmd['content'] as String);
+        if (decoded is Map<String, dynamic>) {
+          liveInfo =
+              decoded['live_play_info'] as Map<String, dynamic>? ?? decoded;
+        }
+      } catch (_) {}
+    } else if (liveRcmd['live_play_info'] is Map<String, dynamic>) {
+      liveInfo = liveRcmd['live_play_info'] as Map<String, dynamic>;
+    } else {
+      liveInfo = liveRcmd;
+    }
+
+    final watched = liveInfo['watched_show'] is Map<String, dynamic>
+        ? liveInfo['watched_show'] as Map<String, dynamic>
+        : null;
+
+    return DynLiveRcmd(
+      roomId: _asInt(liveInfo['room_id'] ?? liveInfo['roomid']),
+      title: liveInfo['title']?.toString(),
+      cover: liveInfo['cover']?.toString(),
+      uname: liveInfo['uname']?.toString(),
+      watchedShow: watched?['text_large']?.toString() ??
+          watched?['text_small']?.toString() ??
+          liveInfo['watched_show']?.toString(),
+      liveStatus: _asInt(liveInfo['live_status']),
+    );
+  }
+}
+
+/// 富文本节点。
+class DynRichTextNode {
+  final String? type;
+  final String? text;
+  final String? origText;
+  final String? jumpUrl;
+  final String? rid;
+  final String? emojiUrl;
+
+  DynRichTextNode({
+    this.type,
+    this.text,
+    this.origText,
+    this.jumpUrl,
+    this.rid,
+    this.emojiUrl,
+  });
+
+  factory DynRichTextNode.fromJson(Map<String, dynamic> json) {
+    final emoji = json['emoji'] as Map<String, dynamic>?;
+    return DynRichTextNode(
+      type: json['type']?.toString(),
+      text: json['text']?.toString() ?? json['orig_text']?.toString(),
+      origText: json['orig_text']?.toString(),
+      jumpUrl: json['jump_url']?.toString(),
+      rid: json['rid']?.toString(),
+      emojiUrl: emoji?['icon_url']?.toString(),
+    );
+  }
+}
+
+/// 附加模块（商品卡等）。
+class DynAdditional {
+  final String? type;
+  final String? goodsHeadText;
+  final List<DynGoodsItem> goodsItems;
+
+  DynAdditional({this.type, this.goodsHeadText, this.goodsItems = const []});
+
+  factory DynAdditional.fromJson(Map<String, dynamic> json) {
+    final goods = json['goods'] as Map<String, dynamic>? ?? {};
+    final rawItems = goods['items'] as List?;
+    return DynAdditional(
+      type: json['type']?.toString(),
+      goodsHeadText: goods['head_text']?.toString(),
+      goodsItems: rawItems
+              ?.map((e) => DynGoodsItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+  }
+}
+
+/// 商品卡子项。
+class DynGoodsItem {
+  final String? id;
+  final String? name;
+  final String? cover;
+  final String? price;
+  final String? jumpUrl;
+
+  DynGoodsItem({
+    this.id,
+    this.name,
+    this.cover,
+    this.price,
+    this.jumpUrl,
+  });
+
+  factory DynGoodsItem.fromJson(Map<String, dynamic> json) {
+    return DynGoodsItem(
+      id: json['id']?.toString(),
+      name: json['name']?.toString(),
+      cover: json['cover']?.toString(),
+      price: json['price']?.toString(),
+      jumpUrl: json['jump_url']?.toString(),
+    );
+  }
+}
+
+/// 互动统计（点赞/转发/评论）。
+class DynStat {
+  final int? repost;
+  final int? comment;
+  final int? like;
+
+  DynStat({this.repost, this.comment, this.like});
+
+  factory DynStat.fromJson(Map<String, dynamic> json) {
+    return DynStat(
+      repost: _asInt((json['repost'] as Map<String, dynamic>?)?['count']),
+      comment: _asInt((json['comment'] as Map<String, dynamic>?)?['count']),
+      like: _asInt((json['like'] as Map<String, dynamic>?)?['count']),
     );
   }
 }
@@ -231,3 +565,11 @@ int? _asInt(Object? value) {
   if (value is num) return value.toInt();
   return int.tryParse(value.toString());
 }
+
+double? _asDouble(Object? value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+

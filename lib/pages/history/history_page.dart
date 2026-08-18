@@ -44,7 +44,7 @@ class _HistoryPageState extends State<HistoryPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _load();
+    _load(refresh: true);
   }
 
   @override
@@ -75,9 +75,10 @@ class _HistoryPageState extends State<HistoryPage> {
       _items.clear();
       _loading = true;
       _isLoadingMore = false;
+      _error = null;
       setState(() {});
     } else {
-      if (!_hasMore || _loading || _isLoadingMore) return;
+      if (!_hasMore || _isLoadingMore) return;
       _isLoadingMore = true;
       setState(() {});
     }
@@ -104,8 +105,14 @@ class _HistoryPageState extends State<HistoryPage> {
           _isLoadingMore = false;
           _error = null;
           if (response.list != null) _items.addAll(response.list!);
-          // 游标分页：取末尾项的 oid 和 viewAt。
-          if (response.list != null && response.list!.isNotEmpty) {
+          // 游标分页：优先使用服务端下发的 cursor，回退到末尾项推算
+          if (response.cursor != null &&
+              response.cursor!.max != null &&
+              response.cursor!.max! > 0) {
+            _max = response.cursor!.max;
+            _viewAt = response.cursor!.viewAt;
+            _hasMore = (response.list?.length ?? 0) >= 20 && _max != 0;
+          } else if (response.list != null && response.list!.isNotEmpty) {
             final last = response.list!.last;
             _max = last.history.oid;
             _viewAt = last.viewAt;
@@ -305,61 +312,65 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget _buildSkeleton() {
-    return CustomScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.all(Style.safeSpace),
-          sliver: SliverGrid.builder(
-            gridDelegate: Grid.videoCardHDelegate(
-              maxCrossAxisExtent: 440.0,
-              mainAxisExtent: 110.0,
-            ),
-            itemCount: 12,
-            itemBuilder: (context, index) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(Style.radiusSm),
-                      child: Container(
-                        width: 140,
-                        height: 140 * 9 / 16,
-                        color: Colors.grey.withValues(alpha: 0.15),
+    return RefreshIndicator(
+      color: biliPink,
+      onRefresh: () => _load(refresh: true),
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(Style.safeSpace),
+            sliver: SliverGrid.builder(
+              gridDelegate: Grid.videoCardHDelegate(
+                maxCrossAxisExtent: 440.0,
+                mainAxisExtent: 110.0,
+              ),
+              itemCount: 12,
+              itemBuilder: (context, index) => Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(Style.radiusSm),
+                        child: Container(
+                          width: 140,
+                          height: 140 * 9 / 16,
+                          color: Colors.grey.withValues(alpha: 0.15),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Container(
-                            height: 14,
-                            width: double.infinity,
-                            color: Colors.grey.withValues(alpha: 0.15),
-                          ),
-                          Container(
-                            height: 12,
-                            width: 100,
-                            color: Colors.grey.withValues(alpha: 0.15),
-                          ),
-                          Container(
-                            height: 10,
-                            width: 60,
-                            color: Colors.grey.withValues(alpha: 0.15),
-                          ),
-                        ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Container(
+                              height: 14,
+                              width: double.infinity,
+                              color: Colors.grey.withValues(alpha: 0.15),
+                            ),
+                            Container(
+                              height: 12,
+                              width: 100,
+                              color: Colors.grey.withValues(alpha: 0.15),
+                            ),
+                            Container(
+                              height: 10,
+                              width: 60,
+                              color: Colors.grey.withValues(alpha: 0.15),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

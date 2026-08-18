@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import 'package:winwin/common/constants.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/browser_ua.dart';
 import 'package:winwin/http/init.dart';
@@ -235,19 +236,23 @@ abstract final class VideoHttp {
   ///  - subtitle.subtitles：Phase 4.4 字幕列表
   ///  - view_points：Phase 4.5 章节标记
   ///
-  /// [bvid] / [cid] 必填，用于定位视频。未登录也能调用（无历史进度）。
+  /// [bvid] / [cid] 必填，用于定位视频。[aid] 可选。未登录也能调用（无历史进度）。
   static Future<LoadingState<PlayInfoModel>> playInfo({
+    int? aid,
     required String bvid,
     required int cid,
   }) async {
     // 风控规避参数（对齐 videoUrl 与 BiliPai WbiUtils.appendRiskFingerprintParams）：
     // /x/player/wbi/* 系列缺少 dm_img_* / gaia 参数时会被风控拒绝或降级，
     // 表现为字幕列表/章节标记静默丢失、字幕面板无法弹出。
+    final effectiveAid = aid ?? (bvid.isNotEmpty ? IdUtils.bv2av(bvid) : null);
     final dmImgStr = Utils.base64EncodeRandomString(16, 64);
     final dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
     final params = await WbiSign.makSign({
+      if (effectiveAid != null && effectiveAid > 0) 'aid': effectiveAid,
       'bvid': bvid,
       'cid': cid,
+      'try_look': 1,
       'web_location': '333.976',
       'gaia_source': 'pre-load',
       'isGaiaAvoided': true,
@@ -256,14 +261,28 @@ abstract final class VideoHttp {
       'dm_cover_img_str': dmCoverImgStr,
       'dm_img_inter': '{"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
     });
-    final res = await Request().get(
-      Api.playInfo,
-      queryParameters: params,
-    );
-    if (res.data['code'] == 0) {
-      return Success(PlayInfoModel.fromJson(res.data['data'] ?? {}));
-    } else {
-      return Error(res.data['message']);
+    try {
+      final res = await Request().get(
+        Api.playInfo,
+        queryParameters: params,
+      );
+      if (res.data['code'] == 0) {
+        final model = PlayInfoModel.fromJson(res.data['data'] ?? {});
+        AppLogger.d(
+          'VideoHttp',
+          'playInfo bvid=$bvid cid=$cid: viewPoints=${model.viewPoints.length}, subtitles=${model.subtitle?.subtitles.length ?? 0}',
+        );
+        return Success(model);
+      } else {
+        AppLogger.w(
+          'VideoHttp',
+          'playInfo code!=0: code=${res.data['code']}, msg=${res.data['message']}, bvid=$bvid',
+        );
+        return Error(res.data['message']);
+      }
+    } catch (e, s) {
+      AppLogger.e('VideoHttp', 'playInfo request failed: $e, bvid=$bvid', error: e, stackTrace: s);
+      return Error('获取播放信息失败：$e');
     }
   }
 

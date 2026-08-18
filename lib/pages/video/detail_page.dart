@@ -254,7 +254,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           // Phase 4.2 优化：playInfo（续播进度/字幕/章节）与播放器加载并行，
           // 不再串行等待 —— 首帧关键路径少一次 HTTP 往返。
           // playInfo 返回后通过 resumeTo 恢复进度（race-free，见控制器）。
-          unawaited(_applyPlayInfo(ctrl, cid, detailDurSec));
+          unawaited(_applyPlayInfo(ctrl, cid, detailDurSec, aid: aid));
           ctrl.load();
         }
         // 互动初始态（对标 BiliPai checkInteractionStatus，来自 req_user）。
@@ -281,10 +281,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Future<void> _applyPlayInfo(
     WinWinPlayerController ctrl,
     int cid,
-    int detailDurSec,
-  ) async {
+    int detailDurSec, {
+    int? aid,
+  }) async {
     try {
-      final infoRes = await VideoHttp.playInfo(bvid: widget.bvid, cid: cid);
+      final infoRes = await VideoHttp.playInfo(
+        aid: aid,
+        bvid: widget.bvid,
+        cid: cid,
+      );
       if (!mounted) return;
       if (infoRes case Success(:final response)) {
         // Phase 4.4：传入可用字幕列表，SubtitleController 自动按 AI 偏好选择。
@@ -306,9 +311,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             ctrl.resumeTo(Duration(milliseconds: response.lastPlayTime));
           }
         }
+      } else if (infoRes case Error(:final errMsg)) {
+        AppLogger.w('VideoDetailPage', '_applyPlayInfo failed: $errMsg (bvid=${widget.bvid}, cid=$cid)');
       }
-    } catch (_) {
-      // playInfo 失败不阻断播放。
+    } catch (e, s) {
+      AppLogger.e('VideoDetailPage', '_applyPlayInfo exception: $e (bvid=${widget.bvid}, cid=$cid)', error: e, stackTrace: s);
     }
   }
 

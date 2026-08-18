@@ -2,18 +2,39 @@
 ///
 /// 移植自 PiliPlus `lib/models_new/history/`，精简为 WinWin 所需字段。
 class HistoryData {
+  HistoryCursor? cursor;
   List<HistoryTab>? tab;
   List<HistoryItem>? list;
 
-  HistoryData({this.tab, this.list});
+  HistoryData({this.cursor, this.tab, this.list});
 
   factory HistoryData.fromJson(Map<String, dynamic> json) => HistoryData(
+        cursor: json['cursor'] is Map<String, dynamic>
+            ? HistoryCursor.fromJson(json['cursor'] as Map<String, dynamic>)
+            : null,
         tab: (json['tab'] as List<dynamic>?)
             ?.map((e) => HistoryTab.fromJson(e as Map<String, dynamic>))
             .toList(),
         list: (json['list'] as List<dynamic>?)
             ?.map((e) => HistoryItem.fromJson(e as Map<String, dynamic>))
             .toList(),
+      );
+}
+
+/// 历史游标（分页）。
+class HistoryCursor {
+  int? max;
+  int? viewAt;
+  String? business;
+  int? ps;
+
+  HistoryCursor({this.max, this.viewAt, this.business, this.ps});
+
+  factory HistoryCursor.fromJson(Map<String, dynamic> json) => HistoryCursor(
+        max: _asInt(json['max']),
+        viewAt: _asInt(json['view_at']),
+        business: json['business'] as String?,
+        ps: _asInt(json['ps']),
       );
 }
 
@@ -46,7 +67,7 @@ class HistoryItem {
   String? showTitle;
   int? duration;
   int? isFav;
-  int? kid;
+  dynamic kid;
   String? tagName;
   int? liveStatus;
 
@@ -61,18 +82,18 @@ class HistoryItem {
           .toList()
       ..uri = json['uri'] as String?
       ..history = History.fromJson(json['history'] as Map<String, dynamic>)
-      ..videos = json['videos'] as int?
+      ..videos = _asInt(json['videos'])
       ..authorName = json['author_name'] as String?
-      ..authorMid = json['author_mid'] as int?
-      ..viewAt = json['view_at'] as int?
-      ..progress = json['progress'] as int?
+      ..authorMid = _asInt(json['author_mid'])
+      ..viewAt = _asInt(json['view_at'])
+      ..progress = _asInt(json['progress'])
       ..badge = json['badge'] as String?
       ..showTitle = json['show_title'] as String?
-      ..duration = json['duration'] as int?
-      ..isFav = json['is_fav'] as int?
-      ..kid = json['kid'] as int?
+      ..duration = _asInt(json['duration'])
+      ..isFav = _asInt(json['is_fav'])
+      ..kid = json['kid']
       ..tagName = json['tag_name'] as String?
-      ..liveStatus = json['live_status'] as int?;
+      ..liveStatus = _asInt(json['live_status']);
     return item;
   }
 
@@ -84,7 +105,12 @@ class HistoryItem {
   }
 
   /// 删除时拼接的 kid：`business_kid`。
-  String get delKid => '${history.business}_${kid}';
+  String get delKid {
+    final k = kid?.toString() ?? history.oid?.toString() ?? '';
+    if (k.contains('_')) return k;
+    final b = history.business ?? 'archive';
+    return '${b}_$k';
+  }
 }
 
 /// 历史记录跳转信息。
@@ -106,4 +132,11 @@ class History {
         cid: json['cid'] == 0 ? null : json['cid'] as int?,
         business: json['business'] as String?,
       );
+}
+
+int? _asInt(Object? value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
 }
