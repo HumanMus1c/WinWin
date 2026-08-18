@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -17,7 +18,6 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/toview.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/main.dart';
-import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
@@ -123,10 +123,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   bool _wasPlaying = false;
   /// 页面被覆盖前记录的播放位置，用于返回时恢复进度。
   Duration _savedPosition = Duration.zero;
-
-  /// playInfo 接口返回的数据（Phase 4.2 历史进度 / 4.4 字幕 / 4.5 章节）。
-  /// 由 [_loadDetail] 拉取后缓存，供后续 Phase 使用。
-  PlayInfoModel? _playInfo;
 
   /// 稿件标签（对标 BiliPai videoTags，`/x/tag/archive/tags`）。
   List<VideoTag> _tags = const [];
@@ -249,48 +245,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 ? pages.first.cid
                 : response.cid;
         if (cid != null) {
-          // Phase 4.2：拉取 playInfo 获取上次播放进度（last_play_time），
-          // 同时缓存字幕列表 / 章节标记供 Phase 4.4 / 4.5 使用。
-          Duration? startProgress;
           final aid = response.aid;
           // 稿件总时长（秒），用于判定上次进度是否已接近播完。
           final detailDurSec = response.duration ?? 0;
-          try {
-            final infoRes =
-                await VideoHttp.playInfo(bvid: widget.bvid, cid: cid);
-            if (!mounted) return;
-            if (infoRes case Success(:final response)) {
-              _playInfo = response;
-              // last_play_time 单位为毫秒（参照 PiliPlus
-              // Duration(milliseconds: data.lastPlayTime)）；
-              // 已接近播完（距结尾 ≤10s）时不续播，从头开始。
-              if (response.lastPlayTime > 0) {
-                final lastSec = response.lastPlayTime ~/ 1000;
-                if (detailDurSec <= 0 || lastSec < detailDurSec - 10) {
-                  startProgress = Duration(
-                    milliseconds: response.lastPlayTime,
-                  );
-                }
-              }
-            }
-          } catch (_) {
-            // playInfo 失败不阻断播放。
-          }
-          if (!mounted) return;
           final ctrl = WinWinPlayerController(bvid: widget.bvid, cid: cid);
           ctrl.aid = aid;
           playerController = ctrl;
-          // Phase 4.4：传入可用字幕列表，SubtitleController 自动按 AI 偏好选择。
-          final subtitles = _playInfo?.subtitle?.subtitles ?? const [];
-          if (subtitles.isNotEmpty) {
-            ctrl.setSubtitleList(subtitles);
-          }
-          // Phase 4.5：传入章节标记（view_points），供进度条渲染章节标记。
-          final viewPoints = _playInfo?.viewPoints ?? const [];
-          if (viewPoints.isNotEmpty) {
-            ctrl.setViewPoints(viewPoints);
-          }
-          ctrl.load(start: startProgress);
+          // Phase 4.2 优化：playInfo（续播进度/字幕/章节）与播放器加载并行，
+          // 不再串行等待 —— 首帧关键路径少一次 HTTP 往返。
+          // playInfo 返回后通过 resumeTo 恢复进度（race-free，见控制器）。
+          unawaited(_applyPlayInfo(ctrl, cid, detailDurSec));
+          ctrl.load();
         }
         // 互动初始态（对标 BiliPai checkInteractionStatus，来自 req_user）。
         _hasLike = response.reqUser?.like ?? false;
@@ -306,6 +271,44 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         setState(() => _detailState = res);
       case Loading():
         break;
+    }
+  }
+
+  /// 拉取 playInfo 并应用到控制器（与 ctrl.load 并行执行，Phase 4.2/4.4/4.5）。
+  ///
+  /// 提供：上次播放进度（last_play_time，经 [WinWinPlayerController.resumeTo]
+  /// 恢复）、字幕列表、章节标记。失败静默，不阻断播放。
+  Future<void> _applyPlayInfo(
+    WinWinPlayerController ctrl,
+    int cid,
+    int detailDurSec,
+  ) async {
+    try {
+      final infoRes = await VideoHttp.playInfo(bvid: widget.bvid, cid: cid);
+      if (!mounted) return;
+      if (infoRes case Success(:final response)) {
+        // Phase 4.4：传入可用字幕列表，SubtitleController 自动按 AI 偏好选择。
+        final subtitles = response.subtitle?.subtitles ?? const [];
+        if (subtitles.isNotEmpty) {
+          ctrl.setSubtitleList(subtitles);
+        }
+        // Phase 4.5：传入章节标记（view_points），供进度条渲染章节标记。
+        final viewPoints = response.viewPoints;
+        if (viewPoints.isNotEmpty) {
+          ctrl.setViewPoints(viewPoints);
+        }
+        // last_play_time 单位为毫秒（参照 PiliPlus
+        // Duration(milliseconds: data.lastPlayTime)）；
+        // 已接近播完（距结尾 ≤10s）时不续播，从头开始。
+        if (response.lastPlayTime > 0) {
+          final lastSec = response.lastPlayTime ~/ 1000;
+          if (detailDurSec <= 0 || lastSec < detailDurSec - 10) {
+            ctrl.resumeTo(Duration(milliseconds: response.lastPlayTime));
+          }
+        }
+      }
+    } catch (_) {
+      // playInfo 失败不阻断播放。
     }
   }
 

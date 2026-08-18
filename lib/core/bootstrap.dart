@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/log/startup_blackbox.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/init.dart';
+import 'package:winwin/utils/wbi_sign.dart';
 
 /// Startup bootstrap shared by `main()` and lazily-created controllers.
 ///
@@ -33,4 +36,9 @@ Future<void> _run() async {
   StartupBlackbox.log('bootstrap', 'account restore start');
   AccountService().restore(Pref.userInfoCache);
   StartupBlackbox.log('bootstrap', 'account restore done (${sw.elapsedMilliseconds}ms)');
+
+  // 预取 WBI 签名密钥（不阻塞启动）：首个 WBI 签名请求（playInfo /
+  // videoUrl 等）不再额外串行等待一次 /x/web-interface/nav 往返，
+  // 缩短视频打开首帧关键路径。失败静默（WbiSign 内部已兜底空密钥）。
+  unawaited(Future<void>.sync(WbiSign.getWbiKeys));
 }

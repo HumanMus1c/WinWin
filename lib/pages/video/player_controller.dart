@@ -449,6 +449,40 @@ class WinWinPlayerController {
     _isInitialLoad = false;
   }
 
+  /// 异步恢复到指定播放进度（playInfo 与 [load] 并行返回续播位置时调用）。
+  ///
+  /// 与 load(start:) 不同：调用时加载可能已在进行中（setMedia/prepare），
+  /// 立即 seek 会与加载流程竞态。此处等待 media 就绪（ready 且 duration
+  /// 已由 buffered 事件写入）后再 seek；加载失败则放弃恢复。
+  Future<void> resumeTo(Duration position) async {
+    final player = _player;
+    if (player == null || _disposed || position <= Duration.zero) return;
+    if (!ready.value || duration.value <= Duration.zero) {
+      // 仍在加载：监听就绪信号。error 非空表示加载失败，放弃恢复。
+      final done = Completer<void>();
+      void check() {
+        if ((ready.value && duration.value > Duration.zero) ||
+            error.value != null) {
+          if (!done.isCompleted) done.complete();
+        }
+      }
+      ready.addListener(check);
+      duration.addListener(check);
+      error.addListener(check);
+      try {
+        // 兜底超时：load 被防抖吞掉等极端情况下不悬挂监听。
+        await done.future.timeout(const Duration(seconds: 15), onTimeout: () {});
+      } finally {
+        ready.removeListener(check);
+        duration.removeListener(check);
+        error.removeListener(check);
+      }
+      if (_disposed || error.value != null) return;
+      if (!ready.value || duration.value <= Duration.zero) return;
+    }
+    await player.seek(position: position.inMilliseconds);
+  }
+
   /// 通过 VideoLoadPolicy 解析首次加载画质。
   ///
   /// 桌面端无移动数据概念，[preferFastStartOnMobile] 恒为 false。
