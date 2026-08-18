@@ -4,6 +4,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:winwin/core/log/startup_blackbox.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
@@ -38,19 +39,35 @@ class WindowStateController with WindowListener {
     final maximized = box.get(SettingBoxKey.isWindowMaximized, defaultValue: false) == true;
     final size = _readSize(box.get(SettingBoxKey.windowSize));
     final position = _readOffset(box.get(SettingBoxKey.windowPosition));
+    StartupBlackbox.log('window',
+        'restore state: maximized=$maximized size=${size?.width}x${size?.height} '
+        'position=(${position?.dx.toStringAsFixed(0)},${position?.dy.toStringAsFixed(0)})');
 
     if (maximized) {
+      // 黑箱：maximize 若发生在引擎首帧呈现之前，窗口会以最大化白屏亮相
+      // （原生侧 firstframe 时间线可交叉验证先后顺序）。
+      StartupBlackbox.log('window', 'windowManager.maximize() start');
       await windowManager.maximize();
+      StartupBlackbox.log('window', 'windowManager.maximize() done');
       return;
     }
     if (size != null) {
+      StartupBlackbox.log('window',
+          'windowManager.setSize(${size.width}x${size.height}) start');
       await windowManager.setSize(size);
+      StartupBlackbox.log('window', 'windowManager.setSize done');
     }
     if (position != null) {
       // 位置越出屏幕（如拔掉外接显示器）时不恢复，使用默认位置。
       final screen = _screenLogicalSize();
       if (screen == null || _onScreen(position, size ?? const Size(1280, 800), screen)) {
+        StartupBlackbox.log('window',
+            'windowManager.setPosition(${position.dx.toStringAsFixed(0)},'
+            '${position.dy.toStringAsFixed(0)}) start');
         await windowManager.setPosition(position);
+        StartupBlackbox.log('window', 'windowManager.setPosition done');
+      } else {
+        StartupBlackbox.log('window', 'position off-screen, keep default');
       }
     }
   }

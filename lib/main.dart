@@ -2,11 +2,13 @@ import 'dart:async' show unawaited;
 import 'dart:io' show pid;
 
 import 'package:catcher_2/catcher_2.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/mdk.dart' as mdk;
 
 import 'core/bootstrap.dart';
 import 'core/log/app_logger.dart';
+import 'core/log/startup_blackbox.dart';
 import 'core/log/sync_trace.dart';
 import 'core/storage/storage_pref.dart';
 import 'core/window/window_state_controller.dart';
@@ -27,7 +29,19 @@ final RouteObserver<PageRoute<dynamic>> routeObserver =
     RouteObserver<PageRoute<dynamic>>();
 
 void main() async {
+  // 黑箱：最先注册（偶发启动白屏取证；pending 缓冲保证早于 IO 就绪的
+  // 事件也按序落盘），不阻塞启动。
+  unawaited(StartupBlackbox.init());
+  StartupBlackbox.log(
+      'main', 'entered, release=$kReleaseMode, debug=$kDebugMode, pid=$pid');
+
   WidgetsFlutterBinding.ensureInitialized();
+  StartupBlackbox.log('main', 'binding initialized');
+
+  // 黑箱：首帧 FrameTiming + post-frame 里程碑 + 30s 帧心跳 + 生命周期。
+  StartupBlackbox.attachFrameTracking();
+  AppLifecycleListener(onStateChange: StartupBlackbox.logLifecycle);
+
   // Phase 4.6：初始化桌面伪 PiP 窗口管理器。
   unawaited(DesktopPipController.instance.ensureInitialized());
 
@@ -87,6 +101,7 @@ void main() async {
     if (jsonHandler != null) jsonHandler,
     ConsoleHandler(),
   ];
+  StartupBlackbox.log('main', 'handing off to Catcher2 runApp');
   Catcher2(
     rootWidget: const WinWinApp(),
     debugConfig: Catcher2Options(SilentReportMode(), handlers),
@@ -152,9 +167,12 @@ class _AgreementGateState extends State<AgreementGate> {
   @override
   void initState() {
     super.initState();
+    StartupBlackbox.log('gate', 'AgreementGate initState, awaiting bootstrap');
     ensureBootstrap().then((_) {
       if (!mounted) return;
-      setState(() => _acked = Pref.userAgreementAck);
+      final acked = Pref.userAgreementAck;
+      StartupBlackbox.log('gate', 'bootstrap done, acked=$acked');
+      setState(() => _acked = acked);
     });
   }
 
