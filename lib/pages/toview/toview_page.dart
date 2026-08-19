@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/log/api_blackbox.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/toview.dart';
 import 'package:winwin/models/toview/toview_models.dart';
@@ -43,22 +47,42 @@ class _ToviewPageState extends State<ToviewPage> {
   @override
   void initState() {
     super.initState();
+    AccountService().addListener(_onAccountChanged);
     _scrollController.addListener(_onScroll);
-    _load();
+    _load(refresh: true);
   }
 
   @override
   void dispose() {
+    AccountService().removeListener(_onAccountChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onAccountChanged() {
+    if (!mounted) return;
+    if (AccountService().isLogin) {
+      _load(refresh: true);
+    } else {
+      setState(() {
+        _items.clear();
+        _page = 1;
+        _totalCount = null;
+        _hasMore = true;
+        _loading = false;
+        _isLoadingMore = false;
+        _error = '请先登录';
+      });
+    }
   }
 
   void _checkAutoLoad() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_hasMore || _loading || _isLoadingMore) return;
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.hasContentDimensions) {
         final pos = _scrollController.position;
         if (pos.maxScrollExtent <= 0) {
           _load();
@@ -68,20 +92,25 @@ class _ToviewPageState extends State<ToviewPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
+    await ensureBootstrap();
     if (refresh) {
       _page = 1;
       _hasMore = true;
       _items.clear();
+      _totalCount = null;
       _loading = true;
       _isLoadingMore = false;
+      _error = null;
       setState(() {});
     } else {
-      if (!_hasMore || _loading || _isLoadingMore) return;
+      if (!_hasMore || _isLoadingMore) return;
       _isLoadingMore = true;
       setState(() {});
     }
 
     if (!Accounts.main.isLogin) {
+      ApiBlackbox.log('ToviewPage', 'Load aborted: Accounts.main is not login (${Accounts.main.runtimeType})');
+      AppLogger.w('ToviewPage', 'Accounts.main is not login: ${Accounts.main.runtimeType}');
       setState(() {
         _loading = false;
         _isLoadingMore = false;
@@ -90,11 +119,15 @@ class _ToviewPageState extends State<ToviewPage> {
       return;
     }
 
+    ApiBlackbox.log('ToviewPage', 'Fetching toviewList page=$_page');
+    AppLogger.d('ToviewPage', 'Loading toview page $_page');
     final res = await ToviewHttp.toviewList(page: _page);
     if (!mounted) return;
 
     switch (res) {
       case Success(:final response):
+        ApiBlackbox.log('ToviewPage', 'Success: ${response.list?.length} items, total count: ${response.count}');
+        AppLogger.d('ToviewPage', 'Loaded ${response.list?.length} items, total count: ${response.count}');
         setState(() {
           _loading = false;
           _isLoadingMore = false;
@@ -107,6 +140,8 @@ class _ToviewPageState extends State<ToviewPage> {
         });
         _checkAutoLoad();
       case Error(:final errMsg):
+        ApiBlackbox.log('ToviewPage', 'Error: $errMsg');
+        AppLogger.e('ToviewPage', 'Load failed: $errMsg');
         setState(() {
           _loading = false;
           _isLoadingMore = false;
@@ -121,13 +156,12 @@ class _ToviewPageState extends State<ToviewPage> {
 
   void _onScroll() {
     if (!_hasMore || _loading || _isLoadingMore) return;
-    if (_scrollController.hasClients) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.hasContentDimensions) {
       final pos = _scrollController.position;
       if (pos.pixels >= pos.maxScrollExtent - 300) {
         _load();
       }
-    } else {
-      _load();
     }
   }
 
@@ -278,9 +312,6 @@ class _ToviewPageState extends State<ToviewPage> {
                                 ),
                                 itemCount: _items.length,
                                 itemBuilder: (context, index) {
-                                  if (index >= _items.length - 2) {
-                                    _onScroll();
-                                  }
                                   final item = _items[index];
                                   return _ToviewCard(
                                     item: item,

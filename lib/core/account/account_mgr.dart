@@ -10,6 +10,7 @@ import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/api_type.dart';
 import 'package:winwin/http/api.dart';
+import 'package:winwin/http/browser_ua.dart';
 import 'package:winwin/http/constants.dart';
 import 'package:winwin/models/common/account_type.dart';
 import 'package:winwin/utils/app_sign.dart';
@@ -61,12 +62,11 @@ class AccountManager extends Interceptor {
       return handler.next(options);
     }
 
-    options.headers
-      ..addAll(account.headers)
-      ..['referer'] ??= HttpString.baseUrl;
-
     // app端不需要管理cookie
     if (isApp) {
+      options.headers
+        ..addAll(account.headers)
+        ..['referer'] ??= HttpString.baseUrl;
       final dataPtr = (options.method == 'POST' && options.data is Map
           ? (options.data as Map).cast<String, dynamic>()
           : options.queryParameters);
@@ -78,6 +78,8 @@ class AccountManager extends Interceptor {
       }
       return handler.next(options);
     } else {
+      options.headers['user-agent'] ??= BrowserUa.pc;
+      options.headers['referer'] ??= HttpString.baseUrl;
       // 移植自 BiliPai AppSessionCookieJar：除 loadForRequest 外，
       // 还从 LoginAccount.keyCookies 直接注入 SESSDATA/bili_jct/
       // DedeUserID 等关键 cookie，绕过 cookie_jar 的域名匹配。
@@ -193,10 +195,14 @@ class AccountManager extends Interceptor {
       // skip
     } else {
       dioError(err).then((res) {
-        if (Get.isSnackbarOpen) {
-          Get.closeCurrentSnackbar();
+        try {
+          if (Get.isSnackbarOpen) {
+            Get.closeCurrentSnackbar();
+          }
+          Get.snackbar('请求错误', '$res\n$url');
+        } catch (_) {
+          // 桌面端无 GetX Overlay 时静默，避免二次崩溃
         }
-        Get.snackbar('请求错误', '$res\n$url');
       });
     }
   }

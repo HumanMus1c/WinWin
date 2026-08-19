@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -68,12 +69,47 @@ class _SessionListPageState extends State<SessionListPage> {
   @override
   void initState() {
     super.initState();
+    AccountService().addListener(_onAccountChanged);
     _load();
+  }
+
+  @override
+  void dispose() {
+    AccountService().removeListener(_onAccountChanged);
+    super.dispose();
+  }
+
+  void _onAccountChanged() {
+    if (!mounted) return;
+    if (AccountService().isLogin) {
+      _load(refresh: true);
+    } else {
+      setState(() {
+        _sessions.clear();
+        _mergedAll.clear();
+        _specialMids = null;
+        _endTs = 0;
+        _hasMore = true;
+        _loading = false;
+        _isLoadingMore = false;
+        _error = null;
+      });
+    }
   }
 
   Future<void> _load({bool refresh = false, int dupRetry = 0}) async {
     // 项目约定：触碰网络前等待 bootstrap（幂等），防 dio 未初始化。
     await ensureBootstrap();
+    if (!AccountService().isLogin) {
+      setState(() {
+        _loading = false;
+        _isLoadingMore = false;
+        _sessions.clear();
+        _mergedAll.clear();
+        _error = null;
+      });
+      return;
+    }
     if (refresh) {
       _endTs = 0;
       _hasMore = true;

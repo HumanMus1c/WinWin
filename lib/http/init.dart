@@ -7,6 +7,7 @@ import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/account_mgr.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_utils.dart';
+import 'package:winwin/core/log/api_blackbox.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/constants.dart';
@@ -37,7 +38,9 @@ class Request {
         validateStatus: (_) => true,
       ),
     );
+    client.interceptors.add(_JsonDecodeInterceptor());
     client.interceptors.add(accountManager);
+    client.interceptors.add(ApiBlackboxInterceptor());
     client.interceptors.add(
       RetryInterceptor(client, Pref.retryCount, Pref.retryDelay),
     );
@@ -83,6 +86,19 @@ class Request {
     } catch (_) {}
   }
 
+  static void _ensureJsonDecoded(Response res) {
+    final data = res.data;
+    if (data is String) {
+      final str = data.trim();
+      if ((str.startsWith('{') && str.endsWith('}')) ||
+          (str.startsWith('[') && str.endsWith(']'))) {
+        try {
+          res.data = jsonDecode(str);
+        } catch (_) {}
+      }
+    }
+  }
+
   Future<Response<T>> get<T>(
     String path, {
     Object? data,
@@ -90,8 +106,8 @@ class Request {
     Options? options,
     CancelToken? cancelToken,
     ProgressCallback? onReceiveProgress,
-  }) {
-    return dio.get<T>(
+  }) async {
+    final res = await dio.get<T>(
       path,
       data: data,
       queryParameters: queryParameters,
@@ -99,6 +115,8 @@ class Request {
       cancelToken: cancelToken,
       onReceiveProgress: onReceiveProgress,
     );
+    _ensureJsonDecoded(res);
+    return res;
   }
 
   Future<Response<T>> post<T>(
@@ -109,8 +127,8 @@ class Request {
     CancelToken? cancelToken,
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
-  }) {
-    return dio.post<T>(
+  }) async {
+    final res = await dio.post<T>(
       path,
       data: data,
       queryParameters: queryParameters,
@@ -119,5 +137,15 @@ class Request {
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
     );
+    _ensureJsonDecoded(res);
+    return res;
+  }
+}
+
+class _JsonDecodeInterceptor extends Interceptor {
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    Request._ensureJsonDecoded(response);
+    handler.next(response);
   }
 }

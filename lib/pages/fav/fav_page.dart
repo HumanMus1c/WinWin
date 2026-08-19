@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/log/api_blackbox.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/fav.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/fav/fav_models.dart';
@@ -42,22 +46,41 @@ class _FavPageState extends State<FavPage> {
   @override
   void initState() {
     super.initState();
+    AccountService().addListener(_onAccountChanged);
     _scrollController.addListener(_onScroll);
-    _load();
+    _load(refresh: true);
   }
 
   @override
   void dispose() {
+    AccountService().removeListener(_onAccountChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onAccountChanged() {
+    if (!mounted) return;
+    if (AccountService().isLogin) {
+      _load(refresh: true);
+    } else {
+      setState(() {
+        _folders.clear();
+        _page = 1;
+        _hasMore = true;
+        _loading = false;
+        _isLoadingMore = false;
+        _error = '请先登录';
+      });
+    }
   }
 
   void _checkAutoLoad() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_hasMore || _loading || _isLoadingMore) return;
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.hasContentDimensions) {
         final pos = _scrollController.position;
         if (pos.maxScrollExtent <= 0) {
           _load();
@@ -67,20 +90,24 @@ class _FavPageState extends State<FavPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
+    await ensureBootstrap();
     if (refresh) {
       _page = 1;
       _hasMore = true;
       _folders.clear();
       _loading = true;
       _isLoadingMore = false;
+      _error = null;
       setState(() {});
     } else {
-      if (!_hasMore || _loading || _isLoadingMore) return;
+      if (!_hasMore || _isLoadingMore) return;
       _isLoadingMore = true;
       setState(() {});
     }
 
     if (!Accounts.main.isLogin) {
+      ApiBlackbox.log('FavPage', 'Load aborted: Accounts.main is not login (${Accounts.main.runtimeType})');
+      AppLogger.w('FavPage', 'Accounts.main is not login: ${Accounts.main.runtimeType}');
       setState(() {
         _loading = false;
         _isLoadingMore = false;
@@ -89,14 +116,31 @@ class _FavPageState extends State<FavPage> {
       return;
     }
 
-    final res = await FavHttp.userFavFolder(
+    ApiBlackbox.log('FavPage', 'Fetching userFavFolder pn=$_page, mid=${Accounts.main.mid}');
+    AppLogger.d('FavPage', 'Loading page $_page for mid ${Accounts.main.mid}');
+    var res = await FavHttp.userFavFolder(
       pn: _page,
       mid: Accounts.main.mid,
     );
     if (!mounted) return;
 
+    if (res case Success(:final response)) {
+      if ((response.list == null || response.list!.isEmpty) && _page == 1) {
+        ApiBlackbox.log('FavPage', 'userFavFolder list empty, falling back to allFavFolders');
+        final allRes = await FavHttp.allFavFolders(Accounts.main.mid);
+        if (!mounted) return;
+        if (allRes case Success(response: final allResponse)) {
+          if (allResponse.list != null && allResponse.list!.isNotEmpty) {
+            res = allRes;
+          }
+        }
+      }
+    }
+
     switch (res) {
       case Success(:final response):
+        ApiBlackbox.log('FavPage', 'Success: ${response.list?.length} folders, hasMore: ${response.hasMore}');
+        AppLogger.d('FavPage', 'Loaded ${response.list?.length} folders, hasMore: ${response.hasMore}');
         setState(() {
           _loading = false;
           _isLoadingMore = false;
@@ -107,6 +151,8 @@ class _FavPageState extends State<FavPage> {
         });
         _checkAutoLoad();
       case Error(:final errMsg):
+        ApiBlackbox.log('FavPage', 'Error: $errMsg');
+        AppLogger.e('FavPage', 'Load failed: $errMsg');
         setState(() {
           _loading = false;
           _isLoadingMore = false;
@@ -121,13 +167,12 @@ class _FavPageState extends State<FavPage> {
 
   void _onScroll() {
     if (!_hasMore || _loading || _isLoadingMore) return;
-    if (_scrollController.hasClients) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.hasContentDimensions) {
       final pos = _scrollController.position;
       if (pos.pixels >= pos.maxScrollExtent - 300) {
         _load();
       }
-    } else {
-      _load();
     }
   }
 
@@ -165,9 +210,6 @@ class _FavPageState extends State<FavPage> {
                                 gridDelegate: Grid.folderCardDelegate(),
                                 itemCount: _folders.length,
                                 itemBuilder: (context, index) {
-                                  if (index >= _folders.length - 2) {
-                                    _onScroll();
-                                  }
                                   final folder = _folders[index];
                                   return _FavFolderCard(
                                     folder: folder,
@@ -347,7 +389,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _load();
+    _load(refresh: true);
   }
 
   @override
@@ -361,7 +403,8 @@ class _FavDetailPageState extends State<FavDetailPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_hasMore || _loading || _isLoadingMore) return;
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.hasContentDimensions) {
         final pos = _scrollController.position;
         if (pos.maxScrollExtent <= 0) {
           _load();
@@ -379,7 +422,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
       _isLoadingMore = false;
       setState(() {});
     } else {
-      if (!_hasMore || _loading || _isLoadingMore) return;
+      if (!_hasMore || _isLoadingMore) return;
       _isLoadingMore = true;
       setState(() {});
     }
@@ -412,13 +455,12 @@ class _FavDetailPageState extends State<FavDetailPage> {
 
   void _onScroll() {
     if (!_hasMore || _loading || _isLoadingMore) return;
-    if (_scrollController.hasClients) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.hasContentDimensions) {
       final pos = _scrollController.position;
       if (pos.pixels >= pos.maxScrollExtent - 300) {
         _load();
       }
-    } else {
-      _load();
     }
   }
 
@@ -507,9 +549,6 @@ class _FavDetailPageState extends State<FavDetailPage> {
                             ),
                             itemCount: _items.length,
                             itemBuilder: (context, index) {
-                              if (index >= _items.length - 2) {
-                                _onScroll();
-                              }
                               final item = _items[index];
                               return _FavVideoCard(
                                 item: item,

@@ -28,14 +28,18 @@ abstract final class ToviewHttp {
           'key': keyword,
           'asc': asc,
           'need_split': true,
-          'web_location': '333.881',
+          'web_location': 333.881,
         }),
       );
-      final data = res.data as Map<String, dynamic>;
-      if (data['code'] == 0) {
-        return Success(LaterData.fromJson(data['data'] as Map<String, dynamic>));
+      final data = res.data;
+      if (data is Map<String, dynamic>) {
+        if (data['code'] == 0) {
+          final body = data['data'] as Map<String, dynamic>?;
+          return Success(body != null ? LaterData.fromJson(body) : LaterData(count: 0, list: []));
+        }
+        return Error(data['message']?.toString() ?? '获取稍后再看失败');
       }
-      return Error(data['message']?.toString() ?? '获取稍后再看失败');
+      return const Error('获取稍后再看失败：返回数据格式异常');
     } catch (e) {
       return Error('获取稍后再看失败：$e');
     }

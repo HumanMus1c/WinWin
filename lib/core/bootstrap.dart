@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/account/login_utils.dart';
 import 'package:winwin/core/log/startup_blackbox.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -35,6 +36,11 @@ Future<void> _run() async {
   // 从加密缓存恢复登录态，驱动 UI 首屏展示。
   StartupBlackbox.log('bootstrap', 'account restore start');
   AccountService().restore(Pref.userInfoCache);
+  if (Accounts.main.isLogin &&
+      (AccountService().userInfo == null ||
+          AccountService().userInfo?.isLogin != true)) {
+    unawaited(LoginUtils.onLoginMain());
+  }
   StartupBlackbox.log('bootstrap', 'account restore done (${sw.elapsedMilliseconds}ms)');
 
   // 预取 WBI 签名密钥（不阻塞启动）：首个 WBI 签名请求（playInfo /

@@ -61,7 +61,8 @@ class _SearchPanelState extends State<SearchPanel>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_hasMore || _loading || !_firstLoaded) return;
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.hasContentDimensions) {
         final pos = _scrollController.position;
         if (pos.maxScrollExtent <= 0) {
           _loadMore();
@@ -72,6 +73,7 @@ class _SearchPanelState extends State<SearchPanel>
 
   void _onScroll() {
     if (_scrollController.hasClients &&
+        _scrollController.position.hasContentDimensions &&
         _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 300) {
       _loadMore();

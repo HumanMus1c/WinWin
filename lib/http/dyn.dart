@@ -117,11 +117,18 @@ class DynFeedData {
 
   factory DynFeedData.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List?;
+    final list = <DynItemModel>[];
+    if (rawItems != null) {
+      for (final e in rawItems) {
+        if (e is Map) {
+          try {
+            list.add(DynItemModel.fromJson(Map<String, dynamic>.from(e)));
+          } catch (_) {}
+        }
+      }
+    }
     return DynFeedData(
-      items: rawItems
-              ?.map((e) => DynItemModel.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          <DynItemModel>[],
+      items: list,
       hasMore: json['has_more'] == true,
       offset: json['offset']?.toString() ?? '',
     );
@@ -146,6 +153,8 @@ class DynItemModel {
   final DynOpus? opus;
   /// 直播推荐信息。
   final DynLiveRcmd? liveRcmd;
+  /// 剧集/追番信息（仅 DYNAMIC_TYPE_PGC 或 MAJOR_TYPE_PGC 存在）。
+  final DynPgc? pgc;
   /// 文本描述（动态正文）。
   final String? text;
   /// 富文本节点（@、表情、网页链接、商品链接、BV 链接等）。
@@ -170,6 +179,7 @@ class DynItemModel {
     this.article,
     this.opus,
     this.liveRcmd,
+    this.pgc,
     this.text,
     this.richTextNodes = const [],
     this.additional,
@@ -204,27 +214,56 @@ class DynItemModel {
       majorType == DynMajorType.liveRcmd ||
       liveRcmd != null;
 
+  /// 是否为追番/剧集动态。
+  bool get isPgc =>
+      type == DynType.pgc ||
+      type == DynType.pgcUnion ||
+      majorType == DynMajorType.pgc ||
+      majorType == DynMajorType.pgcUnion ||
+      (pgc != null && (pgc!.title != null || pgc!.cover != null));
+
   factory DynItemModel.fromJson(Map<String, dynamic> json) {
-    final modules = json['modules'] as Map<String, dynamic>? ?? {};
-    final moduleAuthor =
-        modules['module_author'] as Map<String, dynamic>? ?? {};
-    final moduleDynamic =
-        modules['module_dynamic'] as Map<String, dynamic>? ?? {};
-    final desc = moduleDynamic['desc'] as Map<String, dynamic>? ?? {};
-    final major = moduleDynamic['major'] as Map<String, dynamic>? ?? {};
-    final additional = moduleDynamic['additional'] as Map<String, dynamic>?;
-    final moduleStat = modules['module_stat'] as Map<String, dynamic>?;
+    final modules = json['modules'] is Map
+        ? Map<String, dynamic>.from(json['modules'] as Map)
+        : <String, dynamic>{};
+    final moduleAuthor = modules['module_author'] is Map
+        ? Map<String, dynamic>.from(modules['module_author'] as Map)
+        : <String, dynamic>{};
+    final moduleDynamic = modules['module_dynamic'] is Map
+        ? Map<String, dynamic>.from(modules['module_dynamic'] as Map)
+        : <String, dynamic>{};
+    final desc = moduleDynamic['desc'] is Map
+        ? Map<String, dynamic>.from(moduleDynamic['desc'] as Map)
+        : <String, dynamic>{};
+    final major = moduleDynamic['major'] is Map
+        ? Map<String, dynamic>.from(moduleDynamic['major'] as Map)
+        : <String, dynamic>{};
+    final additional = moduleDynamic['additional'] is Map
+        ? Map<String, dynamic>.from(moduleDynamic['additional'] as Map)
+        : null;
+    final moduleStat = modules['module_stat'] is Map
+        ? Map<String, dynamic>.from(modules['module_stat'] as Map)
+        : null;
 
     final rawRichNodes = desc['rich_text_nodes'] as List?;
-    final richNodes = rawRichNodes
-            ?.map((e) => DynRichTextNode.fromJson(e as Map<String, dynamic>))
-            .toList() ??
-        const <DynRichTextNode>[];
+    final richNodes = <DynRichTextNode>[];
+    if (rawRichNodes != null) {
+      for (final n in rawRichNodes) {
+        if (n is Map) {
+          try {
+            richNodes.add(DynRichTextNode.fromJson(Map<String, dynamic>.from(n)));
+          } catch (_) {}
+        }
+      }
+    }
 
     final rawOrig = json['orig'];
-    final origItem = rawOrig is Map<String, dynamic>
-        ? DynItemModel.fromJson(rawOrig)
-        : null;
+    DynItemModel? origItem;
+    if (rawOrig is Map) {
+      try {
+        origItem = DynItemModel.fromJson(Map<String, dynamic>.from(rawOrig));
+      } catch (_) {}
+    }
 
     final majorTypeStr = major['type']?.toString();
 
@@ -238,12 +277,13 @@ class DynItemModel {
       article: DynArticle.fromMajor(major),
       opus: DynOpus.fromMajor(major),
       liveRcmd: DynLiveRcmd.fromMajor(major),
+      pgc: DynPgc.fromMajor(major),
       text: desc['text']?.toString(),
       richTextNodes: richNodes,
       additional:
           additional != null ? DynAdditional.fromJson(additional) : null,
       stat: moduleStat != null ? DynStat.fromJson(moduleStat) : null,
-      pubTs: _asInt(moduleAuthor['pub_ts'] ?? moduleAuthor['pub_action']),
+      pubTs: _asInt(moduleAuthor['pub_ts']),
       orig: origItem,
     );
   }
@@ -458,6 +498,58 @@ class DynLiveRcmd {
           watched?['text_small']?.toString() ??
           liveInfo['watched_show']?.toString(),
       liveStatus: _asInt(liveInfo['live_status']),
+    );
+  }
+}
+
+/// 剧集/追番动态（MAJOR_TYPE_PGC）。
+class DynPgc {
+  final int? seasonId;
+  final int? epId;
+  final String? title;
+  final String? cover;
+  final String? badge;
+  final String? jumpUrl;
+  final String? subType;
+  final int? play;
+  final int? danmaku;
+
+  DynPgc({
+    this.seasonId,
+    this.epId,
+    this.title,
+    this.cover,
+    this.badge,
+    this.jumpUrl,
+    this.subType,
+    this.play,
+    this.danmaku,
+  });
+
+  factory DynPgc.fromMajor(Map<String, dynamic> major) {
+    if (major['type'] != DynMajorType.pgc &&
+        major['type'] != DynMajorType.pgcUnion) {
+      return DynPgc();
+    }
+    final pgc = major['pgc'] as Map<String, dynamic>? ?? {};
+    final stat = pgc['stat'] as Map<String, dynamic>? ?? {};
+    final badgeObj = pgc['badge'];
+    String? badgeText;
+    if (badgeObj is Map) {
+      badgeText = badgeObj['text']?.toString();
+    } else if (badgeObj is String) {
+      badgeText = badgeObj;
+    }
+    return DynPgc(
+      seasonId: _asInt(pgc['season_id']),
+      epId: _asInt(pgc['epid'] ?? pgc['ep_id']),
+      title: pgc['title']?.toString(),
+      cover: pgc['cover']?.toString(),
+      badge: badgeText ?? pgc['sub_type_name']?.toString(),
+      jumpUrl: pgc['jump_url']?.toString(),
+      subType: pgc['sub_type']?.toString(),
+      play: _asInt(stat['play']),
+      danmaku: _asInt(stat['danmaku']),
     );
   }
 }

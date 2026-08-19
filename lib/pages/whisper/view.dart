@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:winwin/common/widgets/refresh_indicator.dart';
+import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
@@ -26,6 +27,8 @@ class WhisperPage extends StatefulWidget {
 
 class _WhisperPageState extends State<WhisperPage>
     with AutomaticKeepAliveClientMixin {
+  final GlobalKey<SessionListSectionState> _sessionListKey =
+      GlobalKey<SessionListSectionState>();
   LoadingState<Map<String, dynamic>> _unreadState = LoadingState.loading();
   LoadingState<Map<String, dynamic>> _feedUnreadState = LoadingState.loading();
   bool _loading = false;
@@ -36,10 +39,36 @@ class _WhisperPageState extends State<WhisperPage>
   @override
   void initState() {
     super.initState();
+    AccountService().addListener(_onAccountChanged);
     _load();
   }
 
+  @override
+  void dispose() {
+    AccountService().removeListener(_onAccountChanged);
+    super.dispose();
+  }
+
+  void _onAccountChanged() {
+    if (!mounted) return;
+    if (AccountService().isLogin) {
+      _load();
+    } else {
+      setState(() {
+        _unreadState = LoadingState.loading();
+        _feedUnreadState = LoadingState.loading();
+      });
+    }
+  }
+
   Future<void> _load() async {
+    if (!AccountService().isLogin) {
+      setState(() {
+        _unreadState = const Success({});
+        _feedUnreadState = const Success({});
+      });
+      return;
+    }
     if (_loading) return;
     _loading = true;
     setState(() {
@@ -55,12 +84,8 @@ class _WhisperPageState extends State<WhisperPage>
     final unreadRes = results[0];
     final feedRes = results[1];
     setState(() {
-      _unreadState = unreadRes is Success<Map<String, dynamic>>
-          ? unreadRes
-          : unreadRes as LoadingState<Map<String, dynamic>>;
-      _feedUnreadState = feedRes is Success<Map<String, dynamic>>
-          ? feedRes
-          : feedRes as LoadingState<Map<String, dynamic>>;
+      _unreadState = unreadRes;
+      _feedUnreadState = feedRes;
     });
     _loading = false;
   }
@@ -97,8 +122,14 @@ class _WhisperPageState extends State<WhisperPage>
           const Divider(height: 1),
           Expanded(
             child: AppRefreshIndicator(
-              onRefresh: _load,
+              onRefresh: () async {
+                await Future.wait([
+                  _load(),
+                  _sessionListKey.currentState?.reload() ?? Future.value(),
+                ]);
+              },
               child: SessionListSection(
+                key: _sessionListKey,
                 onRefreshUnread: () => _clearDmUnread(),
               ),
             ),

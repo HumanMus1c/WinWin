@@ -1,9 +1,23 @@
-# Flutter
+# Flutter / Dart
 build/
 .dart_tool/
 .packages
 .flutter-plugins
 .flutter-plugins-dependencies
+*.exe
+*.dll
+*.pdb
+*.obj
+*.tmp
+*.o
+
+# Logs & Diagnostics
+*.log
+*.log.old
+logs/
+.winwin_logs.json
+*.hive
+*.hive.lock
 
 # IDE
 .idea/
@@ -15,5 +29,5 @@ build/
 Thumbs.db
 
 # Misc
-*.log
 .sandbox/
+scratch/

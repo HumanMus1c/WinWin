@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/history.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/history/history_models.dart';
@@ -43,22 +46,42 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void initState() {
     super.initState();
+    AccountService().addListener(_onAccountChanged);
     _scrollController.addListener(_onScroll);
     _load(refresh: true);
   }
 
   @override
   void dispose() {
+    AccountService().removeListener(_onAccountChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onAccountChanged() {
+    if (!mounted) return;
+    if (AccountService().isLogin) {
+      _load(refresh: true);
+    } else {
+      setState(() {
+        _items.clear();
+        _max = null;
+        _viewAt = null;
+        _hasMore = true;
+        _loading = false;
+        _isLoadingMore = false;
+        _error = '请先登录';
+      });
+    }
   }
 
   void _checkAutoLoad() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_hasMore || _loading || _isLoadingMore) return;
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.hasContentDimensions) {
         final pos = _scrollController.position;
         if (pos.maxScrollExtent <= 0) {
           _load();
@@ -68,6 +91,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
+    await ensureBootstrap();
     if (refresh) {
       _max = null;
       _viewAt = null;
@@ -84,6 +108,7 @@ class _HistoryPageState extends State<HistoryPage> {
     }
 
     if (!Accounts.main.isLogin) {
+      AppLogger.w('HistoryPage', 'Accounts.main is not login: ${Accounts.main.runtimeType}');
       setState(() {
         _loading = false;
         _isLoadingMore = false;
@@ -92,6 +117,7 @@ class _HistoryPageState extends State<HistoryPage> {
       return;
     }
 
+    AppLogger.d('HistoryPage', 'Loading history max: $_max, viewAt: $_viewAt');
     final res = await HistoryHttp.historyList(
       max: _max,
       viewAt: _viewAt,
@@ -100,6 +126,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
     switch (res) {
       case Success(:final response):
+        AppLogger.d('HistoryPage', 'Loaded ${response.list?.length} items');
         setState(() {
           _loading = false;
           _isLoadingMore = false;
@@ -123,6 +150,7 @@ class _HistoryPageState extends State<HistoryPage> {
         });
         _checkAutoLoad();
       case Error(:final errMsg):
+        AppLogger.e('HistoryPage', 'Load failed: $errMsg');
         setState(() {
           _loading = false;
           _isLoadingMore = false;
@@ -137,13 +165,12 @@ class _HistoryPageState extends State<HistoryPage> {
 
   void _onScroll() {
     if (!_hasMore || _loading || _isLoadingMore) return;
-    if (_scrollController.hasClients) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.hasContentDimensions) {
       final pos = _scrollController.position;
       if (pos.pixels >= pos.maxScrollExtent - 300) {
         _load();
       }
-    } else {
-      _load();
     }
   }
 
@@ -265,9 +292,6 @@ class _HistoryPageState extends State<HistoryPage> {
                                 ),
                                 itemCount: _items.length,
                                 itemBuilder: (context, index) {
-                                  if (index >= _items.length - 2) {
-                                    _onScroll();
-                                  }
                                   final item = _items[index];
                                   return _HistoryCard(
                                     item: item,

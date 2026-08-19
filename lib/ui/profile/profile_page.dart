@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/account/login_utils.dart';
+import 'package:winwin/core/log/api_blackbox.dart';
 import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/fav/fav_page.dart';
@@ -121,8 +122,13 @@ class _ProfilePageState extends State<ProfilePage> {
     BuildContext context,
     void Function(BuildContext) onLoggedIn,
   ) async {
-    if (!await LoginGuard.requireLogin(context)) return;
-    if (!mounted) return;
+    ApiBlackbox.log('ProfilePage', 'Action tapped: isLogin=${AccountService().isLogin}');
+    if (!await LoginGuard.requireLogin(context)) {
+      ApiBlackbox.log('ProfilePage', 'Action blocked by LoginGuard');
+      return;
+    }
+    if (!context.mounted) return;
+    ApiBlackbox.log('ProfilePage', 'Action executing callback');
     onLoggedIn(context);
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -22,10 +23,10 @@ class SessionListSection extends StatefulWidget {
   final VoidCallback? onRefreshUnread;
 
   @override
-  State<SessionListSection> createState() => _SessionListSectionState();
+  State<SessionListSection> createState() => SessionListSectionState();
 }
 
-class _SessionListSectionState extends State<SessionListSection> {
+class SessionListSectionState extends State<SessionListSection> {
   final List<Map<String, dynamic>> _sessions = [];
 
   /// 特别关注筛选模式下维护的完整合并列表（仅显示其中特别关注会话）。
@@ -43,13 +44,50 @@ class _SessionListSectionState extends State<SessionListSection> {
   @override
   void initState() {
     super.initState();
+    AccountService().addListener(_onAccountChanged);
     _load();
   }
+
+  @override
+  void dispose() {
+    AccountService().removeListener(_onAccountChanged);
+    super.dispose();
+  }
+
+  void _onAccountChanged() {
+    if (!mounted) return;
+    if (AccountService().isLogin) {
+      _load(refresh: true);
+    } else {
+      setState(() {
+        _sessions.clear();
+        _mergedAll.clear();
+        _specialMids = null;
+        _endTs = 0;
+        _hasMore = true;
+        _loading = false;
+        _isLoadingMore = false;
+        _error = null;
+      });
+    }
+  }
+
+  Future<void> reload() => _load(refresh: true);
 
   Future<void> _load({bool refresh = false, int dupRetry = 0}) async {
     // 启动时本页可能先于 bootstrap 完成前构建（main 不阻塞 runApp），
     // 须先等 Dio 初始化，否则 Request.dio LateInitializationError 导致白屏。
     await ensureBootstrap();
+    if (!AccountService().isLogin) {
+      setState(() {
+        _loading = false;
+        _isLoadingMore = false;
+        _sessions.clear();
+        _mergedAll.clear();
+        _error = null;
+      });
+      return;
+    }
     if (refresh) {
       _endTs = 0;
       _hasMore = true;

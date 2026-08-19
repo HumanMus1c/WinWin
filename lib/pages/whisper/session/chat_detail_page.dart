@@ -60,7 +60,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   final ScrollController _scrollCtrl = ScrollController();
   final TextEditingController _inputCtrl = TextEditingController();
   int? _minSeqno;
-  int? _maxSeqno;
   bool _hasMore = true;
   bool _loading = true;
   bool _loadingMore = false;
@@ -113,7 +112,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           _minSeqno = (response['min_seqno'] as num?)?.toInt() ?? _minSeqno;
           final max = (response['max_seqno'] as num?)?.toInt();
           if (max != null && max > 0) {
-            _maxSeqno = max;
             if (refresh) MsgHttp.ackSessionMsg(talkerId: widget.talkerId, ackSeqno: max);
           }
           _hasMore = (response['has_more'] == 1) && older.isNotEmpty;
@@ -127,6 +125,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted || !_hasMore || _loadingMore) return;
           if (_scrollCtrl.hasClients &&
+              _scrollCtrl.position.hasContentDimensions &&
               _scrollCtrl.position.maxScrollExtent <= 0) {
             _load();
           }
@@ -143,7 +142,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   /// 滚动接近最旧端（reverse 列表的 maxScrollExtent）时加载更早的历史。
   void _onScroll() {
-    if (!_scrollCtrl.hasClients) return;
+    if (!_scrollCtrl.hasClients ||
+        !_scrollCtrl.position.hasContentDimensions) {
+      return;
+    }
     if (_loading || _loadingMore || !_hasMore) return;
     final pos = _scrollCtrl.position;
     if (pos.pixels >= pos.maxScrollExtent - 120) {

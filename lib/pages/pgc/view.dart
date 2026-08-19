@@ -49,7 +49,8 @@ class _PgcPageState extends State<PgcPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_hasMore || _loading) return;
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.hasContentDimensions) {
         final pos = _scrollController.position;
         if (pos.maxScrollExtent <= 0) {
           _load(refresh: false);
@@ -91,7 +92,10 @@ class _PgcPageState extends State<PgcPage>
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) return;
+    if (!_scrollController.hasClients ||
+        !_scrollController.position.hasContentDimensions) {
+      return;
+    }
     final pos = _scrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - 240) {
       _load(refresh: false);

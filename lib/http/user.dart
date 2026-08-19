@@ -14,12 +14,16 @@ abstract final class UserHttp {
   static Future<LoadingState<UserInfoModel>> userInfo() async {
     try {
       final res = await Request().get<dynamic>(Api.userInfo);
-      final data = res.data as Map<String, dynamic>;
-      if (data['code'] == 0) {
-        return Success(UserInfoModel.fromJson(data['data'] as Map<String, dynamic>));
-      } else {
-        return Error(data['message']?.toString() ?? '获取用户信息失败');
+      final data = res.data;
+      if (data is Map<String, dynamic>) {
+        if (data['code'] == 0) {
+          final body = data['data'] as Map<String, dynamic>?;
+          return Success(body != null ? UserInfoModel.fromJson(body) : UserInfoModel());
+        } else {
+          return Error(data['message']?.toString() ?? '获取用户信息失败');
+        }
       }
+      return const Error('获取用户信息失败：返回格式异常');
     } on DioException catch (e) {
       return Error('获取用户信息失败：${e.message ?? e.type.name}');
     } catch (e) {
@@ -41,15 +45,19 @@ abstract final class UserHttp {
         Api.userInfoApp,
         queryParameters: const {'platform': 'android'},
       );
-      final data = res.data as Map<String, dynamic>;
-      if (data['code'] == 0) {
-        final raw = data['data'] as Map<String, dynamic>;
-        // app 端响应不含 isLogin 字段，由调用方在确认登录后置为 true。
-        raw['isLogin'] = true;
-        return Success(UserInfoModel.fromJson(raw));
-      } else {
-        return Error(data['message']?.toString() ?? '获取用户信息失败');
+      final data = res.data;
+      if (data is Map<String, dynamic>) {
+        if (data['code'] == 0) {
+          final raw = data['data'] as Map<String, dynamic>?;
+          if (raw == null) return Success(UserInfoModel());
+          // app 端响应不含 isLogin 字段，由调用方在确认登录后置为 true。
+          raw['isLogin'] = true;
+          return Success(UserInfoModel.fromJson(raw));
+        } else {
+          return Error(data['message']?.toString() ?? '获取用户信息失败');
+        }
       }
+      return const Error('获取用户信息失败：返回格式异常');
     } on DioException catch (e) {
       return Error('获取用户信息失败：${e.message ?? e.type.name}');
     } catch (e) {

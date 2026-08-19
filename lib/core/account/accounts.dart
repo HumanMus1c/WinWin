@@ -43,7 +43,7 @@ abstract final class Accounts {
     }
     return Future.wait(
       (accountMode.toSet()..removeWhere((i) => i.activated)).map(
-        (a) async => a,
+        Request.buvidActive,
       ),
     );
   }

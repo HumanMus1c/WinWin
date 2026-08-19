@@ -1,7 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
+import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/models/user/user_info.dart';
 
 /// 账户状态广播服务（移植自 PiliPlus `lib/services/account_service.dart`）。
@@ -22,7 +21,9 @@ class AccountService extends ChangeNotifier {
   UserInfoModel? get userInfo => _userInfo;
 
   /// 是否已登录。
-  bool get isLogin => _userInfo != null && _userInfo!.isLogin == true;
+  bool get isLogin =>
+      (_userInfo != null && _userInfo!.isLogin == true) ||
+      Accounts.main.isLogin;
 
   /// 头像 URL。
   String get face => _userInfo?.face ?? '';

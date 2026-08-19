@@ -19,11 +19,15 @@ abstract final class FavHttp {
         Api.userFavFolder,
         queryParameters: {'pn': pn, 'ps': ps, 'up_mid': mid},
       );
-      final data = res.data as Map<String, dynamic>;
-      if (data['code'] == 0) {
-        return Success(FavFolderData.fromJson(data['data'] as Map<String, dynamic>));
+      final data = res.data;
+      if (data is Map<String, dynamic>) {
+        if (data['code'] == 0) {
+          final body = data['data'] as Map<String, dynamic>?;
+          return Success(body != null ? FavFolderData.fromJson(body) : FavFolderData(count: 0, list: []));
+        }
+        return Error(data['message']?.toString() ?? '获取收藏夹失败');
       }
-      return Error(data['message']?.toString() ?? '获取收藏夹失败');
+      return const Error('获取收藏夹失败：返回数据格式异常');
     } catch (e) {
       return Error('获取收藏夹失败：$e');
     }
@@ -36,11 +40,15 @@ abstract final class FavHttp {
         Api.favFolder,
         queryParameters: {'up_mid': mid},
       );
-      final data = res.data as Map<String, dynamic>;
-      if (data['code'] == 0) {
-        return Success(FavFolderData.fromJson(data['data'] as Map<String, dynamic>));
+      final data = res.data;
+      if (data is Map<String, dynamic>) {
+        if (data['code'] == 0) {
+          final body = data['data'] as Map<String, dynamic>?;
+          return Success(body != null ? FavFolderData.fromJson(body) : FavFolderData(count: 0, list: []));
+        }
+        return Error(data['message']?.toString() ?? '获取收藏夹失败');
       }
-      return Error(data['message']?.toString() ?? '获取收藏夹失败');
+      return const Error('获取收藏夹失败：返回数据格式异常');
     } catch (e) {
       return Error('获取收藏夹失败：$e');
     }
@@ -57,11 +65,15 @@ abstract final class FavHttp {
         Api.favFolder,
         queryParameters: {'up_mid': mid, 'rid': rid, 'type': type},
       );
-      final data = res.data as Map<String, dynamic>;
-      if (data['code'] == 0) {
-        return Success(FavFolderData.fromJson(data['data'] as Map<String, dynamic>));
+      final data = res.data;
+      if (data is Map<String, dynamic>) {
+        if (data['code'] == 0) {
+          final body = data['data'] as Map<String, dynamic>?;
+          return Success(body != null ? FavFolderData.fromJson(body) : FavFolderData(count: 0, list: []));
+        }
+        return Error(data['message']?.toString() ?? '查询失败');
       }
-      return Error(data['message']?.toString() ?? '查询失败');
+      return const Error('查询失败：返回数据格式异常');
     } catch (e) {
       return Error('查询失败：$e');
     }
@@ -90,11 +102,15 @@ abstract final class FavHttp {
           'platform': 'web',
         },
       );
-      final data = res.data as Map<String, dynamic>;
-      if (data['code'] == 0) {
-        return Success(FavDetailData.fromJson(data['data'] as Map<String, dynamic>));
+      final data = res.data;
+      if (data is Map<String, dynamic>) {
+        if (data['code'] == 0) {
+          final body = data['data'] as Map<String, dynamic>?;
+          return Success(body != null ? FavDetailData.fromJson(body) : FavDetailData(medias: []));
+        }
+        return Error(data['message']?.toString() ?? '获取收藏夹详情失败');
       }
-      return Error(data['message']?.toString() ?? '获取收藏夹详情失败');
+      return const Error('获取收藏夹详情失败：返回数据格式异常');
     } catch (e) {
       return Error('获取收藏夹详情失败：$e');
     }

@@ -14,6 +14,10 @@ abstract final class DynType {
   static const String liveRcmd = 'DYNAMIC_TYPE_LIVE_RCMD';
   /// 课程动态。
   static const String courses = 'DYNAMIC_TYPE_COURSES_SEASON';
+  /// 追番/剧集动态。
+  static const String pgc = 'DYNAMIC_TYPE_PGC';
+  /// 剧集联合动态。
+  static const String pgcUnion = 'DYNAMIC_TYPE_PGC_UNION';
 }
 
 /// 动态 Major 主要内容类型常量。
@@ -23,6 +27,8 @@ abstract final class DynMajorType {
   static const String article = 'MAJOR_TYPE_ARTICLE';
   static const String opus = 'MAJOR_TYPE_OPUS';
   static const String liveRcmd = 'MAJOR_TYPE_LIVE_RCMD';
+  static const String pgc = 'MAJOR_TYPE_PGC';
+  static const String pgcUnion = 'MAJOR_TYPE_PGC_UNION';
   static const String courses = 'MAJOR_TYPE_COURSES';
   static const String none = 'MAJOR_TYPE_NONE';
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
@@ -26,7 +28,8 @@ void showDynamicsPage(BuildContext context) {
 
 /// 动态页（对齐 PiliPlus 与 BiliPai 响应式排版）。
 ///
-/// 顶部 TabBar 切换动态类型，全部 Tab 为弹性单列流，视频 Tab 为自适应多列宫格。
+/// 顶部 TabBar 切换动态类型（全部、视频、追番、专栏）。
+/// 齐次分类（视频、追番）采用标准网格；异质分类（全部、专栏）采用多列自适应瀑布流。
 class DynamicsPage extends StatefulWidget {
   const DynamicsPage({super.key});
 
@@ -40,6 +43,8 @@ class _DynamicsPageState extends State<DynamicsPage>
   final List<_DynTabData> _tabs = const [
     _DynTabData(label: '全部', type: 'all'),
     _DynTabData(label: '视频', type: 'video'),
+    _DynTabData(label: '追番', type: 'pgc'),
+    _DynTabData(label: '专栏', type: 'article'),
   ];
 
   @override
@@ -90,7 +95,7 @@ class _DynTabData {
   const _DynTabData({required this.label, required this.type});
 }
 
-/// 单个动态 tab 页：下拉刷新 + 列表/宫格 + 分页加载。
+/// 单个动态 tab 页：下拉刷新 + 列表/宫格/瀑布流 + 分页加载。
 class _DynTabPage extends StatefulWidget {
   const _DynTabPage({required this.type});
 
@@ -110,6 +115,7 @@ class _DynTabPageState extends State<_DynTabPage>
   bool _loading = false;
 
   bool get _isVideoTab => widget.type == 'video';
+  bool get _isPgcTab => widget.type == 'pgc';
 
   @override
   bool get wantKeepAlive => true;
@@ -134,7 +140,8 @@ class _DynTabPageState extends State<_DynTabPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_hasMore || _loading) return;
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.hasContentDimensions) {
         final pos = _scrollController.position;
         if (pos.maxScrollExtent <= 0) {
           _load(refresh: false);
@@ -188,7 +195,10 @@ class _DynTabPageState extends State<_DynTabPage>
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) return;
+    if (!_scrollController.hasClients ||
+        !_scrollController.position.hasContentDimensions) {
+      return;
+    }
     final pos = _scrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - 240) {
       _load(refresh: false);
@@ -223,9 +233,12 @@ class _DynTabPageState extends State<_DynTabPage>
                         Style.safeSpace,
                         Style.xxl * 2,
                       ),
-                      sliver: _isVideoTab
-                          ? _buildVideoGrid()
-                          : _buildAllDynList(),
+                      sliver: switch (widget.type) {
+                        'video' => _buildVideoGrid(),
+                        'pgc' => _buildPgcGrid(),
+                        'article' => _buildArticleMasonryGrid(),
+                        _ => _buildAllMasonryGrid(),
+                      },
                     ),
                     SliverToBoxAdapter(
                       child: _buildTrailer(),
@@ -237,7 +250,7 @@ class _DynTabPageState extends State<_DynTabPage>
     );
   }
 
-  /// 视频 Tab 宫格排版（与推荐/热门/关注流对齐的纵向卡片网格）。
+  /// 视频 Tab 宫格排版（齐次纵向视频卡片网格）。
   Widget _buildVideoGrid() {
     final gridDelegate = Grid.videoCardVDelegate(
       mainAxisExtent: MediaQuery.textScalerOf(context).scale(90),
@@ -254,27 +267,57 @@ class _DynTabPageState extends State<_DynTabPage>
     );
   }
 
-  /// 全部 Tab 弹性列表排版（居中限制宽度，适配图文/转发等弹性高度卡片）。
-  Widget _buildAllDynList() {
-    return SliverList.separated(
+  /// 追番 Tab 宫格排版（齐次纵向剧集卡片网格）。
+  Widget _buildPgcGrid() {
+    final gridDelegate = Grid.videoCardVDelegate(
+      mainAxisExtent: MediaQuery.textScalerOf(context).scale(90),
+    );
+    return SliverGrid.builder(
+      gridDelegate: gridDelegate,
       itemCount: _items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: Style.md),
       itemBuilder: (context, index) {
         if (index == _items.length - 1) {
           _onScroll();
         }
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: _DynCard(item: _items[index]),
-          ),
-        );
+        return _DynPgcCard(item: _items[index]);
+      },
+    );
+  }
+
+  /// 全部 Tab 自适应多列瀑布流排版（解决异质卡片在标准网格中的行间留白浪费问题）。
+  Widget _buildAllMasonryGrid() {
+    return SliverMasonryGrid.extent(
+      maxCrossAxisExtent: 440.0,
+      mainAxisSpacing: Style.cardSpace,
+      crossAxisSpacing: Style.cardSpace,
+      childCount: _items.length,
+      itemBuilder: (context, index) {
+        if (index == _items.length - 1) {
+          _onScroll();
+        }
+        return _DynCard(item: _items[index]);
+      },
+    );
+  }
+
+  /// 专栏 Tab 自适应多列瀑布流排版。
+  Widget _buildArticleMasonryGrid() {
+    return SliverMasonryGrid.extent(
+      maxCrossAxisExtent: 420.0,
+      mainAxisSpacing: Style.cardSpace,
+      crossAxisSpacing: Style.cardSpace,
+      childCount: _items.length,
+      itemBuilder: (context, index) {
+        if (index == _items.length - 1) {
+          _onScroll();
+        }
+        return _DynCard(item: _items[index]);
       },
     );
   }
 
   Widget _buildSkeleton() {
+    final isGridTab = _isVideoTab || _isPgcTab;
     return CustomScrollView(
       physics: const NeverScrollableScrollPhysics(),
       slivers: [
@@ -285,11 +328,19 @@ class _DynTabPageState extends State<_DynTabPage>
             Style.safeSpace,
             Style.xxl * 2,
           ),
-          sliver: SliverGrid.builder(
-            gridDelegate: Grid.videoCardVDelegate(),
-            itemBuilder: (context, index) => const VideoCardVSkeleton(),
-            itemCount: 12,
-          ),
+          sliver: isGridTab
+              ? SliverGrid.builder(
+                  gridDelegate: Grid.videoCardVDelegate(),
+                  itemBuilder: (context, index) => const VideoCardVSkeleton(),
+                  itemCount: 12,
+                )
+              : SliverMasonryGrid.extent(
+                  maxCrossAxisExtent: 440.0,
+                  mainAxisSpacing: Style.cardSpace,
+                  crossAxisSpacing: Style.cardSpace,
+                  childCount: 8,
+                  itemBuilder: (context, index) => const _DynCardSkeleton(),
+                ),
         ),
       ],
     );
@@ -342,6 +393,65 @@ class _DynTabPageState extends State<_DynTabPage>
       );
     }
     return const SizedBox.shrink();
+  }
+}
+
+/// 动态瀑布流骨架屏组件（无 Expanded，适配 MasonryGrid 无界高度）。
+class _DynCardSkeleton extends StatelessWidget {
+  const _DynCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ColorScheme.of(context).onInverseSurface;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(Style.md),
+        child: Skeleton(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: Style.sm),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(width: 100, height: 12, color: color),
+                      const SizedBox(height: 4),
+                      Container(width: 60, height: 10, color: color),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: Style.sm),
+              Container(width: double.infinity, height: 14, color: color),
+              const SizedBox(height: 6),
+              Container(width: 200, height: 14, color: color),
+              const SizedBox(height: Style.sm),
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(Style.radiusSm),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -427,6 +537,19 @@ class _DynVideoCard extends StatelessWidget {
                         style: const TextStyle(height: 1.35),
                       ),
                     ),
+                    if (item.author?.name != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          item.author!.name!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ),
                     // 播放与弹幕数统计
                     Row(
                       spacing: 3,
@@ -469,7 +592,171 @@ class _DynVideoCard extends StatelessWidget {
   }
 }
 
-/// 全部 Tab 综合动态卡片：作者 + 正文/富文本 + 视频/图文/Opus/专栏/转发/直播/商品 + 互动统计。
+/// 追番 Tab 专属纵向剧集卡片。
+class _DynPgcCard extends StatelessWidget {
+  const _DynPgcCard({required this.item});
+
+  final DynItemModel item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final radius = shapes.medium;
+    final pgc = item.pgc;
+    final cover = pgc?.cover ?? item.archive?.cover;
+    final title = pgc?.title ?? item.archive?.title ?? item.text ?? '';
+    final badge = pgc?.badge;
+    final play = pgc?.play ?? item.archive?.play;
+    final danmaku = pgc?.danmaku ?? item.archive?.danmaku;
+
+    return Card(
+      child: InkWell(
+        onTap: () {
+          if (pgc?.jumpUrl != null && pgc!.jumpUrl!.isNotEmpty) {
+            _handleUrl(context, pgc.jumpUrl!);
+          } else if (item.archive?.bvid != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => VideoDetailPage(
+                  bvid: item.archive!.bvid!,
+                  cover: cover,
+                ),
+              ),
+            );
+          }
+        },
+        borderRadius: BorderRadius.all(radius),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 封面区（16:10）
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: LayoutBuilder(
+                builder: (context, boxConstraints) {
+                  final double maxWidth = boxConstraints.maxWidth;
+                  final double maxHeight = boxConstraints.maxHeight;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      NetworkImgLayer(
+                        src: cover,
+                        width: maxWidth,
+                        height: maxHeight,
+                        borderRadius: BorderRadius.vertical(
+                          top: radius,
+                        ),
+                      ),
+                      if (badge != null && badge.isNotEmpty)
+                        Positioned(
+                          right: 6,
+                          bottom: 6,
+                          child: PBadge(
+                            text: badge,
+                            type: PBadgeType.badge,
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            // 内容区
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(height: 1.35),
+                      ),
+                    ),
+                    if (item.author?.name != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          item.author!.name!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ),
+                    // 播放与弹幕数统计
+                    Row(
+                      spacing: 3,
+                      children: [
+                        Icon(
+                          Icons.play_circle_outlined,
+                          size: 13,
+                          color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                        ),
+                        Text(
+                          NumUtils.formatNum(play),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        if (danmaku != null) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.subtitles_outlined,
+                            size: 13,
+                            color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                          ),
+                          Text(
+                            NumUtils.formatNum(danmaku),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleUrl(BuildContext context, String url) {
+    final result = BilibiliUrlParser.parseDeepLink(url);
+    if (result.bvid != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: result.bvid!)),
+      );
+      return;
+    }
+    if (result.aid != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: IdUtils.av2bv(result.aid!))),
+      );
+      return;
+    }
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text('链接：$url')),
+    );
+  }
+}
+
+/// 全部 Tab 综合动态卡片：作者 + 正文/富文本 + 视频/图文/Opus/专栏/追番/转发/直播/商品 + 互动统计。
 class _DynCard extends StatelessWidget {
   const _DynCard({required this.item});
 
@@ -544,7 +831,7 @@ class _DynCard extends StatelessWidget {
                 ),
               ],
             ),
-            // 正文（富文本解析）
+            // 正文（富文本解析，防超长溢出设置最大行数）
             if (item.text != null && item.text!.isNotEmpty) ...[
               const SizedBox(height: Style.sm),
               if (item.richTextNodes.isNotEmpty)
@@ -552,11 +839,15 @@ class _DynCard extends StatelessWidget {
                   TextSpan(
                     children: _buildRichSpans(context, item.richTextNodes, cs.primary),
                   ),
+                  maxLines: 6,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium,
                 )
               else
                 Text(
                   item.text!,
+                  maxLines: 6,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium,
                 ),
             ],
@@ -567,6 +858,9 @@ class _DynCard extends StatelessWidget {
             ] else if (item.isVideo && item.archive != null && item.archive!.bvid != null) ...[
               const SizedBox(height: Style.sm),
               _buildVideoPreview(context, item.archive!),
+            ] else if (item.isPgc && item.pgc != null) ...[
+              const SizedBox(height: Style.sm),
+              _buildPgcPreview(context, item.pgc!),
             ] else if (item.draw != null && item.draw!.items.isNotEmpty) ...[
               const SizedBox(height: Style.sm),
               _buildDrawGrid(context, item.draw!.items),
@@ -634,14 +928,14 @@ class _DynCard extends StatelessWidget {
                 TextSpan(
                   children: _buildRichSpans(context, orig.richTextNodes, cs.primary),
                 ),
-                maxLines: 4,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyMedium,
               )
             else
               Text(
                 orig.text!,
-                maxLines: 4,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyMedium,
               ),
@@ -649,6 +943,9 @@ class _DynCard extends StatelessWidget {
           if (orig.isVideo && orig.archive != null && orig.archive?.bvid != null) ...[
             const SizedBox(height: Style.sm),
             _buildVideoPreview(context, orig.archive!),
+          ] else if (orig.isPgc && orig.pgc != null) ...[
+            const SizedBox(height: Style.sm),
+            _buildPgcPreview(context, orig.pgc!),
           ] else if (orig.draw != null && orig.draw!.items.isNotEmpty) ...[
             const SizedBox(height: Style.sm),
             _buildDrawGrid(context, orig.draw!.items),
@@ -667,6 +964,97 @@ class _DynCard extends StatelessWidget {
     );
   }
 
+  /// 追番剧集动态卡片预览。
+  Widget _buildPgcPreview(BuildContext context, DynPgc pgc) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final cover = pgc.cover;
+
+    return InkWell(
+      onTap: () {
+        if (pgc.jumpUrl != null && pgc.jumpUrl!.isNotEmpty) {
+          _handleJumpUrl(context, pgc.jumpUrl!);
+        }
+      },
+      borderRadius: BorderRadius.circular(Style.radiusSm),
+      child: Container(
+        padding: const EdgeInsets.all(Style.sm),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(Style.radiusSm),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            if (cover != null && cover.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(Style.radiusXs),
+                child: SizedBox(
+                  width: 90,
+                  height: 60,
+                  child: Stack(
+                    children: [
+                      NetworkImgLayer(
+                        src: cover,
+                        width: 90,
+                        height: 60,
+                        borderRadius: BorderRadius.circular(Style.radiusXs),
+                      ),
+                      if (pgc.badge != null && pgc.badge!.isNotEmpty)
+                        Positioned(
+                          right: 4,
+                          bottom: 4,
+                          child: PBadge(text: pgc.badge!, type: PBadgeType.badge),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: Style.sm),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    pgc.title ?? '剧集更新',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  if (pgc.play != null || pgc.danmaku != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (pgc.play != null) ...[
+                          Icon(Icons.play_circle_outlined, size: 12, color: cs.outline),
+                          const SizedBox(width: 2),
+                          Text(
+                            NumUtils.formatNum(pgc.play),
+                            style: TextStyle(fontSize: 11, color: cs.outline),
+                          ),
+                        ],
+                        if (pgc.danmaku != null) ...[
+                          const SizedBox(width: 6),
+                          Icon(Icons.subtitles_outlined, size: 12, color: cs.outline),
+                          const SizedBox(width: 2),
+                          Text(
+                            NumUtils.formatNum(pgc.danmaku),
+                            style: TextStyle(fontSize: 11, color: cs.outline),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// 图文九宫格图片渲染（1 图自然比例/单大图，2-4 图 2x2，5-9 图 3x3）。
   Widget _buildDrawGrid(BuildContext context, List<DynDrawItem> pics) {
     if (pics.isEmpty) return const SizedBox.shrink();
@@ -674,9 +1062,9 @@ class _DynCard extends StatelessWidget {
       final item = pics.first;
       final w = item.width ?? 16;
       final h = item.height ?? 9;
-      final aspect = (w > 0 && h > 0) ? (w / h).clamp(0.6, 2.2) : 16 / 9;
+      final aspect = (w > 0 && h > 0) ? (w / h).clamp(0.7, 2.0) : 16 / 9;
       return ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 380, maxHeight: 320),
+        constraints: const BoxConstraints(maxWidth: 380, maxHeight: 240),
         child: AspectRatio(
           aspectRatio: aspect,
           child: ClipRRect(
@@ -697,10 +1085,10 @@ class _DynCard extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final totalWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : 480.0;
-        const spacing = 6.0;
+        final totalWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : 380.0;
+        const spacing = 4.0;
         final rawItemWidth = (totalWidth - spacing * (crossAxisCount - 1)) / crossAxisCount;
-        final itemWidth = rawItemWidth.clamp(60.0, 160.0);
+        final itemWidth = rawItemWidth.clamp(50.0, 130.0);
 
         return Wrap(
           spacing: spacing,
@@ -1022,7 +1410,6 @@ class _DynCard extends StatelessWidget {
                 width: double.infinity,
                 height: double.infinity,
                 borderRadius: BorderRadius.circular(Style.radiusSm),
-                heroTag: archive.bvid != null ? 'cover_${archive.bvid}' : null,
               ),
             ),
             Positioned.fill(
@@ -1246,9 +1633,11 @@ class _DynCard extends StatelessWidget {
   }
 
   static String _formatTime(int ts) {
+    if (ts <= 0) return '';
     final dt = DateTime.fromMillisecondsSinceEpoch(ts * 1000);
     final now = DateTime.now();
     final diff = now.difference(dt);
+    if (diff.isNegative || diff.inMinutes < 1) return '刚刚';
     if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
     if (diff.inHours < 24) return '${diff.inHours}小时前';
     if (diff.inDays < 30) return '${diff.inDays}天前';

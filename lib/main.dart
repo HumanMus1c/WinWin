@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:fvp/mdk.dart' as mdk;
 
 import 'core/bootstrap.dart';
+import 'core/log/api_blackbox.dart';
 import 'core/log/app_logger.dart';
 import 'core/log/startup_blackbox.dart';
 import 'core/log/sync_trace.dart';
@@ -32,6 +33,7 @@ void main() async {
   // 黑箱：最先注册（偶发启动白屏取证；pending 缓冲保证早于 IO 就绪的
   // 事件也按序落盘），不阻塞启动。
   unawaited(StartupBlackbox.init());
+  unawaited(ApiBlackbox.init());
   StartupBlackbox.log(
       'main', 'entered, release=$kReleaseMode, debug=$kDebugMode, pid=$pid');
 
