@@ -242,24 +242,11 @@ abstract final class VideoHttp {
     required String bvid,
     required int cid,
   }) async {
-    // 风控规避参数（对齐 videoUrl 与 BiliPai WbiUtils.appendRiskFingerprintParams）：
-    // /x/player/wbi/* 系列缺少 dm_img_* / gaia 参数时会被风控拒绝或降级，
-    // 表现为字幕列表/章节标记静默丢失、字幕面板无法弹出。
     final effectiveAid = aid ?? (bvid.isNotEmpty ? IdUtils.bv2av(bvid) : null);
-    final dmImgStr = Utils.base64EncodeRandomString(16, 64);
-    final dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
     final params = await WbiSign.makSign({
       if (effectiveAid != null && effectiveAid > 0) 'aid': effectiveAid,
       'bvid': bvid,
       'cid': cid,
-      'try_look': 1,
-      'web_location': '333.976',
-      'gaia_source': 'pre-load',
-      'isGaiaAvoided': true,
-      'dm_img_list': '[]',
-      'dm_img_str': dmImgStr,
-      'dm_cover_img_str': dmCoverImgStr,
-      'dm_img_inter': '{"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
     });
     try {
       final res = await Request().get(
@@ -508,9 +495,9 @@ abstract final class VideoHttp {
 
   // ─────────────────── 稿件互动（对标 BiliPai VideoInteractionUseCase）───
 
-  /// （取消）点赞（APP 端 `/x/v2/view/like`，移植自 PiliPlus）。
+  /// （取消）点赞（Web 端 `/x/web-interface/archive/like`，对标 BiliPai ActionRepository.likeVideo）。
   ///
-  /// [type] 为当前是否已点赞：已赞→传 0 取消，未赞→传 1 点赞。
+  /// [type] 为当前是否已点赞：已赞→传 2 取消，未赞→传 1 点赞。
   /// 返回服务端 toast 文案（可能为 null）。
   static Future<LoadingState<String?>> likeVideo({
     required int aid,
@@ -520,16 +507,25 @@ abstract final class VideoHttp {
     if (!account.isLogin) return const Error('请先登录');
     final res = await Request().post(
       Api.likeVideo,
-      data: {'aid': aid.toString(), 'like': type ? '0' : '1'},
+      data: {
+        'aid': aid,
+        'like': type ? 2 : 1, // Web 端：1=点赞，2=取消点赞
+        'csrf': account.csrf,
+      },
       options: Options(
         contentType: Headers.formUrlEncodedContentType,
+        headers: {
+          'origin': 'https://www.bilibili.com',
+          'referer': 'https://www.bilibili.com',
+          'user-agent': BrowserUa.pc,
+        },
         extra: {'account': account},
       ),
     );
     if (res.data['code'] == 0) {
       return Success(res.data['data']?['toast'] as String?);
     } else {
-      return Error(res.data['message']);
+      return Error(res.data['message'] ?? '操作失败');
     }
   }
 
@@ -560,9 +556,9 @@ abstract final class VideoHttp {
     }
   }
 
-  /// 投币（APP 端 `/x/v2/view/coin/add`，移植自 PiliPlus）。
+  /// 投币（Web 端 `/x/web-interface/coin/add`，对标 BiliPai ActionRepository.coinVideo）。
   ///
-  /// [multiply] 投币数量（上限 2），[selectLike] 1=投币同时点赞。
+  /// [multiply] 投币数量（上限 2），[selectLike] 1=投币同时点赞，0=不点赞。
   static Future<LoadingState<void>> coinVideo({
     required int aid,
     required int multiply,
@@ -573,19 +569,34 @@ abstract final class VideoHttp {
     final res = await Request().post(
       Api.coinVideo,
       data: {
-        'aid': aid.toString(),
-        'multiply': multiply.toString(),
-        'select_like': selectLike.toString(),
+        'aid': aid,
+        'multiply': multiply,
+        'select_like': selectLike,
+        'csrf': account.csrf,
       },
       options: Options(
         contentType: Headers.formUrlEncodedContentType,
+        headers: {
+          'origin': 'https://www.bilibili.com',
+          'referer': 'https://www.bilibili.com',
+          'user-agent': BrowserUa.pc,
+        },
         extra: {'account': account},
       ),
     );
-    if (res.data['code'] == 0) {
+    final code = res.data['code'];
+    if (code == 0) {
       return const Success(null);
     } else {
-      return Error(res.data['message']);
+      final msg = switch (code) {
+        34004 => '操作太频繁，请稍后重试',
+        34005 => '已投满2个硬币',
+        -104 => '硬币余额不足',
+        _ => (res.data['message'] as String?)?.isNotEmpty == true
+            ? res.data['message'] as String
+            : '投币失败: $code',
+      };
+      return Error(msg);
     }
   }
 

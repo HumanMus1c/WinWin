@@ -80,7 +80,7 @@ class _HotPageState extends State<HotPage>
                   }
                   return VideoCardV(
                     videoItem: response[index],
-                    heroTag: 'cover_${response[index].bvid}',
+                    heroTag: 'hot_${response[index].bvid}',
                     onTap: () {
                       final item = response[index];
                       if (item is! BaseRcmdVideoItemModel) return;
@@ -92,6 +92,7 @@ class _HotPageState extends State<HotPage>
                           builder: (_) => VideoDetailPage(
                             bvid: bvid,
                             cover: item.cover,
+                            heroTag: 'hot_$bvid',
                           ),
                         ),
                       );

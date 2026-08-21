@@ -476,7 +476,11 @@ class _FavDetailPageState extends State<FavDetailPage> {
     }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => VideoDetailPage(bvid: bvid, cover: item.cover),
+        builder: (_) => VideoDetailPage(
+          bvid: bvid,
+          cover: item.cover,
+          heroTag: 'fav_$bvid',
+        ),
       ),
     );
   }
@@ -708,7 +712,7 @@ class _FavVideoCard extends StatelessWidget {
                           width: 140,
                           height: 140 * 9 / 16,
                           borderRadius: BorderRadius.all(radius),
-                          heroTag: item.bvid != null ? 'cover_${item.bvid}' : null,
+                          heroTag: item.bvid != null ? 'fav_${item.bvid}' : null,
                         ),
                       ),
                       if (duration > 0)

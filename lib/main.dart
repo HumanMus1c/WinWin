@@ -72,7 +72,6 @@ void main() async {
         AppLogger.i('fvp', msg);
       case mdk.LogLevel.debug:
       case mdk.LogLevel.all:
-        AppLogger.d('fvp', msg);
       case mdk.LogLevel.off:
         break;
     }

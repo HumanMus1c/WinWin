@@ -19,7 +19,6 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart' hide SubtitleItem;
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
-import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/play_url.dart';
 import 'package:winwin/pages/danmaku/controller.dart';
@@ -134,8 +133,6 @@ class WinWinPlayerController {
   PlayUrlModel? _playUrl;
   int _currentQn = 80;
 
-  /// HDR 自动升级是否已尝试过（避免循环升级）。
-  bool _hdrUpgradeAttempted = false;
   /// 当前是否为首次加载（用于 HDR 自动升级判定）。
   bool _isInitialLoad = true;
 
@@ -826,14 +823,22 @@ class WinWinPlayerController {
     viewPointsNotifier.value = List.unmodifiable(points);
   }
 
-  /// Phase 4.5：查找当前播放位置对应的章节标题（无则返回 null）。
-  String? currentChapterTitle() {
-    final posSec = position.value.inSeconds.toDouble();
-    for (final vp in viewPointsNotifier.value) {
-      if (vp.contains(posSec)) return vp.title;
+  /// Phase 4.5：查找当前播放位置（或指定秒数）对应的章节对象（无则返回 null）。
+  ViewPoint? currentChapter([double? posSec]) {
+    final sec = posSec ?? position.value.inSeconds.toDouble();
+    final list = viewPointsNotifier.value;
+    if (list.isEmpty) return null;
+    for (final vp in list) {
+      if (vp.contains(sec)) return vp;
+    }
+    for (int i = list.length - 1; i >= 0; i--) {
+      if (sec >= list[i].from) return list[i];
     }
     return null;
   }
+
+  /// Phase 4.5：查找当前播放位置对应的章节标题（无则返回 null）。
+  String? currentChapterTitle([double? posSec]) => currentChapter(posSec)?.title;
 
   // ── Phase 4.6 截图 ──
 
@@ -902,8 +907,8 @@ class WinWinPlayerController {
       (s) => s.index == activeIndex,
       orElse: () => audio.first,
     );
-    final codec = stream.codec?.codec?.toLowerCase();
-    if (codec == null || codec.isEmpty) return null;
+    final codec = stream.codec.codec.toLowerCase();
+    if (codec.isEmpty) return null;
     // 编码名映射：FFmpeg 原始字符串 → 显示标签。
     return switch (codec) {
       'aac' => 'AAC',

@@ -195,7 +195,11 @@ class _ToviewPageState extends State<ToviewPage> {
     }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => VideoDetailPage(bvid: bvid, cover: item.pic),
+        builder: (_) => VideoDetailPage(
+          bvid: bvid,
+          cover: item.pic,
+          heroTag: 'toview_$bvid',
+        ),
       ),
     );
   }
@@ -484,7 +488,7 @@ class _ToviewCard extends StatelessWidget {
                           width: 140,
                           height: 140 * 9 / 16,
                           borderRadius: BorderRadius.all(radius),
-                          heroTag: bvid != null && bvid.isNotEmpty ? 'cover_$bvid' : null,
+                          heroTag: bvid != null && bvid.isNotEmpty ? 'toview_$bvid' : null,
                         ),
                       ),
                       if (duration > 0)

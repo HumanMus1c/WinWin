@@ -205,7 +205,11 @@ class _HistoryPageState extends State<HistoryPage> {
     }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => VideoDetailPage(bvid: bvid, cover: item.cover),
+        builder: (_) => VideoDetailPage(
+          bvid: bvid,
+          cover: item.cover,
+          heroTag: 'history_$bvid',
+        ),
       ),
     );
   }
@@ -468,7 +472,7 @@ class _HistoryCard extends StatelessWidget {
                           width: 140,
                           height: 140 * 9 / 16,
                           borderRadius: BorderRadius.all(radius),
-                          heroTag: bvid != null && bvid.isNotEmpty ? 'cover_$bvid' : null,
+                          heroTag: bvid != null && bvid.isNotEmpty ? 'history_$bvid' : null,
                         ),
                       ),
                       if (duration > 0)

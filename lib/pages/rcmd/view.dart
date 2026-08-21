@@ -78,8 +78,7 @@ class _RcmdPageState extends State<RcmdPage>
                   }
                   return VideoCardV(
                     videoItem: response[index],
-                    // Phase 7.5.3：Hero 共享元素 tag，为详情页转场预留
-                    heroTag: 'cover_${response[index].bvid}',
+                    heroTag: 'rcmd_${response[index].bvid}',
                     onTap: () {
                       final item = response[index];
                       // 推荐流同时可能是 App 模型或 Web 模型，二者均继承
@@ -93,6 +92,7 @@ class _RcmdPageState extends State<RcmdPage>
                           builder: (_) => VideoDetailPage(
                             bvid: bvid,
                             cover: item.cover,
+                            heroTag: 'rcmd_$bvid',
                           ),
                         ),
                       );

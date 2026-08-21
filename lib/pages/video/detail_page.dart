@@ -49,10 +49,16 @@ const double kDetailNarrowBreakpoint = 900;
 /// 退化为单列（评论内联左栏，推荐追加尾部）。视觉沿用 BiliPai 的
 /// iOS 风格（圆角卡片、safeSpace 边距、扁平无阴影）。
 class VideoDetailPage extends StatefulWidget {
-  const VideoDetailPage({super.key, required this.bvid, this.cover});
+  const VideoDetailPage({
+    super.key,
+    required this.bvid,
+    this.cover,
+    this.heroTag,
+  });
 
   final String bvid;
   final String? cover;
+  final Object? heroTag;
 
   @override
   State<VideoDetailPage> createState() => _VideoDetailPageState();
@@ -1197,16 +1203,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Widget _buildPlayerContent(VideoDetailData data) {
     final controller = playerController;
     if (controller == null) {
-      // 封面占位 + Hero 转场（与 VideoCardV 的 heroTag 'cover_$bvid' 对应）
-      return Hero(
-        tag: 'cover_${widget.bvid}',
-        child: NetworkImgLayer(
-          src: widget.cover ?? data.pic,
-          width: double.infinity,
-          height: double.infinity,
-          borderRadius: BorderRadius.zero,
-        ),
+      final coverWidget = NetworkImgLayer(
+        src: widget.cover ?? data.pic,
+        width: double.infinity,
+        height: double.infinity,
+        borderRadius: BorderRadius.zero,
       );
+      if (widget.heroTag != null) {
+        return Hero(
+          tag: widget.heroTag!,
+          child: coverWidget,
+        );
+      }
+      return coverWidget;
     }
     return PlayerPanel(
       controller: controller,
@@ -2053,9 +2062,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 相关推荐卡片（宽栏列表与窄屏 sliver 段落共用）。
   Widget _buildRelatedTile(RelatedVideoItem item) {
     final bvid = item.bvid;
+    final heroTag = bvid != null ? 'related_$bvid' : null;
     return VideoCardH(
       videoItem: item,
-      heroTag: bvid != null ? 'cover_$bvid' : null,
+      heroTag: heroTag,
       coverWidth: 150,
       showStat: false,
       onTap: bvid == null
@@ -2067,6 +2077,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   builder: (_) => VideoDetailPage(
                     bvid: bvid,
                     cover: item.pic,
+                    heroTag: heroTag,
                   ),
                 ),
               );

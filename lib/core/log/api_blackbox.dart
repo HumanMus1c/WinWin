@@ -12,10 +12,11 @@ import 'package:path_provider/path_provider.dart';
 /// - 记录完整的 HTTP 请求、Header、Cookie 状态、Query 参数、签名参数、响应体与异常。
 /// - 自动滚动归档（超过 5MB 滚动为 .old）。
 abstract final class ApiBlackbox {
-  static RandomAccessFile? _raf;
+  static File? _file;
   static final List<String> _pending = [];
   static bool _initTried = false;
   static final Stopwatch _sw = Stopwatch()..start();
+  static final _AsyncExecutor _executor = _AsyncExecutor();
 
   /// 初始化日志文件句柄。在应用启动阶段调用。
   static Future<void> init() async {
@@ -24,46 +25,43 @@ abstract final class ApiBlackbox {
     try {
       final docs = await getApplicationDocumentsDirectory();
       final dir = Directory('${docs.path}${Platform.pathSeparator}logs');
-      if (!dir.existsSync()) dir.createSync(recursive: true);
+      if (!dir.existsSync()) await dir.create(recursive: true);
       final file = File('${dir.path}${Platform.pathSeparator}blackbox_api.log');
       if (file.existsSync() && file.lengthSync() > 5 * 1024 * 1024) {
         final old = File('${file.path}.old');
-        if (old.existsSync()) old.deleteSync();
-        file.renameSync(old.path);
+        if (old.existsSync()) await old.delete();
+        await file.rename(old.path);
       }
-      final raf = file.openSync(mode: FileMode.append);
-      for (final line in _pending) {
-        raf.writeStringSync(line);
+      _file = file;
+      if (_pending.isNotEmpty) {
+        final lines = _pending.join();
+        _pending.clear();
+        _executor.submit(() => file.writeAsString(lines, mode: FileMode.append));
       }
-      _pending.clear();
-      _raf = raf;
       log('ApiBlackbox', '=== ApiBlackbox initialized (pid=$pid) ===');
-    } catch (e) {
+    } catch (_) {
       // 无法落盘则保留内存缓冲
     }
   }
 
-  /// 记录一条格式化日志行并立即刷新到磁盘。
+  /// 记录一条格式化日志行并异步提交到磁盘写入队列。
   static void log(String tag, String message) {
     final line =
         '${DateTime.now().toIso8601String()} [${_sw.elapsedMilliseconds}ms] '
         '[$tag] $message\n';
-    final raf = _raf;
-    if (raf != null) {
-      try {
-        raf.writeStringSync(line);
-        raf.flushSync();
-        return;
-      } catch (_) {}
+    final file = _file;
+    if (file != null) {
+      _executor.submit(() => file.writeAsString(line, mode: FileMode.append));
     } else {
       _pending.add(line);
-      if (_pending.length > 1024) _pending.removeRange(0, 512);
+      if (_pending.length > 512) _pending.removeRange(0, 256);
     }
   }
 
   /// 格式化请求体/响应体，防止超大二进制或数据刷屏。
-  static String formatPayload(dynamic data, {int maxLength = 2048}) {
+  static String formatPayload(dynamic data, {int maxLength = 512}) {
     if (data == null) return '<null>';
+    if (data is List<int>) return '<binary bytes: ${data.length}>';
     try {
       String text;
       if (data is String) {
@@ -80,6 +78,25 @@ abstract final class ApiBlackbox {
     } catch (_) {
       return '<unformattable ${data.runtimeType}>';
     }
+  }
+}
+
+/// 单线程串行执行器：保证落盘顺序且不阻塞主 UI Isolate。
+class _AsyncExecutor {
+  Future<void> _task = Future.value();
+
+  Future<void> submit(Future<void> Function() task) {
+    final completer = Completer<void>();
+    _task = _task.then((_) async {
+      try {
+        await task();
+      } catch (_) {
+        // 吞掉异常，防止单次写失败阻断后续任务。
+      } finally {
+        completer.complete();
+      }
+    });
+    return completer.future;
   }
 }
 

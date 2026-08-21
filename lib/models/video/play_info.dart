@@ -41,12 +41,7 @@ class PlayInfoModel {
         var vp = rawList[i];
         if (vp.to <= vp.from) {
           if (i + 1 < rawList.length && rawList[i + 1].from > vp.from) {
-            vp = ViewPoint(
-              from: vp.from,
-              to: rawList[i + 1].from,
-              title: vp.title,
-              type: vp.type,
-            );
+            vp = vp.copyWith(to: rawList[i + 1].from);
           }
         }
         if (vp.to > vp.from || vp.title.isNotEmpty) {
@@ -67,7 +62,7 @@ class PlayInfoModel {
   }
 }
 
-/// 章节标记（view_points 节点）。
+/// 章节标记（view_points 节点，对标 BiliPai ViewPoint / PiliPlus ViewPoint）。
 class ViewPoint {
   /// 起始时间（秒）。
   final double from;
@@ -75,22 +70,49 @@ class ViewPoint {
   final double to;
   /// 章节标题。
   final String title;
-  /// 章节类型（如 "chapter"）。
-  final String type;
+  /// 类型：1=高能看点/精彩片段，2=正式章节（Chapter）。
+  final int type;
+  /// 章节封面/缩略图 URL。
+  final String? imgUrl;
+  /// 章节 Logo URL。
+  final String? logoUrl;
 
   const ViewPoint({
     required this.from,
     required this.to,
     required this.title,
-    required this.type,
+    this.type = 2,
+    this.imgUrl,
+    this.logoUrl,
   });
 
   /// 章节时长（秒）。
-  double get duration => to - from;
+  double get duration => (to > from) ? (to - from) : 0;
+
+  /// 是否为正式章节（type == 2）。
+  bool get isChapter => type == 2;
 
   /// 判断 [positionSec] 是否在章节内。
   bool contains(double positionSec) =>
-      positionSec >= from && positionSec < to;
+      positionSec >= from && (to <= from || positionSec < to);
+
+  ViewPoint copyWith({
+    double? from,
+    double? to,
+    String? title,
+    int? type,
+    String? imgUrl,
+    String? logoUrl,
+  }) {
+    return ViewPoint(
+      from: from ?? this.from,
+      to: to ?? this.to,
+      title: title ?? this.title,
+      type: type ?? this.type,
+      imgUrl: imgUrl ?? this.imgUrl,
+      logoUrl: logoUrl ?? this.logoUrl,
+    );
+  }
 
   factory ViewPoint.fromJson(Map<String, dynamic> json) {
     final from = _asDouble(json['from']) ?? 0;
@@ -99,12 +121,17 @@ class ViewPoint {
     if (to <= from && dur != null && dur > 0) {
       to = from + dur;
     }
-    final rawTitle = json['title'] ?? json['content'] ?? '';
+    final rawTitle = json['content'] ?? json['title'] ?? '';
+    final typeInt = _asInt(json['type']) ?? 2;
+    final img = json['imgUrl']?.toString() ?? json['img_url']?.toString();
+    final logo = json['logoUrl']?.toString() ?? json['logo_url']?.toString();
     return ViewPoint(
       from: from,
       to: to,
       title: rawTitle.toString(),
-      type: json['type']?.toString() ?? '',
+      type: typeInt,
+      imgUrl: (img != null && img.isNotEmpty) ? img : null,
+      logoUrl: (logo != null && logo.isNotEmpty) ? logo : null,
     );
   }
 }

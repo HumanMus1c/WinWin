@@ -481,7 +481,11 @@ class _DynVideoCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => VideoDetailPage(bvid: bvid, cover: cover),
+              builder: (_) => VideoDetailPage(
+                bvid: bvid,
+                cover: cover,
+                heroTag: 'dyn_$bvid',
+              ),
             ),
           );
         },
@@ -506,7 +510,7 @@ class _DynVideoCard extends StatelessWidget {
                         borderRadius: BorderRadius.vertical(
                           top: radius,
                         ),
-                        heroTag: bvid != null ? 'cover_$bvid' : null,
+                        heroTag: bvid != null ? 'dyn_$bvid' : null,
                       ),
                       if (durationText != null && durationText.isNotEmpty)
                         Positioned(
@@ -523,20 +527,18 @@ class _DynVideoCard extends StatelessWidget {
               ),
             ),
             // 内容区
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(height: 1.35),
-                      ),
-                    ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(height: 1.35),
+                  ),
                     if (item.author?.name != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 2),
@@ -584,7 +586,6 @@ class _DynVideoCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -664,20 +665,18 @@ class _DynPgcCard extends StatelessWidget {
               ),
             ),
             // 内容区
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(height: 1.35),
-                      ),
-                    ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(height: 1.35),
+                  ),
                     if (item.author?.name != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 2),
@@ -727,7 +726,6 @@ class _DynPgcCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
           ],
         ),
       ),

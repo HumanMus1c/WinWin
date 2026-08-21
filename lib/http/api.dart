@@ -42,16 +42,13 @@ abstract final class Api {
   // https://api.bilibili.com/x/web-interface/view/detail?aid=527403921
 
   /// https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/video/action.md
-  // 点赞 Post
+  // 点赞 Post (Web 端，对齐 BiliPai)
   /// aid	num	稿件avid	必要（可选）	avid与bvid任选一个
   /// bvid	str	稿件bvid	必要（可选）	avid与bvid任选一个
   /// like	num	操作方式	必要	1：点赞 2：取消赞
-  // csrf	str	CSRF Token（位于cookie）	必要
+  /// csrf	str	CSRF Token（位于cookie）	必要
   // https://api.bilibili.com/x/web-interface/archive/like
-  // static const String likeVideo = '/x/web-interface/archive/like';
-
-  // 改用app端点赞接口
-  static const String likeVideo = '${HttpString.appBaseUrl}/x/v2/view/like';
+  static const String likeVideo = '/x/web-interface/archive/like';
   //判断视频是否被点赞（双端）Get
   // access_key	str	APP登录Token	APP方式必要
   /// aid	num	稿件avid	必要（可选）	avid与bvid任选一个
@@ -70,17 +67,14 @@ abstract final class Api {
   static const String dislikeVideo =
       '${HttpString.appBaseUrl}/x/v2/view/dislike';
 
-  // 投币视频（web端）POST
+  // 投币视频（web端，对齐 BiliPai）POST
   /// aid	num	稿件avid	必要（可选）	avid与bvid任选一个
   /// bvid	str	稿件bvid	必要（可选）	avid与bvid任选一个
   /// multiply	num	投币数量	必要	上限为2
   /// select_like	num	是否附加点赞	非必要	0：不点赞 1：同时点赞 默认为0
-  // csrf	str	CSRF Token（位于cookie）	必要
+  /// csrf	str	CSRF Token（位于cookie）	必要
   // https://api.bilibili.com/x/web-interface/coin/add
-  // static const String coinVideo = '/x/web-interface/coin/add';
-
-  // 改用app端投币接口
-  static const String coinVideo = '${HttpString.appBaseUrl}/x/v2/view/coin/add';
+  static const String coinVideo = '/x/web-interface/coin/add';
 
   // 判断视频是否被投币（双端）GET
   // access_key	str	APP登录Token	APP方式必要

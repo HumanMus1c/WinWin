@@ -112,7 +112,7 @@ class _FollowPageState extends State<FollowPage>
                   }
                   return VideoCardV(
                     videoItem: response[index],
-                    heroTag: 'cover_${response[index].bvid}',
+                    heroTag: 'follow_${response[index].bvid}',
                     onTap: () {
                       final item = response[index];
                       if (item is! BaseRcmdVideoItemModel) return;
@@ -124,6 +124,7 @@ class _FollowPageState extends State<FollowPage>
                           builder: (_) => VideoDetailPage(
                             bvid: bvid,
                             cover: item.cover,
+                            heroTag: 'follow_$bvid',
                           ),
                         ),
                       );

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -59,6 +60,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
   final ValueNotifier<bool> _controlsVisible = ValueNotifier(true);
   bool _draggingProgress = false;
   double _dragSeconds = 0;
+  double? _hoverSliderSeconds;
+  double? _hoverSliderFraction;
   bool _volumePopupOpen = false;
   bool _chapterPanelOpen = false;
 
@@ -828,24 +831,78 @@ class _PlayerPanelState extends State<PlayerPanel> {
   Widget _buildTimeText() {
     final c = widget.controller;
     return ListenableBuilder(
-      listenable: Listenable.merge([c.position, c.duration]),
+      listenable: Listenable.merge([
+        c.position,
+        c.duration,
+        c.viewPointsNotifier,
+      ]),
       builder: (context, _) {
         final pos = DurationUtils.formatDuration(c.position.value.inSeconds);
         final dur = DurationUtils.formatDuration(c.duration.value.inSeconds);
+        final curChapter = c.currentChapter();
         // B 站风格：当前时间纯白，总时长降饱和。
-        return Text.rich(
-          TextSpan(
-            children: [
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text.rich(
               TextSpan(
-                text: pos,
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+                children: [
+                  TextSpan(
+                    text: pos,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                  TextSpan(
+                    text: ' / $dur',
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                ],
               ),
-              TextSpan(
-                text: ' / $dur',
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            if (curChapter != null && curChapter.title.isNotEmpty) ...[
+              const SizedBox(width: Style.xs),
+              HoverContainer(
+                onTap: () {
+                  setState(() => _chapterPanelOpen = !_chapterPanelOpen);
+                  _onPointerActivity();
+                },
+                borderRadius: 4.0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 2,
+                ),
+                color: _chapterPanelOpen
+                    ? biliBlue.withValues(alpha: 0.25)
+                    : Colors.white.withValues(alpha: 0.08),
+                hoverColor: biliBlue.withValues(alpha: 0.3),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 160),
+                      child: Text(
+                        '· ${curChapter.title}',
+                        style: TextStyle(
+                          color: _chapterPanelOpen
+                              ? biliBlue
+                              : Colors.white.withValues(alpha: 0.88),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 14,
+                      color: _chapterPanelOpen ? biliBlue : Colors.white54,
+                    ),
+                  ],
+                ),
               ),
             ],
-          ),
+          ],
         );
       },
     );
@@ -867,55 +924,157 @@ class _PlayerPanelState extends State<PlayerPanel> {
             : c.position.value.inSeconds.toDouble();
         final value = posSec.clamp(0.0, maxSec).toDouble();
         final chapters = c.viewPoints;
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 3,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                activeTrackColor: biliBlue,
-                inactiveTrackColor: Colors.white24,
-                thumbColor: biliBlue,
-                overlayColor: const Color(0x3300AEEC),
-              ),
-              child: Slider(
-                value: value,
-                min: 0,
-                max: maxSec,
-                onChangeStart: (v) {
-                  setState(() {
-                    _draggingProgress = true;
-                    _dragSeconds = v;
-                  });
-                },
-                onChanged: (v) {
-                  setState(() => _dragSeconds = v);
-                },
-                onChangeEnd: (v) {
-                  setState(() => _draggingProgress = false);
-                  c.seek(Duration(seconds: v.round()));
-                },
-              ),
-            ),
-            // Phase 4.5：章节标记（view_points）— 在进度条上显示竖线标记。
-            if (chapters.isNotEmpty && durSec > 0)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: CustomPaint(
-                      painter: _ChapterMarkerPainter(
-                        chapters: chapters,
-                        durationSec: durSec,
-                        color: Colors.white70,
+        final previewSec = _draggingProgress
+            ? _dragSeconds
+            : _hoverSliderSeconds;
+        final previewChapter =
+            previewSec != null ? c.currentChapter(previewSec) : null;
+        final showTooltip = previewSec != null && durSec > 0;
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final sliderWidth = constraints.maxWidth;
+            final targetFraction = _draggingProgress
+                ? (value / maxSec)
+                : (_hoverSliderFraction ?? (value / maxSec));
+            final tooltipLeft = (targetFraction * (sliderWidth - 24)).clamp(
+              8.0,
+              (sliderWidth - 180).clamp(8.0, double.infinity),
+            );
+
+            return Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                // Hover/Drag 章节与时间浮动预览提示
+                if (showTooltip)
+                  Positioned(
+                    bottom: 28,
+                    left: tooltipLeft,
+                    child: IgnorePointer(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xF0181818),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            width: 0.5,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black54,
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              DurationUtils.formatDuration(previewSec.toInt()),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (previewChapter != null &&
+                                previewChapter.title.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 160),
+                                child: Text(
+                                  previewChapter.title,
+                                  style: const TextStyle(
+                                    color: Color(0xFF00AEEC),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
+                MouseRegion(
+                  onHover: (e) {
+                    final localX =
+                        (e.localPosition.dx - 12).clamp(0.0, sliderWidth - 24);
+                    final fraction = (sliderWidth > 24)
+                        ? (localX / (sliderWidth - 24)).clamp(0.0, 1.0)
+                        : 0.0;
+                    setState(() {
+                      _hoverSliderFraction = fraction;
+                      _hoverSliderSeconds = fraction * maxSec;
+                    });
+                    _onPointerActivity();
+                  },
+                  onExit: (_) {
+                    setState(() {
+                      _hoverSliderSeconds = null;
+                      _hoverSliderFraction = null;
+                    });
+                  },
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 3,
+                      thumbShape:
+                          const RoundSliderThumbShape(enabledThumbRadius: 6),
+                      overlayShape:
+                          const RoundSliderOverlayShape(overlayRadius: 12),
+                      activeTrackColor: biliBlue,
+                      inactiveTrackColor: Colors.white24,
+                      thumbColor: biliBlue,
+                      overlayColor: const Color(0x3300AEEC),
+                    ),
+                    child: Slider(
+                      value: value,
+                      min: 0,
+                      max: maxSec,
+                      onChangeStart: (v) {
+                        setState(() {
+                          _draggingProgress = true;
+                          _dragSeconds = v;
+                        });
+                      },
+                      onChanged: (v) {
+                        setState(() => _dragSeconds = v);
+                      },
+                      onChangeEnd: (v) {
+                        setState(() => _draggingProgress = false);
+                        c.seek(Duration(seconds: v.round()));
+                      },
+                    ),
+                  ),
                 ),
-              ),
-          ],
+                // Phase 4.5：章节标记（view_points）— 在进度条上显示竖线标记。
+                if (chapters.isNotEmpty && durSec > 0)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: CustomPaint(
+                          painter: _ChapterMarkerPainter(
+                            chapters: chapters,
+                            durationSec: durSec,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         );
       },
     );
@@ -1286,7 +1445,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ),
                 const SizedBox(width: Style.xs),
                 Text(
-                  '章节',
+                  '章节 (${chapters.length})',
                   style: TextStyle(
                     color: isOpen ? biliBlue : Colors.white70,
                     fontSize: 11,
@@ -1301,7 +1460,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// 章节悬浮面板 — 覆盖视频画面右侧 1/3 区域的黑色半透明面板，每行展示「时间节点范围 - 章节标题」。
+  /// 章节悬浮面板 — 覆盖视频画面右侧 1/3 区域的黑色半透明面板，每行展示「缩略图 + 时间节点范围 + 章节标题」。
   Widget _buildChapterPanel(double panelWidth) {
     final c = widget.controller;
     return ValueListenableBuilder<List<ViewPoint>>(
@@ -1428,10 +1587,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                       vertical: Style.sm,
                                     ),
                                     color: isCurrent
-                                        ? biliPink.withValues(alpha: 0.14)
+                                        ? biliBlue.withValues(alpha: 0.16)
                                         : Colors.transparent,
                                     hoverColor: isCurrent
-                                        ? biliPink.withValues(alpha: 0.22)
+                                        ? biliBlue.withValues(alpha: 0.24)
                                         : Colors.white.withValues(alpha: 0.08),
                                     child: Row(
                                       crossAxisAlignment:
@@ -1443,7 +1602,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                           child: isCurrent
                                               ? const Icon(
                                                   Icons.play_arrow_rounded,
-                                                  color: biliPink,
+                                                  color: biliBlue,
                                                   size: 18,
                                                 )
                                               : Text(
@@ -1457,7 +1616,19 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                   ),
                                                 ),
                                         ),
-                                        const SizedBox(width: Style.xs),
+                                        if (vp.imgUrl != null &&
+                                            vp.imgUrl!.isNotEmpty) ...[
+                                          ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                            child: NetworkImgLayer(
+                                              src: vp.imgUrl,
+                                              width: 44,
+                                              height: 25,
+                                            ),
+                                          ),
+                                          const SizedBox(width: Style.xs),
+                                        ],
                                         // 时间节点范围
                                         Container(
                                           padding: const EdgeInsets.symmetric(
@@ -1466,7 +1637,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: isCurrent
-                                                ? biliPink.withValues(
+                                                ? biliBlue.withValues(
                                                     alpha: 0.22,
                                                   )
                                                 : Colors.white.withValues(
@@ -1479,7 +1650,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                             '$fromStr - $toStr',
                                             style: TextStyle(
                                               color: isCurrent
-                                                  ? biliPink
+                                                  ? biliBlue
                                                   : Colors.white.withValues(
                                                       alpha: 0.8,
                                                     ),
@@ -1502,7 +1673,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                 : vp.title,
                                             style: TextStyle(
                                               color: isCurrent
-                                                  ? biliPink
+                                                  ? Colors.white
                                                   : Colors.white.withValues(
                                                       alpha: 0.9,
                                                     ),
