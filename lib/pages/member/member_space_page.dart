@@ -37,6 +37,20 @@ enum _DynFilterType {
   const _DynFilterType(this.label);
 }
 
+/// 空间板块类型枚举。
+enum _SpaceTabType {
+  video('投稿'),
+  seasons('合集'),
+  dynamics('动态'),
+  fav('收藏'),
+  bangumi('追番'),
+  liked('点赞'),
+  about('详细资料');
+
+  final String label;
+  const _SpaceTabType(this.label);
+}
+
 /// 用户空间页（对齐 PiliPlus 与 BiliPai 全面设计规范）。
 ///
 /// 包含：
@@ -44,7 +58,7 @@ enum _DynFilterType {
 /// - 完备的用户信息头部（头像+挂件+官方认证标、大会员高亮与徽标、Lv0~Lv6与硬核等级徽标、详细经验进度条、粉丝牌、我关注的人也在关注、签名、UID与空间标签、封禁提示）。
 /// - 交互操作：关注/取关/互关状态切换、私信入口、分享与更多菜单。
 /// - 关系统计入口：关注数、粉丝数、获赞数（点击直达关系列表）。
-/// - 7 大板块标签栏（TabBar）：投稿视频、合集和系列、用户动态、已收藏夹、已追番追剧、已点赞视频、详细资料。
+/// - 动态板块标签栏（TabBar）：根据公开状态自适应呈现（未公开隐私板块自动隐藏）。
 class MemberSpacePage extends StatefulWidget {
   const MemberSpacePage({super.key, required this.mid});
 
@@ -56,7 +70,7 @@ class MemberSpacePage extends StatefulWidget {
 
 class _MemberSpacePageState extends State<MemberSpacePage>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+  late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
 
   LoadingState<MemberSpaceData> _spaceState = LoadingState.loading();
@@ -112,10 +126,60 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   int _relationStatus = 0;
   bool _isFollowingUpdating = false;
 
+  /// 计算当前对外开放可见的 Tab 列表（未公开或私密板块直接不展示）。
+  List<_SpaceTabType> get _availableTabs {
+    final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
+    final tabs = <_SpaceTabType>[_SpaceTabType.video];
+
+    // 合集与系列：本人可见，或者有公开合集数据
+    if (isOwner || _seasonsSeries.isNotEmpty || (_navNum != null && _navNum!.channel > 0)) {
+      tabs.add(_SpaceTabType.seasons);
+    }
+
+    // 动态：公开基础板块
+    tabs.add(_SpaceTabType.dynamics);
+
+    // 收藏夹：本人可见，或者已确认公开且非隐私设置未公开
+    final isFavPublic = !_favFailed && (_favFolders.isNotEmpty || (_navNum != null && _navNum!.favourite > 0));
+    if (isOwner || isFavPublic) {
+      tabs.add(_SpaceTabType.fav);
+    }
+
+    // 追番追剧：本人可见，或者已确认公开且非隐私设置未公开
+    final bangumiCount = _navNum != null ? (_navNum!.bangumi + _navNum!.cinema) : _bangumiList.length;
+    final isBangumiPublic = !_bangumiFailed && (_bangumiList.isNotEmpty || (_navNum != null && bangumiCount > 0));
+    if (isOwner || isBangumiPublic) {
+      tabs.add(_SpaceTabType.bangumi);
+    }
+
+    // 点赞视频：本人可见，或者已确认公开且非隐私设置未公开
+    final isLikedPublic = !_likedFailed && (_likedVideos.isNotEmpty || (_navNum != null && _navNum!.like > 0));
+    if (isOwner || isLikedPublic) {
+      tabs.add(_SpaceTabType.liked);
+    }
+
+    // 详细资料
+    tabs.add(_SpaceTabType.about);
+    return tabs;
+  }
+
+  void _syncTabController() {
+    final tabs = _availableTabs;
+    if (_tabController.length != tabs.length) {
+      final oldIndex = _tabController.index;
+      _tabController.dispose();
+      _tabController = TabController(
+        length: tabs.length,
+        vsync: this,
+        initialIndex: oldIndex.clamp(0, tabs.length - 1),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: _availableTabs.length, vsync: this);
     _loadAll();
   }
 
@@ -167,7 +231,9 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final res = await MemberHttp.spaceNavNum(mid: widget.mid);
     if (!mounted) return;
     if (res case Success(:final response)) {
-      setState(() => _navNum = response);
+      _navNum = response;
+      _syncTabController();
+      setState(() {});
     }
   }
 
@@ -203,9 +269,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         _videoEnd = response.isEnd ?? response.list.isEmpty;
         _videoPage++;
         _videoFailed = false;
+        _syncTabController();
         setState(() {});
       case Error():
         _videoFailed = true;
+        _syncTabController();
         setState(() {});
       case Loading():
         break;
@@ -236,10 +304,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         _favFolders.addAll(response.list ?? []);
         _favFailed = false;
         _favError = null;
+        _syncTabController();
         setState(() {});
       case Error(:final errMsg):
         _favFailed = true;
         _favError = errMsg;
+        _syncTabController();
         setState(() {});
       case Loading():
         break;
@@ -272,10 +342,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         _bangumiPage++;
         _bangumiFailed = false;
         _bangumiError = null;
+        _syncTabController();
         setState(() {});
       case Error(:final errMsg):
         _bangumiFailed = true;
         _bangumiError = errMsg;
+        _syncTabController();
         setState(() {});
       case Loading():
         break;
@@ -306,10 +378,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         _likedVideos.addAll(response);
         _likedFailed = false;
         _likedError = null;
+        _syncTabController();
         setState(() {});
       case Error(:final errMsg):
         _likedFailed = true;
         _likedError = errMsg;
+        _syncTabController();
         setState(() {});
       case Loading():
         break;
@@ -451,6 +525,9 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final theme = Theme.of(context);
     final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
 
+    final tabs = _availableTabs;
+    _syncTabController();
+
     return AppRefreshIndicator(
       onRefresh: _loadAll,
       child: NestedScrollView(
@@ -532,15 +609,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   labelColor: theme.colorScheme.primary,
                   unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
                   indicatorColor: theme.colorScheme.primary,
-                  tabs: [
-                    Tab(text: '投稿 (${_navNum?.video ?? _videos.length})'),
-                    Tab(text: '合集 (${_navNum?.channel ?? _seasonsSeries.length})'),
-                    Tab(text: '动态 (${_dynamics.length})'),
-                    Tab(text: '收藏 (${_navNum?.favourite ?? _favFolders.length})'),
-                    Tab(text: '追番 (${_navNum?.bangumi ?? _bangumiList.length})'),
-                    Tab(text: '点赞 (${_likedVideos.length})'),
-                    const Tab(text: '详细资料'),
-                  ],
+                  tabs: tabs.map((t) => Tab(text: _tabTitle(t))).toList(),
                 ),
                 theme.colorScheme.surface,
               ),
@@ -549,18 +618,49 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         },
         body: TabBarView(
           controller: _tabController,
-          children: [
-            _buildVideosTab(),
-            _buildSeasonsTab(),
-            _buildDynamicsTab(),
-            _buildFavTab(),
-            _buildBangumiTab(),
-            _buildLikedTab(),
-            _buildAboutTab(card),
-          ],
+          children: tabs.map((t) => _buildTabContent(t, card)).toList(),
         ),
       ),
     );
+  }
+
+  String _tabTitle(_SpaceTabType type) {
+    switch (type) {
+      case _SpaceTabType.video:
+        return '投稿 (${_navNum?.video ?? _videos.length})';
+      case _SpaceTabType.seasons:
+        return '合集 (${_navNum?.channel ?? _seasonsSeries.length})';
+      case _SpaceTabType.dynamics:
+        return '动态 (${_dynamics.length})';
+      case _SpaceTabType.fav:
+        return '收藏 (${_navNum?.favourite ?? _favFolders.length})';
+      case _SpaceTabType.bangumi:
+        final count = _navNum != null ? (_navNum!.bangumi + _navNum!.cinema) : _bangumiList.length;
+        return '追番 ($count)';
+      case _SpaceTabType.liked:
+        return '点赞 (${_likedVideos.length})';
+      case _SpaceTabType.about:
+        return '详细资料';
+    }
+  }
+
+  Widget _buildTabContent(_SpaceTabType type, MemberCard? card) {
+    switch (type) {
+      case _SpaceTabType.video:
+        return _buildVideosTab();
+      case _SpaceTabType.seasons:
+        return _buildSeasonsTab();
+      case _SpaceTabType.dynamics:
+        return _buildDynamicsTab();
+      case _SpaceTabType.fav:
+        return _buildFavTab();
+      case _SpaceTabType.bangumi:
+        return _buildBangumiTab();
+      case _SpaceTabType.liked:
+        return _buildLikedTab();
+      case _SpaceTabType.about:
+        return _buildAboutTab(card);
+    }
   }
 
   /// 顶部横幅与头像背景
