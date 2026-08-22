@@ -16,4 +16,18 @@ abstract final class DurationUtils {
     }
     return '${h.toString().padLeft(2, '0')}:$mm:$ss';
   }
+
+  /// Parses a string like '03:45' or '01:23:45' or '120' to seconds integer.
+  static int parseDuration(String? str) {
+    if (str == null || str.isEmpty) return 0;
+    final asInt = int.tryParse(str);
+    if (asInt != null) return asInt;
+    final parts = str.split(':').map((e) => int.tryParse(e) ?? 0).toList();
+    if (parts.length == 2) {
+      return parts[0] * 60 + parts[1];
+    } else if (parts.length == 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+    return 0;
+  }
 }

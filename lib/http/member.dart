@@ -6,6 +6,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/utils/duration_utils.dart';
 
 /// 投稿视频排序类型。
 enum ArchiveOrderType {
@@ -18,10 +19,11 @@ enum ArchiveOrderType {
 
 /// 用户空间相关 HTTP（移植与对齐 PiliPlus `lib/http/member.dart` 与 BiliPai）。
 abstract final class MemberHttp {
-  /// 用户空间信息（APP 端 `/x/v2/space`）。
+  /// 用户空间信息（APP 端 `/x/v2/space` 与 Web 端 `/x/web-interface/card` 双通道容灾）。
   ///
-  /// 返回 [MemberSpaceData]，包含用户完整卡片（头像/名字/签名/粉丝牌/关注TA的人/等级等）。
+  /// 返回 [MemberSpaceData]，包含用户完整卡片（头像/名字/签名/粉丝牌/关注TA的人/等级/背景等）。
   static Future<LoadingState<MemberSpaceData>> space({required int mid}) async {
+    // 1. 优先尝试 APP 端空间接口
     final params = {
       'build': 8430300,
       'version': '8.43.0',
@@ -42,12 +44,34 @@ abstract final class MemberHttp {
             'bili-http-engine': 'cronet',
             'user-agent': Constants.userAgentApp,
           },
+          sendTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
         ),
       );
       final data = res.data as Map<String, dynamic>;
-      if (data['code'] == 0) {
+      if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
         return Success(
-          MemberSpaceData.fromJson(data['data'] as Map<String, dynamic>? ?? <String, dynamic>{}),
+          MemberSpaceData.fromJson(data['data'] as Map<String, dynamic>),
+        );
+      }
+    } catch (_) {
+      // APP 端超时或异常时无缝降级到 Web 端卡片接口
+    }
+
+    // 2. Web 端卡片接口兜底（高可用、极速）
+    try {
+      final res = await Request().get<dynamic>(
+        Api.memberCardInfo,
+        queryParameters: {'mid': mid, 'photo': true},
+        options: Options(
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
+        return Success(
+          MemberSpaceData.fromWebCard(data['data'] as Map<String, dynamic>),
         );
       } else {
         return Error(data['message']?.toString() ?? '获取空间信息失败');
@@ -59,16 +83,18 @@ abstract final class MemberHttp {
     }
   }
 
-  /// 用户投稿视频列表（APP 端游标分页 `/x/v2/space/archive/cursor`）。
+  /// 用户投稿视频列表（APP 游标与 Web 端搜索双通道）。
   ///
   /// 支持 [order] 排序（pubdate 最新发布 / click 最多播放热门）。
   static Future<LoadingState<MemberArchiveData>> spaceArchive({
     required int mid,
     String? cursor,
+    int pageNum = 1,
     ArchiveOrderType order = ArchiveOrderType.pubdate,
     int? seasonId,
     int? seriesId,
   }) async {
+    // 1. 尝试 APP 游标接口
     final params = {
       'vmid': mid,
       if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
@@ -92,13 +118,60 @@ abstract final class MemberHttp {
             'bili-http-engine': 'cronet',
             'user-agent': Constants.userAgentApp,
           },
+          sendTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
         ),
       );
       final data = res.data as Map<String, dynamic>;
-      if (data['code'] == 0) {
+      if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
         return Success(
-          MemberArchiveData.fromJson(data['data'] as Map<String, dynamic>? ?? <String, dynamic>{}),
+          MemberArchiveData.fromJson(data['data'] as Map<String, dynamic>),
         );
+      }
+    } catch (_) {
+      // APP 接口异常降级到 Web 搜索接口
+    }
+
+    // 2. Web 端投稿检索接口兜底
+    try {
+      final orderParam = switch (order) {
+        ArchiveOrderType.pubdate => 'pubdate',
+        ArchiveOrderType.click => 'click',
+      };
+      final res = await Request().get<dynamic>(
+        '/x/space/arc/search',
+        queryParameters: {
+          'mid': mid,
+          'ps': 30,
+          'pn': pageNum,
+          'order': orderParam,
+        },
+        options: Options(
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
+        final d = data['data'] as Map<String, dynamic>;
+        final vlist = (d['list'] as Map?)?['vlist'] as List? ?? [];
+        final page = d['page'] as Map<String, dynamic>? ?? {};
+        final total = _asInt(page['count']) ?? vlist.length;
+        final list = vlist.map((e) {
+          final m = Map<String, dynamic>.from(e as Map);
+          return MemberVideoItem(
+            aid: _asInt(m['aid']),
+            bvid: m['bvid']?.toString(),
+            title: m['title']?.toString(),
+            pic: m['pic']?.toString(),
+            play: _asInt(m['play']),
+            danmaku: _asInt(m['video_review']),
+            duration: DurationUtils.parseDuration(m['length']?.toString() ?? ''),
+            pubdate: _asInt(m['created']),
+          );
+        }).toList();
+        final isEnd = (pageNum * 30) >= total;
+        return Success(MemberArchiveData(list: list, isEnd: isEnd));
       } else {
         return Error(data['message']?.toString() ?? '获取投稿列表失败');
       }
@@ -259,6 +332,93 @@ abstract final class MemberHttp {
     }
   }
 
+  /// 获取用户空间导航数量与公开板块统计（Web 端 `/x/space/navnum`）。
+  static Future<LoadingState<SpaceNavNumData>> spaceNavNum({required int mid}) async {
+    try {
+      final res = await Request().get<dynamic>(
+        '/x/space/navnum',
+        queryParameters: {'mid': mid},
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
+        return Success(SpaceNavNumData.fromJson(data['data'] as Map<String, dynamic>));
+      } else {
+        return Error(data['message']?.toString() ?? '获取空间导航统计失败');
+      }
+    } on DioException catch (e) {
+      return Error('网络请求异常：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('获取空间导航统计失败：$e');
+    }
+  }
+
+  /// 用户最近点赞视频列表（Web 端 `/x/space/like/video`）。
+  ///
+  /// 若用户隐私设置未公开，API 将返回 code 53004。
+  static Future<LoadingState<List<MemberVideoItem>>> likedVideos({
+    required int mid,
+  }) async {
+    try {
+      final res = await Request().get<dynamic>(
+        Api.getRecentLikeVideoApi,
+        queryParameters: {'vmid': mid},
+      );
+      final data = res.data as Map<String, dynamic>;
+      final code = data['code'];
+      if (code == 0) {
+        final list = (data['data']?['list'] as List?) ?? [];
+        final items = list
+            .map((e) => MemberVideoItem.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+        return Success(items);
+      } else if (code == 53004 || code == 53000 || code == -400) {
+        return Error(data['message']?.toString() ?? '用户隐私设置未公开');
+      } else {
+        return Error(data['message']?.toString() ?? '获取点赞视频失败');
+      }
+    } on DioException catch (e) {
+      return Error('网络请求异常：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('获取点赞视频失败：$e');
+    }
+  }
+
+  /// 用户追番 / 追剧列表（Web 端 `/x/space/bangumi/follow/list`）。
+  ///
+  /// - [type]: 1=追番（Anime），2=追剧（Cinema / 影视）
+  static Future<LoadingState<SpaceBangumiData>> spaceBangumi({
+    required int mid,
+    int type = 1,
+    int pn = 1,
+    int ps = 30,
+  }) async {
+    try {
+      final res = await Request().get<dynamic>(
+        Api.favPgc,
+        queryParameters: {
+          'vmid': mid,
+          'type': type,
+          'pn': pn,
+          'ps': ps,
+        },
+      );
+      final data = res.data as Map<String, dynamic>;
+      final code = data['code'];
+      if (code == 0) {
+        final d = data['data'] as Map<String, dynamic>? ?? {};
+        return Success(SpaceBangumiData.fromJson(d));
+      } else if (code == 53004 || code == 53000) {
+        return Error(data['message']?.toString() ?? '用户隐私设置未公开');
+      } else {
+        return Error(data['message']?.toString() ?? '获取追番列表失败');
+      }
+    } on DioException catch (e) {
+      return Error('网络请求异常：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('获取追番列表失败：$e');
+    }
+  }
+
   /// 关系操作（关注 / 取消关注 / 特别关注 / 移除黑名单）。
   ///
   /// - [act]: 1=关注, 2=取关, 3=悄悄关注, 4=取消悄关, 5=拉黑, 6=移出黑名单
@@ -293,7 +453,7 @@ abstract final class MemberHttp {
   }
 }
 
-/// 用户空间数据（`/x/v2/space` 响应）。
+/// 用户空间数据（`/x/v2/space` 响应 或 `/x/web-interface/card` 映射）。
 class MemberSpaceData {
   final MemberCard? card;
   final MemberArchiveData? archives;
@@ -335,6 +495,155 @@ class MemberSpaceData {
               ? MemberImages(topPhoto: topPhotoDirect.toString(), imgUrl: topPhotoDirect.toString())
               : null),
       silence: _asInt(json['silence']),
+    );
+  }
+
+  /// 从 Web 端 `/x/web-interface/card` 构建 [MemberSpaceData]。
+  factory MemberSpaceData.fromWebCard(Map<String, dynamic> json) {
+    final cardMap = json['card'] as Map<String, dynamic>? ?? {};
+    final spaceMap = json['space'] as Map<String, dynamic>? ??
+        (cardMap['space'] as Map<String, dynamic>?);
+    final likesMap = json['like_num'] != null ? {'like_num': json['like_num']} : null;
+
+    return MemberSpaceData(
+      card: MemberCard(
+        mid: _asInt(cardMap['mid']),
+        name: cardMap['name']?.toString(),
+        face: cardMap['face']?.toString(),
+        sign: cardMap['sign']?.toString(),
+        level: _asInt((cardMap['level_info'] as Map?)?['current_level'] ?? cardMap['level']),
+        fans: _asInt(cardMap['fans'] ?? json['follower']),
+        following: _asInt(cardMap['attention'] ?? cardMap['following']),
+        vip: cardMap['vip'] is Map<String, dynamic>
+            ? MemberVip.fromJson(cardMap['vip'] as Map<String, dynamic>)
+            : null,
+        officialVerify: cardMap['official_verify'] is Map<String, dynamic>
+            ? MemberOfficial.fromJson(cardMap['official_verify'] as Map<String, dynamic>)
+            : null,
+        levelInfo: cardMap['level_info'] is Map<String, dynamic>
+            ? MemberLevelInfo.fromJson(cardMap['level_info'] as Map<String, dynamic>)
+            : null,
+        pendant: cardMap['pendant'] is Map<String, dynamic>
+            ? MemberPendant.fromJson(cardMap['pendant'] as Map<String, dynamic>)
+            : null,
+        likes: likesMap != null ? MemberLikes.fromJson(likesMap) : null,
+        relation: _asInt((cardMap['relation'] as Map?)?['status'] ?? cardMap['relation']),
+        silence: _asInt(cardMap['silence']),
+      ),
+      archives: null,
+      images: spaceMap != null ? MemberImages.fromJson(spaceMap) : null,
+      silence: _asInt(cardMap['silence']),
+    );
+  }
+}
+
+/// 空间各板块统计数据（`/x/space/navnum` 响应）。
+class SpaceNavNumData {
+  final int video;
+  final int bangumi;
+  final int cinema;
+  final int favourite;
+  final int like;
+  final int channel;
+
+  SpaceNavNumData({
+    this.video = 0,
+    this.bangumi = 0,
+    this.cinema = 0,
+    this.favourite = 0,
+    this.like = 0,
+    this.channel = 0,
+  });
+
+  factory SpaceNavNumData.fromJson(Map<String, dynamic> json) {
+    final fav = json['favourite'];
+    int favCount = 0;
+    if (fav is Map) {
+      favCount = _asInt(fav['master']) ?? 0;
+    } else if (fav is int) {
+      favCount = fav;
+    }
+    return SpaceNavNumData(
+      video: _asInt(json['video']) ?? 0,
+      bangumi: _asInt(json['bangumi']) ?? 0,
+      cinema: _asInt(json['cinema']) ?? 0,
+      favourite: favCount,
+      like: _asInt(json['like']) ?? 0,
+      channel: _asInt((json['channel'] as Map?)?['master']) ?? _asInt(json['channel']) ?? 0,
+    );
+  }
+}
+
+/// 用户追番/追剧列表数据。
+class SpaceBangumiData {
+  final List<SpaceBangumiItem> list;
+  final int total;
+  final int pn;
+  final int ps;
+
+  SpaceBangumiData({
+    this.list = const [],
+    this.total = 0,
+    this.pn = 1,
+    this.ps = 30,
+  });
+
+  bool get isEnd => (pn * ps) >= total;
+
+  factory SpaceBangumiData.fromJson(Map<String, dynamic> json) {
+    final rawList = json['list'] as List? ?? [];
+    final list = rawList
+        .map((e) => SpaceBangumiItem.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+    return SpaceBangumiData(
+      list: list,
+      total: _asInt(json['total']) ?? list.length,
+      pn: _asInt(json['pn']) ?? 1,
+      ps: _asInt(json['ps']) ?? 30,
+    );
+  }
+}
+
+/// 追番 / 追剧单个卡片模型。
+class SpaceBangumiItem {
+  final int? seasonId;
+  final int? mediaId;
+  final String? title;
+  final String? cover;
+  final String? badge;
+  final String? progress;
+  final String? indexShow;
+  final int? totalCount;
+  final int? follow;
+  final int? view;
+
+  SpaceBangumiItem({
+    this.seasonId,
+    this.mediaId,
+    this.title,
+    this.cover,
+    this.badge,
+    this.progress,
+    this.indexShow,
+    this.totalCount,
+    this.follow,
+    this.view,
+  });
+
+  factory SpaceBangumiItem.fromJson(Map<String, dynamic> json) {
+    final newEp = json['new_ep'] as Map<String, dynamic>?;
+    final stat = json['stat'] as Map<String, dynamic>?;
+    return SpaceBangumiItem(
+      seasonId: _asInt(json['season_id']),
+      mediaId: _asInt(json['media_id']),
+      title: json['title']?.toString(),
+      cover: json['cover']?.toString(),
+      badge: json['badge']?.toString(),
+      progress: json['progress']?.toString(),
+      indexShow: newEp?['index_show']?.toString(),
+      totalCount: _asInt(json['total_count']),
+      follow: _asInt(stat?['follow']),
+      view: _asInt(stat?['view']),
     );
   }
 }
@@ -764,6 +1073,7 @@ class MemberArchiveData {
 
 /// 投稿视频条目。
 class MemberVideoItem {
+  final int? aid;
   final String? bvid;
   final String? title;
   final String? pic;
@@ -774,6 +1084,7 @@ class MemberVideoItem {
   final String? upName;
 
   MemberVideoItem({
+    this.aid,
     this.bvid,
     this.title,
     this.pic,
@@ -786,6 +1097,7 @@ class MemberVideoItem {
 
   factory MemberVideoItem.fromJson(Map<String, dynamic> json) {
     return MemberVideoItem(
+      aid: _asInt(json['aid']),
       bvid: json['bvid'] as String?,
       title: json['title'] as String?,
       pic: json['cover'] as String? ?? json['pic'] as String?,

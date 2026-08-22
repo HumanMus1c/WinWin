@@ -10,8 +10,11 @@ import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/dyn.dart';
+import 'package:winwin/http/fav.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
+import 'package:winwin/models/fav/fav_models.dart';
+import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/member/season_series_detail_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
@@ -37,14 +40,11 @@ enum _DynFilterType {
 /// 用户空间页（对齐 PiliPlus 与 BiliPai 全面设计规范）。
 ///
 /// 包含：
-/// - 沉浸式顶部背景横幅（带渐变过渡）。
+/// - 沉浸式顶部背景横幅（双通道与自动协议补全）。
 /// - 完备的用户信息头部（头像+挂件+官方认证标、大会员高亮与徽标、Lv0~Lv6与硬核等级徽标、详细经验进度条、粉丝牌、我关注的人也在关注、签名、UID与空间标签、封禁提示）。
 /// - 交互操作：关注/取关/互关状态切换、私信入口、分享与更多菜单。
 /// - 关系统计入口：关注数、粉丝数、获赞数（点击直达关系列表）。
-/// - 标签栏（TabBar）：投稿视频、合集和系列、用户动态、详细资料。
-/// - 投稿视频网格：支持最新发布与最多播放（热门）排序切换，齐次 16:10 视频卡片，完整播放/弹幕/时长/发布时间外显。
-/// - 用户创建的合集：支持合集与系列列表展示，点击进入合集详情视频列表。
-/// - 用户动态瀑布流：支持动态类型筛选（全部/视频/图文/转发），自适应多列瀑布流。
+/// - 7 大板块标签栏（TabBar）：投稿视频、合集和系列、用户动态、已收藏夹、已追番追剧、已点赞视频、详细资料。
 class MemberSpacePage extends StatefulWidget {
   const MemberSpacePage({super.key, required this.mid});
 
@@ -62,12 +62,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   LoadingState<MemberSpaceData> _spaceState = LoadingState.loading();
   MemberCardInfoData? _cardInfo;
   MemberImages? _extraTopPhoto;
+  SpaceNavNumData? _navNum;
 
   // 投稿视频列表数据与排序
   final List<MemberVideoItem> _videos = [];
   bool _loadingVideos = false;
   bool _videoEnd = false;
   bool _videoFailed = false;
+  int _videoPage = 1;
   ArchiveOrderType _videoOrder = ArchiveOrderType.pubdate;
 
   // 合集与系列数据
@@ -85,6 +87,27 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   String? _dynamicOffset;
   _DynFilterType _selectedDynFilter = _DynFilterType.all;
 
+  // 收藏夹列表数据
+  final List<FavFolderInfo> _favFolders = [];
+  bool _loadingFav = false;
+  bool _favFailed = false;
+  String? _favError;
+
+  // 追番与追剧列表数据
+  final List<SpaceBangumiItem> _bangumiList = [];
+  bool _loadingBangumi = false;
+  bool _bangumiFailed = false;
+  String? _bangumiError;
+  int _bangumiType = 1; // 1=追番, 2=追剧
+  int _bangumiPage = 1;
+  bool _bangumiEnd = false;
+
+  // 点赞视频数据
+  final List<MemberVideoItem> _likedVideos = [];
+  bool _loadingLiked = false;
+  bool _likedFailed = false;
+  String? _likedError;
+
   // 关系状态 (0=未关注, 1=悄关, 2=已关注, 4/6=互关, 128=拉黑, -10=特关)
   int _relationStatus = 0;
   bool _isFollowingUpdating = false;
@@ -92,7 +115,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
     _loadAll();
   }
 
@@ -107,10 +130,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     await Future.wait([
       _loadSpace(),
       _loadCardInfo(),
+      _loadNavNum(),
       _loadTopPhoto(),
       _loadInitialVideos(),
       _loadInitialSeasons(),
       _loadInitialDynamics(),
+      _loadFavFolders(),
+      _loadInitialBangumi(),
+      _loadLikedVideos(),
     ]);
   }
 
@@ -136,6 +163,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     }
   }
 
+  Future<void> _loadNavNum() async {
+    final res = await MemberHttp.spaceNavNum(mid: widget.mid);
+    if (!mounted) return;
+    if (res case Success(:final response)) {
+      setState(() => _navNum = response);
+    }
+  }
+
   Future<void> _loadTopPhoto() async {
     final res = await MemberHttp.topPhoto(mid: widget.mid);
     if (!mounted) return;
@@ -146,6 +181,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Future<void> _loadInitialVideos() async {
     _videos.clear();
+    _videoPage = 1;
     _videoEnd = false;
     _videoFailed = false;
     await _loadMoreVideos();
@@ -156,6 +192,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     setState(() => _loadingVideos = true);
     final res = await MemberHttp.spaceArchive(
       mid: widget.mid,
+      pageNum: _videoPage,
       order: _videoOrder,
     );
     if (!mounted) return;
@@ -163,7 +200,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     switch (res) {
       case Success(:final response):
         _videos.addAll(response.list);
-        _videoEnd = response.isEnd ?? false;
+        _videoEnd = response.isEnd ?? response.list.isEmpty;
+        _videoPage++;
         _videoFailed = false;
         setState(() {});
       case Error():
@@ -180,6 +218,102 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       _videoOrder = newOrder;
     });
     _loadInitialVideos();
+  }
+
+  Future<void> _loadFavFolders() async {
+    if (_loadingFav) return;
+    setState(() {
+      _loadingFav = true;
+      _favFailed = false;
+      _favError = null;
+    });
+    final res = await FavHttp.allFavFolders(widget.mid);
+    if (!mounted) return;
+    _loadingFav = false;
+    switch (res) {
+      case Success(:final response):
+        _favFolders.clear();
+        _favFolders.addAll(response.list ?? []);
+        _favFailed = false;
+        _favError = null;
+        setState(() {});
+      case Error(:final errMsg):
+        _favFailed = true;
+        _favError = errMsg;
+        setState(() {});
+      case Loading():
+        break;
+    }
+  }
+
+  Future<void> _loadInitialBangumi() async {
+    _bangumiList.clear();
+    _bangumiPage = 1;
+    _bangumiEnd = false;
+    _bangumiFailed = false;
+    _bangumiError = null;
+    await _loadMoreBangumi();
+  }
+
+  Future<void> _loadMoreBangumi() async {
+    if (_loadingBangumi || _bangumiEnd || _bangumiFailed) return;
+    setState(() => _loadingBangumi = true);
+    final res = await MemberHttp.spaceBangumi(
+      mid: widget.mid,
+      type: _bangumiType,
+      pn: _bangumiPage,
+    );
+    if (!mounted) return;
+    _loadingBangumi = false;
+    switch (res) {
+      case Success(:final response):
+        _bangumiList.addAll(response.list);
+        _bangumiEnd = response.isEnd || response.list.isEmpty;
+        _bangumiPage++;
+        _bangumiFailed = false;
+        _bangumiError = null;
+        setState(() {});
+      case Error(:final errMsg):
+        _bangumiFailed = true;
+        _bangumiError = errMsg;
+        setState(() {});
+      case Loading():
+        break;
+    }
+  }
+
+  void _switchBangumiType(int newType) {
+    if (_bangumiType == newType) return;
+    setState(() {
+      _bangumiType = newType;
+    });
+    _loadInitialBangumi();
+  }
+
+  Future<void> _loadLikedVideos() async {
+    if (_loadingLiked) return;
+    setState(() {
+      _loadingLiked = true;
+      _likedFailed = false;
+      _likedError = null;
+    });
+    final res = await MemberHttp.likedVideos(mid: widget.mid);
+    if (!mounted) return;
+    _loadingLiked = false;
+    switch (res) {
+      case Success(:final response):
+        _likedVideos.clear();
+        _likedVideos.addAll(response);
+        _likedFailed = false;
+        _likedError = null;
+        setState(() {});
+      case Error(:final errMsg):
+        _likedFailed = true;
+        _likedError = errMsg;
+        setState(() {});
+      case Loading():
+        break;
+    }
   }
 
   Future<void> _loadInitialSeasons() async {
@@ -392,14 +526,19 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               delegate: _SliverAppBarDelegate(
                 TabBar(
                   controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
                   indicatorSize: TabBarIndicatorSize.label,
                   labelColor: theme.colorScheme.primary,
                   unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
                   indicatorColor: theme.colorScheme.primary,
                   tabs: [
-                    Tab(text: '投稿 (${_videos.length})'),
-                    Tab(text: '合集 (${_seasonsSeries.length})'),
+                    Tab(text: '投稿 (${_navNum?.video ?? _videos.length})'),
+                    Tab(text: '合集 (${_navNum?.channel ?? _seasonsSeries.length})'),
                     Tab(text: '动态 (${_dynamics.length})'),
+                    Tab(text: '收藏 (${_navNum?.favourite ?? _favFolders.length})'),
+                    Tab(text: '追番 (${_navNum?.bangumi ?? _bangumiList.length})'),
+                    Tab(text: '点赞 (${_likedVideos.length})'),
                     const Tab(text: '详细资料'),
                   ],
                 ),
@@ -414,6 +553,9 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             _buildVideosTab(),
             _buildSeasonsTab(),
             _buildDynamicsTab(),
+            _buildFavTab(),
+            _buildBangumiTab(),
+            _buildLikedTab(),
             _buildAboutTab(card),
           ],
         ),
@@ -1962,6 +2104,399 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       }
     }
     return spans;
+  }
+
+  /// 收藏夹 Tab
+  Widget _buildFavTab() {
+    if (_loadingFav && _favFolders.isEmpty) {
+      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+    }
+    if (_favFailed) {
+      return _buildPrivacyNotice(_favError ?? '用户未公开收藏夹或暂无收藏', onRetry: _loadFavFolders);
+    }
+    if (_favFolders.isEmpty) {
+      return const Center(child: Text('暂无公开收藏夹'));
+    }
+
+    final gridDelegate = Grid.videoCardVDelegate(
+      mainAxisExtent: MediaQuery.textScalerOf(context).scale(76),
+    );
+
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(Style.safeSpace),
+          sliver: SliverGrid(
+            gridDelegate: gridDelegate,
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                if (index >= _favFolders.length) return null;
+                final item = _favFolders[index];
+                return _buildFavFolderCard(item);
+              },
+              childCount: _favFolders.length,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFavFolderCard(FavFolderInfo item) {
+    final theme = Theme.of(context);
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final radius = shapes.medium;
+
+    return Card(
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => FavDetailPage(folder: item),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.all(radius),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  NetworkImgLayer(
+                    src: item.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    borderRadius: BorderRadius.vertical(top: radius),
+                  ),
+                  Positioned(
+                    right: 6,
+                    bottom: 6,
+                    child: PBadge(
+                      text: '${item.mediaCount} 支内容',
+                      type: PBadgeType.duration,
+                    ),
+                  ),
+                  if (!item.isPublic)
+                    Positioned(
+                      left: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.lock, size: 10, color: Colors.white),
+                            SizedBox(width: 2),
+                            Text('私密', style: TextStyle(color: Colors.white, fontSize: 10)),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.intro?.isNotEmpty == true
+                        ? item.intro!
+                        : '创建者: ${item.upper?.name ?? ""}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 追番追剧 Tab
+  Widget _buildBangumiTab() {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Style.safeSpace, Style.sm, Style.safeSpace, 0),
+            child: Row(
+              children: [
+                ChoiceChip(
+                  label: Text('追番 (${_navNum?.bangumi ?? (_bangumiType == 1 ? _bangumiList.length : '')})'),
+                  selected: _bangumiType == 1,
+                  onSelected: (val) {
+                    if (val) _switchBangumiType(1);
+                  },
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: Style.sm),
+                ChoiceChip(
+                  label: Text('追剧 (${_navNum?.cinema ?? (_bangumiType == 2 ? _bangumiList.length : '')})'),
+                  selected: _bangumiType == 2,
+                  onSelected: (val) {
+                    if (val) _switchBangumiType(2);
+                  },
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_loadingBangumi && _bangumiList.isEmpty)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 60),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+          )
+        else if (_bangumiFailed)
+          SliverToBoxAdapter(
+            child: _buildPrivacyNotice(
+              _bangumiError ?? '用户隐私设置未公开追番追剧',
+              onRetry: _loadInitialBangumi,
+            ),
+          )
+        else if (_bangumiList.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 80),
+              child: Center(child: Text(_bangumiType == 1 ? '暂无追番' : '暂无追剧')),
+            ),
+          )
+        else ...[
+          SliverPadding(
+            padding: const EdgeInsets.all(Style.safeSpace),
+            sliver: SliverGrid(
+              gridDelegate: Grid.videoCardVDelegate(
+                mainAxisExtent: MediaQuery.textScalerOf(context).scale(76),
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  if (index >= _bangumiList.length) return null;
+                  if (index == _bangumiList.length - 1) {
+                    _loadMoreBangumi();
+                  }
+                  final item = _bangumiList[index];
+                  return _buildBangumiCard(item);
+                },
+                childCount: _bangumiList.length,
+              ),
+            ),
+          ),
+          if (_loadingBangumi)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: Style.md),
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBangumiCard(SpaceBangumiItem item) {
+    final theme = Theme.of(context);
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final radius = shapes.medium;
+
+    return Card(
+      child: InkWell(
+        onTap: () {
+          final title = item.title ?? '番剧';
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+            SnackBar(
+              content: Text('$title ${item.indexShow ?? ""}'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.all(radius),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  NetworkImgLayer(
+                    src: item.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    borderRadius: BorderRadius.vertical(top: radius),
+                  ),
+                  if (item.badge?.isNotEmpty == true)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: PBadge(
+                        text: item.badge!,
+                        type: PBadgeType.badge,
+                      ),
+                    ),
+                  if (item.indexShow?.isNotEmpty == true)
+                    Positioned(
+                      left: 6,
+                      bottom: 6,
+                      child: PBadge(
+                        text: item.indexShow!,
+                        type: PBadgeType.duration,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.progress?.isNotEmpty == true
+                        ? item.progress!
+                        : (item.follow != null ? '${NumUtils.formatNum(item.follow)} 系列追番' : ''),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 已点赞 Tab
+  Widget _buildLikedTab() {
+    if (_loadingLiked && _likedVideos.isEmpty) {
+      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+    }
+    if (_likedFailed) {
+      return _buildPrivacyNotice(
+        _likedError ?? 'UP主已设置点赞视频不公开',
+        onRetry: _loadLikedVideos,
+      );
+    }
+    if (_likedVideos.isEmpty) {
+      return const Center(child: Text('暂无公开点赞视频'));
+    }
+
+    final gridDelegate = Grid.videoCardVDelegate(
+      mainAxisExtent: MediaQuery.textScalerOf(context).scale(86),
+    );
+
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(Style.safeSpace),
+          sliver: SliverGrid(
+            gridDelegate: gridDelegate,
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                if (index >= _likedVideos.length) return null;
+                return _buildVideoCard(_likedVideos[index]);
+              },
+              childCount: _likedVideos.length,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 隐私保护或受限占位展示卡片
+  Widget _buildPrivacyNotice(String message, {VoidCallback? onRetry}) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Style.xl, vertical: Style.xxl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(Style.lg),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.lock_outline,
+                size: 48,
+                color: cs.outline,
+              ),
+            ),
+            const SizedBox(height: Style.md),
+            Text(
+              message,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: Style.xs),
+            Text(
+              '因用户隐私设置，该内容仅空间主人可见',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.outline,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: Style.md),
+              TextButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('重试'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   /// 详细资料 Tab
