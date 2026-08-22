@@ -40,6 +40,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   StartupBlackbox.log('main', 'binding initialized');
 
+  // 性能优化：为网格/瀑布流海量封面扩大图片内存缓存容量（256MB / 1000 items）
+  // 避免高频滑动时的 cache eviction 与频繁重新解码。
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 256 << 20;
+  PaintingBinding.instance.imageCache.maximumSize = 1000;
+
   // 黑箱：首帧 FrameTiming + post-frame 里程碑 + 30s 帧心跳 + 生命周期。
   StartupBlackbox.attachFrameTracking();
   AppLifecycleListener(onStateChange: StartupBlackbox.logLifecycle);

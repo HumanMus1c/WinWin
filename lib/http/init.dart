@@ -107,7 +107,7 @@ class Request {
     CancelToken? cancelToken,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final res = await dio.get<T>(
+    return dio.get<T>(
       path,
       data: data,
       queryParameters: queryParameters,
@@ -115,8 +115,6 @@ class Request {
       cancelToken: cancelToken,
       onReceiveProgress: onReceiveProgress,
     );
-    _ensureJsonDecoded(res);
-    return res;
   }
 
   Future<Response<T>> post<T>(
@@ -128,7 +126,7 @@ class Request {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final res = await dio.post<T>(
+    return dio.post<T>(
       path,
       data: data,
       queryParameters: queryParameters,
@@ -137,8 +135,6 @@ class Request {
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
     );
-    _ensureJsonDecoded(res);
-    return res;
   }
 }
 
