@@ -81,12 +81,14 @@ class LogCollector {
       _buffer.removeRange(0, _buffer.length - _maxBuffer);
     }
 
-    // 落盘：脱敏后异步追加。
+    // 落盘：脱敏后异步追加（脱敏计算移至后台异步队列执行，主路径零成本）。
     if (_persistenceEnabled && _file != null) {
-      final sanitized = LogSanitizer.sanitize(message);
-      final line =
-          '${entry.timestamp.toIso8601String()} [$level] $tag: $sanitized\n';
-      _executor.submit(() => _appendWithRotation(line));
+      _executor.submit(() async {
+        final sanitized = LogSanitizer.sanitize(message);
+        final line =
+            '${entry.timestamp.toIso8601String()} [$level] $tag: $sanitized\n';
+        await _appendWithRotation(line);
+      });
     }
   }
 

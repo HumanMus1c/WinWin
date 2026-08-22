@@ -56,10 +56,10 @@ void main() async {
   SyncTrace.log('main', 'app starting, pid=$pid');
 
   // L6：fvp 播放器日志接入。
-  // setLogHandler 接收 mdk 内部日志，分级映射到 AppLogger（error→e, warning→w, ...）。
-  // 注意：release 也订阅（补 PiliPlus 缺口），error/warning 始终进缓冲留线索。
-  // mdk 默认日志级别为 info；如需更细级别可调底层 MDK_setLogLevel(ffi)。
+  // setLogHandler 接收 mdk 内部日志，分级映射到 AppLogger。
+  // 过滤高频常规日志，仅对 warning/error 始终记录；info 仅在 debug 模式下输出。
   mdk.setLogHandler((level, msg) {
+    if (level == mdk.LogLevel.off || level == mdk.LogLevel.all) return;
     if (msg.endsWith('\n')) {
       msg = msg.substring(0, msg.length - 1);
     }
@@ -69,7 +69,9 @@ void main() async {
       case mdk.LogLevel.warning:
         AppLogger.w('fvp', msg);
       case mdk.LogLevel.info:
-        AppLogger.i('fvp', msg);
+        if (kDebugMode) {
+          AppLogger.i('fvp', msg);
+        }
       case mdk.LogLevel.debug:
       case mdk.LogLevel.all:
       case mdk.LogLevel.off:

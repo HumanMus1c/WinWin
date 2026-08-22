@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -58,19 +57,25 @@ abstract final class ApiBlackbox {
     }
   }
 
-  /// 格式化请求体/响应体，防止超大二进制或数据刷屏。
+  /// 格式化请求体/响应体，防止超大二进制或数据刷屏与深度序列化开销。
   static String formatPayload(dynamic data, {int maxLength = 512}) {
     if (data == null) return '<null>';
     if (data is List<int>) return '<binary bytes: ${data.length}>';
     try {
-      String text;
       if (data is String) {
-        text = data;
-      } else if (data is Map || data is List) {
-        text = jsonEncode(data);
-      } else {
-        text = data.toString();
+        if (data.length > maxLength) {
+          return '${data.substring(0, maxLength)}... [truncated, total: ${data.length} chars]';
+        }
+        return data;
       }
+      if (data is Map) {
+        final keys = data.keys.take(8).join(', ');
+        return '<Map with ${data.length} entries, keys: [$keys${data.length > 8 ? ', ...' : ''}]>';
+      }
+      if (data is List) {
+        return '<List with ${data.length} items>';
+      }
+      final text = data.toString();
       if (text.length > maxLength) {
         return '${text.substring(0, maxLength)}... [truncated, total: ${text.length} chars]';
       }
