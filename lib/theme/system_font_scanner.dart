@@ -48,6 +48,16 @@ class SystemFontScanner {
   /// 清除缓存（用于强制重新扫描）。
   static void clearCache() => _cache = null;
 
+  /// 根据英文族名从缓存中获取字体信息（如存在）。
+  static FontInfo? getByFamily(String family) {
+    final list = _cache;
+    if (list == null) return null;
+    for (final item in list) {
+      if (item.family == family) return item;
+    }
+    return null;
+  }
+
   static Future<List<FontInfo>> _scanDirectories() async {
     final dirs = <String>[
       r'C:\Windows\Fonts',
@@ -175,7 +185,9 @@ class SystemFontScanner {
       return [];
     }
 
-    return _parseNameTable(raf, baseOffset + nameOffset, nameLength);
+    // OpenType 规范中，Table Directory 的 offset 字段是相对于整个字体文件开头的绝对偏移量。
+    // 在 TTC 集合文件中同样是文件绝对偏移量，绝不可叠加 baseOffset。
+    return _parseNameTable(raf, nameOffset, nameLength);
   }
 
   /// 解析 name table，提取字体族名（英文 family + 中文 label）。
@@ -189,9 +201,19 @@ class SystemFontScanner {
     final count = data.getUint16(2, Endian.big);
     final stringOffset = data.getUint16(4, Endian.big);
 
-    // langID 常量（十进制：0x0409=1033 en-US，0x0804=2052 zh-CN）。
+    // langID 常量（十进制）：
+    // 0x0409=1033 en-US
+    // 0x0804=2052 zh-CN（简体中文）
+    // 0x0404=1028 zh-TW（繁体中文-台湾）
+    // 0x0c04=3076 zh-HK（繁体中文-香港）
+    // 0x1404=5124 zh-MO（繁体中文-澳门）
+    // 0x1004=4100 zh-SG（简体中文-新加坡）
     const langEnUs = 1033;
     const langZhCn = 2052;
+    const langZhTw = 1028;
+    const langZhHk = 3076;
+    const langZhMo = 5124;
+    const langZhSg = 4100;
 
     // 收集所有相关 name record。
     // key = nameID_langID（均为十进制），value = 解码后的字符串。
@@ -207,20 +229,25 @@ class SystemFontScanner {
       final strLength = data.getUint16(recOff + 8, Endian.big);
       final strOffset = data.getUint16(recOff + 10, Endian.big);
 
-      // 仅取 Windows 平台（platformID=3），其下所有 encoding 均为 UTF-16BE。
-      if (platformID != 3) continue;
+      // 支持 Windows 平台（platformID=3）及 Unicode 平台（platformID=0），UTF-16BE 编码。
+      if (platformID != 3 && platformID != 0) continue;
 
-      // 仅关注 nameID=1 (Family), 4 (Full Name), 16 (Typographic Family)。
-      if (nameID != 1 && nameID != 4 && nameID != 16) continue;
+      // 关注 nameID=1 (Family), 4 (Full Name), 16 (Typographic Family), 21 (WWS Family)。
+      if (nameID != 1 && nameID != 4 && nameID != 16 && nameID != 21) continue;
 
-      // 仅关注 en-US 和 zh-CN。
-      if (languageID != langEnUs && languageID != langZhCn) continue;
+      final isZh = languageID == langZhCn ||
+          languageID == langZhTw ||
+          languageID == langZhHk ||
+          languageID == langZhMo ||
+          languageID == langZhSg;
+
+      // 仅关注 en-US 与中文语言。
+      if (languageID != langEnUs && !isZh && platformID != 0) continue;
 
       final absStrOff = stringOffset + strOffset;
       if (absStrOff + strLength > tableBytes.length) continue;
 
       final strBytes = tableBytes.sublist(absStrOff, absStrOff + strLength);
-      // platformID=3 下所有 encoding 均为 UTF-16BE。
       final value = _decodeUtf16be(strBytes);
 
       // key 用十进制格式，与下方查找保持一致。
@@ -243,14 +270,37 @@ class SystemFontScanner {
 
     if (family == null || family.isEmpty) return [];
 
-    // 解析 label（显示名，优先中文）。
-    final label = names['1_$langZhCn'] ??
+    // 解析 label（显示名，优先简体中文 -> 繁体中文 -> 英文）。
+    String label = names['1_$langZhCn'] ??
         names['16_$langZhCn'] ??
         names['4_$langZhCn'] ??
+        names['1_$langZhTw'] ??
+        names['16_$langZhTw'] ??
+        names['4_$langZhTw'] ??
+        names['1_$langZhHk'] ??
+        names['16_$langZhHk'] ??
+        names['4_$langZhHk'] ??
+        names['1_$langZhMo'] ??
+        names['1_$langZhSg'] ??
         names['1_$langEnUs'] ??
         names['16_$langEnUs'] ??
         names['4_$langEnUs'] ??
         family;
+
+    // 针对 Windows 系统 UI 字体元数据未自带中文 UI 族名的情况补充友好别名
+    if (family == 'Microsoft YaHei UI' &&
+        (label == 'Microsoft YaHei UI' || label.isEmpty)) {
+      label = '微软雅黑 UI';
+    } else if (family == 'Microsoft YaHei UI Light' &&
+        (label == 'Microsoft YaHei UI Light' || label.isEmpty)) {
+      label = '微软雅黑 UI Light';
+    } else if (family == 'Microsoft JhengHei UI' &&
+        (label == 'Microsoft JhengHei UI' || label.isEmpty)) {
+      label = '微軟正黑體 UI';
+    } else if (family == 'Microsoft JhengHei UI Light' &&
+        (label == 'Microsoft JhengHei UI Light' || label.isEmpty)) {
+      label = '微軟正黑體 UI Light';
+    }
 
     return [FontInfo(family: family, label: label)];
   }

@@ -312,7 +312,9 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
       _filteredFonts = q.isEmpty
           ? _allFonts
           : _allFonts
-              .where((f) => f.label.toLowerCase().contains(q))
+              .where((f) =>
+                  f.label.toLowerCase().contains(q) ||
+                  f.family.toLowerCase().contains(q))
               .toList();
     });
   }
@@ -380,6 +382,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                           final font = _filteredFonts[index];
                           final isDefault =
                               font.family == AppFontNotifier.windowsDefault;
+                          final hasSubtitle = font.label != font.family;
                           return RadioListTile<String>(
                             dense: true,
                             value: font.family,
@@ -389,6 +392,14 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                                   : font.label,
                               style: TextStyle(fontFamily: font.family),
                             ),
+                            subtitle: hasSubtitle
+                                ? Text(
+                                    font.family,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme.colorScheme.outline,
+                                    ),
+                                  )
+                                : null,
                           );
                         },
                       ),

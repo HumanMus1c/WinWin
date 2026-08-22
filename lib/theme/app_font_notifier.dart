@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
+import 'package:winwin/theme/system_font_scanner.dart';
 
 /// 应用字体全局通知器（单例 [ValueNotifier]）。
 ///
@@ -172,6 +173,11 @@ class AppFontNotifier extends ValueNotifier<String> {
   String get displayName {
     if (isCustomFont) return '自定义字体';
     if (value == windowsDefault) return 'Segoe UI（Windows 默认）';
-    return value.isEmpty ? '系统默认' : value;
+    if (value.isEmpty) return '系统默认';
+    final info = SystemFontScanner.getByFamily(value);
+    if (info != null && info.label != info.family) {
+      return '${info.label} ($value)';
+    }
+    return value;
   }
 }
