@@ -232,8 +232,15 @@ class SystemFontScanner {
       // 支持 Windows 平台（platformID=3）及 Unicode 平台（platformID=0），UTF-16BE 编码。
       if (platformID != 3 && platformID != 0) continue;
 
-      // 关注 nameID=1 (Family), 4 (Full Name), 16 (Typographic Family), 21 (WWS Family)。
-      if (nameID != 1 && nameID != 4 && nameID != 16 && nameID != 21) continue;
+      // 关注 nameID=1 (Family), 2 (Subfamily), 4 (Full Name), 16 (Typographic Family), 17 (Typographic Subfamily), 21 (WWS Family)。
+      if (nameID != 1 &&
+          nameID != 2 &&
+          nameID != 4 &&
+          nameID != 16 &&
+          nameID != 17 &&
+          nameID != 21) {
+        continue;
+      }
 
       final isZh = languageID == langZhCn ||
           languageID == langZhTw ||
@@ -255,51 +262,76 @@ class SystemFontScanner {
       names.putIfAbsent(key, () => value);
     }
 
-    // 解析 family（英文，供 Flutter 解析）。
-    // 优先级：nameID=1(en) > 16(en) > 4(en) > 1(zh) > 16(zh) > 4(zh)
-    // 注意：nameID=1 (Font Family) 优先于 nameID=16 (Typographic Family)，
-    // 因为 Windows 按 nameID=1 匹配字体族，且 TTC 中多个子字体可能共享
-    // nameID=16（如 msyh.ttc 的 "Microsoft YaHei" 和 "Microsoft YaHei UI"
-    // 共享 nameID=16="Microsoft YaHei"），优先用 nameID=1 才能区分它们。
-    final family = names['1_$langEnUs'] ??
-        names['16_$langEnUs'] ??
-        names['4_$langEnUs'] ??
-        names['1_$langZhCn'] ??
-        names['16_$langZhCn'] ??
-        names['4_$langZhCn'];
+    // 方案 B：完整枚举各级具体字重（Light / Regular / Bold 等）。
+    final styleEn = names['2_$langEnUs'] ?? 'Regular';
+    final isRegular = styleEn.toLowerCase() == 'regular' ||
+        styleEn.toLowerCase() == 'normal';
 
-    if (family == null || family.isEmpty) return [];
+    // 解析 family（供 Flutter 的 TextStyle(fontFamily:) 解析使用）：
+    // 常规体优先取 nameID=1（族名），非常规体（如 Bold/Light）优先取 nameID=4（全名）或 nameID=1。
+    String family = isRegular
+        ? (names['1_$langEnUs'] ??
+            names['4_$langEnUs'] ??
+            names['1_$langZhCn'] ??
+            '')
+        : (names['4_$langEnUs'] ??
+            names['1_$langEnUs'] ??
+            names['4_$langZhCn'] ??
+            '');
 
-    // 解析 label（显示名，优先简体中文 -> 繁体中文 -> 英文）。
-    String label = names['1_$langZhCn'] ??
-        names['16_$langZhCn'] ??
-        names['4_$langZhCn'] ??
-        names['1_$langZhTw'] ??
-        names['16_$langZhTw'] ??
-        names['4_$langZhTw'] ??
-        names['1_$langZhHk'] ??
-        names['16_$langZhHk'] ??
-        names['4_$langZhHk'] ??
-        names['1_$langZhMo'] ??
-        names['1_$langZhSg'] ??
-        names['1_$langEnUs'] ??
-        names['16_$langEnUs'] ??
-        names['4_$langEnUs'] ??
-        family;
+    if (family.isEmpty) return [];
+
+    // 解析 label（显示名，优先中文全名）：
+    String label = isRegular
+        ? (names['1_$langZhCn'] ??
+            names['4_$langZhCn'] ??
+            names['1_$langZhTw'] ??
+            names['4_$langZhTw'] ??
+            names['1_$langZhHk'] ??
+            names['4_$langZhHk'] ??
+            family)
+        : (names['4_$langZhCn'] ??
+            names['1_$langZhCn'] ??
+            names['4_$langZhTw'] ??
+            names['1_$langZhTw'] ??
+            names['4_$langZhHk'] ??
+            names['1_$langZhHk'] ??
+            family);
+
+    // 对于非 Regular 字重，若提取到的中文名称未包含字重后缀，则补充后缀
+    if (!isRegular &&
+        !label.toLowerCase().contains(styleEn.toLowerCase()) &&
+        (names['1_$langZhCn'] == label || names['1_$langZhTw'] == label)) {
+      if (names['4_$langZhCn'] != null && names['4_$langZhCn']!.isNotEmpty) {
+        label = names['4_$langZhCn']!;
+      } else {
+        label = '$label $styleEn';
+      }
+    }
 
     // 针对 Windows 系统 UI 字体元数据未自带中文 UI 族名的情况补充友好别名
     if (family == 'Microsoft YaHei UI' &&
-        (label == 'Microsoft YaHei UI' || label.isEmpty)) {
+        (label == 'Microsoft YaHei UI' || label == 'Microsoft Yahei UI')) {
       label = '微软雅黑 UI';
     } else if (family == 'Microsoft YaHei UI Light' &&
-        (label == 'Microsoft YaHei UI Light' || label.isEmpty)) {
+        (label.contains('Microsoft YaHei UI Light') ||
+            label.contains('Microsoft Yahei UI Light') ||
+            label == 'Microsoft YaHei UI Light')) {
       label = '微软雅黑 UI Light';
+    } else if (family == 'Microsoft YaHei UI Bold' &&
+        (label.contains('Microsoft YaHei UI Bold') ||
+            label.contains('Microsoft Yahei UI Bold') ||
+            label == 'Microsoft YaHei UI Bold')) {
+      label = '微软雅黑 UI Bold';
     } else if (family == 'Microsoft JhengHei UI' &&
-        (label == 'Microsoft JhengHei UI' || label.isEmpty)) {
+        label.contains('Microsoft JhengHei UI')) {
       label = '微軟正黑體 UI';
     } else if (family == 'Microsoft JhengHei UI Light' &&
-        (label == 'Microsoft JhengHei UI Light' || label.isEmpty)) {
+        label.contains('Microsoft JhengHei UI Light')) {
       label = '微軟正黑體 UI Light';
+    } else if (family == 'Microsoft JhengHei UI Bold' &&
+        label.contains('Microsoft JhengHei UI Bold')) {
+      label = '微軟正黑體 UI Bold';
     }
 
     return [FontInfo(family: family, label: label)];
