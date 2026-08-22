@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/image_utils.dart';
 
-/// A cached network image layer with fade animation, rounded corners and a
+/// A cached network image layer with fast fade animation, rounded corners and a
 /// gray placeholder. [type] can be 'emote', 'avatar' or 'default'.
 ///
-/// Phase 7.5.4 增强：
-/// - [heroTag]：非空时用 [Hero] 包裹图像，用于视频卡片→详情页转场。
-/// - 渐变占位：placeholder 由纯色升级为 surfaceVariant→outlineVariant 渐变。
+/// 流畅度优化：
+/// - 接入 [ImageUtils.thumbnailUrl] 边缘智能裁切，杜绝 4K 原图下载与全分辨率解码。
+/// - 优化 [fadeInDuration] 为短平快过渡，消除滚动时大量并发 Ticker 动画。
+/// - 保证 [memCacheWidth] / [memCacheHeight] 在无限尺寸时仍有安全上限。
 class NetworkImgLayer extends StatelessWidget {
   const NetworkImgLayer({
     super.key,
@@ -18,8 +19,8 @@ class NetworkImgLayer extends StatelessWidget {
     this.type = 'default',
     this.borderRadius = const BorderRadius.all(Radius.circular(Style.radiusMd)),
     this.fit = BoxFit.cover,
-    this.fadeInDuration = const Duration(milliseconds: 120),
-    this.fadeOutDuration = const Duration(milliseconds: 120),
+    this.fadeInDuration = const Duration(milliseconds: 50),
+    this.fadeOutDuration = Duration.zero,
     this.heroTag,
   });
 
@@ -33,7 +34,6 @@ class NetworkImgLayer extends StatelessWidget {
   final Duration fadeOutDuration;
 
   /// Hero 共享元素 tag（非空时启用）。视频卡片与详情页需使用相同 tag。
-  /// 通常用 `'cover_$bvid'` 形式确保唯一。
   final Object? heroTag;
 
   @override
@@ -61,17 +61,41 @@ class NetworkImgLayer extends StatelessWidget {
 
   Widget _buildImage(BuildContext context) {
     int? memCacheWidth, memCacheHeight;
-    // 仅对有限尺寸计算 memCache 尺寸；double.infinity（如 Stack/AspectRatio 撑满
-    // 场景）会导致 (inf * dpr).round() 抛 "Infinity or NaN toInt"。
-    if (width.isFinite && height.isFinite) {
+    int? reqWidth, reqHeight;
+
+    if (width.isFinite && height.isFinite && width > 0 && height > 0) {
+      final dpr = MediaQuery.devicePixelRatioOf(context);
+      final pWidth = (width * dpr).round().clamp(64, 1080);
+      final pHeight = (height * dpr).round().clamp(64, 1080);
       if (width <= height) {
-        memCacheWidth = ImageUtils.cacheSize(width, context);
+        memCacheWidth = pWidth;
       } else {
-        memCacheHeight = ImageUtils.cacheSize(height, context);
+        memCacheHeight = pHeight;
+      }
+      reqWidth = pWidth;
+      reqHeight = pHeight;
+    } else {
+      // 兜底安全边界（避免 double.infinity 导致加载无限制超大图）
+      if (type == 'avatar') {
+        memCacheWidth = 120;
+        memCacheHeight = 120;
+      } else if (type == 'emote') {
+        memCacheWidth = 64;
+        memCacheHeight = 64;
+      } else {
+        memCacheWidth = 480;
       }
     }
+
+    final targetUrl = ImageUtils.thumbnailUrl(
+      src,
+      width: reqWidth,
+      height: reqHeight,
+      type: type,
+    );
+
     return CachedNetworkImage(
-      imageUrl: ImageUtils.thumbnailUrl(src),
+      imageUrl: targetUrl,
       width: width,
       height: height,
       memCacheWidth: memCacheWidth,
@@ -80,14 +104,14 @@ class NetworkImgLayer extends StatelessWidget {
       fadeOutDuration: fadeOutDuration,
       fadeInDuration: fadeInDuration,
       filterQuality: FilterQuality.low,
-      placeholder: (context, url) => _placeholder(context),
-      errorWidget: (context, url, error) => _placeholder(context),
+      useOldImageOnUrlChange: true,
+      placeholder: (context, url) => _placeholder(context, isAvatar: type == 'avatar'),
+      errorWidget: (context, url, error) => _placeholder(context, isAvatar: type == 'avatar'),
     );
   }
 
   Widget _placeholder(BuildContext context, {bool isAvatar = false}) {
     final cs = Theme.of(context).colorScheme;
-    // 渐变占位：从 surfaceVariant 到 outlineVariant，比纯色更有层次
     return Container(
       width: width,
       height: height,

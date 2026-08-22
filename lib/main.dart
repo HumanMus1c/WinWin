@@ -1,5 +1,6 @@
 import 'dart:async' show unawaited;
 import 'dart:io' show pid;
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:catcher_2/catcher_2.dart';
 import 'package:flutter/foundation.dart';
@@ -117,6 +118,29 @@ void main() async {
   );
 }
 
+/// 全局平滑滚动行为配置。
+///
+/// 解决 Windows 桌面端默认 [ClampingScrollPhysics] 滚轮步进僵硬卡手的问题，
+/// 开启弹性动量插值物理，并允许鼠标/触控板/触屏全设备指针平滑滚动。
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const BouncingScrollPhysics(
+      parent: AlwaysScrollableScrollPhysics(),
+    );
+  }
+}
+
 class WinWinApp extends StatelessWidget {
   const WinWinApp({super.key});
 
@@ -138,6 +162,7 @@ class WinWinApp extends StatelessWidget {
                   child: MaterialApp(
                     title: 'WinWin — BiliPai Desktop Port',
                     debugShowCheckedModeBanner: false,
+                    scrollBehavior: const AppScrollBehavior(),
                     theme: AppTheme.lightFor(uiStyle, fontFamily: fontFamily),
                     darkTheme: AppTheme.darkFor(uiStyle, fontFamily: fontFamily),
                     themeMode: themeMode,

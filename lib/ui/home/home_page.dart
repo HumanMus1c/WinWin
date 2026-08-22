@@ -50,19 +50,23 @@ class _HomePageState extends State<HomePage> {
             top: 0,
             left: 0,
             right: 0,
-            child: _HomeTopBar(onGotoProfile: widget.onGotoProfile),
+            child: RepaintBoundary(
+              child: _HomeTopBar(onGotoProfile: widget.onGotoProfile),
+            ),
           ),
           // ── Category tabs ──
           Positioned(
             top: 68,
             left: 0,
             right: 0,
-            child: _CategoryTabRow(
-              selectedIndex: _selectedCategory,
-              onSelect: (i) => setState(() {
-                _selectedCategory = i;
-                _visitedTabs.add(i);
-              }),
+            child: RepaintBoundary(
+              child: _CategoryTabRow(
+                selectedIndex: _selectedCategory,
+                onSelect: (i) => setState(() {
+                  _selectedCategory = i;
+                  _visitedTabs.add(i);
+                }),
+              ),
             ),
           ),
         ],

@@ -31,12 +31,8 @@ class _HotPageState extends State<HotPage>
   Widget build(BuildContext context) {
     super.build(context);
     final colorScheme = ColorScheme.of(context);
-    return Container(
-      clipBehavior: Clip.hardEdge,
-      margin: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(Style.mdRadius)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
       child: RefreshIndicator(
         onRefresh: controller.onRefresh,
         child: CustomScrollView(

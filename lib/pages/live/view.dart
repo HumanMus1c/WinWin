@@ -150,15 +150,16 @@ class _LiveCard extends StatelessWidget {
             // 封面
             AspectRatio(
               aspectRatio: 16 / 10,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetworkImgLayer(
-                    src: item.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    borderRadius: BorderRadius.zero,
-                  ),
+              child: LayoutBuilder(
+                builder: (context, constraints) => Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NetworkImgLayer(
+                      src: item.cover,
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      borderRadius: BorderRadius.zero,
+                    ),
                   // 直播中标识
                   if (item.isLiving)
                     Positioned(
@@ -229,6 +230,7 @@ class _LiveCard extends StatelessWidget {
                     ),
                 ],
               ),
+            ),
             ),
             // 文本信息
             Expanded(

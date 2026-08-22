@@ -250,15 +250,16 @@ class _PgcCard extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 2 / 3,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetworkImgLayer(
-                    src: _cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    borderRadius: BorderRadius.zero,
-                  ),
+              child: LayoutBuilder(
+                builder: (context, constraints) => Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NetworkImgLayer(
+                      src: _cover,
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      borderRadius: BorderRadius.zero,
+                    ),
                   if (_score != null)
                     Positioned(
                       right: 4,
@@ -306,6 +307,7 @@ class _PgcCard extends StatelessWidget {
                     ),
                 ],
               ),
+            ),
             ),
             Expanded(
               child: Padding(

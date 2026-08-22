@@ -63,12 +63,8 @@ class _FollowPageState extends State<FollowPage>
       );
     }
     final colorScheme = ColorScheme.of(context);
-    return Container(
-      clipBehavior: Clip.hardEdge,
-      margin: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(Style.mdRadius)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
       child: RefreshIndicator(
         onRefresh: controller.onRefresh,
         child: CustomScrollView(
