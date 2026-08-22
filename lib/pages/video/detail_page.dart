@@ -120,7 +120,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   bool? _inWatchLater;
 
   /// Phase 7.6.3：VideoHeader 收缩比例（0.0=展开，1.0=pin），用于顶栏渐变。
-  double _scrollRatio = 0.0;
+  final ValueNotifier<double> _scrollRatio = ValueNotifier<double>(0.0);
 
   /// 折叠自动暂停：本次是否由折叠触发暂停（展开时仅恢复该情形，不覆盖手动暂停）。
   bool _autoPausedByCollapse = false;
@@ -154,6 +154,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   @override
   void dispose() {
+    _scrollRatio.dispose();
     SyncTrace.log('DetailPage', 'dispose enter');
     routeObserver.unsubscribe(this);
     windowManager.removeListener(this);
@@ -898,9 +899,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             minExtent: minExtent,
                             onScrollRatioChange: (r) {
                               _handleCollapseAutoPause(r);
-                              if ((r - _scrollRatio).abs() > 0.01) {
-                                setState(() => _scrollRatio = r);
-                              }
+                              _scrollRatio.value = r;
                             },
                             child: _buildPlayerContent(response),
                           ),
@@ -1007,9 +1006,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                         minExtent: minExtent,
                         onScrollRatioChange: (r) {
                           _handleCollapseAutoPause(r);
-                          if ((r - _scrollRatio).abs() > 0.01) {
-                            setState(() => _scrollRatio = r);
-                          }
+                          _scrollRatio.value = r;
                         },
                         child: _buildPlayerError(code, errMsg),
                       ),
@@ -1120,82 +1117,106 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 渐变顶栏：_scrollRatio=0 透明（覆盖在播放器上），=1 不透明（显示标题）。
   Widget _buildGradientTopBar(String? upName, {bool forceOpaque = false}) {
-    final theme = Theme.of(context);
-    final opacity = forceOpaque ? 1.0 : _scrollRatio.clamp(0.0, 1.0);
-    final overVideo = opacity < 0.5;
-    // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏拍平到页面背景后，
-    // 为标题/返回箭头选出达标可读色（覆盖在播放器上时仍用白色）。
-    final barContrast = resolveAccessibleContainerColors(
-      containerColor: theme.scaffoldBackgroundColor
-          .withValues(alpha: opacity * 0.95),
-      contentColor: theme.colorScheme.onSurface,
-      backgroundColor: theme.scaffoldBackgroundColor,
-      fallbackContentColors: [
-        theme.colorScheme.onInverseSurface,
-        theme.colorScheme.scrim,
-      ],
-    );
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: SafeArea(
-        bottom: false,
-        // 毛玻璃顶栏（降级版）：模糊强度随 _scrollRatio 渐显（sigma 0→20），
-        // 与 FrostedBottomBar 同质感参数；ClipRect 限定模糊区域。
-        child: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: 20 * opacity,
-              sigmaY: 20 * opacity,
-            ),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              height: kToolbarHeight,
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor
-                    .withValues(alpha: opacity * 0.95),
-                border: opacity > 0.5
-                    ? Border(
-                        bottom: BorderSide(
-                          color: theme.colorScheme.outlineVariant
-                              .withValues(alpha: 0.3),
-                          width: 0.5,
+    return ValueListenableBuilder<double>(
+      valueListenable: _scrollRatio,
+      builder: (context, scrollRatio, _) {
+        final theme = Theme.of(context);
+        final opacity = forceOpaque ? 1.0 : scrollRatio.clamp(0.0, 1.0);
+        final overVideo = opacity < 0.5;
+        // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏拍平到页面背景后，
+        // 为标题/返回箭头选出达标可读色（覆盖在播放器上时仍用白色）。
+        final barContrast = resolveAccessibleContainerColors(
+          containerColor: theme.scaffoldBackgroundColor
+              .withValues(alpha: opacity * 0.95),
+          contentColor: theme.colorScheme.onSurface,
+          backgroundColor: theme.scaffoldBackgroundColor,
+          fallbackContentColors: [
+            theme.colorScheme.onInverseSurface,
+            theme.colorScheme.scrim,
+          ],
+        );
+
+        final barContent = SizedBox(
+          height: kToolbarHeight,
+          child: Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: overVideo ? Colors.white : barContrast.contentColor,
+                ),
+                onPressed: () {
+                  SyncTrace.log('DetailPage', 'back button pressed');
+                  Navigator.pop(context);
+                },
+              ),
+              Expanded(
+                child: opacity > 0.05
+                    ? Opacity(
+                        opacity: opacity,
+                        child: Text(
+                          (upName?.isNotEmpty ?? false) ? upName! : '视频详情',
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: barContrast.contentColor,
+                          ),
                         ),
                       )
-                    : null,
+                    : const SizedBox.shrink(),
               ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.arrow_back,
-                      color: overVideo ? Colors.white : barContrast.contentColor,
-                    ),
-                    onPressed: () {
-                      SyncTrace.log('DetailPage', 'back button pressed');
-                      Navigator.pop(context);
-                    },
+            ],
+          ),
+        );
+
+        // 当几乎完全透明时，完全绕过 BackdropFilter，避免无意义的 GPU Offscreen 渲染
+        if (opacity <= 0.01) {
+          return Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: barContent,
+            ),
+          );
+        }
+
+        return Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            bottom: false,
+            // 毛玻璃顶栏：模糊强度随 _scrollRatio 渐显（sigma 0→20），
+            // ClipRect 限定模糊区域。
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: 20 * opacity,
+                  sigmaY: 20 * opacity,
+                ),
+                child: Container(
+                  height: kToolbarHeight,
+                  decoration: BoxDecoration(
+                    color: theme.scaffoldBackgroundColor
+                        .withValues(alpha: opacity * 0.95),
+                    border: opacity > 0.5
+                        ? Border(
+                            bottom: BorderSide(
+                              color: theme.colorScheme.outlineVariant
+                                  .withValues(alpha: 0.3),
+                              width: 0.5,
+                            ),
+                          )
+                        : null,
                   ),
-                  Expanded(
-                    child: AnimatedOpacity(
-                      opacity: opacity,
-                      duration: const Duration(milliseconds: 150),
-                      child: Text(
-                        (upName?.isNotEmpty ?? false) ? upName! : '视频详情',
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: barContrast.contentColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  child: barContent,
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

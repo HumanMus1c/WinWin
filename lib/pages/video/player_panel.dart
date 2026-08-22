@@ -584,27 +584,30 @@ class _PlayerPanelState extends State<PlayerPanel> {
   ///
   /// 纹理未就绪时显示纯黑占位；就绪后按 [WinWinPlayerController.videoSize]
   /// 的宽高比居中显示（等效 `BoxFit.contain`）。
+  /// 包裹 [RepaintBoundary] 隔离控制条/弹幕/手势等上层高频 UI 的重绘影响。
   Widget _buildVideoSurface(WinWinPlayerController c) {
-    return ValueListenableBuilder<int?>(
-      valueListenable: c.textureId,
-      builder: (context, texId, _) {
-        if (texId == null || texId < 0) return const SizedBox.expand();
-        final texture = Texture(textureId: texId);
-        return ValueListenableBuilder<Size?>(
-          valueListenable: c.videoSize,
-          builder: (context, size, _) {
-            if (size == null || size.width <= 0 || size.height <= 0) {
-              return texture;
-            }
-            return Center(
-              child: AspectRatio(
-                aspectRatio: size.width / size.height,
-                child: texture,
-              ),
-            );
-          },
-        );
-      },
+    return RepaintBoundary(
+      child: ValueListenableBuilder<int?>(
+        valueListenable: c.textureId,
+        builder: (context, texId, _) {
+          if (texId == null || texId < 0) return const SizedBox.expand();
+          final texture = Texture(textureId: texId);
+          return ValueListenableBuilder<Size?>(
+            valueListenable: c.videoSize,
+            builder: (context, size, _) {
+              if (size == null || size.width <= 0 || size.height <= 0) {
+                return texture;
+              }
+              return Center(
+                child: AspectRatio(
+                  aspectRatio: size.width / size.height,
+                  child: texture,
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 

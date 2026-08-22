@@ -474,8 +474,9 @@ class _DynVideoCard extends StatelessWidget {
     final play = archive?.play;
     final danmaku = archive?.danmaku;
 
-    return Card(
-      child: InkWell(
+    return RepaintBoundary(
+      child: Card(
+        child: InkWell(
         onTap: () {
           if (bvid == null || bvid.isEmpty) return;
           Navigator.push(
@@ -589,6 +590,7 @@ class _DynVideoCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
