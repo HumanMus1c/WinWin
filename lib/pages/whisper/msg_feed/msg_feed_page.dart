@@ -232,8 +232,8 @@ class MsgFeedAvatar extends StatelessWidget {
               width: size,
               height: size,
               fit: BoxFit.cover,
-              placeholder: (_, __) => _fallback(cs),
-              errorWidget: (_, __, ___) => _fallback(cs),
+              placeholder: (_, _) => _fallback(cs),
+              errorWidget: (_, _, _) => _fallback(cs),
             )
           : _fallback(cs),
     );

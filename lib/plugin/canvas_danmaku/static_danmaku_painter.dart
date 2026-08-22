@@ -1,6 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:winwin/plugin/canvas_danmaku/base_danmaku_painter.dart';
 import 'package:winwin/plugin/canvas_danmaku/models/danmaku_item.dart';
-import 'package:flutter/material.dart';
 
 final class StaticDanmakuPainter extends CustomPainter {
   final int count;
@@ -37,11 +37,12 @@ final class StaticDanmakuPainter extends CustomPainter {
           )
           ..xPosition = (size.width - item.width) / 2;
 
-        BaseDanmakuPainter.paintImg(
+        BaseDanmakuPainter.paintItem(
           canvas,
           item,
           item.xPosition,
           trackHeight * i,
+          strokeWidth,
         );
       }
     }

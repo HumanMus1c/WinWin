@@ -4,6 +4,7 @@
 /// 含会员权限识别字段 [vipStatus] / [vipType]。
 ///
 /// 纯 model（无 Hive 注解），通过 JSON 字符串持久化到 GStorage.localCache。
+library;
 
 /// 安全类型转换：bilibili API 返回的数字字段可能是 int / double / String，
 /// 直接 `as int?` 会抛异常。此方法统一处理。

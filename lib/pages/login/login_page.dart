@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
-import 'package:winwin/core/account/login_utils.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/login.dart';
 import 'package:winwin/models/common/account_type.dart';
@@ -373,7 +372,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
             '当前 RSA 加密为 stub，密码登录可能因风控失败；遇到风控时会弹出极验滑块验证。',
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: cs.onSurface.withOpacity(0.4),
+              color: cs.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -654,7 +653,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                     )
                   : const Icon(Icons.send),
               label: Text(
-                _cooldown > 0 ? '等待${_cooldown}秒' : '获取验证码',
+                _cooldown > 0 ? '等待$_cooldown秒' : '获取验证码',
               ),
             ),
           ),
@@ -685,7 +684,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
             '遇到风控时会弹出极验滑块验证，验证通过后自动重试。',
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: cs.onSurface.withOpacity(0.4),
+              color: cs.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -835,7 +834,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
                   'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${Uri.encodeComponent(_qrUrl!)}',
                   width: 240,
                   height: 240,
-                  errorBuilder: (_, __, ___) => const SizedBox(
+                  errorBuilder: (_, _, _) => const SizedBox(
                     width: 240,
                     height: 240,
                     child: Center(

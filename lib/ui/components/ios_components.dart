@@ -60,7 +60,7 @@ class IOSClickableItem extends StatelessWidget {
               width: 30,
               height: 30,
               decoration: BoxDecoration(
-                color: iconTint.withOpacity(0.12),
+                color: iconTint.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(7),
               ),
               child: Icon(icon, color: iconTint, size: 18),
@@ -91,7 +91,7 @@ class _IOSDivider extends StatelessWidget {
       padding: const EdgeInsets.only(left: 58),
       child: Container(
         height: 0.5,
-        color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.5),
+        color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
       ),
     );
   }

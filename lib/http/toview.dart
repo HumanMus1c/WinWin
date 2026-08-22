@@ -52,8 +52,8 @@ abstract final class ToviewHttp {
       final res = await Request().post<dynamic>(
         Api.toViewLater,
         data: {
-          if (aid != null) 'aid': aid,
-          if (bvid != null) 'bvid': bvid,
+          'aid': ?aid,
+          'bvid': ?bvid,
           'csrf': Accounts.main.csrf,
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
@@ -88,7 +88,7 @@ abstract final class ToviewHttp {
       final res = await Request().post<dynamic>(
         Api.toViewClear,
         data: {
-          if (cleanType != null) 'clean_type': cleanType,
+          'clean_type': ?cleanType,
           'csrf': Accounts.main.csrf,
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),

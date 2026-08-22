@@ -145,20 +145,31 @@ class WinWinDanmakuController {
     }
   }
 
+  /// 取 [startMs] 到 [endMs] 区间内所有 100ms 分桶应上屏的弹幕。
+  /// 避免因播放器轮询间隔（如 100ms~250ms）造成中间 100ms 桶被漏投。
+  List<DanmakuContentItem<DanmakuElem>> getDanmakuRange(int startMs, int endMs) {
+    if (_disposed || _closed || endMs < 0) return const [];
+    final seg = calcSegment(endMs);
+    if (!_requestedSeg.contains(seg)) {
+      queryDanmaku(seg);
+    }
+    final int startBucket = (startMs ~/ 100).clamp(0, endMs ~/ 100);
+    final int endBucket = endMs ~/ 100;
+    final result = <DanmakuContentItem<DanmakuElem>>[];
+    for (int b = startBucket; b <= endBucket; b++) {
+      final bucket = _dmSegMap[b];
+      if (bucket != null && bucket.isNotEmpty) {
+        result.addAll(_applyRenderFilters(bucket));
+      }
+    }
+    return result;
+  }
+
   /// 取 [progressMs] 附近应上屏的弹幕（已做渲染前过滤）。
   ///
   /// 若该段未加载，触发异步拉取并返回空列表（下一帧再取）。
   List<DanmakuContentItem<DanmakuElem>> getCurrentDanmaku(int progressMs) {
-    if (_disposed || _closed) return const [];
-    final seg = calcSegment(progressMs);
-    if (!_requestedSeg.contains(seg)) {
-      // 异步拉取，不阻塞当前帧。
-      queryDanmaku(seg);
-      return const [];
-    }
-    final bucket = _dmSegMap[progressMs ~/ 100];
-    if (bucket == null || bucket.isEmpty) return const [];
-    return _applyRenderFilters(bucket);
+    return getDanmakuRange(progressMs, progressMs);
   }
 
   /// 渲染前过滤：weight / 彩色屏蔽 / 会员彩色标记。

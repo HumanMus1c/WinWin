@@ -1,4 +1,5 @@
 /// 播放地址（`/x/player/wbi/playurl`，fnval=4048 DASH）简化模型。
+library;
 
 /// 安全类型转换：B站 API 部分数值字段可能返回 String（如 "1920"），
 /// 直接 `as int?` 会抛 type cast 异常。此函数兼容 int / double / String。

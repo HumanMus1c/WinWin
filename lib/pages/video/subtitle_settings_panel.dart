@@ -320,7 +320,7 @@ class _SubtitleOptionTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
-                color: biliPink.withOpacity(0.2),
+                color: biliPink.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(Style.radiusXs),
               ),
               child: Text(

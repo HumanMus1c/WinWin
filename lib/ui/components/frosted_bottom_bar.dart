@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
@@ -58,7 +57,6 @@ class FrostedBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.ios;
     final chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.ios;
     final style = InheritedUiStyle.of(context);
     final renderer = resolvePrimitiveRenderer(style);

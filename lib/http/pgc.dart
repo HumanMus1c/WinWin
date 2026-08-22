@@ -21,9 +21,9 @@ abstract final class PgcHttp {
       Api.pgcIndexResult,
       queryParameters: {
         ...params,
-        if (seasonType != null) 'season_type': seasonType,
-        if (type != null) 'type': type,
-        if (indexType != null) 'index_type': indexType,
+        'season_type': ?seasonType,
+        'type': ?type,
+        'index_type': ?indexType,
         'page': page,
         'pagesize': 21,
       },
@@ -46,9 +46,9 @@ abstract final class PgcHttp {
     final res = await Request().get(
       Api.pgcIndexCondition,
       queryParameters: {
-        if (seasonType != null) 'season_type': seasonType,
+        'season_type': ?seasonType,
         'type': type,
-        if (indexType != null) 'index_type': indexType,
+        'index_type': ?indexType,
       },
     );
     if (res.data['code'] == 0) {
@@ -84,7 +84,7 @@ abstract final class PgcHttp {
         'pagesize': 20,
         'type': 1,
         'page': page,
-        if (indexType != null) 'index_type': indexType,
+        'index_type': ?indexType,
       },
     );
     if (res.data['code'] == 0) {
@@ -146,7 +146,7 @@ abstract final class PgcHttp {
         'media_id': mediaId,
         'ps': 20,
         'sort': sort,
-        if (next != null) 'cursor': next,
+        'cursor': ?next,
         'web_location': 666.19,
       },
     );

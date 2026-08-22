@@ -209,11 +209,11 @@ class _HomeTopBarState extends State<_HomeTopBar> {
                 child: isLogin && faceUrl.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: faceUrl,
-                        placeholder: (_, __) => const ColoredBox(
+                        placeholder: (_, _) => const ColoredBox(
                           color: Colors.grey,
                           child: SizedBox.expand(),
                         ),
-                        errorWidget: (_, __, ___) => const ColoredBox(
+                        errorWidget: (_, _, _) => const ColoredBox(
                           color: Colors.grey,
                           child: Center(
                             child: Icon(Icons.person, color: Colors.white, size: 20),
@@ -348,7 +348,7 @@ class _CategoryTabRow extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: Style.md),
               itemCount: tabs.length,
-              separatorBuilder: (_, __) => const SizedBox(width: Style.sm),
+              separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
               itemBuilder: (context, index) {
                 final isSelected = index == selectedIndex;
                 final baseColor = cs.primary;

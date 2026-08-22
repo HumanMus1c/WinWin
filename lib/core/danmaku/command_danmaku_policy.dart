@@ -107,7 +107,7 @@ class CommandDanmakuPolicy {
 
     final Map<String, dynamic> json;
     try {
-      final decoded = jsonDecode(content!.trim());
+      final decoded = jsonDecode(content.trim());
       if (decoded is! Map<String, dynamic>) {
         return CommandDanmaku(
           kind: CommandDanmakuKind.text,

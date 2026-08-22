@@ -108,11 +108,11 @@ abstract final class HistoryHttp {
       await Request().post<dynamic>(
         Api.heartBeat,
         data: {
-          if (aid != null) 'aid': aid,
-          if (bvid != null) 'bvid': bvid,
+          'aid': ?aid,
+          'bvid': ?bvid,
           'cid': cid,
-          if (epid != null) 'epid': epid,
-          if (seasonId != null) 'sid': seasonId,
+          'epid': ?epid,
+          'sid': ?seasonId,
           'type': 3,
           'played_time': progress,
           'csrf': Accounts.heartbeat.csrf,

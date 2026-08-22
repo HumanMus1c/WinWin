@@ -1,6 +1,7 @@
 /// Feed 刷新分页与合并工具 — 从 BiliPai FeedRefreshPaging.kt + FeedMergeUtils.kt 移植。
 ///
 /// 纯函数，无副作用，用于推荐流/动态流等列表的刷新与分页合并。
+library;
 
 /// 手动"换一批"时的页码决策。
 ///

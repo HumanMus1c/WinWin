@@ -90,7 +90,7 @@ class VideoCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
+                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6)],
                   ),
                 ),
               ),
@@ -123,7 +123,7 @@ class VideoCard extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
+                  color: Colors.black.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -154,11 +154,11 @@ class VideoCard extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 12, color: Colors.white.withOpacity(0.85)),
+        Icon(icon, size: 12, color: Colors.white.withValues(alpha: 0.85)),
         const SizedBox(width: 2),
         Text(
           value,
-          style: TextStyle(color: Colors.white.withOpacity(0.94), fontSize: 11),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.94), fontSize: 11),
         ),
       ],
     );

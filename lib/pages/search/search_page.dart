@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/storage/storage.dart';
-import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/search.dart';
 import 'package:winwin/models/search/result.dart';
@@ -180,7 +179,7 @@ class _SearchPageState extends State<SearchPage> {
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor: Theme.of(context).colorScheme.surfaceContainer.withOpacity(0.5),
+          fillColor: Theme.of(context).colorScheme.surfaceContainer.withValues(alpha: 0.5),
           contentPadding: const EdgeInsets.symmetric(horizontal: Style.md),
           suffixIcon: _controller.text.isNotEmpty
               ? IconButton(

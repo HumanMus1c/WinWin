@@ -1,4 +1,3 @@
-import 'dart:io' show Cookie;
 
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:hive_ce/hive.dart';

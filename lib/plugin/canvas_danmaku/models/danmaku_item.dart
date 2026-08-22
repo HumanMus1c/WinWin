@@ -19,8 +19,11 @@ class DanmakuItem<T> {
   /// 上次绘制时间
   int? drawTick;
 
-  /// 弹幕布局缓存
-  ui.Image? image;
+  /// 弹幕主体文本 Paragraph
+  ui.Paragraph? paragraph;
+
+  /// 弹幕描边文本 Paragraph
+  ui.Paragraph? strokeParagraph;
 
   bool expired = false;
 
@@ -35,8 +38,10 @@ class DanmakuItem<T> {
   }
 
   void dispose() {
-    image?.dispose();
-    image = null;
+    paragraph?.dispose();
+    paragraph = null;
+    strokeParagraph?.dispose();
+    strokeParagraph = null;
   }
 
   DanmakuItem({
@@ -44,7 +49,8 @@ class DanmakuItem<T> {
     required this.height,
     required this.width,
     this.xPosition = 0,
-    this.image,
+    this.paragraph,
+    this.strokeParagraph,
     this.drawTick,
   });
 
@@ -53,24 +59,24 @@ class DanmakuItem<T> {
     int fontWeight,
     double strokeWidth,
   ) {
-    if (image == null) {
-      final paragraph = DmUtils.generateParagraph(
+    if (paragraph == null) {
+      paragraph = DmUtils.generateParagraph(
         content: content,
         fontSize: fontSize,
         fontWeight: fontWeight,
       );
-      image = DmUtils.recordDanmakuImage(
-        contentParagraph: paragraph,
-        content: content,
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-        strokeWidth: strokeWidth,
-      );
-      width = paragraph.maxIntrinsicWidth +
+      if (strokeWidth > 0) {
+        strokeParagraph = DmUtils.generateStrokeParagraph(
+          content: content,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          strokeWidth: strokeWidth,
+        );
+      }
+      width = paragraph!.maxIntrinsicWidth +
           strokeWidth +
           (content.selfSend ? 4.0 : 0.0);
-      height = paragraph.height + strokeWidth;
-      paragraph.dispose();
+      height = paragraph!.height + strokeWidth;
     }
   }
 

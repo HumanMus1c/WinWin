@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/models/search/search_type.dart';
 import 'package:winwin/pages/search/search_panel.dart';
-import 'package:winwin/theme/style.dart';
 
 /// 搜索结果页 — TabBar 分类 + TabBarView 结果列表。
 ///

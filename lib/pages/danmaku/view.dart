@@ -35,8 +35,8 @@ class WinWinDanmaku extends StatefulWidget {
 }
 
 class _WinWinDanmakuState extends State<WinWinDanmaku> {
-  /// 进度去重：按 100ms 量化，避免同一段弹幕重复投递。
-  int _lastTick = -1;
+  /// 记录上次拉取弹幕的时间戳（毫秒），用于跨步范围查询，防止轮询间隔漏投。
+  int _lastProgressMs = -1;
 
   /// 最近一次已上屏的本地回显，防止重复 add。
   DanmakuContentItem<DanmakuElem>? _lastLocal;
@@ -78,7 +78,7 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     c.danmaku?.dispose();
     // 清空引擎画面上的残留弹幕，重置去重标记。
     c.danmakuEngine?.clear();
-    _lastTick = -1;
+    _lastProgressMs = -1;
     _lastLocal = null;
     // 重建 dm 并重新挂载监听。
     _initDanmaku();
@@ -115,17 +115,19 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
 
   // ── 监听 ──
 
-  /// 进度推进：按 100ms 去重后，把当前窗口内的弹幕逐条交给引擎。
+  /// 进度推进：按时间区间跨步提取应上屏的弹幕逐条交给引擎。
   void _onPosition() {
     final c = widget.controller;
     final dm = c.danmaku;
     final engine = c.danmakuEngine;
     if (dm == null || engine == null || dm.danmakuClosed) return;
     final ms = c.position.value.inMilliseconds;
-    final tick = ms ~/ 100;
-    if (tick == _lastTick) return;
-    _lastTick = tick;
-    for (final item in dm.getCurrentDanmaku(ms)) {
+    if (_lastProgressMs < 0 || (ms - _lastProgressMs).abs() > 1500) {
+      _lastProgressMs = ms - 100;
+    }
+    final items = dm.getDanmakuRange(_lastProgressMs + 100, ms);
+    _lastProgressMs = ms;
+    for (final item in items) {
       engine.addDanmaku(item);
     }
   }
@@ -150,7 +152,8 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
 
   /// seek 后清空画面上的弹幕，并重置去重标记以便新进度立即补给。
   void _onSeek() {
-    _lastTick = -1;
+    _lastProgressMs = -1;
+    _lastLocal = null;
     widget.controller.danmakuEngine?.clear();
   }
 

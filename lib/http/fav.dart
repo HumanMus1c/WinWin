@@ -187,7 +187,7 @@ abstract final class FavHttp {
           'privacy': privacy,
           'cover': cover.isNotEmpty ? Uri.encodeFull(cover) : cover,
           'csrf': Accounts.main.csrf,
-          if (mediaId != null) 'media_id': mediaId,
+          'media_id': ?mediaId,
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );

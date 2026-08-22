@@ -99,7 +99,7 @@ void main() async {
   // 默认开启（L7 阶段接入 Pref.enableLog 后改为用户可控）。
   final jsonHandler = await JsonFileHandler.init();
   final handlers = <ReportHandler>[
-    if (jsonHandler != null) jsonHandler,
+    ?jsonHandler,
     ConsoleHandler(),
   ];
   StartupBlackbox.log('main', 'handing off to Catcher2 runApp');

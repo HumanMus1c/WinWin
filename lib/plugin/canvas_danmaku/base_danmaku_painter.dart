@@ -1,5 +1,5 @@
-import 'package:winwin/plugin/canvas_danmaku/canvas_danmaku.dart';
 import 'package:flutter/material.dart';
+import 'package:winwin/plugin/canvas_danmaku/models/danmaku_item.dart';
 
 abstract base class BaseDanmakuPainter extends CustomPainter {
   final int length;
@@ -10,7 +10,10 @@ abstract base class BaseDanmakuPainter extends CustomPainter {
   final int batchThreshold;
   final int tick;
 
-  static final Paint _paint = Paint();
+  static final Paint _selfSendPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.0
+    ..color = Colors.green;
 
   const BaseDanmakuPainter({
     required this.length,
@@ -19,23 +22,32 @@ abstract base class BaseDanmakuPainter extends CustomPainter {
     required this.strokeWidth,
     required this.running,
     required this.tick,
-    this.batchThreshold = 10, // 默认值为10，可以自行调整
+    this.batchThreshold = 10,
   });
 
-  static void paintImg(
+  static void paintItem(
     Canvas canvas,
     DanmakuItem item,
     double dx,
     double dy,
+    double strokeWidth,
   ) {
-    final img = item.image!;
-    if (img.width == item.width.ceil()) {
-      canvas.drawImage(img, Offset(dx, dy), _paint);
-    } else {
-      final src =
-          Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
-      final dst = Rect.fromLTWH(dx, dy, item.width, item.height);
-      canvas.drawImageRect(img, src, dst, _paint);
+    final offset = Offset(
+      dx + (strokeWidth / 2.0) + (item.content.selfSend ? 2.0 : 0.0),
+      dy + strokeWidth / 2.0,
+    );
+    if (item.strokeParagraph case final strokeP?) {
+      canvas.drawParagraph(strokeP, offset);
+    }
+    if (item.paragraph case final p?) {
+      canvas.drawParagraph(p, offset);
+    }
+    if (item.content.selfSend) {
+      _selfSendPaint.strokeWidth = strokeWidth > 0 ? strokeWidth : 1.0;
+      canvas.drawRect(
+        Rect.fromLTWH(dx, dy, item.width, item.height),
+        _selfSendPaint,
+      );
     }
   }
 

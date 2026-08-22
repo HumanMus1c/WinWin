@@ -414,7 +414,7 @@ class AppListItem extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (trailing != null) trailing!,
+                ?trailing,
               ],
             ),
           ),
@@ -645,7 +645,6 @@ class AppSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = _Tokens.of(context);
     final cs = Theme.of(context).colorScheme;
     return AppTextField(
       controller: controller,

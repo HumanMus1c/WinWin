@@ -166,6 +166,15 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
       fontWeight: _option.fontWeight,
     );
 
+    final strokeParagraph = _option.strokeWidth > 0
+        ? DmUtils.generateStrokeParagraph(
+            content: content,
+            fontSize: _option.fontSize,
+            fontWeight: _option.fontWeight,
+            strokeWidth: _option.strokeWidth,
+          )
+        : null;
+
     final danmakuWidth = (content.selfSend
             ? paragraph.maxIntrinsicWidth + 4
             : paragraph.maxIntrinsicWidth) +
@@ -176,28 +185,26 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
         content.type != DanmakuItemType.scroll &&
         _option.static2Scroll &&
         danmakuWidth > _viewWidth) {
+      paragraph.dispose();
+      strokeParagraph?.dispose();
       return false;
     }
 
-    DanmakuItem<T> getItem() => DanmakuItem<T>(
+    DanmakuItem<T> createItem() => DanmakuItem<T>(
         xPosition: _viewWidth,
         width: danmakuWidth,
         height: danmakuHeight,
         content: content,
-        image: DmUtils.recordDanmakuImage(
-          contentParagraph: paragraph,
-          content: content,
-          fontSize: _option.fontSize,
-          fontWeight: _option.fontWeight,
-          strokeWidth: _option.strokeWidth,
-        ));
+        paragraph: paragraph,
+        strokeParagraph: strokeParagraph,
+    );
 
     for (var i = 0; i < _trackCount; i++) {
       final index =
           content.type == DanmakuItemType.bottom ? _trackCount - 1 - i : i;
 
       if (added = canAdd(index, danmakuWidth)) {
-        final item = getItem();
+        final item = createItem();
         if (content.type == DanmakuItemType.scroll || scroll) {
           _scrollDanmakuItems[index].add(item);
         } else {
@@ -216,16 +223,18 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
       }
     } else {
       if (content.selfSend) {
-        _scrollDanmakuItems[0].add(getItem());
+        _scrollDanmakuItems[0].add(createItem());
         added = true;
       } else if ((content.type == DanmakuItemType.scroll || scroll) &&
           _option.massiveMode) {
-        _scrollDanmakuItems[_random.nextInt(_trackCount)].add(getItem());
+        _scrollDanmakuItems[_random.nextInt(_trackCount)].add(createItem());
         added = true;
+      } else {
+        paragraph.dispose();
+        strokeParagraph?.dispose();
       }
     }
 
-    paragraph.dispose();
     return added;
   }
 
@@ -255,14 +264,10 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
         added = true;
         _specialDanmakuItems.add(
           DanmakuItem<T>(
-              width: 0,
-              height: 0,
-              content: content,
-              image: DmUtils.recordSpecialDanmakuImg(
-                content: content as SpecialDanmakuContentItem,
-                fontWeight: _option.fontWeight,
-                strokeWidth: _option.strokeWidth,
-              )),
+            width: 0,
+            height: 0,
+            content: content,
+          ),
         );
         if (_running && !_ticker.isActive) {
           _ticker.start();

@@ -112,7 +112,5 @@ abstract final class CredentialCrypto {
     }
   }
 
-  static int _randomByte() => DateTime.now().microsecondsSinceEpoch & 0xFF;
-
   static final _uuid = const Uuid();
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/storage/storage.dart';
-import 'package:winwin/core/storage/storage_key.dart';
 
 /// 开关设置项：自动从 [GStorage.setting] 读取初始值，切换时写回。
 ///

@@ -2,6 +2,7 @@
 ///
 /// 移植自 PiliPlus 的 `models/search/result.dart`，精简为桌面端需要的字段。
 /// 去除了 Em 高亮解析（改为纯文本），保留视频/用户/直播/番剧/专栏五大类。
+library;
 
 /// 搜索结果基类。
 abstract class SearchNumData<T> {

@@ -24,8 +24,8 @@ abstract final class MsgHttp {
     final res = await Request().get(
       Api.msgFeedReply,
       queryParameters: {
-        if (cursor != null) 'id': cursor,
-        if (cursorTime != null) 'reply_time': cursorTime,
+        'id': ?cursor,
+        'reply_time': ?cursorTime,
         'platform': 'web',
         'mobi_app': 'web',
         'build': 0,
@@ -49,8 +49,8 @@ abstract final class MsgHttp {
     final res = await Request().get(
       Api.msgFeedAt,
       queryParameters: {
-        if (cursor != null) 'id': cursor,
-        if (cursorTime != null) 'at_time': cursorTime,
+        'id': ?cursor,
+        'at_time': ?cursorTime,
         'platform': 'web',
         'mobi_app': 'web',
         'build': 0,
@@ -74,8 +74,8 @@ abstract final class MsgHttp {
     final res = await Request().get(
       Api.msgFeedLike,
       queryParameters: {
-        if (cursor != null) 'id': cursor,
-        if (cursorTime != null) 'like_time': cursorTime,
+        'id': ?cursor,
+        'like_time': ?cursorTime,
         'platform': 'web',
         'mobi_app': 'web',
         'build': 0,
@@ -126,7 +126,7 @@ abstract final class MsgHttp {
     final res = await Request().get(
       Api.msgSysNotify,
       queryParameters: {
-        if (cursor != null) 'cursor': cursor,
+        'cursor': ?cursor,
         'page_size': pageSize,
         'mobi_app': 'web',
         'build': 0,
@@ -198,8 +198,8 @@ abstract final class MsgHttp {
       Api.uploadBfs,
       data: FormData.fromMap({
         'file_up': await MultipartFile.fromFile(path),
-        if (category != null) 'category': category,
-        if (biz != null) 'biz': biz,
+        'category': ?category,
+        'biz': ?biz,
         'csrf': Accounts.main.csrf,
       }),
       cancelToken: cancelToken,
@@ -250,8 +250,8 @@ abstract final class MsgHttp {
       },
       data: {
         'dyn_id_str': dynIdStr,
-        if (dynType != null) 'dyn_type': dynType,
-        if (ridStr != null) 'rid_str': ridStr,
+        'dyn_type': ?dynType,
+        'rid_str': ?ridStr,
       },
     );
     if (res.data['code'] == 0) {

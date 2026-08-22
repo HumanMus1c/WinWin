@@ -559,74 +559,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
     Overlay.of(buttonContext).insert(_settingsOverlay!);
   }
 
-  /// 顶部输入行：文本框 + 清空 + 发送。
-  Widget _buildInputRow(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Style.md,
-        vertical: Style.sm,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _textController,
-              focusNode: _focusNode,
-              // 内联模式不自动聚焦，避免进入视频页时抢占焦点。
-              maxLength: 100,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _onSend(),
-              onChanged: (_) => setState(() {}),
-              style: theme.textTheme.bodyLarge,
-              decoration: InputDecoration(
-                hintText: _danmakuPlaceholder(Accounts.main.isLogin),
-                counterText: '',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(Style.radiusSm),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor:
-                    theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.5),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: Style.md,
-                  vertical: Style.sm,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: Style.sm),
-          if (_textController.text.isNotEmpty)
-            IconButton(
-              tooltip: '清空',
-              icon: const Icon(Icons.clear, size: 20),
-              onPressed: () {
-                _textController.clear();
-                setState(() {});
-              },
-            ),
-          ValueListenableBuilder<bool>(
-            valueListenable: _sending,
-            builder: (context, sending, _) {
-              return IconButton(
-                tooltip: '发送',
-                icon: sending
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.send, size: 20),
-                color: _canSend ? biliPink : theme.colorScheme.outline,
-                onPressed: _canSend ? _onSend : null,
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+
 
   // ─────────────────────────── 选项区 ───────────────────────────
 

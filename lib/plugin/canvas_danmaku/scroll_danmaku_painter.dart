@@ -1,8 +1,8 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/material.dart';
 import 'package:winwin/plugin/canvas_danmaku/base_danmaku_painter.dart';
 import 'package:winwin/plugin/canvas_danmaku/models/danmaku_item.dart';
-import 'package:flutter/material.dart';
 
 final class ScrollDanmakuPainter extends BaseDanmakuPainter {
   final double trackHeight;
@@ -97,11 +97,12 @@ final class ScrollDanmakuPainter extends BaseDanmakuPainter {
       }
     }
 
-    BaseDanmakuPainter.paintImg(
+    BaseDanmakuPainter.paintItem(
       canvas,
       item,
       item.xPosition,
       yPos,
+      strokeWidth,
     );
 
     item.drawTick = tick;

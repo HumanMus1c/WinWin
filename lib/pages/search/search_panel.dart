@@ -198,10 +198,10 @@ class _SearchPanelState extends State<SearchPanel>
                   width: 160,
                   height: 100,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
+                  placeholder: (_, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                   ),
-                  errorWidget: (_, __, ___) => Container(
+                  errorWidget: (_, _, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                     width: 160,
                     height: 100,
@@ -291,10 +291,10 @@ class _SearchPanelState extends State<SearchPanel>
                   width: 48,
                   height: 48,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
+                  placeholder: (_, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                   ),
-                  errorWidget: (_, __, ___) => Container(
+                  errorWidget: (_, _, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                     child: const Icon(Icons.person),
                   ),
@@ -397,10 +397,10 @@ class _SearchPanelState extends State<SearchPanel>
                       width: 160,
                       height: 100,
                       fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
+                      placeholder: (_, _) => Container(
                         color: theme.colorScheme.surfaceContainer,
                       ),
-                      errorWidget: (_, __, ___) => Container(
+                      errorWidget: (_, _, _) => Container(
                         color: theme.colorScheme.surfaceContainer,
                         width: 160,
                         height: 100,
@@ -487,10 +487,10 @@ class _SearchPanelState extends State<SearchPanel>
                   width: 80,
                   height: 110,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
+                  placeholder: (_, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                   ),
-                  errorWidget: (_, __, ___) => Container(
+                  errorWidget: (_, _, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                     width: 80,
                     height: 110,
@@ -578,10 +578,10 @@ class _SearchPanelState extends State<SearchPanel>
                     width: 120,
                     height: 80,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
+                    placeholder: (_, _) => Container(
                       color: theme.colorScheme.surfaceContainer,
                     ),
-                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                    errorWidget: (_, _, _) => const SizedBox.shrink(),
                   ),
                 ),
               if (item.imageUrls != null && item.imageUrls!.isNotEmpty)

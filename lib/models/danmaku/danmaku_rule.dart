@@ -70,7 +70,7 @@ class RuleFilter {
     final keywords = <String>[];
     final regexes = <RegExp>[];
     final uids = <String>{};
-    if (rules.length > 0) {
+    if (rules.isNotEmpty) {
       for (final r in rules[0]) {
         if (r.filter.isNotEmpty) keywords.add(r.filter);
       }
