@@ -1,21 +1,33 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 /// 系统字体信息。
 ///
-/// [family] 是英文族名（来自 nameID=16 或 1，langID=0x0409），
-/// 供 Flutter 的 `TextStyle(fontFamily:)` 解析使用。
-/// [label] 是显示名称，优先取中文名（langID=0x0804），无则回退到 [family]。
+/// [family] 是唯一标识键（如 "Microsoft YaHei Bold"），供持久化存储与匹配使用。
+/// [actualFamily] 是底层 DirectWrite 基础字体族名（如 "Microsoft YaHei"）。
+/// [label] 是显示名称，优先中文全名（如 "微软雅黑 Bold"）。
+/// [weight] 是具体字重（如 [FontWeight.w700]）。
+/// [isItalic] 是否为斜体。
 class FontInfo {
   final String family;
+  final String actualFamily;
   final String label;
+  final FontWeight weight;
+  final bool isItalic;
 
-  const FontInfo({required this.family, required this.label});
+  const FontInfo({
+    required this.family,
+    required this.actualFamily,
+    required this.label,
+    this.weight = FontWeight.w400,
+    this.isItalic = false,
+  });
 
   @override
-  String toString() => 'FontInfo($family)';
+  String toString() =>
+      'FontInfo($family, actualFamily: $actualFamily, weight: $weight, italic: $isItalic)';
 }
 
 /// 扫描 Windows 系统已安装的字体，解析 TTF/OTF/TTC 文件的 name table
@@ -169,6 +181,8 @@ class SystemFontScanner {
 
     int? nameOffset;
     int? nameLength;
+    int? os2Offset;
+    int? os2Length;
     for (int i = 0; i < numTables; i++) {
       final off = i * 16;
       if (off + 16 > dirBytes.length) break;
@@ -177,7 +191,10 @@ class SystemFontScanner {
         final dir = ByteData.sublistView(dirBytes);
         nameOffset = dir.getUint32(off + 8, Endian.big);
         nameLength = dir.getUint32(off + 12, Endian.big);
-        break;
+      } else if (tag == 'OS/2') {
+        final dir = ByteData.sublistView(dirBytes);
+        os2Offset = dir.getUint32(off + 8, Endian.big);
+        os2Length = dir.getUint32(off + 12, Endian.big);
       }
     }
 
@@ -185,14 +202,26 @@ class SystemFontScanner {
       return [];
     }
 
+    int usWeightClass = 400;
+    if (os2Offset != null && os2Length != null && os2Length >= 6) {
+      try {
+        await raf.setPosition(os2Offset);
+        final os2Bytes = await _readExact(raf, 6);
+        if (os2Bytes.length >= 6) {
+          final os2 = ByteData.sublistView(os2Bytes);
+          usWeightClass = os2.getUint16(4, Endian.big);
+        }
+      } catch (_) {}
+    }
+
     // OpenType 规范中，Table Directory 的 offset 字段是相对于整个字体文件开头的绝对偏移量。
     // 在 TTC 集合文件中同样是文件绝对偏移量，绝不可叠加 baseOffset。
-    return _parseNameTable(raf, nameOffset, nameLength);
+    return _parseNameTable(raf, nameOffset, nameLength, usWeightClass);
   }
 
   /// 解析 name table，提取字体族名（英文 family + 中文 label）。
   static Future<List<FontInfo>> _parseNameTable(
-      RandomAccessFile raf, int tableOffset, int tableLength) async {
+      RandomAccessFile raf, int tableOffset, int tableLength, int usWeightClass) async {
     await raf.setPosition(tableOffset);
     final tableBytes = await _readExact(raf, tableLength);
     if (tableBytes.length < 6) return [];
@@ -266,20 +295,26 @@ class SystemFontScanner {
     final styleEn = names['2_$langEnUs'] ?? 'Regular';
     final isRegular = styleEn.toLowerCase() == 'regular' ||
         styleEn.toLowerCase() == 'normal';
+    final isItalic = styleEn.toLowerCase().contains('italic') ||
+        styleEn.toLowerCase().contains('oblique');
 
-    // 解析 family（供 Flutter 的 TextStyle(fontFamily:) 解析使用）：
+    // 底层 DirectWrite 实际族名（用于 TextStyle.fontFamily 准确匹配系统字体）
+    final actualFamily = names['1_$langEnUs'] ??
+        names['16_$langEnUs'] ??
+        names['1_$langZhCn'] ??
+        '';
+
+    if (actualFamily.isEmpty) return [];
+
+    // 解析 family 唯一标识键：
     // 常规体优先取 nameID=1（族名），非常规体（如 Bold/Light）优先取 nameID=4（全名）或 nameID=1。
     String family = isRegular
         ? (names['1_$langEnUs'] ??
             names['4_$langEnUs'] ??
-            names['1_$langZhCn'] ??
-            '')
+            actualFamily)
         : (names['4_$langEnUs'] ??
             names['1_$langEnUs'] ??
-            names['4_$langZhCn'] ??
-            '');
-
-    if (family.isEmpty) return [];
+            actualFamily);
 
     // 解析 label（显示名，优先中文全名）：
     String label = isRegular
@@ -334,7 +369,44 @@ class SystemFontScanner {
       label = '微軟正黑體 UI Bold';
     }
 
-    return [FontInfo(family: family, label: label)];
+    final weight = _resolveWeight(usWeightClass, styleEn);
+
+    return [
+      FontInfo(
+        family: family,
+        actualFamily: actualFamily,
+        label: label,
+        weight: weight,
+        isItalic: isItalic,
+      ),
+    ];
+  }
+
+  /// 根据 OS/2 usWeightClass 及样式字符串解析 FontWeight。
+  static FontWeight _resolveWeight(int usWeightClass, String styleEn) {
+    final lower = styleEn.toLowerCase();
+    if (lower.contains('black') || lower.contains('heavy')) return FontWeight.w900;
+    if (lower.contains('extrabold') || lower.contains('ultra bold')) {
+      return FontWeight.w800;
+    }
+    if (lower.contains('semibold') ||
+        lower.contains('semi bold') ||
+        lower.contains('demi')) {
+      return FontWeight.w600;
+    }
+    if (lower.contains('bold')) return FontWeight.w700;
+    if (lower.contains('medium')) return FontWeight.w500;
+    if (lower.contains('light')) return FontWeight.w300;
+    if (lower.contains('thin')) return FontWeight.w100;
+    if (usWeightClass <= 150) return FontWeight.w100;
+    if (usWeightClass <= 250) return FontWeight.w200;
+    if (usWeightClass <= 350) return FontWeight.w300;
+    if (usWeightClass <= 450) return FontWeight.w400;
+    if (usWeightClass <= 550) return FontWeight.w500;
+    if (usWeightClass <= 650) return FontWeight.w600;
+    if (usWeightClass <= 750) return FontWeight.w700;
+    if (usWeightClass <= 850) return FontWeight.w800;
+    return FontWeight.w900;
   }
 
   /// 从 RandomAccessFile 精确读取 [count] 字节。

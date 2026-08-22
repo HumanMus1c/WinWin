@@ -3,6 +3,7 @@ import 'app_chrome.dart';
 import 'app_shapes.dart';
 import 'app_typography.dart';
 import 'colors.dart';
+import 'system_font_scanner.dart';
 import 'ui_style.dart';
 
 /// App theme — 按 [UiStyle] 解析三套 ThemeData。
@@ -39,15 +40,16 @@ class AppTheme {
   /// 向后兼容：默认 iOS 深色主题。
   static ThemeData get dark => darkFor(UiStyle.ios);
 
-  /// 将 [fontFamily] 注入 [ThemeData] 的 textTheme / primaryTextTheme。
+  /// 将 [fontFamily]（或字体标识键）注入 [ThemeData] 的 textTheme / primaryTextTheme。
   ///
-  /// 参照 BiliPai 的 `Typography.withFontFamily()`：遍历全部 TextStyle
-  /// 替换 fontFamily。空值则原样返回。
+  /// 自动解析底层 DirectWrite 基础族名。
   static ThemeData _applyFont(ThemeData base, String? fontFamily) {
     if (fontFamily == null || fontFamily.isEmpty) return base;
+    final info = SystemFontScanner.getByFamily(fontFamily);
+    final family = info?.actualFamily ?? fontFamily;
     return base.copyWith(
-      textTheme: base.textTheme.apply(fontFamily: fontFamily),
-      primaryTextTheme: base.primaryTextTheme.apply(fontFamily: fontFamily),
+      textTheme: base.textTheme.apply(fontFamily: family),
+      primaryTextTheme: base.primaryTextTheme.apply(fontFamily: family),
     );
   }
 

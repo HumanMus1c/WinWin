@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/theme/system_font_scanner.dart';
 
@@ -43,12 +44,35 @@ void main() {
       expect(yaheiUiBold.first.label, '微软雅黑 UI Bold');
 
       // Verify helper getByFamily
-      expect(SystemFontScanner.getByFamily('Microsoft YaHei')?.label, '微软雅黑');
-      expect(SystemFontScanner.getByFamily('Microsoft YaHei Bold')?.label, '微软雅黑 Bold');
-      expect(SystemFontScanner.getByFamily('Microsoft YaHei Light')?.label, '微软雅黑 Light');
-      expect(SystemFontScanner.getByFamily('Microsoft YaHei UI')?.label, '微软雅黑 UI');
-      expect(SystemFontScanner.getByFamily('Microsoft YaHei UI Bold')?.label, '微软雅黑 UI Bold');
-      expect(SystemFontScanner.getByFamily('Microsoft YaHei UI Light')?.label, '微软雅黑 UI Light');
+      final yaheiInfo = SystemFontScanner.getByFamily('Microsoft YaHei');
+      expect(yaheiInfo?.label, '微软雅黑');
+      expect(yaheiInfo?.actualFamily, 'Microsoft YaHei');
+      expect(yaheiInfo?.weight, FontWeight.w400);
+
+      final yaheiBoldInfo = SystemFontScanner.getByFamily('Microsoft YaHei Bold');
+      expect(yaheiBoldInfo?.label, '微软雅黑 Bold');
+      expect(yaheiBoldInfo?.actualFamily, 'Microsoft YaHei');
+      expect(yaheiBoldInfo?.weight, FontWeight.w700);
+
+      final yaheiLightInfo = SystemFontScanner.getByFamily('Microsoft YaHei Light');
+      expect(yaheiLightInfo?.label, '微软雅黑 Light');
+      expect(yaheiLightInfo?.actualFamily, 'Microsoft YaHei Light');
+      expect(yaheiLightInfo?.weight, FontWeight.w300);
+
+      final yaheiUiInfo = SystemFontScanner.getByFamily('Microsoft YaHei UI');
+      expect(yaheiUiInfo?.label, '微软雅黑 UI');
+      expect(yaheiUiInfo?.actualFamily, 'Microsoft YaHei UI');
+      expect(yaheiUiInfo?.weight, FontWeight.w400);
+
+      final yaheiUiBoldInfo = SystemFontScanner.getByFamily('Microsoft YaHei UI Bold');
+      expect(yaheiUiBoldInfo?.label, '微软雅黑 UI Bold');
+      expect(yaheiUiBoldInfo?.actualFamily, 'Microsoft YaHei UI');
+      expect(yaheiUiBoldInfo?.weight, FontWeight.w700);
+
+      final yaheiUiLightInfo = SystemFontScanner.getByFamily('Microsoft YaHei UI Light');
+      expect(yaheiUiLightInfo?.label, '微软雅黑 UI Light');
+      expect(yaheiUiLightInfo?.actualFamily, 'Microsoft YaHei UI Light');
+      expect(yaheiUiLightInfo?.weight, FontWeight.w300);
     });
   });
 }
