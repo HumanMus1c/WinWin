@@ -194,7 +194,7 @@ class WinWinPlayerController {
     player.setProperty('avio.reconnect_delay_max', '7');
     player.setProperty('avformat.extension_picky', '0');
     // 扩大缓冲上限，减少在线 DASH 卡顿（mdk 默认 max 仅 4 秒）。
-    player.setBufferRange(min: 1000, max: 30000);
+    player.setBufferRange(min: 2000, max: 20000);
 
     player.volume = volume.value / 100.0;
     return player;
@@ -302,17 +302,21 @@ class WinWinPlayerController {
     textureId.value = player.textureId.value;
   }
 
-  /// mdk 没有 position/duration 流，用 250ms 轮询更新 ValueNotifier。
+  /// mdk 没有 position/duration 流，用 100ms 轮询更新 ValueNotifier。
+  /// 100ms 轮询使进度条指示器更丝滑，并与弹幕分桶时间精确吻合。
   /// duration 不在此获取：切换 media 时 mediaInfo.duration 可能返回旧值
   /// （B 的 duration 比 A 长，导致时间轴超出 A 的长度）。duration 改为
   /// 在 onMediaStatus.buffered 事件中获取，确保是新 media 的值。
   void _startPolling() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+    _pollTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       final player = _player;
       if (_disposed || player == null || !ready.value) return;
       final posMs = player.position;
-      position.value = Duration(milliseconds: posMs);
+      final newPos = Duration(milliseconds: posMs);
+      if (position.value != newPos) {
+        position.value = newPos;
+      }
       // SponsorBlock 自动跳过：检查当前位置是否在可跳过段落内。
       if (sponsorBlockEnabled) {
         final target = sponsorBlock?.computeSkipTarget(posMs / 1000.0);
