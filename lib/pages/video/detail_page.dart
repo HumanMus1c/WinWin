@@ -730,12 +730,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   // ─────────────────────────── 评论发送 ───────────────────────────
 
   /// 设置回复目标（点击评论的"回复"按钮时调用）。
-  void _setReplyTarget(ReplyItemModel reply) async {
+  void _setReplyTarget(ReplyItemModel reply, {String? targetName}) async {
     if (!await LoginGuard.requireLogin(context)) return;
     if (!mounted) return;
+    final name = targetName ?? reply.member?.uname ?? '';
     setState(() {
       _replyRoot = reply.rpid;
-      _replyHint = '回复 @${reply.member?.uname ?? ''}';
+      _replyHint = name.isNotEmpty ? '回复 @$name' : null;
     });
     _commentCtrl.clear();
   }
@@ -853,8 +854,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 }
                 return Row(
                   children: [
-                    Expanded(flex: 7, child: _buildLeftColumn(upName)),
-                    Expanded(flex: 3, child: _buildRightColumn()),
+                    Expanded(flex: 65, child: _buildLeftColumn(upName)),
+                    Expanded(flex: 35, child: _buildRightColumn()),
                   ],
                 );
               },
@@ -1242,7 +1243,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             data.title ?? widget.bvid,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.headlineSmall,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
           ),
           const SizedBox(height: Style.sm),
           Row(
@@ -1269,7 +1274,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 DurationUtils.formatDuration(data.duration),
                 style: grayStyle,
               ),
-              if (data.pubdate != null) Text(_formatDate(data.pubdate), style: grayStyle),
+              if (data.pubdate != null)
+                Text(_formatDate(data.pubdate), style: grayStyle),
             ],
           ),
           const SizedBox(height: Style.md),
@@ -1277,11 +1283,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             children: [
               GestureDetector(
                 onTap: () => _gotoMemberSpace(owner?.mid),
-                child: NetworkImgLayer(
-                  src: owner?.face,
-                  width: 40,
-                  height: 40,
-                  type: 'avatar',
+                child: ClipOval(
+                  child: NetworkImgLayer(
+                    src: owner?.face,
+                    width: 40,
+                    height: 40,
+                    type: 'avatar',
+                  ),
                 ),
               ),
               const SizedBox(width: Style.md),
@@ -1293,6 +1301,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall?.copyWith(
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1300,6 +1309,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
               // 关注按钮：未登录→登录页；已登录→TODO 接入关注接口
               FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                ),
                 onPressed: () async {
                   if (!await LoginGuard.requireLogin(context)) return;
                   // TODO: 接入关注/取关接口（需 FollowHttp）
@@ -1451,6 +1467,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Widget _buildReplyTile(ReplyItemModel reply) {
     final theme = Theme.of(context);
     final member = reply.member;
+    final upMid = _detailState.dataOrNull?.owner?.mid;
+    final isUp = upMid != null && (reply.mid == upMid || member?.mid == upMid);
     final grayStyle = TextStyle(
       fontSize: 12,
       color: theme.colorScheme.onSurfaceVariant,
@@ -1471,11 +1489,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               // 评论用户头像（点击跳转空间）
               GestureDetector(
                 onTap: () => _gotoMemberSpace(reply.mid ?? member?.mid),
-                child: NetworkImgLayer(
-                  src: member?.avatar,
-                  width: 40,
-                  height: 40,
-                  type: 'avatar',
+                child: ClipOval(
+                  child: NetworkImgLayer(
+                    src: member?.avatar,
+                    width: 38,
+                    height: 38,
+                    type: 'avatar',
+                  ),
                 ),
               ),
               const SizedBox(width: Style.md),
@@ -1485,7 +1505,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   children: [
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
                           child: GestureDetector(
                             onTap: () =>
                                 _gotoMemberSpace(reply.mid ?? member?.mid),
@@ -1493,35 +1513,90 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               member?.uname ?? '',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelLarge?.copyWith(
+                              style: TextStyle(
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
+                                color: isUp
+                                    ? biliPink
+                                    : theme.colorScheme.onSurface,
                               ),
                             ),
                           ),
                         ),
+                        if (isUp)
+                          Container(
+                            margin: const EdgeInsets.only(left: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: biliPink.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: biliPink.withValues(alpha: 0.35),
+                                width: 0.6,
+                              ),
+                            ),
+                            child: const Text(
+                              'UP',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: biliPink,
+                                height: 1.1,
+                              ),
+                            ),
+                          ),
+                        if (member?.level case final lvl? when lvl > 0)
+                          Container(
+                            margin: const EdgeInsets.only(left: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              'LV$lvl',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurfaceVariant,
+                                height: 1.1,
+                              ),
+                            ),
+                          ),
+                        const Spacer(),
                         Text(_formatDate(reply.ctime), style: grayStyle),
                       ],
                     ),
                     const SizedBox(height: Style.xs),
                     Text(
                       reply.content?.message ?? '',
-                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 14.5,
+                        height: 1.55,
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
-                    const SizedBox(height: Style.xs),
-                    // 操作行：点赞 + 回复
+                    const SizedBox(height: Style.sm),
+                    // 操作行：点赞 + 回复 + 展开折叠
                     Row(
                       spacing: Style.lg,
                       children: [
                         GestureDetector(
                           onTap: () => _toggleLikeReply(reply),
                           child: Row(
-                            spacing: Style.xs,
+                            spacing: 4,
                             children: [
                               Icon(
                                 reply.isLiked
                                     ? Icons.thumb_up
                                     : Icons.thumb_up_outlined,
-                                size: 14,
+                                size: 15,
                                 color: reply.isLiked
                                     ? biliPink
                                     : theme.colorScheme.onSurfaceVariant,
@@ -1529,6 +1604,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               Text(
                                 NumUtils.formatNum(reply.like),
                                 style: grayStyle.copyWith(
+                                  fontSize: 12,
                                   color: reply.isLiked
                                       ? biliPink
                                       : theme.colorScheme.onSurfaceVariant,
@@ -1540,16 +1616,16 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                         GestureDetector(
                           onTap: () => _setReplyTarget(reply),
                           child: Row(
-                            spacing: Style.xs,
+                            spacing: 3,
                             children: [
                               Icon(
-                                Icons.chat_bubble_outline,
-                                size: 13,
+                                Icons.reply,
+                                size: 15,
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
                               Text(
                                 '回复',
-                                style: grayStyle,
+                                style: grayStyle.copyWith(fontSize: 12),
                               ),
                             ],
                           ),
@@ -1558,21 +1634,23 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           GestureDetector(
                             onTap: () => _toggleSubReplies(reply),
                             child: Row(
-                              spacing: Style.xs,
+                              spacing: 2,
                               children: [
                                 Text(
                                   subReplies != null
                                       ? '收起 ${reply.rcount}条回复'
                                       : '展开 ${reply.rcount}条回复',
                                   style: grayStyle.copyWith(
+                                    fontSize: 12,
                                     color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 Icon(
                                   subReplies != null
                                       ? Icons.expand_less
                                       : Icons.expand_more,
-                                  size: 14,
+                                  size: 15,
                                   color: theme.colorScheme.primary,
                                 ),
                               ],
@@ -1585,18 +1663,39 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
             ],
           ),
-          // 楼中楼回复列表
-          if (subReplies != null) ...[
+          // 楼中楼回复列表（独立背景圆角容器包覆）
+          if (subReplies != null && subReplies.isNotEmpty) ...[
             const SizedBox(height: Style.sm),
             Container(
-              padding: const EdgeInsets.only(left: Style.md + Style.md),
+              margin: const EdgeInsets.only(left: 46),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Style.md,
+                vertical: Style.sm,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(Style.radiusMd),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final sub in subReplies) _buildSubReplyTile(sub, reply),
+                  for (int i = 0; i < subReplies.length; i++) ...[
+                    if (i > 0) ...[
+                      const SizedBox(height: Style.xs),
+                      Divider(
+                        height: 1,
+                        thickness: 0.5,
+                        color: theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.2),
+                      ),
+                      const SizedBox(height: Style.xs),
+                    ],
+                    _buildSubReplyTile(subReplies[i], reply, upMid: upMid),
+                  ],
                   if (subLoading)
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: Style.xs),
+                      padding: EdgeInsets.symmetric(vertical: Style.sm),
                       child: Center(
                         child: SizedBox(
                           width: 18,
@@ -1606,9 +1705,23 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       ),
                     ),
                   if (!subEnd && !subLoading && subReplies.length >= 3)
-                    TextButton(
-                      onPressed: () => _loadSubReplies(reply),
-                      child: const Text('查看更多回复'),
+                    Padding(
+                      padding: const EdgeInsets.only(top: Style.xs),
+                      child: TextButton.icon(
+                        onPressed: () => _loadSubReplies(reply),
+                        icon: const Icon(Icons.expand_more, size: 16),
+                        label: Text(
+                          '查看更多回复 ${reply.rcount != null ? "(${subReplies.length}/${reply.rcount})" : ""}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Style.sm,
+                            vertical: Style.xs,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -1619,96 +1732,179 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     );
   }
 
-  /// 楼中楼单条回复。
-  Widget _buildSubReplyTile(ReplyItemModel sub, ReplyItemModel root) {
+  /// 楼中楼单条回复（两行独立展示：第1行头像/名称/身份/时间，第2行独立正文，第3行操作）。
+  Widget _buildSubReplyTile(
+    ReplyItemModel sub,
+    ReplyItemModel root, {
+    int? upMid,
+  }) {
     final theme = Theme.of(context);
+    final isSubUp =
+        upMid != null && (sub.mid == upMid || sub.member?.mid == upMid);
+    final subMember = sub.member;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Style.xs),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: () => _gotoMemberSpace(sub.mid ?? sub.member?.mid),
-            child: NetworkImgLayer(
-              src: sub.member?.avatar,
-              width: 28,
-              height: 28,
-              type: 'avatar',
-            ),
-          ),
-          const SizedBox(width: Style.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  maxLines: 5,
-                  overflow: TextOverflow.ellipsis,
-                  text: TextSpan(
-                    style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
-                    children: [
-                      TextSpan(
-                        text: '${sub.member?.uname ?? ''}：',
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w500,
+          // 第 1 行：头像 + 用户名 + 徽章 + 发布时间
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: () => _gotoMemberSpace(sub.mid ?? subMember?.mid),
+                child: ClipOval(
+                  child: NetworkImgLayer(
+                    src: subMember?.avatar,
+                    width: 28,
+                    height: 28,
+                    type: 'avatar',
+                  ),
+                ),
+              ),
+              const SizedBox(width: Style.sm),
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: GestureDetector(
+                        onTap: () =>
+                            _gotoMemberSpace(sub.mid ?? subMember?.mid),
+                        child: Text(
+                          subMember?.uname ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color:
+                                isSubUp ? biliPink : theme.colorScheme.primary,
+                          ),
                         ),
                       ),
-                      TextSpan(
-                        text: sub.content?.message ?? '',
+                    ),
+                    if (isSubUp)
+                      Container(
+                        margin: const EdgeInsets.only(left: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 3,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: biliPink.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(3),
+                          border: Border.all(
+                            color: biliPink.withValues(alpha: 0.4),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: const Text(
+                          'UP',
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w600,
+                            color: biliPink,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                    if (subMember?.level case final lvl? when lvl > 0)
+                      Container(
+                        margin: const EdgeInsets.only(left: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 3,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Text(
+                          'LV$lvl',
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Text(
+                _formatDate(sub.ctime),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          // 第 2 行：回复正文（独立行展示，字体加大更清晰，行高宽松舒适）
+          Padding(
+            padding: const EdgeInsets.only(left: 36, top: 4, bottom: 4),
+            child: Text(
+              sub.content?.message ?? '',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontSize: 13.5,
+                height: 1.5,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+          // 第 3 行：操作栏（点赞 + 回复）
+          Padding(
+            padding: const EdgeInsets.only(left: 36, bottom: 2),
+            child: Row(
+              spacing: Style.md,
+              children: [
+                GestureDetector(
+                  onTap: () => _toggleLikeSubReply(sub),
+                  child: Row(
+                    spacing: 3,
+                    children: [
+                      Icon(
+                        sub.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                        size: 13,
+                        color: sub.isLiked
+                            ? biliPink
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      Text(
+                        NumUtils.formatNum(sub.like),
                         style: TextStyle(
-                          color: theme.colorScheme.onSurface,
+                          fontSize: 11.5,
+                          color: sub.isLiked
+                              ? biliPink
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 2),
-                Row(
-                  spacing: Style.md,
-                  children: [
-                    Text(_formatDate(sub.ctime),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        )),
-                    GestureDetector(
-                      onTap: () => _toggleLikeSubReply(sub),
-                      child: Row(
-                        spacing: Style.xs,
-                        children: [
-                          Icon(
-                            sub.isLiked
-                                ? Icons.thumb_up
-                                : Icons.thumb_up_outlined,
-                            size: 12,
-                            color: sub.isLiked
-                                ? biliPink
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
-                          Text(
-                            NumUtils.formatNum(sub.like),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: sub.isLiked
-                                  ? biliPink
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                GestureDetector(
+                  onTap: () => _setReplyTarget(
+                    root,
+                    targetName: subMember?.uname,
+                  ),
+                  child: Row(
+                    spacing: 2,
+                    children: [
+                      Icon(
+                        Icons.reply,
+                        size: 13,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _setReplyTarget(root),
-                      child: Text(
+                      Text(
                         '回复',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 11.5,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

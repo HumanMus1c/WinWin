@@ -11,7 +11,6 @@ import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
-import 'package:winwin/pages/search/search_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/pages/toview/toview_page.dart';
 import 'package:winwin/theme/app_typography.dart';
@@ -19,7 +18,6 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
-import 'package:winwin/theme/ui_style_notifier.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 
@@ -28,8 +26,6 @@ import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 /// 结构（PiliPlus 布局）：
 /// ```
 /// ┌────────────────────────────────────────────┐
-/// │ [search]        [style] [setting]          │ 顶栏操作行
-/// ├────────────────────────────────────────────┤
 /// │ ┌──┐  Username [LV]                        │
 /// │ │av│  硬币 X    经验 Y/Z  [====bar====]   │ 用户信息行
 /// │ └──┘                                        │
@@ -83,36 +79,32 @@ class _ProfilePageState extends State<ProfilePage> {
     final info = service.userInfo;
     final isLogin = service.isLogin;
     return Scaffold(
-      body: Column(
-        children: [
-          _HeaderActions(),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 100),
-              children: [
-                _UserInfoSection(info: info, isLogin: isLogin),
-                const SizedBox(height: 10),
-                _StatsRow(
-                  info: info,
-                  isLogin: isLogin,
-                  onGuarded: _guarded,
-                  onNavigate: widget.onNavigate,
-                ),
-                const SizedBox(height: 10),
-                _ActionGrid(
-                  onGuarded: _guarded,
-                  onNavigate: widget.onNavigate,
-                ),
-                const SizedBox(height: Style.md),
-                _SettingsGroup(
-                  isLogin: isLogin,
-                  onGuarded: _guarded,
-                  onLogout: _onLogout,
-                ),
-              ],
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.only(top: 16, bottom: 100),
+          children: [
+            _UserInfoSection(info: info, isLogin: isLogin),
+            const SizedBox(height: 10),
+            _StatsRow(
+              info: info,
+              isLogin: isLogin,
+              onGuarded: _guarded,
+              onNavigate: widget.onNavigate,
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            _ActionGrid(
+              onGuarded: _guarded,
+              onNavigate: widget.onNavigate,
+            ),
+            const SizedBox(height: Style.md),
+            _SettingsGroup(
+              isLogin: isLogin,
+              onGuarded: _guarded,
+              onLogout: _onLogout,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -152,69 +144,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (confirmed != true) return;
     await LoginUtils.onLogoutMain();
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// 顶栏操作行 — 搜索 + 风格切换 + 设置
-// ════════════════════════════════════════════════════════════════
-
-class _HeaderActions extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final style = InheritedUiStyle.of(context);
-    // 下一风格（循环切换 iOS→MD3→Miuix→iOS）
-    final nextStyle = UiStyle.values[(style.legacyInt + 1) % UiStyle.values.length];
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: '搜索',
-              iconSize: 22,
-              padding: const EdgeInsets.all(8),
-              style: const ButtonStyle(
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SearchPage()),
-              ),
-              icon: Icon(Icons.search, color: cs.onSurface),
-            ),
-            const Spacer(),
-            IconButton(
-              tooltip: '切换至${nextStyle.label}风格',
-              iconSize: 22,
-              padding: const EdgeInsets.all(8),
-              style: const ButtonStyle(
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              onPressed: () => UiStyleNotifier.instance.setStyle(nextStyle),
-              icon: Icon(Icons.palette_outlined, color: cs.onSurface),
-            ),
-            IconButton(
-              tooltip: '设置',
-              iconSize: 22,
-              padding: const EdgeInsets.all(8),
-              style: const ButtonStyle(
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingPage()),
-              ),
-              icon: Icon(Icons.settings_outlined, color: cs.onSurface),
-            ),
-            const SizedBox(width: 8),
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -289,11 +218,11 @@ class _UserInfoSection extends StatelessWidget {
                   child: isLogin && (info?.face?.isNotEmpty ?? false)
                       ? CachedNetworkImage(
                           imageUrl: info!.face!,
-                          placeholder: (_, __) => const ColoredBox(
+                          placeholder: (_, _) => const ColoredBox(
                             color: Colors.grey,
                             child: SizedBox.expand(),
                           ),
-                          errorWidget: (_, __, ___) => const Center(
+                          errorWidget: (_, _, _) => const Center(
                             child: Icon(Icons.person,
                                 color: Colors.white, size: 28),
                           ),
