@@ -2,22 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
-/// 视频卡片 - 水平布局（Phase 7.5.5）。
+/// 视频卡片 - 水平布局（高性能适配版）。
 ///
 /// 用于「稍后再看」/「历史记录」/「相关推荐」/「搜索结果列表」等
 /// 横向列表场景。左侧封面（16:9 固定宽度）+ 右侧文本信息。
 ///
-/// [videoItem] 为 dynamic，兼容多种模型（RelatedVideoItem / HistoryItem /
-/// LaterItem / FavDetailItem / RcmdVideoItemModel 等）。预期字段：
-/// cover/pic, title, duration, owner.name（回退 upper.name / authorName）,
-/// stat.view（回退 cntInfo.play）, stat.danmu/danmaku（回退 cntInfo.danmaku）,
-/// bvid, progress（可选，0-1 比例或已看秒数，后者需配合 duration 归一化）。
-///
-/// 三风格自适应：圆角由 [AppShapes] 解析，时长/进度角标用 [PBadge]。
+/// 通过 [VideoCardData.from] 进行强类型模型适配，彻底消除内部反复调用
+/// `try-catch` 导致的 `NoSuchMethodError` 与闭包构造开销。
+/// 外层包裹 [RepaintBoundary] 以实现高效重绘隔离。
 class VideoCardH extends StatelessWidget {
   const VideoCardH({
     super.key,
@@ -40,112 +37,86 @@ class VideoCardH extends StatelessWidget {
   /// 是否显示播放/弹幕数统计。
   final bool showStat;
 
-  /// 从 videoItem 中取封面 URL（兼容 cover/pic 字段）。
-  /// 不同模型字段名不同：HistoryItem 用 cover，RelatedVideoItem 用 pic。
-  /// 任一缺失均不能抛 NoSuchMethodError，故两边都用 [_opt] 容错。
-  String? get _cover =>
-      _opt(() => videoItem.cover as String?) ??
-      _opt(() => videoItem.pic as String?);
-
   @override
   Widget build(BuildContext context) {
+    final data = VideoCardData.from(videoItem);
     final theme = Theme.of(context);
     final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
     final radius = shapes.medium;
-    final int duration =
-        (_opt(() => videoItem.duration as num?) ?? 0).toInt();
-    // progress 为可选字段（仅 HistoryItem / LaterItem 提供），缺失时返回 null。
-    // HistoryItem 存已看秒数（>1），需配合 duration 归一化为 0-1 比例。
-    double? progress = _opt(() => videoItem.progress as num?)?.toDouble();
-    if (progress != null && progress > 1 && duration > 0) {
-      progress = progress / duration;
-    }
+    final int duration = data.duration;
+    final double? progress = data.progress;
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.all(radius),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 左：封面缩略图
-              ClipRRect(
-                borderRadius: BorderRadius.all(radius),
-                child: SizedBox(
-                  width: coverWidth,
-                  height: coverWidth * 9 / 16,
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: NetworkImgLayer(
-                          src: _cover,
-                          width: coverWidth,
-                          height: coverWidth * 9 / 16,
-                          borderRadius: BorderRadius.all(radius),
-                          heroTag: heroTag,
-                        ),
-                      ),
-                      if (duration > 0)
-                        Positioned(
-                          right: 4,
-                          bottom: 4,
-                          child: PBadge(
-                            text: DurationUtils.formatDuration(duration),
-                            type: PBadgeType.duration,
+    return RepaintBoundary(
+      child: Card(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.all(radius),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 左：封面缩略图
+                ClipRRect(
+                  borderRadius: BorderRadius.all(radius),
+                  child: SizedBox(
+                    width: coverWidth,
+                    height: coverWidth * 9 / 16,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: NetworkImgLayer(
+                            src: data.cover,
+                            width: coverWidth,
+                            height: coverWidth * 9 / 16,
+                            borderRadius: BorderRadius.all(radius),
+                            heroTag: heroTag,
                           ),
                         ),
-                      if (progress != null && progress > 0)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: LinearProgressIndicator(
-                            value: progress.clamp(0.0, 1.0),
-                            minHeight: 2,
-                            backgroundColor: Colors.transparent,
-                            valueColor: AlwaysStoppedAnimation(
-                              theme.colorScheme.primary,
+                        if (duration > 0)
+                          Positioned(
+                            right: 4,
+                            bottom: 4,
+                            child: PBadge(
+                              text: DurationUtils.formatDuration(duration),
+                              type: PBadgeType.duration,
                             ),
                           ),
-                        ),
-                    ],
+                        if (progress != null && progress > 0)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: LinearProgressIndicator(
+                              value: progress.clamp(0.0, 1.0),
+                              minHeight: 2,
+                              backgroundColor: Colors.transparent,
+                              valueColor: AlwaysStoppedAnimation(
+                                theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              // 右：标题 + UP + 统计
-              Expanded(child: _buildTextContent(theme)),
-            ],
+                const SizedBox(width: 10),
+                // 右：标题 + UP + 统计
+                Expanded(child: _buildTextContent(theme, data)),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTextContent(ThemeData theme) {
-    final String title = videoItem.title?.toString() ?? '';
+  Widget _buildTextContent(ThemeData theme, VideoCardData data) {
+    final String title = data.title;
     final cs = theme.colorScheme;
-
-    // UP 主名多模型回退：owner.name → upper.name（FavDetailItem）→
-    // authorName（HistoryItem）。字段缺失时 [_opt] 归一化为 null。
-    final dynamic owner = _opt(() => videoItem.owner);
-    final String ownerName = owner?.name?.toString() ??
-        _opt(() => videoItem.upper?.name as String?) ??
-        _opt(() => videoItem.authorName as String?) ??
-        '';
-
-    // 统计数回退：stat.view/danmu → cntInfo.play/danmaku（FavDetailItem）。
-    // 部分模型无 danmu 字段（如 RelatedVideoStat/Stat 仅有 danmaku），
-    // 直接访问会抛 NoSuchMethodError，必须用 [_opt] 容错。
-    final dynamic stat = _opt(() => videoItem.stat);
-    final dynamic cntInfo = _opt(() => videoItem.cntInfo);
-    final int? playCount = _opt(() => (stat?.view as num?)?.toInt()) ??
-        _opt(() => (cntInfo?.play as num?)?.toInt());
-    final int? danmakuCount = _opt(() => (stat?.danmu as num?)?.toInt()) ??
-        _opt(() => (stat?.danmaku as num?)?.toInt()) ??
-        _opt(() => (cntInfo?.danmaku as num?)?.toInt());
+    final String ownerName = data.ownerName;
+    final int? playCount = data.playCount;
+    final int? danmakuCount = data.danmakuCount;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,19 +165,5 @@ class VideoCardH extends StatelessWidget {
         ],
       ],
     );
-  }
-}
-
-/// 安全读取 [obj] 上的可选字段。
-///
-/// [VideoCardH] 通过 dynamic 接收多种模型（RelatedVideoItem /
-/// HistoryItem / RcmdVideoItemModel 等），部分字段（如 cover/pic/progress）
-/// 仅在某些模型上存在。直接 `obj.field` 会在缺失时抛 NoSuchMethodError，
-/// 此包装用 try/catch 把这类异常归一化为 null。
-T? _opt<T>(T? Function() read) {
-  try {
-    return read();
-  } catch (_) {
-    return null;
   }
 }
