@@ -61,6 +61,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   LoadingState<MemberSpaceData> _spaceState = LoadingState.loading();
   MemberCardInfoData? _cardInfo;
+  MemberImages? _extraTopPhoto;
 
   // 投稿视频列表数据与排序
   final List<MemberVideoItem> _videos = [];
@@ -106,6 +107,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     await Future.wait([
       _loadSpace(),
       _loadCardInfo(),
+      _loadTopPhoto(),
       _loadInitialVideos(),
       _loadInitialSeasons(),
       _loadInitialDynamics(),
@@ -131,6 +133,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     if (!mounted) return;
     if (res case Success(:final response)) {
       setState(() => _cardInfo = response);
+    }
+  }
+
+  Future<void> _loadTopPhoto() async {
+    final res = await MemberHttp.topPhoto(mid: widget.mid);
+    if (!mounted) return;
+    if (res case Success(:final response)) {
+      setState(() => _extraTopPhoto = response);
     }
   }
 
@@ -418,7 +428,20 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     MemberImages? images,
   ) {
     final theme = Theme.of(context);
-    final topPhoto = images?.topPhoto ?? images?.imgUrl;
+    String? topPhoto = images?.topPhoto ??
+        images?.imgUrl ??
+        _extraTopPhoto?.topPhoto ??
+        _extraTopPhoto?.imgUrl ??
+        _cardInfo?.spaceLImg ??
+        _cardInfo?.spaceSImg;
+
+    if (topPhoto != null && topPhoto.isNotEmpty) {
+      if (topPhoto.startsWith('//')) {
+        topPhoto = 'https:$topPhoto';
+      } else if (topPhoto.startsWith('http://')) {
+        topPhoto = topPhoto.replaceFirst('http://', 'https://');
+      }
+    }
 
     return Stack(
       fit: StackFit.expand,

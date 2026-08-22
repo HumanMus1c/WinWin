@@ -239,6 +239,26 @@ abstract final class MemberHttp {
     }
   }
 
+  /// 获取用户空间顶部背景图（Web 端 `/x/space/top/photo`）。
+  static Future<LoadingState<MemberImages>> topPhoto({required int mid}) async {
+    try {
+      final res = await Request().get<dynamic>(
+        '/x/space/top/photo',
+        queryParameters: {'mid': mid},
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
+        return Success(MemberImages.fromJson(data['data'] as Map<String, dynamic>));
+      } else {
+        return Error(data['message']?.toString() ?? '获取背景图失败');
+      }
+    } on DioException catch (e) {
+      return Error('网络请求异常：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('获取背景图失败：$e');
+    }
+  }
+
   /// 关系操作（关注 / 取消关注 / 特别关注 / 移除黑名单）。
   ///
   /// - [act]: 1=关注, 2=取关, 3=悄悄关注, 4=取消悄关, 5=拉黑, 6=移出黑名单
@@ -288,6 +308,20 @@ class MemberSpaceData {
   });
 
   factory MemberSpaceData.fromJson(Map<String, dynamic> json) {
+    final imagesJson = json['images'] is Map<String, dynamic>
+        ? json['images'] as Map<String, dynamic>
+        : json['space'] is Map<String, dynamic>
+            ? json['space'] as Map<String, dynamic>
+            : (json['card'] is Map && (json['card'] as Map)['space'] is Map<String, dynamic>)
+                ? (json['card'] as Map)['space'] as Map<String, dynamic>
+                : null;
+
+    final topPhotoDirect = json['top_photo'] ??
+        json['topPhoto'] ??
+        (json['card'] is Map
+            ? (json['card'] as Map)['top_photo'] ?? (json['card'] as Map)['space_photo']
+            : null);
+
     return MemberSpaceData(
       card: json['card'] is Map<String, dynamic>
           ? MemberCard.fromJson(json['card'] as Map<String, dynamic>)
@@ -295,9 +329,11 @@ class MemberSpaceData {
       archives: json['archives'] is Map<String, dynamic>
           ? MemberArchiveData.fromJson(json['archives'] as Map<String, dynamic>)
           : null,
-      images: json['images'] is Map<String, dynamic>
-          ? MemberImages.fromJson(json['images'] as Map<String, dynamic>)
-          : null,
+      images: imagesJson != null
+          ? MemberImages.fromJson(imagesJson)
+          : (topPhotoDirect != null
+              ? MemberImages(topPhoto: topPhotoDirect.toString(), imgUrl: topPhotoDirect.toString())
+              : null),
       silence: _asInt(json['silence']),
     );
   }
@@ -312,10 +348,29 @@ class MemberImages {
   MemberImages({this.imgUrl, this.nightImgurl, this.topPhoto});
 
   factory MemberImages.fromJson(Map<String, dynamic> json) {
+    final imgUrl = (json['imgUrl'] ??
+            json['img_url'] ??
+            json['l_img'] ??
+            json['s_img'] ??
+            json['top_photo'] ??
+            json['topPhoto'])
+        ?.toString();
+    final nightImgurl = (json['nightImgurl'] ??
+            json['night_imgurl'] ??
+            json['night_img_url'])
+        ?.toString();
+    final topPhoto = (json['top_photo'] ??
+            json['topPhoto'] ??
+            json['top_photo_arc'] ??
+            json['l_img'] ??
+            json['s_img'] ??
+            json['imgUrl'] ??
+            json['img_url'])
+        ?.toString();
     return MemberImages(
-      imgUrl: json['img_url']?.toString(),
-      nightImgurl: json['night_imgurl']?.toString(),
-      topPhoto: json['top_photo']?.toString(),
+      imgUrl: imgUrl,
+      nightImgurl: nightImgurl,
+      topPhoto: topPhoto,
     );
   }
 }
@@ -630,7 +685,7 @@ class MemberPrInfo {
   }
 }
 
-/// 用户卡片详细数据（`/x/web-interface/card` 响应，含经验值）。
+/// 用户卡片详细数据（`/x/web-interface/card` 响应，含经验值与空间背景）。
 class MemberCardInfoData {
   final int? currentLevel;
   final int? currentMin;
@@ -640,6 +695,8 @@ class MemberCardInfoData {
   final int? articleCount;
   final int? follower;
   final int? likeNum;
+  final String? spaceLImg;
+  final String? spaceSImg;
 
   MemberCardInfoData({
     this.currentLevel,
@@ -650,6 +707,8 @@ class MemberCardInfoData {
     this.articleCount,
     this.follower,
     this.likeNum,
+    this.spaceLImg,
+    this.spaceSImg,
   });
 
   factory MemberCardInfoData.fromJson(Map<String, dynamic> json) {
@@ -657,6 +716,17 @@ class MemberCardInfoData {
     final levelInfo = card?['level_info'] as Map<String, dynamic>?;
     final currentLevel = _asInt(levelInfo?['current_level']);
     final isLevel6 = currentLevel == 6;
+
+    final space = json['space'] as Map<String, dynamic>?;
+    final cardSpace = (card?['space'] is Map)
+        ? (card?['space'] as Map<String, dynamic>)
+        : null;
+    final spaceLImg = (space?['l_img'] ??
+            cardSpace?['l_img'] ??
+            space?['s_img'] ??
+            cardSpace?['s_img'])
+        ?.toString();
+    final spaceSImg = (space?['s_img'] ?? cardSpace?['s_img'])?.toString();
 
     return MemberCardInfoData(
       currentLevel: currentLevel,
@@ -667,6 +737,8 @@ class MemberCardInfoData {
       articleCount: _asInt(json['article_count']),
       follower: _asInt(json['follower']),
       likeNum: _asInt(json['like_num']),
+      spaceLImg: spaceLImg,
+      spaceSImg: spaceSImg,
     );
   }
 }

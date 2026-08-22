@@ -10,6 +10,7 @@ import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
+import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/pages/toview/toview_page.dart';
@@ -183,147 +184,170 @@ class _UserInfoSection extends StatelessWidget {
       color: cs.secondary,
     );
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        if (!isLogin) showLoginPage(context);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          children: [
-            // 头像（55px 圆形 + VIP 角标）
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 55,
-                  height: 55,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: isLogin
-                        ? null
-                        : LinearGradient(
-                            colors: [
-                              biliPink,
-                              biliPink.withValues(alpha: 0.7),
-                            ],
-                          ),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      width: 1.5,
-                    ),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: isLogin && (info?.face?.isNotEmpty ?? false)
-                      ? CachedNetworkImage(
-                          imageUrl: info!.face!,
-                          placeholder: (_, _) => const ColoredBox(
-                            color: Colors.grey,
-                            child: SizedBox.expand(),
-                          ),
-                          errorWidget: (_, _, _) => const Center(
-                            child: Icon(Icons.person,
-                                color: Colors.white, size: 28),
-                          ),
-                          fit: BoxFit.cover,
-                        )
-                      : const Icon(Icons.person,
-                          color: Colors.white, size: 28),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (!isLogin) {
+            showLoginPage(context);
+          } else {
+            final mid = info?.mid;
+            if (mid != null && mid > 0) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MemberSpacePage(mid: mid),
                 ),
-                if (isVip)
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: biliPink,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                            color: cs.surface, width: 1),
-                      ),
-                      child: const Text(
-                        'VIP',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 16),
-            // 用户名 + 硬币/经验 + 进度条
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+              );
+            }
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              // 头像（55px 圆形 + VIP 角标）
+              Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  Row(
-                    spacing: 6,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          isLogin ? (info?.name ?? '未命名用户') : '点击登录',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            height: 1,
-                            fontWeight: typo.titleWeight,
-                            color: isVip && (info?.isYearVip ?? false)
-                                ? biliPink
-                                : null,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (hasLevel)
-                        _LevelBadge(level: levelInfo!.currentLevel!),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (isLogin)
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(text: '硬币 ', style: coinLabelStyle),
-                          TextSpan(
-                            text: _fmtNum(info?.money?.toInt() ?? info?.coins),
-                            style: coinValStyle,
-                          ),
-                          TextSpan(text: '      经验 ', style: coinLabelStyle),
-                          TextSpan(
-                            text: _fmtNum(curExp),
-                            style: coinValStyle,
-                          ),
-                          TextSpan(
-                            text: '/${_fmtNum(nextExp)}',
-                            style: coinLabelStyle,
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    Text(
-                      '登录后同步你的账户数据',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: cs.onSurface.withValues(alpha: 0.6),
+                  Container(
+                    width: 55,
+                    height: 55,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: isLogin
+                          ? null
+                          : LinearGradient(
+                              colors: [
+                                biliPink,
+                                biliPink.withValues(alpha: 0.7),
+                              ],
+                            ),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 1.5,
                       ),
                     ),
-                  const SizedBox(height: 4),
-                  if (isLogin)
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 225),
-                      child: AppProgressBar(value: progress),
+                    clipBehavior: Clip.antiAlias,
+                    child: isLogin && (info?.face?.isNotEmpty ?? false)
+                        ? CachedNetworkImage(
+                            imageUrl: info!.face!,
+                            placeholder: (_, _) => const ColoredBox(
+                              color: Colors.grey,
+                              child: SizedBox.expand(),
+                            ),
+                            errorWidget: (_, _, _) => const Center(
+                              child: Icon(Icons.person,
+                                  color: Colors.white, size: 28),
+                            ),
+                            fit: BoxFit.cover,
+                          )
+                        : const Icon(Icons.person,
+                            color: Colors.white, size: 28),
+                  ),
+                  if (isVip)
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: biliPink,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                              color: cs.surface, width: 1),
+                        ),
+                        child: const Text(
+                          'VIP',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(width: 16),
+              // 用户名 + 硬币/经验 + 进度条
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      spacing: 6,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            isLogin ? (info?.name ?? '未命名用户') : '点击登录',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              height: 1,
+                              fontWeight: typo.titleWeight,
+                              color: isVip && (info?.isYearVip ?? false)
+                                  ? biliPink
+                                  : null,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (hasLevel)
+                          _LevelBadge(level: levelInfo!.currentLevel!),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (isLogin)
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(text: '硬币 ', style: coinLabelStyle),
+                            TextSpan(
+                              text: _fmtNum(info?.money?.toInt() ?? info?.coins),
+                              style: coinValStyle,
+                            ),
+                            TextSpan(text: '      经验 ', style: coinLabelStyle),
+                            TextSpan(
+                              text: _fmtNum(curExp),
+                              style: coinValStyle,
+                            ),
+                            TextSpan(
+                              text: '/${_fmtNum(nextExp)}',
+                              style: coinLabelStyle,
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Text(
+                        '登录后同步你的账户数据',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    if (isLogin)
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 225),
+                        child: AppProgressBar(value: progress),
+                      ),
+                  ],
+                ),
+              ),
+              if (isLogin) ...[
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right,
+                  color: cs.outline.withValues(alpha: 0.5),
+                  size: 22,
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
