@@ -37,6 +37,19 @@ static void BringExistingWindowToForeground() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  // 确保 UI 线程挂载在用户的交互式桌面 WinSta0\Default 上。
+  // 当通过沙箱、IDE 终端、远程调试器或后台服务启动时，子进程可能被分配到隔离桌面
+  //（例如 exebox-*），导致窗口无法在用户的交互桌面以及 Alt+Tab 任务视图中呈现。
+  HDESK default_desktop = OpenDesktopW(
+      L"Default", 0, FALSE,
+      DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS | DESKTOP_CREATEWINDOW |
+          DESKTOP_CREATEMENU | DESKTOP_HOOKCONTROL | DESKTOP_JOURNALRECORD |
+          DESKTOP_JOURNALPLAYBACK | DESKTOP_ENUMERATE | DESKTOP_SWITCHDESKTOP);
+  if (default_desktop != nullptr) {
+    SetThreadDesktop(default_desktop);
+    CloseDesktop(default_desktop);
+  }
+
   // 黑箱：最先初始化，记录完整启动时间线（偶发启动白屏取证）。
   blackbox::Init();
   blackbox::Log("main", "wWinMain enter, pid=%lu", GetCurrentProcessId());

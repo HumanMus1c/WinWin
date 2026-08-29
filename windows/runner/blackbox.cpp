@@ -361,6 +361,13 @@ void Init() {
   LocalTimestamp(ts, sizeof(ts));
   Log("blackbox", "==== native session start %s pid=%lu flutter=%s ====",
       ts, GetCurrentProcessId(), FLUTTER_VERSION);
+
+  char deskName[256] = {};
+  HDESK hDesk = GetThreadDesktop(GetCurrentThreadId());
+  DWORD deskLen = 0;
+  if (GetUserObjectInformationA(hDesk, UOI_NAME, deskName, sizeof(deskName), &deskLen)) {
+    Log("blackbox", "thread desktop: %s", deskName);
+  }
 }
 
 void Log(const char* tag, const char* fmt, ...) {
