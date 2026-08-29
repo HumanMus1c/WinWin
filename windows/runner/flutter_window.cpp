@@ -49,11 +49,22 @@ bool FlutterWindow::OnCreate() {
     // 黑箱：首帧呈现是启动白屏诊断的核心里程碑。
     blackbox::NotifyFirstFrame(GetHandle());
     this->Show();
+    HWND child = GetChildContent();
+    if (child) {
+      ::ShowWindow(child, SW_SHOW);
+      RECT rect = GetClientArea();
+      ::MoveWindow(child, 0, 0, rect.right - rect.left, rect.bottom - rect.top, TRUE);
+      ::InvalidateRect(child, nullptr, FALSE);
+      ::UpdateWindow(child);
+    }
+    ::InvalidateRect(GetHandle(), nullptr, FALSE);
+    ::UpdateWindow(GetHandle());
     ::SetForegroundWindow(GetHandle());
     ::BringWindowToTop(GetHandle());
     if (flutter_controller_->view()) {
       ::SetFocus(flutter_controller_->view()->GetNativeWindow());
     }
+    flutter_controller_->ForceRedraw();
     blackbox::Log("runner", "Show() & ForceForeground done");
   });
 
@@ -80,6 +91,23 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // 在任何插件处理前优先确保子窗口尺寸与父窗口客户区完全同步
+  if (message == WM_SIZE) {
+    RECT rect = GetClientArea();
+    HWND child = GetChildContent();
+    if (child != nullptr) {
+      ::MoveWindow(child, 0, 0, rect.right - rect.left,
+                   rect.bottom - rect.top, TRUE);
+      ::InvalidateRect(child, nullptr, FALSE);
+    }
+    if (flutter_controller_) {
+      flutter_controller_->ForceRedraw();
+    }
+  } else if (message == WM_ERASEBKGND) {
+    // 拦截背景擦除，避免父窗口背景绘制覆盖 Direct3D 子窗口
+    return 1;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

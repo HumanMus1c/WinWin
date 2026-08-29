@@ -73,6 +73,7 @@ class WindowStateController with WindowListener {
     StartupBlackbox.log('window', 'windowManager.show/focus start');
     await windowManager.show();
     await windowManager.focus();
+    WidgetsBinding.instance.scheduleFrame();
     StartupBlackbox.log('window', 'windowManager.show/focus done');
   }
 
