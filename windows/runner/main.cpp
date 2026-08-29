@@ -92,9 +92,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   flutter::DartProject project(L"data");
 
-  // 启用 Impeller 渲染后端（Direct3D 11 原生交换链，彻底解决 Skia/ANGLE 在虚拟显示器与核显下的白屏问题）
-  project.set_impeller_switch(flutter::ImpellerSwitch::Enabled);
-  blackbox::Log("main", "DartProject created, Impeller enabled");
+  // 使用稳定的 Skia / ANGLE (Direct3D 11) 渲染后端，规避 Impeller 在 Intel 核显/虚拟显示器下的白屏呈现缺陷
+  project.set_impeller_switch(flutter::ImpellerSwitch::Disabled);
+  project.set_gpu_preference(flutter::GpuPreference::NoPreference);
+  blackbox::Log("main", "DartProject created, Impeller disabled (Skia)");
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
