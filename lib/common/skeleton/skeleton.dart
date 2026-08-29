@@ -37,11 +37,15 @@ class _SkeletonState extends State<Skeleton>
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.surface.withAlpha(10);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final shimmerColor = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.white.withValues(alpha: 0.75);
     final colors = [
       Colors.transparent,
-      color,
-      color,
+      shimmerColor,
+      shimmerColor,
       Colors.transparent,
     ];
     return AnimatedBuilder(

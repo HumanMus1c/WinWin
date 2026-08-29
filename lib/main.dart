@@ -19,6 +19,7 @@ import 'pages/setting/theme_notifier.dart';
 import 'pages/video/desktop_pip.dart';
 import 'theme/app_font_notifier.dart';
 import 'theme/app_theme.dart';
+import 'theme/colors.dart';
 import 'theme/inherited_ui_style.dart';
 import 'theme/ui_style.dart';
 import 'theme/ui_style_notifier.dart';
@@ -219,8 +220,41 @@ class _AgreementGateState extends State<AgreementGate> {
   Widget build(BuildContext context) {
     final acked = _acked;
     if (acked == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: biliPink.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: biliPink,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'WinWin',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
     if (acked) {
