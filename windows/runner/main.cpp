@@ -14,23 +14,25 @@
 static constexpr const wchar_t* kSingleInstanceMutexName =
     L"Local\\winwin-single-instance-v1";
 
-// 窗口标题与类名，用于把已存在实例提到前台。
-static constexpr const wchar_t* kExistingWindowTitle = L"winwin";
+// 窗口类名，用于把已存在实例提到前台。
 static constexpr const wchar_t* kExistingWindowClass =
     L"FLUTTER_RUNNER_WIN32_WINDOW";
 
 static void BringExistingWindowToForeground() {
-  HWND existing = FindWindowW(kExistingWindowClass, kExistingWindowTitle);
+  HWND existing = FindWindowW(kExistingWindowClass, nullptr);
   if (existing == nullptr) {
     return;
   }
   if (IsIconic(existing)) {
     ShowWindow(existing, SW_RESTORE);
+  } else {
+    ShowWindow(existing, SW_SHOW);
   }
   // 交替调用 AllowSetForegroundWindow + SetForegroundWindow 绕过 Win32
   // 的前台窗口限制（第二个进程默认不能抢前台）。
   AllowSetForegroundWindow(ASFW_ANY);
   SetForegroundWindow(existing);
+  BringWindowToTop(existing);
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,

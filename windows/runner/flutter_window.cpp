@@ -49,7 +49,12 @@ bool FlutterWindow::OnCreate() {
     // 黑箱：首帧呈现是启动白屏诊断的核心里程碑。
     blackbox::NotifyFirstFrame(GetHandle());
     this->Show();
-    blackbox::Log("runner", "Show() after first frame done");
+    ::SetForegroundWindow(GetHandle());
+    ::BringWindowToTop(GetHandle());
+    if (flutter_controller_->view()) {
+      ::SetFocus(flutter_controller_->view()->GetNativeWindow());
+    }
+    blackbox::Log("runner", "Show() & ForceForeground done");
   });
 
   // Flutter can complete the first frame before the "show window" callback is
