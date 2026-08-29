@@ -28,6 +28,10 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
 
+  // 关键：在创建 Direct3D 交换链前确保 HWND 处于可见状态，
+  // 避免在虚拟显示器 (IddCx) 下 DXGI 交换链初始化为 OCCLUDED 导致 Present 无法向 DWM 提交帧。
+  this->Show();
+
   RECT frame = GetClientArea();
 
   // The size here must match the window dimensions to avoid unnecessary surface
@@ -48,7 +52,6 @@ bool FlutterWindow::OnCreate() {
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     // 黑箱：首帧呈现是启动白屏诊断的核心里程碑。
     blackbox::NotifyFirstFrame(GetHandle());
-    this->Show();
     HWND child = GetChildContent();
     if (child) {
       ::ShowWindow(child, SW_SHOW);
