@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
@@ -122,4 +124,30 @@ abstract final class StartupBlackbox {
   /// 生命周期变化（AppLifecycleListener 回调直连）。
   static void logLifecycle(AppLifecycleState state) =>
       log('lifecycle', state.name);
+
+  /// 计划在指定延时后通过 RepaintBoundary 截取 Dart 渲染树快照
+  static void scheduleDartScreenCapture(GlobalKey key, {Duration delay = const Duration(seconds: 3)}) {
+    Future.delayed(delay, () async {
+      try {
+        final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+        if (boundary == null) {
+          log('dart_shot', 'boundary is null');
+          return;
+        }
+        final image = await boundary.toImage(pixelRatio: 1.0);
+        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        if (byteData == null) {
+          log('dart_shot', 'byteData is null');
+          return;
+        }
+        final bytes = byteData.buffer.asUint8List();
+        final docs = await getApplicationDocumentsDirectory();
+        final file = File('${docs.path}${Platform.pathSeparator}logs${Platform.pathSeparator}dart_render.png');
+        await file.writeAsBytes(bytes);
+        log('dart_shot', 'saved dart_render.png (${image.width}x${image.height}, ${bytes.length} bytes)');
+      } catch (e) {
+        log('dart_shot', 'capture error: $e');
+      }
+    });
+  }
 }

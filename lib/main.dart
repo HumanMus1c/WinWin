@@ -144,37 +144,43 @@ class AppScrollBehavior extends MaterialScrollBehavior {
 class WinWinApp extends StatelessWidget {
   const WinWinApp({super.key});
 
+  static final GlobalKey _rootCaptureKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
+    StartupBlackbox.scheduleDartScreenCapture(_rootCaptureKey, delay: const Duration(seconds: 4));
     // 三层 ValueListenableBuilder — UI 风格 × 主题模式 × 应用字体。
     // 任意一个变化都会重建 MaterialApp + UiStyleScope，实现热切换。
-    return ValueListenableBuilder<UiStyle>(
-      valueListenable: UiStyleNotifier.instance,
-      builder: (context, uiStyle, _) {
-        return ValueListenableBuilder<ThemeMode>(
-          valueListenable: ThemeNotifier.instance,
-          builder: (context, themeMode, _) {
-            return ValueListenableBuilder<String>(
-              valueListenable: AppFontNotifier.instance,
-              builder: (context, fontFamily, _) {
-                return UiStyleScope(
-                  style: uiStyle,
-                  child: MaterialApp(
-                    title: 'WinWin — BiliPai Desktop Port',
-                    debugShowCheckedModeBanner: false,
-                    scrollBehavior: const AppScrollBehavior(),
-                    theme: AppTheme.lightFor(uiStyle, fontFamily: fontFamily),
-                    darkTheme: AppTheme.darkFor(uiStyle, fontFamily: fontFamily),
-                    themeMode: themeMode,
-                    navigatorObservers: [routeObserver],
-                    home: const AgreementGate(child: AppRoot()),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
+    return RepaintBoundary(
+      key: _rootCaptureKey,
+      child: ValueListenableBuilder<UiStyle>(
+        valueListenable: UiStyleNotifier.instance,
+        builder: (context, uiStyle, _) {
+          return ValueListenableBuilder<ThemeMode>(
+            valueListenable: ThemeNotifier.instance,
+            builder: (context, themeMode, _) {
+              return ValueListenableBuilder<String>(
+                valueListenable: AppFontNotifier.instance,
+                builder: (context, fontFamily, _) {
+                  return UiStyleScope(
+                    style: uiStyle,
+                    child: MaterialApp(
+                      title: 'WinWin — BiliPai Desktop Port',
+                      debugShowCheckedModeBanner: false,
+                      scrollBehavior: const AppScrollBehavior(),
+                      theme: AppTheme.lightFor(uiStyle, fontFamily: fontFamily),
+                      darkTheme: AppTheme.darkFor(uiStyle, fontFamily: fontFamily),
+                      themeMode: themeMode,
+                      navigatorObservers: [routeObserver],
+                      home: const AgreementGate(child: AppRoot()),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

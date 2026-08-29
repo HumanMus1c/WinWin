@@ -47,7 +47,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
           DESKTOP_JOURNALPLAYBACK | DESKTOP_ENUMERATE | DESKTOP_SWITCHDESKTOP);
   if (default_desktop != nullptr) {
     SetThreadDesktop(default_desktop);
-    CloseDesktop(default_desktop);
   }
 
   // 黑箱：最先初始化，记录完整启动时间线（偶发启动白屏取证）。
@@ -83,13 +82,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   flutter::DartProject project(L"data");
 
-  // Flutter 3.47 Windows 默认启用 Impeller(OpenGLESSDF) 渲染后端，其外部
-  // 纹理（fvp 视频的 DXGI shared handle）在路由转场场景变化时存在崩溃缺陷
-  //（光栅线程空指针访问，flutter_windows.dll 固定偏移 0x2C55F7，8/14 升级
-  // 3.47 后每次播放中返回必崩）。回退 Skia 后端规避，待引擎修复后移除。
-  // TODO: 升级 stable 验证 Impeller 修复后移除此开关。
-  project.set_impeller_switch(flutter::ImpellerSwitch::Disabled);
-  blackbox::Log("main", "DartProject created, Impeller disabled (Skia)");
+  // 启用 Impeller 渲染后端（Direct3D 11 原生交换链，彻底解决 Skia/ANGLE 在虚拟显示器与核显下的白屏问题）
+  project.set_impeller_switch(flutter::ImpellerSwitch::Enabled);
+  blackbox::Log("main", "DartProject created, Impeller enabled");
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();

@@ -242,10 +242,18 @@ Win32Window* Win32Window::GetThisFromHandle(HWND const window) noexcept {
 void Win32Window::SetChildContent(HWND content) {
   child_content_ = content;
   SetParent(content, window_handle_);
+
+  LONG style = GetWindowLong(content, GWL_STYLE);
+  style &= ~(WS_POPUP | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX |
+             WS_MAXIMIZEBOX | WS_SYSMENU);
+  style |= WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS;
+  SetWindowLong(content, GWL_STYLE, style);
+
   RECT frame = GetClientArea();
 
-  MoveWindow(content, frame.left, frame.top, frame.right - frame.left,
-             frame.bottom - frame.top, true);
+  SetWindowPos(content, nullptr, 0, 0, frame.right - frame.left,
+               frame.bottom - frame.top,
+               SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 
   SetFocus(child_content_);
 }

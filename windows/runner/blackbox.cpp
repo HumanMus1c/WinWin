@@ -143,23 +143,25 @@ bool CaptureAndScan(HWND hwnd, const wchar_t* label) {
     return false;
   }
   HGDIOBJ old = SelectObject(mem_dc, dib);
-  // PrintWindow(PW_RENDERFULLCONTENT) 优先；对 Flutter 加速子窗口它可能
-  // 返回全黑（实测如此），此时回退屏幕级 BitBlt 抓 DWM 合成结果。
-  const char* source = "n/a";
-  BOOL ok = PrintWindow(hwnd, mem_dc, PW_RENDERFULLCONTENT);
-  if (!ok) {
-    ok = BitBlt(mem_dc, 0, 0, w, h, wnd_dc, 0, 0, SRCCOPY);
-    source = "bitblt_client";
-  } else {
-    source = "printwindow";
+  // Flutter GPU 加速表面（Direct3D 11 / Impeller / ANGLE）只能通过屏幕级 BitBlt
+  // 抓取 DWM 实际合成呈现的画面；PrintWindow 只能抓到 GDI 纯白背景。
+  POINT tl{0, 0};
+  ClientToScreen(hwnd, &tl);
+  HDC screen_dc = GetDC(nullptr);
+  BOOL ok = FALSE;
+  const char* source = "bitblt_screen";
+  if (screen_dc) {
+    ok = BitBlt(mem_dc, 0, 0, w, h, screen_dc, tl.x, tl.y,
+                SRCCOPY | CAPTUREBLT);
+    ReleaseDC(nullptr, screen_dc);
   }
 
   bool suspect = false;
   std::wstring filename;
+  const int stride = ((w * 3 + 3) / 4) * 4;
   if (!ok) {
-    Log("scan", "capture failed (PrintWindow+BitBlt), gle=%lu", GetLastError());
+    Log("scan", "capture failed (BitBlt screen), gle=%lu", GetLastError());
   } else {
-    const int stride = ((w * 3 + 3) / 4) * 4;
     BYTE* base = (BYTE*)bits;
     auto analyze = [&](double* out) {
       const int step = (w / 320) + 1;
@@ -194,19 +196,6 @@ bool CaptureAndScan(HWND hwnd, const wchar_t* label) {
 
     double m[7]{};
     analyze(m);
-    if (m[2] >= 99.5 && m[3] < 2 && m[4] < 2 && m[5] < 2) {
-      // 全黑：PrintWindow 拿不到加速内容 → 屏幕坐标 BitBlt 重抓。
-      POINT tl{};
-      ClientToScreen(hwnd, &tl);
-      HDC screen_dc = GetDC(nullptr);
-      if (screen_dc) {
-        BitBlt(mem_dc, 0, 0, w, h, screen_dc, tl.x, tl.y,
-               SRCCOPY | CAPTUREBLT);
-        ReleaseDC(nullptr, screen_dc);
-        source = "bitblt_screen";
-        analyze(m);
-      }
-    }
 
     if (m[6] > 0) {
       const double nw = m[0], ch = m[1], dk = m[2];
