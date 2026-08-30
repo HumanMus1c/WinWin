@@ -6,6 +6,7 @@
 #include "flutter_window.h"
 #include "utils.h"
 
+#ifdef NDEBUG
 // 单实例互斥锁：防止同一会话启动多个 WinWin 实例。
 // 根因：Hive 以独占共享模式打开每个 Box 的 .lock 文件，两个实例共用
 // %APPDATA%\com.winwin\winwin\hive\ 路径时，第二个实例会拿到
@@ -34,6 +35,7 @@ static void BringExistingWindowToForeground() {
   SetForegroundWindow(existing);
   BringWindowToTop(existing);
 }
+#endif
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
@@ -46,8 +48,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   blackbox::Init();
   blackbox::Log("main", "wWinMain enter, pid=%lu", GetCurrentProcessId());
 
+#ifdef NDEBUG
   // 第一个实例创建 mutex 成功；若已存在则把原窗口提到前台并立即退出。
   // mutex 句柄在进程退出时由 OS 自动释放，不需要显式 CloseHandle。
+  // 仅在 Release 模式启用，避免 Debug 模式下 flutter run 发生调试锁死与秒退。
   HANDLE single_instance_mutex =
       CreateMutexW(nullptr, TRUE, kSingleInstanceMutexName);
   if (single_instance_mutex == nullptr) {
@@ -60,6 +64,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     BringExistingWindowToForeground();
     return EXIT_SUCCESS;
   }
+#endif
 
   // Attach to console when present (e.g., 'flutter run') or create a
   // new console when running with a debugger.
