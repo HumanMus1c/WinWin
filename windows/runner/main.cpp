@@ -42,23 +42,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     FlutterDesktopResyncOutputStreams();
   }
 
-  // 优先挂载到用户当前活跃的输入桌面（支持远程控制会话与虚拟显示器桌面）
-  HDESK active_desktop = OpenInputDesktop(
-      0, FALSE,
-      DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS | DESKTOP_CREATEWINDOW |
-          DESKTOP_CREATEMENU | DESKTOP_HOOKCONTROL | DESKTOP_JOURNALRECORD |
-          DESKTOP_JOURNALPLAYBACK | DESKTOP_ENUMERATE | DESKTOP_SWITCHDESKTOP);
-  if (active_desktop == nullptr) {
-    active_desktop = OpenDesktopW(
-        L"Default", 0, FALSE,
-        DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS | DESKTOP_CREATEWINDOW |
-            DESKTOP_CREATEMENU | DESKTOP_HOOKCONTROL | DESKTOP_JOURNALRECORD |
-            DESKTOP_JOURNALPLAYBACK | DESKTOP_ENUMERATE | DESKTOP_SWITCHDESKTOP);
-  }
-  if (active_desktop != nullptr) {
-    SetThreadDesktop(active_desktop);
-  }
-
   // 黑箱：最先初始化，记录完整启动时间线（偶发启动白屏取证）。
   blackbox::Init();
   blackbox::Log("main", "wWinMain enter, pid=%lu", GetCurrentProcessId());

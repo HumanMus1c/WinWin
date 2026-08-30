@@ -149,7 +149,7 @@ class WinWinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    StartupBlackbox.scheduleDartScreenCapture(_rootCaptureKey, delay: const Duration(seconds: 4));
+    StartupBlackbox.scheduleDartScreenCapture(_rootCaptureKey, delay: const Duration(seconds: 8));
     // 三层 ValueListenableBuilder — UI 风格 × 主题模式 × 应用字体。
     // 任意一个变化都会重建 MaterialApp + UiStyleScope，实现热切换。
     return RepaintBoundary(

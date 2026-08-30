@@ -75,23 +75,6 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
-  // 在任何插件处理前优先确保子窗口尺寸与父窗口客户区完全同步
-  if (message == WM_SIZE) {
-    RECT rect = GetClientArea();
-    HWND child = GetChildContent();
-    if (child != nullptr) {
-      ::MoveWindow(child, 0, 0, rect.right - rect.left,
-                   rect.bottom - rect.top, TRUE);
-      ::InvalidateRect(child, nullptr, FALSE);
-    }
-    if (flutter_controller_) {
-      flutter_controller_->ForceRedraw();
-    }
-  } else if (message == WM_ERASEBKGND) {
-    // 拦截背景擦除，避免父窗口背景绘制覆盖 Direct3D 子窗口
-    return 1;
-  }
-
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
@@ -106,7 +89,6 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
-    // ---- 黑箱：窗口消息埋点（白屏取证关键信号）----
     case WM_SHOWWINDOW:
       if (g_wm_show_logged < kMaxWmShowLogs) {
         ++g_wm_show_logged;
@@ -121,7 +103,6 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
       }
       break;
     case WM_SIZE:
-      // 窗口在首帧前被显示/最大化的证据（白屏头号嫌疑路径）。
       if (g_wm_size_logged < kMaxWmSizeLogs) {
         ++g_wm_size_logged;
         blackbox::Log("wm", "WM_SIZE type=%lu cx=%u cy=%u",
@@ -132,18 +113,6 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case WM_DPICHANGED:
       blackbox::Log("wm", "WM_DPICHANGED dpi=%u", (unsigned)HIWORD(wparam));
       break;
-    case WM_PAINT: {
-      // 父窗口收到 WM_PAINT：通过 BeginPaint/EndPaint 验证脏区，
-      // 避免 DefWindowProc 使用默认白色画刷重绘覆盖 Direct3D 子窗口。
-      if (g_wm_paint_logged < kMaxWmPaintLogs) {
-        ++g_wm_paint_logged;
-        blackbox::Log("wm", "WM_PAINT (parent window handled)");
-      }
-      PAINTSTRUCT ps;
-      BeginPaint(hwnd, &ps);
-      EndPaint(hwnd, &ps);
-      return 0;
-    }
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
