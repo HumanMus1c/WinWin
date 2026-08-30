@@ -8,9 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:fvp/mdk.dart' as mdk;
 
 import 'core/bootstrap.dart';
-import 'core/log/api_blackbox.dart';
 import 'core/log/app_logger.dart';
-import 'core/log/startup_blackbox.dart';
 import 'core/log/sync_trace.dart';
 import 'core/storage/storage_pref.dart';
 import 'core/window/window_state_controller.dart';
@@ -32,24 +30,12 @@ final RouteObserver<PageRoute<dynamic>> routeObserver =
     RouteObserver<PageRoute<dynamic>>();
 
 void main() async {
-  // 黑箱：最先注册（偶发启动白屏取证；pending 缓冲保证早于 IO 就绪的
-  // 事件也按序落盘），不阻塞启动。
-  unawaited(StartupBlackbox.init());
-  unawaited(ApiBlackbox.init());
-  StartupBlackbox.log(
-      'main', 'entered, release=$kReleaseMode, debug=$kDebugMode, pid=$pid');
-
   WidgetsFlutterBinding.ensureInitialized();
-  StartupBlackbox.log('main', 'binding initialized');
 
   // 性能优化：为网格/瀑布流海量封面扩大图片内存缓存容量（256MB / 1000 items）
   // 避免高频滑动时的 cache eviction 与频繁重新解码。
   PaintingBinding.instance.imageCache.maximumSizeBytes = 256 << 20;
   PaintingBinding.instance.imageCache.maximumSize = 1000;
-
-  // 黑箱：首帧 FrameTiming + post-frame 里程碑 + 30s 帧心跳 + 生命周期。
-  StartupBlackbox.attachFrameTracking();
-  AppLifecycleListener(onStateChange: StartupBlackbox.logLifecycle);
 
   // Phase 4.6：初始化桌面伪 PiP 窗口管理器。
   unawaited(DesktopPipController.instance.ensureInitialized());
@@ -111,7 +97,6 @@ void main() async {
     ?jsonHandler,
     ConsoleHandler(),
   ];
-  StartupBlackbox.log('main', 'handing off to Catcher2 runApp');
   Catcher2(
     rootWidget: const WinWinApp(),
     debugConfig: Catcher2Options(SilentReportMode(), handlers),
@@ -145,43 +130,37 @@ class AppScrollBehavior extends MaterialScrollBehavior {
 class WinWinApp extends StatelessWidget {
   const WinWinApp({super.key});
 
-  static final GlobalKey _rootCaptureKey = GlobalKey();
-
   @override
   Widget build(BuildContext context) {
-    StartupBlackbox.scheduleDartScreenCapture(_rootCaptureKey, delay: const Duration(seconds: 8));
     // 三层 ValueListenableBuilder — UI 风格 × 主题模式 × 应用字体。
     // 任意一个变化都会重建 MaterialApp + UiStyleScope，实现热切换。
-    return RepaintBoundary(
-      key: _rootCaptureKey,
-      child: ValueListenableBuilder<UiStyle>(
-        valueListenable: UiStyleNotifier.instance,
-        builder: (context, uiStyle, _) {
-          return ValueListenableBuilder<ThemeMode>(
-            valueListenable: ThemeNotifier.instance,
-            builder: (context, themeMode, _) {
-              return ValueListenableBuilder<String>(
-                valueListenable: AppFontNotifier.instance,
-                builder: (context, fontFamily, _) {
-                  return UiStyleScope(
-                    style: uiStyle,
-                    child: MaterialApp(
-                      title: 'WinWin — BiliPai Desktop Port',
-                      debugShowCheckedModeBanner: false,
-                      scrollBehavior: const AppScrollBehavior(),
-                      theme: AppTheme.lightFor(uiStyle, fontFamily: fontFamily),
-                      darkTheme: AppTheme.darkFor(uiStyle, fontFamily: fontFamily),
-                      themeMode: themeMode,
-                      navigatorObservers: [routeObserver],
-                      home: const AgreementGate(child: AppRoot()),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
-      ),
+    return ValueListenableBuilder<UiStyle>(
+      valueListenable: UiStyleNotifier.instance,
+      builder: (context, uiStyle, _) {
+        return ValueListenableBuilder<ThemeMode>(
+          valueListenable: ThemeNotifier.instance,
+          builder: (context, themeMode, _) {
+            return ValueListenableBuilder<String>(
+              valueListenable: AppFontNotifier.instance,
+              builder: (context, fontFamily, _) {
+                return UiStyleScope(
+                  style: uiStyle,
+                  child: MaterialApp(
+                    title: 'WinWin — BiliPai Desktop Port',
+                    debugShowCheckedModeBanner: false,
+                    scrollBehavior: const AppScrollBehavior(),
+                    theme: AppTheme.lightFor(uiStyle, fontFamily: fontFamily),
+                    darkTheme: AppTheme.darkFor(uiStyle, fontFamily: fontFamily),
+                    themeMode: themeMode,
+                    navigatorObservers: [routeObserver],
+                    home: const AgreementGate(child: AppRoot()),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -207,11 +186,9 @@ class _AgreementGateState extends State<AgreementGate> {
   @override
   void initState() {
     super.initState();
-    StartupBlackbox.log('gate', 'AgreementGate initState, awaiting bootstrap');
     ensureBootstrap().then((_) {
       if (!mounted) return;
       final acked = Pref.userAgreementAck;
-      StartupBlackbox.log('gate', 'bootstrap done, acked=$acked');
       setState(() => _acked = acked);
     });
   }
