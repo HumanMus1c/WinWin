@@ -19,10 +19,10 @@ static constexpr const wchar_t* kSingleInstanceMutexName =
 static constexpr const wchar_t* kExistingWindowClass =
     L"FLUTTER_RUNNER_WIN32_WINDOW";
 
-static void BringExistingWindowToForeground() {
+static bool BringExistingWindowToForeground() {
   HWND existing = FindWindowW(kExistingWindowClass, nullptr);
   if (existing == nullptr) {
-    return;
+    return false;
   }
   if (IsIconic(existing)) {
     ShowWindow(existing, SW_RESTORE);
@@ -34,11 +34,37 @@ static void BringExistingWindowToForeground() {
   AllowSetForegroundWindow(ASFW_ANY);
   SetForegroundWindow(existing);
   BringWindowToTop(existing);
+  return true;
 }
 #endif
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  // 确保 UI 线程挂载在用户的交互式桌面 WinSta0\Default 上（支持 IDE 终端与远程沙箱环境）
+  HWINSTA hwinsta = OpenWindowStationW(L"WinSta0", FALSE, WINSTA_ALL_ACCESS);
+  if (hwinsta != nullptr) {
+    SetProcessWindowStation(hwinsta);
+  }
+  HDESK default_desktop = OpenDesktopW(
+      L"Default", 0, FALSE,
+      DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS | DESKTOP_CREATEWINDOW |
+          DESKTOP_CREATEMENU | DESKTOP_HOOKCONTROL | DESKTOP_JOURNALRECORD |
+          DESKTOP_JOURNALPLAYBACK | DESKTOP_ENUMERATE | DESKTOP_SWITCHDESKTOP);
+  if (default_desktop == nullptr) {
+    default_desktop = OpenInputDesktop(
+        0, FALSE,
+        DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS | DESKTOP_CREATEWINDOW |
+            DESKTOP_CREATEMENU | DESKTOP_HOOKCONTROL | DESKTOP_JOURNALRECORD |
+            DESKTOP_JOURNALPLAYBACK | DESKTOP_ENUMERATE | DESKTOP_SWITCHDESKTOP);
+  }
+  if (default_desktop != nullptr) {
+    SetThreadDesktop(default_desktop);
+    CloseDesktop(default_desktop);
+  }
+  if (hwinsta != nullptr) {
+    CloseWindowStation(hwinsta);
+  }
+
   // Attach to parent console if present to capture engine logs
   if (AttachConsole(ATTACH_PARENT_PROCESS)) {
     FlutterDesktopResyncOutputStreams();
@@ -54,15 +80,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // 仅在 Release 模式启用，避免 Debug 模式下 flutter run 发生调试锁死与秒退。
   HANDLE single_instance_mutex =
       CreateMutexW(nullptr, TRUE, kSingleInstanceMutexName);
-  if (single_instance_mutex == nullptr) {
-    blackbox::Log("main", "CreateMutexW failed, gle=%lu", GetLastError());
-    return EXIT_FAILURE;
-  }
-  if (GetLastError() == ERROR_ALREADY_EXISTS) {
-    blackbox::Log("main", "second instance detected, forwarding to existing");
+  if (single_instance_mutex != nullptr &&
+      GetLastError() == ERROR_ALREADY_EXISTS) {
+    blackbox::Log("main", "second instance detected, attempting forward");
+    if (BringExistingWindowToForeground()) {
+      CloseHandle(single_instance_mutex);
+      return EXIT_SUCCESS;
+    }
+    // 若原窗口在异常桌面或已失效，关闭锁并继续启动以确保用户能看到界面
+    blackbox::Log("main", "existing window not found, continuing startup");
     CloseHandle(single_instance_mutex);
-    BringExistingWindowToForeground();
-    return EXIT_SUCCESS;
+    single_instance_mutex = nullptr;
   }
 #endif
 
