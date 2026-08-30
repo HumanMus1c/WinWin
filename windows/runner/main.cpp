@@ -40,6 +40,41 @@ static bool BringExistingWindowToForeground() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  // 检查当前线程是否处于 IDE 沙箱或隔离虚拟桌面（例如 exebox-*）
+  // 仅在被隔离到非物理桌面时，自动挂载到用户的交互式物理桌面 WinSta0\Default
+  char current_desktop[256] = {};
+  HDESK h_current = GetThreadDesktop(GetCurrentThreadId());
+  DWORD desk_len = 0;
+  if (h_current != nullptr &&
+      GetUserObjectInformationA(h_current, UOI_NAME, current_desktop,
+                                sizeof(current_desktop), &desk_len)) {
+    if (strstr(current_desktop, "exebox") != nullptr) {
+      HWINSTA hwinsta = OpenWindowStationW(L"WinSta0", FALSE, WINSTA_ALL_ACCESS);
+      if (hwinsta != nullptr) {
+        SetProcessWindowStation(hwinsta);
+      }
+      HDESK default_desktop = OpenDesktopW(
+          L"Default", 0, FALSE,
+          DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS | DESKTOP_CREATEWINDOW |
+              DESKTOP_CREATEMENU | DESKTOP_HOOKCONTROL | DESKTOP_JOURNALRECORD |
+              DESKTOP_JOURNALPLAYBACK | DESKTOP_ENUMERATE | DESKTOP_SWITCHDESKTOP);
+      if (default_desktop == nullptr) {
+        default_desktop = OpenInputDesktop(
+            0, FALSE,
+            DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS | DESKTOP_CREATEWINDOW |
+                DESKTOP_CREATEMENU | DESKTOP_HOOKCONTROL | DESKTOP_JOURNALRECORD |
+                DESKTOP_JOURNALPLAYBACK | DESKTOP_ENUMERATE | DESKTOP_SWITCHDESKTOP);
+      }
+      if (default_desktop != nullptr) {
+        SetThreadDesktop(default_desktop);
+        CloseDesktop(default_desktop);
+      }
+      if (hwinsta != nullptr) {
+        CloseWindowStation(hwinsta);
+      }
+    }
+  }
+
   // Attach to console when present (e.g., 'flutter run') or create a
   // new console when running with a debugger.
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
