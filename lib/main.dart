@@ -220,39 +220,66 @@ class _AgreementGateState extends State<AgreementGate> {
   Widget build(BuildContext context) {
     final acked = _acked;
     if (acked == null) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       return Scaffold(
+        backgroundColor:
+            isDark ? const Color(0xFF18191C) : const Color(0xFFF1F2F5),
         body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: biliPink.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF222429) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
-                child: const Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: biliPink,
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: biliPink.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 26,
+                      height: 26,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.8,
+                        color: biliPink,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'WinWin',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
+                const SizedBox(height: 16),
+                const Text(
+                  'WinWin',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  '正在载入资源...',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? const Color(0xFF9499A0)
+                        : const Color(0xFF61666D),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

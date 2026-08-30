@@ -197,10 +197,14 @@ bool CaptureAndScan(HWND hwnd, const wchar_t* label) {
     double m[7]{};
     analyze(m);
 
+    HWND fg = GetForegroundWindow();
+    bool is_foreground = (fg == hwnd || IsChild(hwnd, fg));
+
     if (m[6] > 0) {
       const double nw = m[0], ch = m[1], dk = m[2];
       const double ar = m[3], ag = m[4], ab = m[5];
-      suspect = nw >= 95.0 && ch < 0.1 && dk < 0.5;
+      // 仅在前台未被遮挡时判定白屏嫌疑；被其他应用遮挡时标记为 occluded 并跳过误报
+      suspect = is_foreground && nw >= 95.0 && ch < 0.1 && dk < 0.5;
 
       // 落盘文件名：shot_时间戳_label.bmp（字典序即时间序）。
       SYSTEMTIME st;
@@ -233,10 +237,10 @@ bool CaptureAndScan(HWND hwnd, const wchar_t* label) {
       }
 
       Log("scan",
-          "label=%s src=%s size=%dx%d nearWhite=%.1f%% chromatic=%.2f%% "
+          "label=%s src=%s size=%dx%d fg=%d nearWhite=%.1f%% chromatic=%.2f%% "
           "dark=%.2f%% avg=(%d,%d,%d) SUSPECT=%d shot=%s",
-          WideToUtf8(label).c_str(), source, w, h, nw, ch, dk, (int)ar,
-          (int)ag, (int)ab, suspect ? 1 : 0,
+          WideToUtf8(label).c_str(), source, w, h, is_foreground ? 1 : 0,
+          nw, ch, dk, (int)ar, (int)ag, (int)ab, suspect ? 1 : 0,
           filename.empty() ? "(save failed)"
                            : WideToUtf8(filename).c_str());
     }
