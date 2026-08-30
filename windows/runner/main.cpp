@@ -92,10 +92,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   flutter::DartProject project(L"data");
 
-  // 使用稳定的 Skia / ANGLE (Direct3D 11) 渲染后端，规避 Impeller 在 Intel 核显/虚拟显示器下的白屏呈现缺陷
+  // 针对虚拟显示器 (IddCx / Remote Control) 与 Intel 核显双适配器兼容性配置：
+  // 1. 设置 WARP (Direct3D 11 高性能软件光栅化)，彻底杜绝无头核显与虚拟显示器跨适配器无法合成的问题
+  // 2. 禁用 DirectComposition（退回标准 DXGI 呈现交换链）
+  _putenv("ANGLE_DEFAULT_PLATFORM=warp");
+  _putenv("ANGLE_DIRECT_COMPOSITION=0");
+
+  // 使用稳定的 Skia / ANGLE 渲染后端
   project.set_impeller_switch(flutter::ImpellerSwitch::Disabled);
   project.set_gpu_preference(flutter::GpuPreference::NoPreference);
-  blackbox::Log("main", "DartProject created, Impeller disabled (Skia)");
+  blackbox::Log("main", "DartProject created, Impeller disabled (Skia / WARP)");
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();

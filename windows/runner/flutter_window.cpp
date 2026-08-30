@@ -132,13 +132,18 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case WM_DPICHANGED:
       blackbox::Log("wm", "WM_DPICHANGED dpi=%u", (unsigned)HIWORD(wparam));
       break;
-    case WM_PAINT:
-      // 父窗口收到 WM_PAINT 说明系统要求重绘（Flutter 未呈现时的白屏现场）。
+    case WM_PAINT: {
+      // 父窗口收到 WM_PAINT：通过 BeginPaint/EndPaint 验证脏区，
+      // 避免 DefWindowProc 使用默认白色画刷重绘覆盖 Direct3D 子窗口。
       if (g_wm_paint_logged < kMaxWmPaintLogs) {
         ++g_wm_paint_logged;
-        blackbox::Log("wm", "WM_PAINT (parent window)");
+        blackbox::Log("wm", "WM_PAINT (parent window handled)");
       }
-      break;
+      PAINTSTRUCT ps;
+      BeginPaint(hwnd, &ps);
+      EndPaint(hwnd, &ps);
+      return 0;
+    }
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
