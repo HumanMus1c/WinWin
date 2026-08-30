@@ -108,10 +108,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   flutter::DartProject project(L"data");
 
-  // 使用稳定的 Skia / ANGLE (Direct3D 11) 渲染后端
-  project.set_impeller_switch(flutter::ImpellerSwitch::Disabled);
+  // Flutter 3.47 原生 Direct3D 11 / Impeller 渲染后端
+  project.set_impeller_switch(flutter::ImpellerSwitch::Default);
   project.set_gpu_preference(flutter::GpuPreference::NoPreference);
-  blackbox::Log("main", "DartProject created, Impeller disabled (Skia / ANGLE D3D11)");
+  blackbox::Log("main",
+                "DartProject created, Impeller Default (Direct3D 11)");
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
