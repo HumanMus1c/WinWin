@@ -40,6 +40,16 @@ static bool BringExistingWindowToForeground() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  // 确保工作目录（CWD）和 DLL 搜索目录与 exe 所在目录严格一致（消除终端与资源管理器启动差异）
+  wchar_t exe_path[MAX_PATH] = {};
+  GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
+  wchar_t* last_slash = wcsrchr(exe_path, L'\\');
+  if (last_slash != nullptr) {
+    *last_slash = L'\0';
+    SetCurrentDirectoryW(exe_path);
+    SetDllDirectoryW(exe_path);
+  }
+
   // 检查当前线程是否处于 IDE 沙箱或隔离虚拟桌面（例如 exebox-*）
   // 仅在被隔离到非物理桌面时，自动挂载到用户的交互式物理桌面 WinSta0\Default
   char current_desktop[256] = {};
@@ -104,12 +114,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     single_instance_mutex = nullptr;
   }
 #endif
-
-  // Attach to console when present (e.g., 'flutter run') or create a
-  // new console when running with a debugger.
-  if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
-    CreateAndAttachConsole();
-  }
 
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
