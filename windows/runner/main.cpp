@@ -40,34 +40,10 @@ static bool BringExistingWindowToForeground() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
-  // 确保 UI 线程挂载在用户的交互式桌面 WinSta0\Default 上（支持 IDE 终端与远程沙箱环境）
-  HWINSTA hwinsta = OpenWindowStationW(L"WinSta0", FALSE, WINSTA_ALL_ACCESS);
-  if (hwinsta != nullptr) {
-    SetProcessWindowStation(hwinsta);
-  }
-  HDESK default_desktop = OpenDesktopW(
-      L"Default", 0, FALSE,
-      DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS | DESKTOP_CREATEWINDOW |
-          DESKTOP_CREATEMENU | DESKTOP_HOOKCONTROL | DESKTOP_JOURNALRECORD |
-          DESKTOP_JOURNALPLAYBACK | DESKTOP_ENUMERATE | DESKTOP_SWITCHDESKTOP);
-  if (default_desktop == nullptr) {
-    default_desktop = OpenInputDesktop(
-        0, FALSE,
-        DESKTOP_READOBJECTS | DESKTOP_WRITEOBJECTS | DESKTOP_CREATEWINDOW |
-            DESKTOP_CREATEMENU | DESKTOP_HOOKCONTROL | DESKTOP_JOURNALRECORD |
-            DESKTOP_JOURNALPLAYBACK | DESKTOP_ENUMERATE | DESKTOP_SWITCHDESKTOP);
-  }
-  if (default_desktop != nullptr) {
-    SetThreadDesktop(default_desktop);
-    CloseDesktop(default_desktop);
-  }
-  if (hwinsta != nullptr) {
-    CloseWindowStation(hwinsta);
-  }
-
-  // Attach to parent console if present to capture engine logs
-  if (AttachConsole(ATTACH_PARENT_PROCESS)) {
-    FlutterDesktopResyncOutputStreams();
+  // Attach to console when present (e.g., 'flutter run') or create a
+  // new console when running with a debugger.
+  if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
+    CreateAndAttachConsole();
   }
 
   // 黑箱：最先初始化，记录完整启动时间线（偶发启动白屏取证）。
