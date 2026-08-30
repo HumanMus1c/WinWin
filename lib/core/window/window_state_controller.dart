@@ -70,11 +70,6 @@ class WindowStateController with WindowListener {
         StartupBlackbox.log('window', 'position off-screen, keep default');
       }
     }
-    StartupBlackbox.log('window', 'windowManager.show/focus start');
-    await windowManager.show();
-    await windowManager.focus();
-    WidgetsBinding.instance.scheduleFrame();
-    StartupBlackbox.log('window', 'windowManager.show/focus done');
   }
 
   Size? _readSize(dynamic raw) {

@@ -213,6 +213,10 @@ Win32Window::MessageHandler(HWND hwnd,
       }
       return 0;
 
+    case WM_ERASEBKGND:
+      // 阻止 GDI 擦除背景，避免硬件渲染表面（DirectComposition/Impeller）在调整大小时出现白屏闪烁
+      return 1;
+
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
       return 0;
