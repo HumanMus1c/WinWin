@@ -73,3 +73,86 @@ class _SkeletonState extends State<Skeleton>
     );
   }
 }
+
+/// Returns the standard background color for skeleton blocks according to current theme.
+Color skeletonBlockColor(BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return isDark
+      ? cs.surfaceContainerHighest
+      : cs.surfaceContainerHighest.withValues(alpha: 0.6);
+}
+
+/// Generic skeleton block placeholder.
+class SkeletonBox extends StatelessWidget {
+  const SkeletonBox({
+    super.key,
+    this.width,
+    this.height,
+    this.borderRadius,
+    this.shape = BoxShape.rectangle,
+  });
+
+  final double? width;
+  final double? height;
+  final BorderRadiusGeometry? borderRadius;
+  final BoxShape shape;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = skeletonBlockColor(context);
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius:
+            shape == BoxShape.circle ? null : (borderRadius ?? BorderRadius.circular(4)),
+        shape: shape,
+      ),
+    );
+  }
+}
+
+/// Single-line skeleton text placeholder with configurable width and height.
+class SkeletonLine extends StatelessWidget {
+  const SkeletonLine({
+    super.key,
+    this.width,
+    this.height = 14,
+    this.borderRadius,
+  });
+
+  final double? width;
+  final double height;
+  final BorderRadiusGeometry? borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return SkeletonBox(
+      width: width,
+      height: height,
+      borderRadius: borderRadius ?? BorderRadius.circular(height / 3),
+    );
+  }
+}
+
+/// Circular skeleton placeholder, e.g. for avatars.
+class SkeletonCircle extends StatelessWidget {
+  const SkeletonCircle({
+    super.key,
+    double? size,
+    double? radius,
+  }) : size = radius != null ? radius * 2 : (size ?? 40);
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SkeletonBox(
+      width: size,
+      height: size,
+      shape: BoxShape.circle,
+    );
+  }
+}

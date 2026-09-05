@@ -1,107 +1,96 @@
 import 'package:flutter/material.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/theme/app_shapes.dart';
 
 /// Skeleton placeholder for the vertical video card.
+///
+/// 结构严格对齐 [VideoCardV]：静态外壳复用 [Card] 与 [AppShapes] 圆角，
+/// 仅内部封面图片、标题行及 UP 昵称展示 Shimmer 骨架动画，
+/// 消除网络数据到达替换时的卡片尺寸与圆角跳动（Zero Layout Shift）。
 class VideoCardVSkeleton extends StatelessWidget {
   const VideoCardVSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final cardBg = isDark ? cs.surfaceContainer : Colors.white;
-    final blockColor = isDark
-        ? cs.surfaceContainerHighest
-        : cs.surfaceContainerHighest.withValues(alpha: 0.6);
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final radius = shapes.medium;
+    final blockColor = skeletonBlockColor(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Skeleton(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 16 / 10,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: blockColor,
+    return RepaintBoundary(
+      child: Card(
+        child: Skeleton(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 10,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: radius),
+                  child: Container(color: blockColor),
                 ),
               ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 200,
-                  height: 13,
-                  decoration: BoxDecoration(
-                    color: blockColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                Container(
-                  height: 13,
-                  width: 140,
-                  margin: const EdgeInsets.only(top: 6),
-                  decoration: BoxDecoration(
-                    color: blockColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Container(
-                      height: 11,
-                      width: 40,
-                      decoration: BoxDecoration(
-                        color: blockColor,
-                        borderRadius: BorderRadius.circular(3),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: 12,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: blockColor,
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Container(
+                              height: 12,
+                              width: 110,
+                              decoration: BoxDecoration(
+                                color: blockColor,
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      height: 11,
-                      width: 40,
-                      decoration: BoxDecoration(
-                        color: blockColor,
-                        borderRadius: BorderRadius.circular(3),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: blockColor,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            height: 11,
+                            width: 70,
+                            decoration: BoxDecoration(
+                              color: blockColor,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                Container(
-                  height: 11,
-                  width: 75,
-                  margin: const EdgeInsets.only(top: 6),
-                  decoration: BoxDecoration(
-                    color: blockColor,
-                    borderRadius: BorderRadius.circular(3),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
-}
+

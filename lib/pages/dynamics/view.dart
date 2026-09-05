@@ -319,7 +319,7 @@ class _DynTabPageState extends State<_DynTabPage>
   Widget _buildSkeleton() {
     final isGridTab = _isVideoTab || _isPgcTab;
     return CustomScrollView(
-      physics: const NeverScrollableScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/core/account/account_service.dart';
@@ -360,61 +361,28 @@ class _ToviewPageState extends State<ToviewPage> {
   }
 
   Widget _buildSkeleton() {
-    return CustomScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.all(Style.safeSpace),
-          sliver: SliverGrid.builder(
-            gridDelegate: Grid.videoCardHDelegate(
-              maxCrossAxisExtent: 440.0,
-              mainAxisExtent: 110.0,
-            ),
-            itemCount: 12,
-            itemBuilder: (context, index) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(Style.radiusSm),
-                      child: Container(
-                        width: 140,
-                        height: 140 * 9 / 16,
-                        color: Colors.grey.withValues(alpha: 0.15),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Container(
-                            height: 14,
-                            width: double.infinity,
-                            color: Colors.grey.withValues(alpha: 0.15),
-                          ),
-                          Container(
-                            height: 12,
-                            width: 100,
-                            color: Colors.grey.withValues(alpha: 0.15),
-                          ),
-                          Container(
-                            height: 10,
-                            width: 60,
-                            color: Colors.grey.withValues(alpha: 0.15),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+    return RefreshIndicator(
+      color: biliPink,
+      onRefresh: () => _load(refresh: true),
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(Style.safeSpace),
+            sliver: SliverGrid.builder(
+              gridDelegate: Grid.videoCardHDelegate(
+                maxCrossAxisExtent: 440.0,
+                mainAxisExtent: 110.0,
+              ),
+              itemCount: 12,
+              itemBuilder: (context, index) => const VideoCardHSkeleton(
+                coverWidth: 140,
+                inCard: true,
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

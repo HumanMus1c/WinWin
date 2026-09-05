@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/skeleton/video_card_h.dart';
+import 'package:winwin/common/skeleton/video_card_v.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/common/widgets/medal_widget.dart';
@@ -512,16 +515,22 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   Widget build(BuildContext context) {
     return Scaffold(
       body: switch (_spaceState) {
-        Loading() => const Center(child: CircularProgressIndicator(color: biliPink)),
-        Error(:final errMsg) => _buildError(errMsg, _loadAll),
+        Loading() => _buildSpaceContent(null),
+        Error(:final errMsg) => Scaffold(
+            appBar: AppBar(
+              leading: const BackButton(),
+              title: const Text('个人空间'),
+            ),
+            body: _buildError(errMsg, _loadAll),
+          ),
         Success(:final response) => _buildSpaceContent(response),
       },
     );
   }
 
-  Widget _buildSpaceContent(MemberSpaceData data) {
-    final card = data.card;
-    final images = data.images;
+  Widget _buildSpaceContent(MemberSpaceData? data) {
+    final card = data?.card;
+    final images = data?.images;
     final theme = Theme.of(context);
     final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
 
@@ -596,7 +605,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               ),
             ),
             SliverToBoxAdapter(
-              child: _buildUserDetailCard(context, card, data.silence),
+              child: _buildUserDetailCard(context, card, data?.silence),
             ),
             SliverPersistentHeader(
               pinned: true,
@@ -776,10 +785,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                         ? CachedNetworkImage(
                             imageUrl: card!.face!,
                             fit: BoxFit.cover,
-                            placeholder: (_, _) => const ColoredBox(color: Colors.grey),
+                            placeholder: (_, _) => const SkeletonBox(),
                             errorWidget: (_, _, _) => const Icon(Icons.person, size: 40),
                           )
-                        : const Icon(Icons.person, size: 40),
+                        : (card == null
+                            ? const SkeletonBox()
+                            : const Icon(Icons.person, size: 40)),
                   ),
                   if (card?.officialVerify?.isOfficial ?? false)
                     Positioned(
@@ -860,50 +871,65 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           ),
           const SizedBox(height: Style.md),
           // 用户昵称 + 会员标 + 等级标 + 粉丝牌
-          Wrap(
-            spacing: Style.sm,
-            runSpacing: Style.xs,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              GestureDetector(
-                onTap: () => _copyToClipboard(card?.name ?? '', '昵称已复制'),
-                child: Text(
-                  card?.name ?? '未知用户',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isVip ? vipColor : null,
+          if (card != null)
+            Wrap(
+              spacing: Style.sm,
+              runSpacing: Style.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () => _copyToClipboard(card.name ?? '', '昵称已复制'),
+                  child: Text(
+                    card.name ?? '未知用户',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isVip ? vipColor : null,
+                    ),
                   ),
                 ),
-              ),
-              if (isVip)
-                PBadge(
-                  text: card?.vip?.labelText ?? '大会员',
-                  type: PBadgeType.badge,
-                ),
-              LevelBadge(level: level, isSenior: isSenior),
-              if (medal != null)
-                MedalWidget(
-                  medalName: medal.medalName ?? '勋章',
-                  level: medal.level ?? 1,
-                  backgroundColor: medal.parsedBackgroundColor,
-                  nameColor: medal.parsedTextColor,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('粉丝勋章: ${medal.medalName} Lv.${medal.level}')),
-                    );
-                  },
-                ),
-            ],
-          ),
+                if (isVip)
+                  PBadge(
+                    text: card.vip?.labelText ?? '大会员',
+                    type: PBadgeType.badge,
+                  ),
+                LevelBadge(level: level, isSenior: isSenior),
+                if (medal != null)
+                  MedalWidget(
+                    medalName: medal.medalName ?? '勋章',
+                    level: medal.level ?? 1,
+                    backgroundColor: medal.parsedBackgroundColor,
+                    nameColor: medal.parsedTextColor,
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('粉丝勋章: ${medal.medalName} Lv.${medal.level}')),
+                      );
+                    },
+                  ),
+              ],
+            )
+          else
+            const Row(
+              children: [
+                SkeletonLine(width: 130, height: 22),
+                SizedBox(width: Style.sm),
+                SkeletonLine(width: 44, height: 18),
+              ],
+            ),
           const SizedBox(height: Style.sm),
           // 等级经验进度条
-          LevelExpBar(
-            level: level,
-            currentExp: _cardInfo?.currentExp,
-            nextExp: _cardInfo?.nextExp,
-            currentMin: _cardInfo?.currentMin,
-            isSenior: isSenior,
-          ),
+          if (card != null)
+            LevelExpBar(
+              level: level,
+              currentExp: _cardInfo?.currentExp,
+              nextExp: _cardInfo?.nextExp,
+              currentMin: _cardInfo?.currentMin,
+              isSenior: isSenior,
+            )
+          else
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: SkeletonLine(width: 180, height: 8),
+            ),
           // 官方认证描述
           if ((card?.officialVerify?.desc?.isNotEmpty ?? false) ||
               (card?.officialVerify?.spliceTitle?.isNotEmpty ?? false)) ...[
@@ -938,10 +964,13 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             ),
           ],
           // 用户个性签名
-          if (card?.sign?.isNotEmpty ?? false) ...[
+          if (card == null) ...[
+            const SizedBox(height: Style.sm),
+            const SkeletonLine(width: 220, height: 14),
+          ] else if (card.sign?.isNotEmpty ?? false) ...[
             const SizedBox(height: Style.sm),
             SelectableText(
-              card!.sign!.trim(),
+              card.sign!.trim(),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: cs.onSurface.withValues(alpha: 0.85),
                 height: 1.4,
@@ -1032,29 +1061,33 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               _statItem(
                 context,
                 label: '关注',
-                count: card?.following ?? 0,
-                onTap: () => showMemberRelationPage(
-                  context,
-                  type: RelationType.followings,
-                  vmid: widget.mid,
-                ),
+                count: card?.following,
+                onTap: card != null
+                    ? () => showMemberRelationPage(
+                          context,
+                          type: RelationType.followings,
+                          vmid: widget.mid,
+                        )
+                    : null,
               ),
               const SizedBox(width: Style.xxl),
               _statItem(
                 context,
                 label: '粉丝',
-                count: card?.fans ?? _cardInfo?.follower ?? 0,
-                onTap: () => showMemberRelationPage(
-                  context,
-                  type: RelationType.fans,
-                  vmid: widget.mid,
-                ),
+                count: card?.fans ?? _cardInfo?.follower,
+                onTap: card != null
+                    ? () => showMemberRelationPage(
+                          context,
+                          type: RelationType.fans,
+                          vmid: widget.mid,
+                        )
+                    : null,
               ),
               const SizedBox(width: Style.xxl),
               _statItem(
                 context,
                 label: '获赞',
-                count: card?.likes?.likeNum ?? _cardInfo?.likeNum ?? 0,
+                count: card?.likes?.likeNum ?? _cardInfo?.likeNum,
               ),
             ],
           ),
@@ -1098,19 +1131,25 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   Widget _statItem(
     BuildContext context, {
     required String label,
-    required int count,
+    int? count,
     VoidCallback? onTap,
   }) {
     final theme = Theme.of(context);
     Widget content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          NumUtils.formatNum(count),
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+        if (count != null)
+          Text(
+            NumUtils.formatNum(count),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          )
+        else
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 2),
+            child: SkeletonLine(width: 36, height: 16),
           ),
-        ),
         Text(
           label,
           style: TextStyle(
@@ -1149,7 +1188,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             child: Row(
               children: [
                 Text(
-                  '共 ${_videos.length} 支视频',
+                  _navNum?.video != null
+                      ? '共 ${_navNum!.video} 支视频'
+                      : (_videos.isNotEmpty
+                          ? '共 ${_videos.length} 支视频'
+                          : '共 -- 支视频'),
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.outline,
@@ -1174,7 +1217,18 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             ),
           ),
         ),
-        if (_videos.isEmpty && !_loadingVideos)
+        if (_videos.isEmpty && _loadingVideos)
+          SliverPadding(
+            padding: const EdgeInsets.all(Style.safeSpace),
+            sliver: SliverGrid(
+              gridDelegate: gridDelegate,
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => const VideoCardVSkeleton(),
+                childCount: 6,
+              ),
+            ),
+          )
+        else if (_videos.isEmpty && !_loadingVideos)
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 80),
@@ -1198,7 +1252,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               ),
             ),
           ),
-        if (_loadingVideos)
+        if (_loadingVideos && _videos.isNotEmpty)
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: Style.lg),
@@ -1336,6 +1390,16 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   /// 合集与系列 Tab
   Widget _buildSeasonsTab() {
+    if (_seasonsSeries.isEmpty && _loadingSeasons) {
+      return ListView.builder(
+        padding: const EdgeInsets.all(Style.safeSpace),
+        itemCount: 4,
+        itemBuilder: (_, _) => const Padding(
+          padding: EdgeInsets.only(bottom: Style.md),
+          child: VideoCardHSkeleton(coverWidth: 120, coverHeight: 75, inCard: true),
+        ),
+      );
+    }
     if (_seasonsSeries.isEmpty && !_loadingSeasons) {
       return const Center(child: Text('暂无创建的合集或系列'));
     }
@@ -1355,7 +1419,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             },
           ),
         ),
-        if (_loadingSeasons)
+        if (_loadingSeasons && _seasonsSeries.isNotEmpty)
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: Style.lg),
@@ -1523,7 +1587,18 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             ),
           ),
         ),
-        if (filtered.isEmpty && !_loadingDynamics)
+        if (filtered.isEmpty && _loadingDynamics)
+          SliverPadding(
+            padding: const EdgeInsets.all(Style.safeSpace),
+            sliver: SliverMasonryGrid.extent(
+              maxCrossAxisExtent: 440.0,
+              mainAxisSpacing: Style.cardSpace,
+              crossAxisSpacing: Style.cardSpace,
+              childCount: 4,
+              itemBuilder: (context, index) => _buildDynamicCardSkeleton(),
+            ),
+          )
+        else if (filtered.isEmpty && !_loadingDynamics)
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 80),
@@ -1546,7 +1621,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               },
             ),
           ),
-        if (_loadingDynamics)
+        if (_loadingDynamics && filtered.isNotEmpty)
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: Style.lg),
@@ -1572,6 +1647,39 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildDynamicCardSkeleton() {
+    return const Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: EdgeInsets.all(Style.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                SkeletonCircle(radius: 19),
+                SizedBox(width: Style.sm),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonLine(width: 80, height: 14),
+                    SizedBox(height: 4),
+                    SkeletonLine(width: 50, height: 10),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: Style.md),
+            SkeletonLine(width: double.infinity, height: 14),
+            SizedBox(height: 6),
+            SkeletonLine(width: 200, height: 14),
+          ],
+        ),
+      ),
     );
   }
 
@@ -2208,8 +2316,25 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   /// 收藏夹 Tab
   Widget _buildFavTab() {
+    final gridDelegate = Grid.videoCardVDelegate(
+      mainAxisExtent: MediaQuery.textScalerOf(context).scale(76),
+    );
+
     if (_loadingFav && _favFolders.isEmpty) {
-      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      return CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(Style.safeSpace),
+            sliver: SliverGrid(
+              gridDelegate: gridDelegate,
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => const VideoCardVSkeleton(),
+                childCount: 4,
+              ),
+            ),
+          ),
+        ],
+      );
     }
     if (_favFailed) {
       return _buildPrivacyNotice(_favError ?? '用户未公开收藏夹或暂无收藏', onRetry: _loadFavFolders);
@@ -2217,10 +2342,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     if (_favFolders.isEmpty) {
       return const Center(child: Text('暂无公开收藏夹'));
     }
-
-    final gridDelegate = Grid.videoCardVDelegate(
-      mainAxisExtent: MediaQuery.textScalerOf(context).scale(76),
-    );
 
     return CustomScrollView(
       slivers: [
@@ -2366,10 +2487,16 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           ),
         ),
         if (_loadingBangumi && _bangumiList.isEmpty)
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 60),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          SliverPadding(
+            padding: const EdgeInsets.all(Style.safeSpace),
+            sliver: SliverGrid(
+              gridDelegate: Grid.videoCardVDelegate(
+                mainAxisExtent: MediaQuery.textScalerOf(context).scale(76),
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => const VideoCardVSkeleton(),
+                childCount: 6,
+              ),
             ),
           )
         else if (_bangumiFailed)
@@ -2510,8 +2637,25 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   /// 已点赞 Tab
   Widget _buildLikedTab() {
+    final gridDelegate = Grid.videoCardVDelegate(
+      mainAxisExtent: MediaQuery.textScalerOf(context).scale(86),
+    );
+
     if (_loadingLiked && _likedVideos.isEmpty) {
-      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      return CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(Style.safeSpace),
+            sliver: SliverGrid(
+              gridDelegate: gridDelegate,
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => const VideoCardVSkeleton(),
+                childCount: 6,
+              ),
+            ),
+          ),
+        ],
+      );
     }
     if (_likedFailed) {
       return _buildPrivacyNotice(
@@ -2522,10 +2666,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     if (_likedVideos.isEmpty) {
       return const Center(child: Text('暂无公开点赞视频'));
     }
-
-    final gridDelegate = Grid.videoCardVDelegate(
-      mainAxisExtent: MediaQuery.textScalerOf(context).scale(86),
-    );
 
     return CustomScrollView(
       slivers: [
@@ -2602,7 +2742,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   /// 详细资料 Tab
   Widget _buildAboutTab(MemberCard? card) {
     final theme = Theme.of(context);
-    final level = card?.level ?? _cardInfo?.currentLevel ?? 0;
+    final level = card?.level ?? _cardInfo?.currentLevel;
     final isSenior = card?.levelInfo?.isSeniorMember ?? false;
 
     return ListView(
@@ -2617,8 +2757,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 Text('基本信息', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: Style.md),
                 _infoRow('UID', '${widget.mid}'),
-                _infoRow('昵称', card?.name ?? '未知'),
-                _infoRow('等级', 'Lv.$level ${isSenior ? '(硬核会员)' : ''}'),
+                _infoRow('昵称', card?.name),
+                _infoRow('等级', level != null ? 'Lv.$level ${isSenior ? '(硬核会员)' : ''}' : null),
                 if (_cardInfo?.currentExp != null)
                   _infoRow('当前经验', '${_cardInfo!.currentExp} / ${_cardInfo!.nextExp ?? 'MAX'}'),
                 if (card?.vip?.isVip ?? false)
@@ -2639,7 +2779,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _infoRow(String label, String? value, {Widget? customValue}) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Style.xs),
@@ -2654,10 +2794,16 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             ),
           ),
           Expanded(
-            child: SelectableText(
-              value,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            ),
+            child: customValue ??
+                (value != null
+                    ? SelectableText(
+                        value,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      )
+                    : const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: SkeletonLine(width: 100, height: 12),
+                      )),
           ),
         ],
       ),

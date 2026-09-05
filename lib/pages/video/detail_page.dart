@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/common/widgets/video_card/video_card_h.dart';
@@ -869,116 +870,136 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 左栏：CustomScrollView + VideoHeader(pin 播放器) + slivers(信息/简介/评论)。
   /// 顶部叠加渐变工具栏（基于 _scrollRatio 显隐）。
   /// [appendRelated] 为 true（窄屏单列布局）时尾部追加相关推荐 slivers。
+  ///
+  /// 静态与动态分层控制（DeepSeek 规范）：
+  /// 播放器外壳（优先承接封面转场）、弹幕输入条、点赞/投币操作行及 Tab 导航结构
+  /// 均为编译期静态控件，始终以最终样式常驻渲染；
+  /// 仅在未就绪时对标题行、UP主资料及未到达的评论数据展示局部 Shimmer 骨架占位。
   Widget _buildLeftColumn(String? upName, {bool appendRelated = false}) {
-    return switch (_detailState) {
-      Loading() => Stack(
-          children: [
-            _buildLeftSkeleton(),
-            _buildGradientTopBar(upName, forceOpaque: true),
-          ],
-        ),
-      // 参照 PiliPlus/BiliPai：稿件信息接口失败（稿件不可见/已删除等）时，
-      // 错误局部化到视频播放区域，页面其余部分（顶栏返回按钮、
-      // 右栏相关推荐）保持可用，不再用错误页替换整个左栏。
-      Error(:final errMsg, :final code) =>
-        _buildErrorLayout(upName, code, errMsg, narrow: appendRelated),
-      Success(:final response) => Column(
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final maxExtent = constraints.maxWidth * 9 / 16;
-                      final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
-                      return CustomScrollView(
-                        controller: scrollController,
-                        slivers: [
-                          VideoHeader(
-                            maxExtent: maxExtent,
-                            minExtent: minExtent,
-                            onScrollRatioChange: (r) {
-                              _handleCollapseAutoPause(r);
-                              _scrollRatio.value = r;
+    if (_detailState case Error(:final errMsg, :final code)) {
+      return _buildErrorLayout(upName, code, errMsg, narrow: appendRelated);
+    }
+
+    final response = _detailState.dataOrNull;
+    final isLoading = _detailState is Loading;
+
+    return Column(
+      children: [
+        Expanded(
+          child: Stack(
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxExtent = constraints.maxWidth * 9 / 16;
+                  final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
+                  return CustomScrollView(
+                    controller: scrollController,
+                    slivers: [
+                      VideoHeader(
+                        maxExtent: maxExtent,
+                        minExtent: minExtent,
+                        onScrollRatioChange: (r) {
+                          _handleCollapseAutoPause(r);
+                          _scrollRatio.value = r;
+                        },
+                        child: _buildPlayerContent(response),
+                      ),
+                      // 弹幕发送栏：紧贴视频下方，宽度与视频一致
+                      //（Sliver 横向撑满左栏 = 播放器宽度）。
+                      if (playerController != null)
+                        SliverToBoxAdapter(
+                          child: SendDanmakuPanel(
+                            controller: playerController!,
+                            inline: true,
+                          ),
+                        ),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          Style.safeSpace,
+                          Style.sm,
+                          Style.cardSpace,
+                          Style.xxl * 2,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              if (isLoading) {
+                                if (index == 0) {
+                                  return _buildInfoSectionSkeleton();
+                                }
+                                if (index == 1) {
+                                  return _buildDescSectionSkeleton();
+                                }
+                                if (!appendRelated) {
+                                  return const SizedBox.shrink();
+                                }
+                                if (index == 2) {
+                                  return _buildReplyHeaderSkeleton();
+                                }
+                                return _buildReplyTileSkeleton();
+                              }
+                              // 0: 信息, 1: 简介, 2: 标签(可选)。
+                              // 宽屏（对标 BiliPai TabletVideoLayout）评论区
+                              // 迁入右栏 Tab，仅窄屏单列布局在左栏内联：
+                              // 其后追加 评论头 + 评论列表 + 尾部。
+                              final hasTags = _tags.isNotEmpty;
+                              final baseCount = hasTags ? 3 : 2;
+                              if (index == 0) {
+                                return _buildInfoSection(response!);
+                              }
+                              if (index == 1) {
+                                return _buildDescSection(response!);
+                              }
+                              if (hasTags && index == 2) {
+                                return _buildTagsSection();
+                              }
+                              if (!appendRelated) {
+                                return const SizedBox.shrink();
+                              }
+                              final replyHeaderIndex = baseCount;
+                              if (index == replyHeaderIndex) {
+                                return _buildReplyHeader(response!);
+                              }
+                              final replyIndex =
+                                  index - replyHeaderIndex - 1;
+                              if (replyIndex < _replies.length) {
+                                if (replyIndex == _replies.length - 1) {
+                                  _maybeLoadMoreReplies();
+                                }
+                                return _buildReplyTile(_replies[replyIndex]);
+                              }
+                              return _buildReplyTrailer();
                             },
-                            child: _buildPlayerContent(response),
-                          ),
-                          // 弹幕发送栏：紧贴视频下方，宽度与视频一致
-                          //（Sliver 横向撑满左栏 = 播放器宽度）。
-                          if (playerController != null)
-                            SliverToBoxAdapter(
-                              child: SendDanmakuPanel(
-                                controller: playerController!,
-                                inline: true,
-                              ),
-                            ),
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(
-                              Style.safeSpace,
-                              Style.sm,
-                              Style.cardSpace,
-                              Style.xxl * 2,
-                            ),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  // 0: 信息, 1: 简介, 2: 标签(可选)。
-                                  // 宽屏（对标 BiliPai TabletVideoLayout）评论区
-                                  // 迁入右栏 Tab，仅窄屏单列布局在左栏内联：
-                                  // 其后追加 评论头 + 评论列表 + 尾部。
-                                  final hasTags = _tags.isNotEmpty;
-                                  final baseCount = hasTags ? 3 : 2;
-                                  if (index == 0) {
-                                    return _buildInfoSection(response);
-                                  }
-                                  if (index == 1) {
-                                    return _buildDescSection(response);
-                                  }
-                                  if (hasTags && index == 2) {
-                                    return _buildTagsSection();
-                                  }
-                                  if (!appendRelated) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  final replyHeaderIndex = baseCount;
-                                  if (index == replyHeaderIndex) {
-                                    return _buildReplyHeader(response);
-                                  }
-                                  final replyIndex =
-                                      index - replyHeaderIndex - 1;
-                                  if (replyIndex < _replies.length) {
-                                    if (replyIndex == _replies.length - 1) {
-                                      _maybeLoadMoreReplies();
-                                    }
-                                    return _buildReplyTile(_replies[replyIndex]);
-                                  }
-                                  return _buildReplyTrailer();
-                                },
-                                childCount: appendRelated
+                            childCount: isLoading
+                                ? (appendRelated ? 6 : 2)
+                                : (appendRelated
                                     ? (_tags.isNotEmpty ? 3 : 2) +
-                                          _replies.length +
-                                          1
-                                    : (_tags.isNotEmpty ? 3 : 2),
-                              ),
-                            ),
+                                        _replies.length +
+                                        1
+                                    : (_tags.isNotEmpty ? 3 : 2)),
                           ),
-                          // 窄屏单列布局：相关推荐追加在尾部。
-                          if (appendRelated) ..._buildRelatedSlivers(),
-                        ],
-                      );
-                    },
-                  ),
-                  _buildGradientTopBar(upName),
-                ],
+                        ),
+                      ),
+                      // 窄屏单列布局：相关推荐追加在尾部。
+                      if (appendRelated) ..._buildRelatedSlivers(),
+                    ],
+                  );
+                },
               ),
-            ),
-            // 评论输入栏：窄屏单列布局固定在左栏底部；
-            // 宽屏布局评论区在右栏 Tab，输入栏随之迁入右栏
-            //（见 _buildRightColumn）。
-            if (appendRelated) _buildCommentInputBar(),
-          ],
+              _buildGradientTopBar(upName),
+            ],
+          ),
         ),
-    };
+        // 评论输入栏：窄屏单列布局固定在左栏底部；
+        // 宽屏布局评论区在右栏 Tab，输入栏随之迁入右栏
+        //（见 _buildRightColumn）。
+        if (appendRelated)
+          _buildCommentInputBar(
+            enabled: !isLoading,
+            disabledHint: isLoading ? '正在加载视频...' : null,
+          ),
+      ],
+    );
   }
 
   /// 稿件信息错误态的左栏布局（参照 BiliPai VideoDetailScreenStateHolder：
@@ -1222,11 +1243,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 播放器内容（Phase 7.6.4：封面加 Hero 共享元素转场）。
   /// VideoHeader 负责裁切/圆角/尺寸，此处只返回原始内容。
-  Widget _buildPlayerContent(VideoDetailData data) {
+  Widget _buildPlayerContent(VideoDetailData? data) {
     final controller = playerController;
     if (controller == null) {
       final coverWidget = NetworkImgLayer(
-        src: widget.cover ?? data.pic,
+        src: widget.cover ?? data?.pic,
         width: double.infinity,
         height: double.infinity,
         borderRadius: BorderRadius.zero,
@@ -1986,8 +2007,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 评论输入栏（固定在左栏底部，默认给当前稿件发布一级评论；
   /// 水平内边距与评论区 SliverPadding 一致，宽度对齐评论区容器）。
-  /// [enabled]=false 时置灰（稿件信息加载失败态，无 aid 不可发评论）。
-  Widget _buildCommentInputBar({bool enabled = true}) {
+  /// [enabled]=false 时置灰（稿件信息加载中或失败态，无 aid 不可发评论）。
+  Widget _buildCommentInputBar({bool enabled = true, String? disabledHint}) {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -2025,7 +2046,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   ),
                   hintText: enabled
                       ? (_replyHint ?? '发一条友善的评论吧~')
-                      : '稿件不可用，暂无法评论',
+                      : (disabledHint ?? '稿件不可用，暂无法评论'),
                   hintStyle: TextStyle(
                     fontSize: 13,
                     color: theme.colorScheme.onSurfaceVariant,
@@ -2176,12 +2197,30 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Widget _buildCommentTab() {
     if (_detailState.dataOrNull == null) {
       return switch (_detailState) {
-        Loading() => const Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+        Loading() => Column(
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.fromLTRB(Style.sm, Style.xs, Style.sm, 0),
+                child: _buildCommentSortRow(),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(
+                    Style.cardSpace,
+                    Style.xs,
+                    Style.safeSpace,
+                    Style.md,
+                  ),
+                  itemCount: 4,
+                  itemBuilder: (_, _) => _buildReplyTileSkeleton(),
+                ),
+              ),
+              _buildCommentInputBar(
+                enabled: false,
+                disabledHint: '正在加载评论...',
+              ),
+            ],
           ),
         _ => const AppEmptyState(
             title: '评论区不可用',
@@ -2363,99 +2402,156 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 相关推荐骨架单项（宽栏 [_buildRightSkeleton] 与窄屏 sliver 共用）。
   Widget _buildRelatedSkeletonItem() {
-    final color = ColorScheme.of(context).onInverseSurface;
-    return Skeleton(
-      child: Row(
+    return const VideoCardHSkeleton(
+      coverWidth: 150,
+      inCard: true,
+    );
+  }
+
+  // ─────────────────────────── 局部骨架屏 / 错误态 ───────────────────────────
+
+  /// 视频信息区局部骨架：卡片外壳、关注按钮与六键互动行以最终静态样式常驻，
+  /// 仅标题文本、数据行与 UP 资料展示 Shimmer 占位。
+  Widget _buildInfoSectionSkeleton() {
+    return _card(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 150,
-            height: 150 * 10 / 16,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(Style.radiusSm),
-            ),
-          ),
-          const SizedBox(width: Style.md),
-          Expanded(
+          const Skeleton(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(width: double.infinity, height: 13, color: color),
-                const SizedBox(height: Style.xs),
-                Container(width: 120, height: 13, color: color),
-                const SizedBox(height: Style.md),
-                Container(width: 80, height: 11, color: color),
+                SkeletonLine(width: double.infinity, height: 18),
+                SizedBox(height: 6),
+                SkeletonLine(width: 220, height: 18),
               ],
             ),
+          ),
+          const SizedBox(height: Style.sm),
+          const Skeleton(
+            child: Row(
+              children: [
+                SkeletonLine(width: 44, height: 12),
+                SizedBox(width: Style.md),
+                SkeletonLine(width: 44, height: 12),
+                SizedBox(width: Style.md),
+                SkeletonLine(width: 44, height: 12),
+              ],
+            ),
+          ),
+          const SizedBox(height: Style.md),
+          Row(
+            children: [
+              const Skeleton(child: SkeletonCircle(size: 40)),
+              const SizedBox(width: Style.md),
+              const Expanded(
+                child: Skeleton(
+                  child: SkeletonLine(width: 100, height: 14),
+                ),
+              ),
+              FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                ),
+                onPressed: null,
+                child: const Text('关注'),
+              ),
+            ],
+          ),
+          const Divider(height: Style.xl),
+          VideoActionRow(
+            stat: null,
+            hasLike: false,
+            hasDislike: false,
+            coinNum: 0,
+            hasFav: false,
+            inWatchLater: null,
+            onLike: () {},
+            onTriple: () {},
+            onCoin: () {},
+            onDislike: () {},
+            onFav: () {},
+            onShare: () {},
+            onWatchLater: () {},
           ),
         ],
       ),
     );
   }
 
-  // ─────────────────────────── 骨架屏 / 错误态 ───────────────────────────
-
-  Widget _buildLeftSkeleton() {
-    final color = ColorScheme.of(context).onInverseSurface;
-    return ListView(
-      controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(
-        Style.safeSpace,
-        Style.sm,
-        Style.cardSpace,
-        Style.xxl * 2,
+  /// 简介区局部骨架：卡片容器常驻，仅内部文本呈现 3 行骨架占位。
+  Widget _buildDescSectionSkeleton() {
+    return _card(
+      margin: const EdgeInsets.only(top: Style.md),
+      child: const Skeleton(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SkeletonLine(width: double.infinity, height: 13),
+            SizedBox(height: 6),
+            SkeletonLine(width: 260, height: 13),
+            SizedBox(height: 6),
+            SkeletonLine(width: 180, height: 13),
+          ],
+        ),
       ),
-      children: [
-        Skeleton(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(Style.mdRadius),
-                  ),
-                ),
-              ),
-              const SizedBox(height: Style.lg),
-              Container(width: 360, height: 22, color: color),
-              const SizedBox(height: Style.sm),
-              Container(width: 220, height: 13, color: color),
-              const SizedBox(height: Style.md),
-              Row(
+    );
+  }
+
+  /// 评论区分组标题骨架：常驻评论标题与最热/最新排序切换按钮。
+  Widget _buildReplyHeaderSkeleton() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        Style.xs,
+        Style.lg,
+        Style.xs,
+        Style.sm,
+      ),
+      child: Row(
+        children: [
+          Text(
+            '评论',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          _buildCommentSortRow(),
+        ],
+      ),
+    );
+  }
+
+  /// 单项评论局部骨架：卡片容器常驻，仅头像与评论文本行显示 Shimmer 动画。
+  Widget _buildReplyTileSkeleton() {
+    return _card(
+      margin: const EdgeInsets.only(top: Style.sm),
+      padding: const EdgeInsets.all(Style.md),
+      child: const Skeleton(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SkeletonCircle(size: 38),
+            SizedBox(width: Style.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: Style.md),
-                  Container(width: 120, height: 14, color: color),
+                  SkeletonLine(width: 90, height: 14),
+                  SizedBox(height: 8),
+                  SkeletonLine(width: double.infinity, height: 13),
+                  SizedBox(height: 6),
+                  SkeletonLine(width: 180, height: 13),
                 ],
               ),
-              const SizedBox(height: Style.lg),
-              Container(width: double.infinity, height: 60, color: color),
-              const SizedBox(height: Style.lg),
-              Container(width: 100, height: 16, color: color),
-              for (int i = 0; i < 3; i++)
-                Padding(
-                  padding: const EdgeInsets.only(top: Style.md),
-                  child: Container(
-                    width: double.infinity,
-                    height: 68,
-                    color: color,
-                  ),
-                ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
