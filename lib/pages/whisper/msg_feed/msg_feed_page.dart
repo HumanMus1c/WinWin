@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/bootstrap.dart';
@@ -233,7 +233,7 @@ class MsgFeedAvatar extends StatelessWidget {
               height: size,
               fit: BoxFit.cover,
               placeholder: (_, _) => _fallback(cs),
-              errorWidget: (_, _, _) => _fallback(cs),
+              errorBuilder: (_, _, _) => _fallback(cs),
             )
           : _fallback(cs),
     );

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image_ce/cached_network_image.dart';
 
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/search.dart';
@@ -201,7 +201,7 @@ class _SearchPanelState extends State<SearchPanel>
                   placeholder: (_, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                   ),
-                  errorWidget: (_, _, _) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                     width: 160,
                     height: 100,
@@ -294,7 +294,7 @@ class _SearchPanelState extends State<SearchPanel>
                   placeholder: (_, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                   ),
-                  errorWidget: (_, _, _) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                     child: const Icon(Icons.person),
                   ),
@@ -400,7 +400,7 @@ class _SearchPanelState extends State<SearchPanel>
                       placeholder: (_, _) => Container(
                         color: theme.colorScheme.surfaceContainer,
                       ),
-                      errorWidget: (_, _, _) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         color: theme.colorScheme.surfaceContainer,
                         width: 160,
                         height: 100,
@@ -490,7 +490,7 @@ class _SearchPanelState extends State<SearchPanel>
                   placeholder: (_, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                   ),
-                  errorWidget: (_, _, _) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                     width: 80,
                     height: 110,
@@ -581,7 +581,7 @@ class _SearchPanelState extends State<SearchPanel>
                     placeholder: (_, _) => Container(
                       color: theme.colorScheme.surfaceContainer,
                     ),
-                    errorWidget: (_, _, _) => const SizedBox.shrink(),
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                 ),
               if (item.imageUrls != null && item.imageUrls!.isNotEmpty)

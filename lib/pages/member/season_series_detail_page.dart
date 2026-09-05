@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -137,7 +137,7 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
                             width: 110,
                             height: 70,
                             fit: BoxFit.cover,
-                            errorWidget: (_, _, _) => const ColoredBox(color: Colors.grey),
+                            errorBuilder: (_, _, _) => const ColoredBox(color: Colors.grey),
                           ),
                         ),
                         const SizedBox(width: Style.md),

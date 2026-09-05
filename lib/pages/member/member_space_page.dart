@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -701,7 +701,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           CachedNetworkImage(
             imageUrl: topPhoto,
             fit: BoxFit.cover,
-            errorWidget: (_, _, _) => _defaultHeaderGradient(theme),
+            errorBuilder: (_, _, _) => _defaultHeaderGradient(theme),
           )
         else
           _defaultHeaderGradient(theme),
@@ -786,7 +786,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                             imageUrl: card!.face!,
                             fit: BoxFit.cover,
                             placeholder: (_, _) => const SkeletonBox(),
-                            errorWidget: (_, _, _) => const Icon(Icons.person, size: 40),
+                            errorBuilder: (_, _, _) => const Icon(Icons.person, size: 40),
                           )
                         : (card == null
                             ? const SkeletonBox()
@@ -1118,7 +1118,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     ? CachedNetworkImage(
                         imageUrl: items[i].face!,
                         fit: BoxFit.cover,
-                        errorWidget: (_, _, _) => const ColoredBox(color: Colors.grey),
+                        errorBuilder: (_, _, _) => const ColoredBox(color: Colors.grey),
                       )
                     : const ColoredBox(color: Colors.grey),
               ),

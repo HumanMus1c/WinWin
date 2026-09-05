@@ -20,7 +20,7 @@ dependencies:
   hive_ce: ^2.19.3
   path_provider: ^2.1.5
   cookie_jar: ^4.0.8
-  cached_network_image: ^3.4.1
+  cached_network_image_ce: ^4.1.1
   fvp: ^0.38.1
   protobuf: ^6.0.0
   # Phase 8: 极验验证码 WebView（用于短信/密码登录风控）
@@ -38,7 +38,7 @@ dependencies:
   logger: ^2.5.0
   catcher_2: ^2.1.9
   # 字体导入：桌面端文件选择器，用于导入 .ttf/.otf 自定义字体文件。
-  file_picker: ^8.1.2
+  file_picker: ^12.2.0
   # 动态页多列瀑布流排版：解决异质卡片在标准网格中的行间留白浪费问题。
   flutter_staggered_grid_view: ^0.7.0
 

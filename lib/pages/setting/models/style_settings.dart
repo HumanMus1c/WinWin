@@ -474,16 +474,15 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
   Future<void> _importFont() async {
     setState(() => _importing = true);
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['ttf', 'otf'],
-        withData: false,
       );
-      if (result == null || result.files.single.path == null) {
+      if (file == null || file.path == null) {
         setState(() => _importing = false);
         return;
       }
-      final path = result.files.single.path!;
+      final path = file.path!;
       final err = await AppFontNotifier.instance.importCustomFont(path);
       if (!mounted) return;
       if (err != null) {

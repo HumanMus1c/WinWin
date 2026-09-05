@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/image_utils.dart';
@@ -106,7 +106,7 @@ class NetworkImgLayer extends StatelessWidget {
       filterQuality: FilterQuality.low,
       useOldImageOnUrlChange: true,
       placeholder: (context, url) => _placeholder(context, isAvatar: type == 'avatar'),
-      errorWidget: (context, url, error) => _placeholder(context, isAvatar: type == 'avatar'),
+      errorBuilder: (context, error, stackTrace) => _placeholder(context, isAvatar: type == 'avatar'),
     );
   }
 

@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/account/account_service.dart';
@@ -237,7 +237,7 @@ class _UserInfoSection extends StatelessWidget {
                               color: Colors.grey,
                               child: SizedBox.expand(),
                             ),
-                            errorWidget: (_, _, _) => const Center(
+                            errorBuilder: (_, _, _) => const Center(
                               child: Icon(Icons.person,
                                   color: Colors.white, size: 28),
                             ),
