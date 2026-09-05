@@ -40,6 +40,10 @@ class WindowStateController with WindowListener {
     final position = _readOffset(box.get(SettingBoxKey.windowPosition));
     if (maximized) {
       await windowManager.maximize();
+      if (!await windowManager.isVisible()) {
+        await windowManager.show();
+        await windowManager.focus();
+      }
       return;
     }
     if (size != null) {
@@ -51,6 +55,10 @@ class WindowStateController with WindowListener {
       if (screen == null || _onScreen(position, size ?? const Size(1280, 800), screen)) {
         await windowManager.setPosition(position);
       }
+    }
+    if (!await windowManager.isVisible()) {
+      await windowManager.show();
+      await windowManager.focus();
     }
   }
 

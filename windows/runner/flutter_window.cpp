@@ -27,8 +27,15 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  // 显式显示窗口，避免因首帧回调在无焦点/非前台或命令行启动环境下被 DWM 挂起而导致窗口永久隐藏
+  this->Show();
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
+    ::SetWindowPos(GetHandle(), HWND_TOP, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    ::SetForegroundWindow(GetHandle());
+    ::BringWindowToTop(GetHandle());
   });
 
   // Flutter can complete the first frame before the "show window" callback is

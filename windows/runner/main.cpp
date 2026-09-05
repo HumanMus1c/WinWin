@@ -7,6 +7,16 @@
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  // 确保工作目录（CWD）和 DLL 搜索目录与 exe 所在目录严格一致（消除终端与资源管理器启动差异）
+  wchar_t exe_path[MAX_PATH] = {};
+  GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
+  wchar_t* last_slash = wcsrchr(exe_path, L'\\');
+  if (last_slash != nullptr) {
+    *last_slash = L'\0';
+    SetCurrentDirectoryW(exe_path);
+    SetDllDirectoryW(exe_path);
+  }
+
   // Attach to console when present (e.g., 'flutter run') or create a
   // new console when running with a debugger.
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
