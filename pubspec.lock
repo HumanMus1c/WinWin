@@ -61,10 +61,10 @@ packages:
     dependency: "direct main"
     description:
       name: catcher_2
-      sha256: c0e21edc0fdb2fd91644ec8bb6870db5823ae2a6fed2cc8cf3f3500e5b295d4e
+      sha256: "56f681cb9ef9ea7341a13508f06aabf900cda8e800310b7be130518812a88c0c"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.1.11"
+    version: "2.1.12"
   characters:
     dependency: transitive
     description:
@@ -157,10 +157,10 @@ packages:
     dependency: "direct main"
     description:
       name: dio
-      sha256: "0df44ebba85e503958eb75d07eedd3c86275a58c1d3eda2f2ce8f0a2c3abbb3c"
+      sha256: "852ec3b48cc431ac04fff978413c541502b67ffc3e26921e74e3d994694192c1"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "5.11.0"
+    version: "5.11.1"
   dio_web_adapter:
     dependency: transitive
     description:
@@ -348,10 +348,10 @@ packages:
     dependency: "direct main"
     description:
       name: fvp
-      sha256: ac06c5ecdf65abb2ce413c9ca6c73fd74bff7c394879c17a98d6b94056b71c52
+      sha256: c6db09d88a6c84ba84fb047b4082a03987199e968273da9ad051660e18cfca55
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.37.3"
+    version: "0.38.1"
   get:
     dependency: "direct main"
     description:
@@ -977,10 +977,10 @@ packages:
     dependency: "direct main"
     description:
       name: window_manager
-      sha256: "732896e1416297c63c9e3fb95aea72d0355f61390263982a47fd519169dc5059"
+      sha256: "05c231fd7b23d2380f14c5cc10b7b93d60d4fa4a2fb4e0f032de27e44b5560e9"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.4.3"
+    version: "0.5.2"
   xdg_directories:
     dependency: transitive
     description:

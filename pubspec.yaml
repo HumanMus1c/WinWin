@@ -21,14 +21,14 @@ dependencies:
   path_provider: ^2.1.5
   cookie_jar: ^4.0.8
   cached_network_image: ^3.4.1
-  fvp: ^0.37.3
+  fvp: ^0.38.1
   protobuf: ^6.0.0
   # Phase 8: 极验验证码 WebView（用于短信/密码登录风控）
   # ≥6.2.0-beta.3 已修复 MSVC 14.51 coroutine 兼容性（WebView2 1.0.3650.58 / CppWinRT 2.0.250303.1）
   flutter_inappwebview: ^6.2.0-beta.3
   fixnum: ^1.1.1
   # Phase 4.6: 桌面伪 PiP（窗口缩放 + 置顶）
-  window_manager: ^0.4.3
+  window_manager: ^0.5.2
   # Phase 3: 直播弹幕二进制 WebSocket（16 字节头 + auth/heartbeat + zlib/brotli 递归解压）
   web_socket_channel: ^3.0.3
   # Phase 3: 直播弹幕 brotli 解压（服务端可能用 brotli 而非 zlib 压缩 payload）
