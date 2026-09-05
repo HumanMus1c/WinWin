@@ -15,7 +15,12 @@ import 'package:winwin/utils/wbi_sign.dart';
 /// storage/network init would leave the window hidden forever.
 Future<void>? _bootstrap;
 
-Future<void> ensureBootstrap() => _bootstrap ??= _run();
+Future<void> ensureBootstrap() {
+  return _bootstrap ??= _run().catchError((Object error, StackTrace stackTrace) {
+    _bootstrap = null;
+    throw error;
+  });
+}
 
 Future<void> _run() async {
   await GStorage.init();

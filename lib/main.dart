@@ -86,6 +86,10 @@ void main() async {
       AppFontNotifier.instance.refresh();
       // 恢复上次窗口尺寸/位置/最大化状态，并开始监听变更以持久化。
       WindowStateController.instance.restoreAndListen();
+    }).catchError((Object error, StackTrace stackTrace) {
+      SyncTrace.log('main', 'ensureBootstrap async failed: $error');
+      AppLogger.e('main', 'ensureBootstrap async failed',
+          error: error, stackTrace: stackTrace);
     }),
   );
 
@@ -182,19 +186,126 @@ class AgreementGate extends StatefulWidget {
 class _AgreementGateState extends State<AgreementGate> {
   /// null = bootstrap 进行中；true/false = 已读取确认状态。
   bool? _acked;
+  Object? _bootstrapError;
 
   @override
   void initState() {
     super.initState();
+    _load();
+  }
+
+  void _load() {
+    setState(() {
+      _acked = null;
+      _bootstrapError = null;
+    });
     ensureBootstrap().then((_) {
       if (!mounted) return;
       final acked = Pref.userAgreementAck;
-      setState(() => _acked = acked);
+      setState(() {
+        _acked = acked;
+        _bootstrapError = null;
+      });
+    }).catchError((Object error, StackTrace stackTrace) {
+      SyncTrace.log('AgreementGate', 'bootstrap failed: $error');
+      AppLogger.e('AgreementGate', 'ensureBootstrap failed',
+          error: error, stackTrace: stackTrace);
+      if (!mounted) return;
+      setState(() {
+        _bootstrapError = error;
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final bootstrapError = _bootstrapError;
+    if (bootstrapError != null) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final errStr = bootstrapError.toString();
+      final isLockError = errStr.contains('33') ||
+          errStr.contains('锁定') ||
+          errStr.contains('locked');
+      final tip = isLockError
+          ? '数据文件被锁定，可能由于另一个 WinWin 实例正在运行或上次未完全退出。\n请在任务管理器中结束残留的 winwin.exe 进程后重试。'
+          : '资源载入失败：$errStr';
+      return Scaffold(
+        backgroundColor:
+            isDark ? const Color(0xFF18191C) : const Color(0xFFF1F2F5),
+        body: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 440),
+            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF222429) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.error_outline,
+                      size: 28,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '资源加载失败',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  tip,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: isDark
+                        ? const Color(0xFF9499A0)
+                        : const Color(0xFF61666D),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: _load,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: biliPink,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 28, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text('重试'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final acked = _acked;
     if (acked == null) {
       final isDark = Theme.of(context).brightness == Brightness.dark;

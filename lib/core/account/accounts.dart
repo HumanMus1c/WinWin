@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:hive_ce/hive.dart';
 
 import 'package:winwin/core/account/account.dart';
@@ -41,11 +43,15 @@ abstract final class Accounts {
         accountMode[t.index] = a;
       }
     }
-    return Future.wait(
-      (accountMode.toSet()..removeWhere((i) => i.activated)).map(
-        Request.buvidActive,
+    // 激活 buvid3 为远端网络调用，异步触发即可，绝不阻塞本地账号加载与启动关键路径。
+    unawaited(
+      Future.wait(
+        (accountMode.toSet()..removeWhere((i) => i.activated)).map(
+          Request.buvidActive,
+        ),
       ),
     );
+    return Future.value();
   }
 
   static Future<void> clear() async {
