@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:fvp/mdk.dart' as mdk;
 
+import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/cache/play_url_cache.dart';
@@ -156,6 +157,8 @@ class WinWinPlayerController {
   /// 待触发的 HDR 自动升级：首播 SDR 后延后到 media buffered 稳定再二次
   /// 拉流 qn=125，避免与首播的 setMedia/prepare/纹理创建并发竞态。
   PlayUrlModel? _pendingHdrUpgrade;
+  /// 缓冲假死计时（毫秒），用于超时检测与自愈。
+  int _bufferingStallMs = 0;
 
   // ── 心跳上报（Phase 4.2）──
   /// 心跳定时器：每 5 秒上报一次播放进度。
@@ -189,12 +192,36 @@ class WinWinPlayerController {
     // 顺序即优先级：D3D11 硬解 → FFmpeg 软解 → dav1d AV1 专用软解。
     player.videoDecoders = const ['D3D11', 'FFmpeg', 'dav1d'];
 
-    // 网络流稳健性 / 格式探测（参照 fvp video_player_mdk.dart 的默认项）。
-    player.setProperty('avio.reconnect', '1');
-    player.setProperty('avio.reconnect_delay_max', '7');
+    // 网络流稳健性 / 格式探测（参照 fvp video_player_mdk.dart 默认项与 FFmpeg 规范）。
+    player.setProperty('video.decoder', 'shader_resource=0');
+    player.setProperty('avformat.strict', 'experimental');
+    player.setProperty('avformat.safe', '0');
+    player.setProperty('avformat.rtsp_transport', 'tcp');
     player.setProperty('avformat.extension_picky', '0');
-    // 扩大缓冲上限，减少在线 DASH 卡顿（mdk 默认 max 仅 4 秒）。
-    player.setBufferRange(min: 2000, max: 20000);
+    player.setProperty('avformat.allowed_segment_extensions', 'ALL');
+
+    // 全量网络流断线自动重连配置：
+    // B站 CDN 在客户端由于缓冲满暂停读取时可能在 60s 左右主动切断连接。
+    // reconnect_at_eof: 遇到服务端非预期 FIN/EOF 时自动以 Range 请求重连，杜绝误判为音画结束。
+    // reconnect_streamed: 开启流式传输重连。
+    // reconnect_on_network_error: 偶发网络波动或丢包时重试。
+    // reconnect_on_http_error: 瞬态 4xx/5xx 错误时重试。
+    player.setProperty('avio.reconnect', '1');
+    player.setProperty('avio.reconnect_at_eof', '1');
+    player.setProperty('avio.reconnect_streamed', '1');
+    player.setProperty('avio.reconnect_delay_max', '5');
+    player.setProperty('avio.reconnect_on_network_error', '1');
+    player.setProperty('avio.reconnect_on_http_error', '4xx,5xx');
+
+    // 解复用器包缓存与容错：加速 seek，避免重复请求 CDN，容忍轻微网络丢包。
+    player.setProperty('demux.buffer.ranges', '50');
+    player.setProperty('demux.buffer.protocols', 'http,https');
+    player.setProperty('demux.max_errors', '50');
+
+    // 扩大缓冲窗口（VOD 点播模式）：
+    // min: 1000ms 起播；max: 180000ms (3分钟)。
+    // 彻底解决之前 max 仅设 20s 导致音频流提前写满后停读网络、触发 CDN 60s 闲置断流并假死阻塞的问题。
+    player.setBufferRange(min: 1000, max: 180000);
 
     player.volume = volume.value / 100.0;
     return player;
@@ -294,6 +321,7 @@ class WinWinPlayerController {
     // 暂停心跳：页面不可见时停止上报，避免把共享 player 的进度误报为本页进度。
     _heartBeatTimer?.cancel();
     _heartBeatTimer = null;
+    _bufferingStallMs = 0;
   }
 
   void _syncTextureId() {
@@ -316,6 +344,18 @@ class WinWinPlayerController {
       final newPos = Duration(milliseconds: posMs);
       if (position.value != newPos) {
         position.value = newPos;
+      }
+      // 缓冲假死兜底（Watchdog）：若因 CDN 闲置断线或丢包处于缓冲中超过 8 秒且正在播放，
+      // 触发一次在位 seek，强制解复用器刷新并重新向 CDN 发起 Range 请求，避免永久卡死在 0% 缓冲。
+      if (buffering.value && playing.value) {
+        _bufferingStallMs += 100;
+        if (_bufferingStallMs >= 8000) {
+          _bufferingStallMs = 0;
+          AppLogger.w('PlayerController', 'Buffering stall detected (8s), auto-recovering stream at ${posMs}ms');
+          unawaited(player.seek(position: posMs));
+        }
+      } else {
+        _bufferingStallMs = 0;
       }
       // SponsorBlock 自动跳过：检查当前位置是否在可跳过段落内。
       if (sponsorBlockEnabled) {
@@ -628,10 +668,17 @@ class WinWinPlayerController {
 
       // 请求头经 'avio.headers' 属性下发，格式为 "Key: Value\r\n" 列表，
       // 对该 Player 打开的所有源（含外部音轨）生效。
-      player.setProperty(
-        'avio.headers',
-        'Referer: $_referer\r\nUser-Agent: $_pcUserAgent\r\n',
-      );
+      // 若已登录，附带登录态 Cookie，确保对高质量流及 CDN 防盗链的持续鉴权。
+      final account = Accounts.main;
+      String headers = 'Referer: $_referer\r\nUser-Agent: $_pcUserAgent\r\n';
+      if (account is LoginAccount) {
+        final cookies = account.keyCookies;
+        if (cookies.isNotEmpty) {
+          final cookieStr = cookies.map((c) => '${c.name}=${c.value}').join('; ');
+          headers += 'Cookie: $cookieStr\r\n';
+        }
+      }
+      player.setProperty('avio.headers', headers);
       // Phase 4.7：音频归一化滤镜作为 player 属性在 prepare 前下发，
       // 避免在 media 已打开/播放中切换 avfilter 触发音频轨重初始化干扰状态。
       if (_audioNormalizeEnabled) {
@@ -824,6 +871,7 @@ class WinWinPlayerController {
   void seek(Duration to) {
     final player = _player;
     if (player == null || _disposed) return;
+    _bufferingStallMs = 0;
     unawaited(player.seek(position: to.inMilliseconds));
     seekCount.value++;
   }
