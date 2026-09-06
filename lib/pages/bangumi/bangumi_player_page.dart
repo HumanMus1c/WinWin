@@ -9,6 +9,7 @@ import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
+import 'package:winwin/http/toview.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/main.dart';
 import 'package:winwin/models/bangumi/bangumi_detail.dart';
@@ -48,12 +49,13 @@ class BangumiPlayerPage extends StatefulWidget {
 }
 
 class _BangumiPlayerPageState extends State<BangumiPlayerPage>
-    with RouteAware, WindowListener, SingleTickerProviderStateMixin {
+    with RouteAware, WindowListener, TickerProviderStateMixin {
   late BangumiEpisode _currentEpisode;
   late List<BangumiEpisode> _episodes;
   WinWinPlayerController? playerController;
 
-  late final TabController _rightTabCtrl;
+  late final TabController _wideTabCtrl;
+  late final TabController _narrowTabCtrl;
   final ScrollController _scrollController = ScrollController();
 
   // 选集排序与状态
@@ -82,6 +84,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   bool _hasLike = false;
   int _coinNum = 0;
   bool _hasFav = false;
+  bool _isFollowed = false;
+  int _followStatus = 0; // 1=想看, 2=在看, 3=看过
+  bool _descExpanded = false;
+  bool? _inWatchLater;
 
   // 记录页面被覆盖前的状态
   bool _wasPlaying = false;
@@ -96,7 +102,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     super.initState();
     _currentEpisode = widget.initialEpisode;
     _episodes = widget.allEpisodes ?? widget.detail.episodes;
-    _rightTabCtrl = TabController(length: 3, vsync: this);
+    _isFollowed = widget.detail.userStatus?.follow == 1;
+    _followStatus = widget.detail.userStatus?.followStatus ?? (_isFollowed ? 2 : 0);
+    _wideTabCtrl = TabController(length: 2, vsync: this);
+    _narrowTabCtrl = TabController(length: 3, vsync: this);
     windowManager.addListener(this);
 
     _initPlayerForEpisode(_currentEpisode);
@@ -117,7 +126,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   void dispose() {
     routeObserver.unsubscribe(this);
     windowManager.removeListener(this);
-    _rightTabCtrl.dispose();
+    _wideTabCtrl.dispose();
+    _narrowTabCtrl.dispose();
     DesktopPipController.instance.exitPip();
     playerController?.dispose();
     _scrollController.dispose();
@@ -306,13 +316,25 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     if (res case Success(:final response)) {
       setState(() {
         _hasLike = response['like'] == 1;
-        _hasFav = response['favorite'] == 1;
+        _hasFav = response['favorite'] == 1 || _isFollowed;
         final rawCoin = response['coin_number'];
         if (rawCoin is int) {
           _coinNum = rawCoin;
         } else if (rawCoin is num) {
           _coinNum = rawCoin.toInt();
         }
+      });
+    }
+
+    final statusRes = await PgcHttp.seasonStatus(widget.detail.seasonId);
+    if (!mounted) return;
+    if (statusRes case Success(:final response)) {
+      final follow = response['follow'] == 1;
+      final fStatus = (response['follow_status'] as num?)?.toInt() ?? (follow ? 2 : 0);
+      setState(() {
+        _isFollowed = follow;
+        _followStatus = fStatus;
+        if (follow) _hasFav = true;
       });
     }
   }
@@ -531,12 +553,12 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
-  /// 桌面宽屏双栏布局（左 7: 播放器+互动，右 3: 选集/评论/简介 Tab）
+  /// 桌面宽屏双栏布局（左 7: 播放器+互动+简介，右 3: 选集/评论 Tab）
   Widget _buildWideLayout(ColorScheme cs) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 左栏：播放器核心
+        // 左栏：播放器核心 + 视频下方交互控件与番剧简介
         Expanded(
           flex: 7,
           child: Column(
@@ -556,10 +578,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       : const Center(child: CircularProgressIndicator()),
                 ),
               ),
-              // 弹幕发送栏
+              // 弹幕发送栏（宽度与视频一致）
               if (playerController != null)
-                SendDanmakuPanel(controller: playerController!),
-              // 互动控制与信息行
+                SendDanmakuPanel(controller: playerController!, inline: true),
+              // 视频下方交互控件与简介区
               Expanded(
                 child: SingleChildScrollView(
                   controller: _scrollController,
@@ -567,50 +589,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 标题
-                      Text(
-                        _currentEpisode.displayTitle,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      // 番剧关联与数据
-                      Row(
-                        children: [
-                          InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => BangumiDetailPage(
-                                    seasonId: widget.detail.seasonId,
-                                    detail: widget.detail,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              widget.detail.title,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: cs.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          if (_currentEpisode.duration != null && _currentEpisode.duration! > 0)
-                            Text(
-                              _currentEpisode.formattedDuration,
-                              style: TextStyle(fontSize: 12, color: cs.outline),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // 互动动作行（点赞/投币/收藏/三连/分享）
-                      _buildEpisodeActionRow(cs),
+                      _buildInfoSection(cs),
+                      _buildDescSection(cs),
+                      _buildTagsSection(cs),
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
@@ -620,26 +602,24 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         ),
         // 分割线
         VerticalDivider(width: 1, thickness: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
-        // 右栏：选集 / 评论 / 简介
+        // 右栏：选集 / 评论
         Expanded(
           flex: 3,
           child: Column(
             children: [
               TabBar(
-                controller: _rightTabCtrl,
+                controller: _wideTabCtrl,
                 tabs: [
                   Tab(text: '选集 (${_episodes.length})'),
                   Tab(text: '评论 (${_replies.length})'),
-                  const Tab(text: '简介'),
                 ],
               ),
               Expanded(
                 child: TabBarView(
-                  controller: _rightTabCtrl,
+                  controller: _wideTabCtrl,
                   children: [
                     _buildEpisodesSidebar(cs),
                     _buildCommentsSidebar(cs),
-                    _buildIntroSidebar(cs),
                   ],
                 ),
               ),
@@ -650,7 +630,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
-  /// 窄屏单列布局
+  /// 窄屏单列布局（视频 + 弹幕 + 选集/简介/评论 Tab）
   Widget _buildNarrowLayout(ColorScheme cs) {
     return Column(
       children: [
@@ -669,22 +649,33 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           ),
         ),
         if (playerController != null)
-          SendDanmakuPanel(controller: playerController!),
+          SendDanmakuPanel(controller: playerController!, inline: true),
         TabBar(
-          controller: _rightTabCtrl,
+          controller: _narrowTabCtrl,
           tabs: [
             Tab(text: '选集 (${_episodes.length})'),
+            const Tab(text: '简介与互动'),
             Tab(text: '评论 (${_replies.length})'),
-            const Tab(text: '简介'),
           ],
         ),
         Expanded(
           child: TabBarView(
-            controller: _rightTabCtrl,
+            controller: _narrowTabCtrl,
             children: [
               _buildEpisodesSidebar(cs),
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(Style.safeSpace),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInfoSection(cs),
+                    _buildDescSection(cs),
+                    _buildTagsSection(cs),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
               _buildCommentsSidebar(cs),
-              _buildIntroSidebar(cs),
             ],
           ),
         ),
@@ -1083,186 +1074,420 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
-  // ─────────────────────────── 简介 Sidebar ───────────────────────────
+  // ─────────────────────────── 交互与卡片组件 ───────────────────────────
 
-  Widget _buildIntroSidebar(ColorScheme cs) {
-    final d = widget.detail;
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: NetworkImgLayer(
-                src: d.cover,
-                width: 90,
-                height: 120,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    d.title,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                  if (d.rating != null && d.rating!.score > 0) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 14),
-                        const SizedBox(width: 2),
-                        Text(
-                          d.rating!.score.toStringAsFixed(1),
-                          style: const TextStyle(
-                            color: Colors.amber,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (d.stat != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      '${NumUtils.formatNum(d.stat!.views)}播放 · ${NumUtils.formatNum(d.stat!.favorites)}追番',
-                      style: TextStyle(fontSize: 11, color: cs.outline),
-                    ),
-                  ],
-                  if (d.styles.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 4,
-                      children: d.styles.take(3).map((st) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: cs.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(st, style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
-                      )).toList(),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+  /// BiliPai/WinWin 风格圆角卡片容器（扁平、无阴影）
+  Widget _card({
+    required Widget child,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(Style.lg),
+    EdgeInsetsGeometry margin = EdgeInsets.zero,
+  }) {
+    return Container(
+      margin: margin,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(Style.mdRadius),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
         ),
-        const SizedBox(height: 14),
-        const Text('简介', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        SelectableText(
-          d.evaluate.isNotEmpty ? d.evaluate : '暂无简介',
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, height: 1.5),
-        ),
-        if (d.actors.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          const Text('声优 / 演员', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          SelectableText(
-            d.actors,
-            style: TextStyle(fontSize: 11.5, color: cs.outline, height: 1.4),
-          ),
-        ],
-        if (d.staff.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          const Text('制作人员', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          SelectableText(
-            d.staff,
-            style: TextStyle(fontSize: 11.5, color: cs.outline, height: 1.4),
-          ),
-        ],
-      ],
+      ),
+      child: child,
     );
   }
 
-  // ─────────────────────────── 动作行 ───────────────────────────
-
-  Widget _buildEpisodeActionRow(ColorScheme cs) {
-    final epStat = VideoStat(
-      like: widget.detail.stat?.likes,
-      coin: _coinNum,
-      favorite: widget.detail.stat?.favorites,
-      share: widget.detail.stat?.share,
+  void _goToDetailPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BangumiDetailPage(
+          seasonId: widget.detail.seasonId,
+          detail: widget.detail,
+        ),
+      ),
     );
+  }
 
-    return VideoActionRow(
-      stat: epStat,
-      hasLike: _hasLike,
-      hasDislike: false,
-      coinNum: _coinNum,
-      hasFav: _hasFav,
-      inWatchLater: null,
-      onLike: () async {
-        if (!await LoginGuard.requireLogin(context)) return;
-        final aid = _currentEpisode.aid;
-        if (aid != null && aid > 0) {
-          final next = !_hasLike;
-          final res = await VideoHttp.likeVideo(aid: aid, type: next);
-          if (res case Success()) {
-            setState(() => _hasLike = next);
-          }
-        }
-      },
-      onDislike: () {},
-      onCoin: () async {
-        if (!await LoginGuard.requireLogin(context)) return;
-        final aid = _currentEpisode.aid;
-        if (aid != null && aid > 0) {
-          if (!mounted) return;
-          await showCoinDialog(
-            context,
-            onPay: (count, withLike) async {
-              final res = await VideoHttp.coinVideo(
-                aid: aid,
-                multiply: count,
-                selectLike: withLike ? 1 : 0,
-              );
-              if (res case Success()) {
-                setState(() {
-                  _coinNum += count;
-                  if (withLike) _hasLike = true;
-                });
-              }
-            },
-          );
-        }
-      },
-      onTriple: () async {
-        if (!await LoginGuard.requireLogin(context)) return;
-        final res = await PgcHttp.pgcTriple(epId: _currentEpisode.id);
-        if (!mounted) return;
-        if (res case Success()) {
-          setState(() {
-            _hasLike = true;
-            _coinNum = 2;
-            _hasFav = true;
-          });
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            const SnackBar(content: Text('一键三连成功！')),
-          );
-        }
-      },
-      onFav: () async {
-        if (!await LoginGuard.requireLogin(context)) return;
-        _showFollowStatusDialog();
-      },
-      onShare: () {
-        final epId = _currentEpisode.id;
-        final url = 'https://www.bilibili.com/bangumi/play/ep$epId';
-        Clipboard.setData(ClipboardData(text: url));
+  Future<void> _toggleFollow() async {
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (_isFollowed) {
+      _showFollowStatusDialog();
+    } else {
+      final res = await PgcHttp.followBangumi(seasonId: widget.detail.seasonId);
+      if (!mounted) return;
+      if (res case Success()) {
+        setState(() {
+          _isFollowed = true;
+          _hasFav = true;
+          _followStatus = 2;
+        });
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('播放链接已复制到剪贴板')),
+          const SnackBar(content: Text('已追番')),
         );
-      },
-      onWatchLater: () {},
+      } else if (res case Error(:final errMsg)) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(content: Text(errMsg ?? '追番失败')),
+        );
+      }
+    }
+  }
+
+  String get _followStatusLabel {
+    if (!_isFollowed) return '追番';
+    return switch (_followStatus) {
+      1 => '想看',
+      2 => '在看',
+      3 => '看过',
+      _ => '正在追番',
+    };
+  }
+
+  Widget _buildFollowButton(ColorScheme cs) {
+    return GestureDetector(
+      onSecondaryTap: _isFollowed ? _showFollowStatusDialog : null,
+      child: FilledButton.tonal(
+        style: FilledButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        ),
+        onPressed: _toggleFollow,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _isFollowed ? Icons.favorite : Icons.favorite_border,
+              size: 16,
+              color: _isFollowed ? Colors.pink : null,
+            ),
+            const SizedBox(width: 4),
+            Text(_followStatusLabel),
+          ],
+        ),
+      ),
     );
+  }
+
+  /// 视频下方交互区（对标普通视频稿件 detail_page.dart 的 _buildInfoSection）
+  Widget _buildInfoSection(ColorScheme cs) {
+    final theme = Theme.of(context);
+    final stat = widget.detail.stat;
+    final grayStyle = TextStyle(fontSize: 12, color: cs.onSurfaceVariant);
+    final epStat = VideoStat(
+      like: stat?.likes,
+      coin: _coinNum,
+      favorite: stat?.favorites,
+      share: stat?.share,
+    );
+
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 剧集标题
+          Text(
+            _currentEpisode.displayTitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: Style.sm),
+          // 数据行（播放量、弹幕、时长、开播时间）
+          Row(
+            children: [
+              Icon(Icons.play_circle_outline, size: 15, color: cs.onSurfaceVariant),
+              const SizedBox(width: 4),
+              Text(NumUtils.formatNum(stat?.views), style: grayStyle),
+              const SizedBox(width: Style.md),
+              Icon(Icons.subtitles_outlined, size: 14, color: cs.onSurfaceVariant),
+              const SizedBox(width: 4),
+              Text(NumUtils.formatNum(stat?.danmakus), style: grayStyle),
+              if (_currentEpisode.duration != null && _currentEpisode.duration! > 0) ...[
+                const SizedBox(width: Style.md),
+                Icon(Icons.schedule_outlined, size: 14, color: cs.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Text(_currentEpisode.formattedDuration, style: grayStyle),
+              ],
+              if (_currentEpisode.pubTime != null || widget.detail.publish?.releaseDateShow != null) ...[
+                const SizedBox(width: Style.md),
+                Icon(Icons.calendar_today_outlined, size: 13, color: cs.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Text(
+                  _currentEpisode.pubTime != null
+                      ? _formatDate(_currentEpisode.pubTime)
+                      : (widget.detail.publish?.releaseDateShow ?? ''),
+                  style: grayStyle,
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: Style.md),
+          // 番剧主体卡片行（对标普通视频 UP 主行）
+          Row(
+            children: [
+              // 番剧海报微缩图（点击跳番剧详情页）
+              GestureDetector(
+                onTap: _goToDetailPage,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(Style.radiusSm),
+                  child: NetworkImgLayer(
+                    src: widget.detail.cover,
+                    width: 44,
+                    height: 44,
+                  ),
+                ),
+              ),
+              const SizedBox(width: Style.md),
+              // 番剧名、评分、全季追番量
+              Expanded(
+                child: GestureDetector(
+                  onTap: _goToDetailPage,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              widget.detail.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.chevron_right, size: 16, color: cs.outline),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          if (widget.detail.rating != null && widget.detail.rating!.score > 0) ...[
+                            const Icon(Icons.star_rounded, color: Colors.amber, size: 15),
+                            const SizedBox(width: 2),
+                            Text(
+                              widget.detail.rating!.score.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Text(
+                            '${NumUtils.formatNum(stat?.favorites)} 追番',
+                            style: grayStyle,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // 追番按钮
+              _buildFollowButton(cs),
+            ],
+          ),
+          const Divider(height: Style.xl),
+          // 互动行（点赞/投币/收藏/点踩/分享/稍后再看 + 长按三连）
+          VideoActionRow(
+            stat: epStat,
+            hasLike: _hasLike,
+            hasDislike: false,
+            coinNum: _coinNum,
+            hasFav: _hasFav,
+            inWatchLater: _inWatchLater,
+            onLike: _actionLike,
+            onTriple: _actionTriple,
+            onCoin: _actionCoin,
+            onDislike: () {},
+            onFav: _actionFav,
+            onShare: _actionShare,
+            onWatchLater: _actionWatchLater,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 番剧简介卡片（默认 3 行折叠，可展开/收起；展开后含声优与制作人员）
+  Widget _buildDescSection(ColorScheme cs) {
+    final desc = widget.detail.evaluate.trim();
+    final hasActors = widget.detail.actors.isNotEmpty;
+    final hasStaff = widget.detail.staff.isNotEmpty;
+    final grayColor = cs.onSurfaceVariant;
+
+    return _card(
+      margin: const EdgeInsets.only(top: Style.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: desc.isEmpty ? null : () => setState(() => _descExpanded = !_descExpanded),
+            borderRadius: BorderRadius.circular(Style.radiusSm),
+            child: Text(
+              desc.isEmpty ? '暂无简介' : desc,
+              maxLines: _descExpanded ? null : 3,
+              overflow: _descExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: grayColor,
+              ),
+            ),
+          ),
+          if (desc.isNotEmpty)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => setState(() => _descExpanded = !_descExpanded),
+                child: Text(_descExpanded ? '收起' : '展开'),
+              ),
+            ),
+          // 展开状态下展示声优和制作人员
+          if (_descExpanded && (hasActors || hasStaff)) ...[
+            const Divider(height: Style.lg),
+            if (hasActors) ...[
+              const Text('声优 / 演员', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              SelectableText(
+                widget.detail.actors,
+                style: TextStyle(fontSize: 12, color: grayColor, height: 1.4),
+              ),
+              const SizedBox(height: Style.sm),
+            ],
+            if (hasStaff) ...[
+              const Text('制作人员', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              SelectableText(
+                widget.detail.staff,
+                style: TextStyle(fontSize: 12, color: grayColor, height: 1.4),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 风格标签行
+  Widget _buildTagsSection(ColorScheme cs) {
+    if (widget.detail.styles.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: Style.md),
+      child: Wrap(
+        spacing: Style.sm,
+        runSpacing: Style.sm,
+        children: widget.detail.styles.map((tag) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(Style.radiusLg),
+            ),
+            child: Text(
+              tag,
+              style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Future<void> _actionLike() async {
+    if (!await LoginGuard.requireLogin(context)) return;
+    final aid = _currentEpisode.aid;
+    if (aid != null && aid > 0) {
+      final next = !_hasLike;
+      final res = await VideoHttp.likeVideo(aid: aid, type: next);
+      if (res case Success()) {
+        setState(() => _hasLike = next);
+      }
+    }
+  }
+
+  Future<void> _actionCoin() async {
+    if (!await LoginGuard.requireLogin(context)) return;
+    final aid = _currentEpisode.aid;
+    if (aid != null && aid > 0) {
+      if (!mounted) return;
+      await showCoinDialog(
+        context,
+        onPay: (count, withLike) async {
+          final res = await VideoHttp.coinVideo(
+            aid: aid,
+            multiply: count,
+            selectLike: withLike ? 1 : 0,
+          );
+          if (res case Success()) {
+            setState(() {
+              _coinNum += count;
+              if (withLike) _hasLike = true;
+            });
+          }
+        },
+      );
+    }
+  }
+
+  Future<void> _actionTriple() async {
+    if (!await LoginGuard.requireLogin(context)) return;
+    final res = await PgcHttp.pgcTriple(epId: _currentEpisode.id);
+    if (!mounted) return;
+    if (res case Success()) {
+      setState(() {
+        _hasLike = true;
+        _coinNum = 2;
+        _hasFav = true;
+        _isFollowed = true;
+      });
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('一键三连成功！')),
+      );
+    }
+  }
+
+  Future<void> _actionFav() async {
+    if (!await LoginGuard.requireLogin(context)) return;
+    _showFollowStatusDialog();
+  }
+
+  void _actionShare() {
+    final epId = _currentEpisode.id;
+    final url = 'https://www.bilibili.com/bangumi/play/ep$epId';
+    Clipboard.setData(ClipboardData(text: url));
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      const SnackBar(content: Text('播放链接已复制到剪贴板')),
+    );
+  }
+
+  Future<void> _actionWatchLater() async {
+    if (!await LoginGuard.requireLogin(context)) return;
+    final aid = _currentEpisode.aid;
+    if (aid == null || aid <= 0) return;
+    final inList = _inWatchLater ?? false;
+    final res = inList
+        ? await ToviewHttp.delToview(aid.toString())
+        : await ToviewHttp.addToview(aid: aid);
+    if (!mounted) return;
+    if (res case Success()) {
+      setState(() => _inWatchLater = !inList);
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(!inList ? '已添加到稍后再看' : '已从稍后再看移除')),
+      );
+    } else if (res case Error(:final errMsg)) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(errMsg ?? '操作失败')),
+      );
+    }
   }
 
   void _showFollowStatusDialog() {
@@ -1275,7 +1500,13 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             onPressed: () async {
               Navigator.pop(ctx);
               await PgcHttp.updateFollowStatus(seasonId: widget.detail.seasonId, status: 1);
-              if (mounted) setState(() => _hasFav = true);
+              if (mounted) {
+                setState(() {
+                  _isFollowed = true;
+                  _followStatus = 1;
+                  _hasFav = true;
+                });
+              }
             },
             child: const Text('想看'),
           ),
@@ -1283,7 +1514,13 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             onPressed: () async {
               Navigator.pop(ctx);
               await PgcHttp.updateFollowStatus(seasonId: widget.detail.seasonId, status: 2);
-              if (mounted) setState(() => _hasFav = true);
+              if (mounted) {
+                setState(() {
+                  _isFollowed = true;
+                  _followStatus = 2;
+                  _hasFav = true;
+                });
+              }
             },
             child: const Text('在看'),
           ),
@@ -1291,7 +1528,13 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             onPressed: () async {
               Navigator.pop(ctx);
               await PgcHttp.updateFollowStatus(seasonId: widget.detail.seasonId, status: 3);
-              if (mounted) setState(() => _hasFav = true);
+              if (mounted) {
+                setState(() {
+                  _isFollowed = true;
+                  _followStatus = 3;
+                  _hasFav = true;
+                });
+              }
             },
             child: const Text('看过'),
           ),
@@ -1300,7 +1543,13 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             onPressed: () async {
               Navigator.pop(ctx);
               await PgcHttp.unfollowBangumi(seasonId: widget.detail.seasonId);
-              if (mounted) setState(() => _hasFav = false);
+              if (mounted) {
+                setState(() {
+                  _isFollowed = false;
+                  _followStatus = 0;
+                  _hasFav = false;
+                });
+              }
             },
             child: const Text('取消追番', style: TextStyle(color: Colors.red)),
           ),
