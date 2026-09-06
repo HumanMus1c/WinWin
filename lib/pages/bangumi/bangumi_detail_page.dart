@@ -1122,7 +1122,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
             maxCrossAxisExtent: 180,
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            childAspectRatio: 1.22,
+            childAspectRatio: 1.18,
           ),
           delegate: SliverChildBuilderDelegate(
             (context, index) {
@@ -1136,7 +1136,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     ];
   }
 
-  /// 单个选集卡片（16:9，封面、集数、标题、时长、气泡角标根据标题字号自适应尺寸）
+  /// 单个选集卡片（16:9，封面、集数、标题、时长、气泡角标严格对齐更改前剧集标题字体大小 11.5）
   Widget _buildEpisodeCard(
     BangumiDetail detail,
     BangumiEpisode ep,
@@ -1150,13 +1150,13 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         final width = customWidth ?? constraints.maxWidth;
         final height = width * 9 / 16;
 
-        // 根据卡片尺寸自适应标题字号，气泡角标严格依据标题字号自适应缩放尺寸
-        final titleFontSize = (width * 0.075).clamp(10.5, 13.0);
-        final badgeFontSize = (titleFontSize * 0.76).clamp(8.0, 10.5);
-        final horizontalPadding = (titleFontSize * 0.42).clamp(3.5, 6.5);
-        final verticalPadding = (titleFontSize * 0.14).clamp(1.2, 3.0);
-        final badgeRadius = (titleFontSize * 0.28).clamp(2.5, 5.0);
-        final badgeOffset = (titleFontSize * 0.32).clamp(3.0, 5.0);
+        // 更改前剧集标题基准字号为 11.5；胶囊、角标、气泡字体大小严格对齐该字号，不缩小
+        final titleFontSize = (width * 0.075).clamp(11.5, 12.5);
+        final badgeFontSize = titleFontSize; // 严格对齐剧集标题字体大小（11.5），绝不缩小
+        final horizontalPadding = (titleFontSize * 0.45).clamp(5.0, 7.0);
+        final verticalPadding = (titleFontSize * 0.18).clamp(2.0, 3.5);
+        final badgeRadius = (titleFontSize * 0.32).clamp(3.5, 5.0);
+        final badgeOffset = 4.0;
 
         return InkWell(
           key: isLastWatched ? _lastWatchedKey : null,
@@ -1203,21 +1203,32 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                           ),
                         ),
                       ),
-                      // 时长（右下角）
+                      // 时长气泡（右下角，字体大小对齐标题字号 11.5，带半透明背景气泡）
                       if (ep.duration != null && ep.duration! > 0)
                         Positioned(
                           right: badgeOffset,
-                          bottom: badgeOffset * 0.8,
-                          child: Text(
-                            ep.formattedDuration,
-                            style: TextStyle(
-                              fontSize: badgeFontSize * 0.95,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
+                          bottom: badgeOffset,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: horizontalPadding * 0.75,
+                              vertical: verticalPadding * 0.7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              borderRadius: BorderRadius.circular(badgeRadius * 0.75),
+                            ),
+                            child: Text(
+                              ep.formattedDuration,
+                              style: TextStyle(
+                                fontSize: badgeFontSize,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                                height: 1.1,
+                              ),
                             ),
                           ),
                         ),
-                      // 状态角标（会员、预告、限免，右上角，自适应气泡尺寸）
+                      // 状态角标（会员、预告、限免，右上角，字体大小对齐标题字号 11.5）
                       if (ep.badge?.isNotEmpty == true)
                         Positioned(
                           right: badgeOffset,
@@ -1251,7 +1262,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                             ),
                           ),
                         ),
-                      // 上次观看标记（左上角，自适应气泡尺寸与图标大小）
+                      // 上次观看标记（左上角，字体大小对齐标题字号 11.5）
                       if (isLastWatched)
                         Positioned(
                           left: badgeOffset,
@@ -1280,7 +1291,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                                   size: badgeFontSize * 1.15,
                                   color: Colors.white,
                                 ),
-                                SizedBox(width: titleFontSize * 0.15),
+                                SizedBox(width: titleFontSize * 0.2),
                                 Text(
                                   '上次看到',
                                   style: TextStyle(
@@ -1299,7 +1310,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                 ),
                 // 标题文本区
                 Padding(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
                   child: Text(
                     ep.displayTitle,
                     maxLines: 2,
