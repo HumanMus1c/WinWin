@@ -278,20 +278,21 @@ abstract final class PgcHttp {
     }
   }
 
-  /// 季状态（追番/投币/收藏状态）。
+  /// 季状态（追番/投币/收藏状态，GET /pgc/view/web/season/user/status）。
   static Future<LoadingState<Map<String, dynamic>>> seasonStatus(
     Object seasonId,
   ) async {
     final res = await Request().get(
       Api.seasonStatus,
       queryParameters: {'season_id': seasonId},
+      options: Options(extra: {'account': Accounts.main}),
     );
-    if (res.data['code'] == 0) {
+    if (res.data['code'] == 0 && res.data['result'] is Map) {
       return Success(
-        (res.data['result'] as Map?)?.cast<String, dynamic>() ?? {},
+        Map<String, dynamic>.from(res.data['result'] as Map),
       );
     } else {
-      return Error(res.data['message']?.toString() ?? '');
+      return Error(res.data['message']?.toString() ?? '获取季状态失败');
     }
   }
 
@@ -340,6 +341,7 @@ abstract final class PgcHttp {
       final res = await Request().get(
         Api.pgcInfo,
         queryParameters: queryParams,
+        options: Options(extra: {'account': Accounts.main}),
       );
 
       if (res.data['code'] == 0 && res.data['result'] != null) {
@@ -358,6 +360,26 @@ abstract final class PgcHttp {
                 sections: response.length > 1 ? response.sublist(1) : const [],
               );
             }
+          }
+        }
+
+        // 若用户已登录，调用 seasonStatus 查询精准的追番及观看历史状态（解决 CDN 缓存缺失 user_status 问题）
+        if (Accounts.main.isLogin && detail.seasonId > 0) {
+          final statusRes = await seasonStatus(detail.seasonId);
+          if (statusRes case Success(:final response)) {
+            final follow = response['follow'] == 1 ||
+                (response['follow_status'] is num && (response['follow_status'] as num) > 0);
+            final followStatus = response['follow_status'] as int? ?? (follow ? 2 : 0);
+            final progress = response['progress'] as Map?;
+            detail = detail.copyWith(
+              userStatus: BangumiUserStatus(
+                follow: follow ? 1 : 0,
+                followStatus: followStatus,
+                pay: response['pay'] as int? ?? detail.userStatus?.pay ?? 0,
+                progressLastEpId: progress?['last_ep_id'] as int?,
+                progressLastTime: progress?['last_time'] as int?,
+              ),
+            );
           }
         }
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
@@ -64,6 +65,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
       _detail = widget.detail;
       _state = Success(widget.detail!);
       _syncUserStatus(widget.detail!.userStatus);
+      if (widget.detail!.seasonId > 0 && Accounts.main.isLogin) {
+        _fetchLiveUserStatus(widget.detail!.seasonId);
+      }
     }
     _loadDetail();
   }
@@ -92,6 +96,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           _selectedEpisodePage = 0;
           _syncUserStatus(response.userStatus);
         });
+        if (response.seasonId > 0 && Accounts.main.isLogin) {
+          _fetchLiveUserStatus(response.seasonId);
+        }
       case Error():
         if (_detail == null) {
           setState(() => _state = res);
@@ -105,6 +112,35 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     if (us != null) {
       _isFollowed = us.isFollowed;
       _followStatus = us.followStatus;
+    }
+  }
+
+  /// 实时向 B 站查询当前登录账号对该番剧的追番与观看记录（解决 CDN 缓存缺失 user_status 问题）
+  Future<void> _fetchLiveUserStatus(int seasonId) async {
+    if (!Accounts.main.isLogin || seasonId <= 0) return;
+    final res = await PgcHttp.seasonStatus(seasonId);
+    if (!mounted) return;
+    if (res case Success(:final response)) {
+      final follow = response['follow'] == 1 ||
+          (response['follow_status'] is num && (response['follow_status'] as num) > 0);
+      final followStatus = response['follow_status'] as int? ?? (follow ? 2 : 0);
+      setState(() {
+        _isFollowed = follow;
+        _followStatus = followStatus;
+        if (_detail != null) {
+          _detail = _detail!.copyWith(
+            userStatus: BangumiUserStatus(
+              follow: follow ? 1 : 0,
+              followStatus: followStatus,
+              pay: response['pay'] as int? ?? _detail!.userStatus?.pay ?? 0,
+              progressLastEpId: (response['progress'] as Map?)?['last_ep_id'] as int? ??
+                  _detail!.userStatus?.progressLastEpId,
+              progressLastTime: (response['progress'] as Map?)?['last_time'] as int? ??
+                  _detail!.userStatus?.progressLastTime,
+            ),
+          );
+        }
+      });
     }
   }
 
@@ -138,29 +174,78 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
   // ─────────────────────────── 追番交互 ───────────────────────────
 
-  Future<void> _toggleFollow() async {
+  Future<void> _followBangumi() async {
     if (!await LoginGuard.requireLogin(context)) return;
     final detail = _detail;
     if (detail == null) return;
 
-    if (_isFollowed) {
-      _showFollowStatusDialog(detail);
-    } else {
-      final res = await PgcHttp.followBangumi(seasonId: detail.seasonId);
-      if (!mounted) return;
-      if (res case Success()) {
-        setState(() {
-          _isFollowed = true;
-          _followStatus = 2; // 默认“在看”
-        });
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('已添加到追番列表')),
-        );
-      } else if (res case Error(:final errMsg)) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(errMsg ?? '追番失败')),
-        );
-      }
+    final res = await PgcHttp.followBangumi(seasonId: detail.seasonId);
+    if (!mounted) return;
+    if (res case Success()) {
+      setState(() {
+        _isFollowed = true;
+        _followStatus = 2; // 默认“在看”
+      });
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('已开始追番')),
+      );
+    } else if (res case Error(:final errMsg)) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(errMsg ?? '追番失败')),
+      );
+    }
+  }
+
+  Future<void> _unfollowBangumi() async {
+    if (!await LoginGuard.requireLogin(context)) return;
+    final detail = _detail;
+    if (detail == null) return;
+
+    final res = await PgcHttp.unfollowBangumi(seasonId: detail.seasonId);
+    if (!mounted) return;
+    if (res case Success()) {
+      setState(() {
+        _isFollowed = false;
+        _followStatus = 0;
+      });
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('已取消追番')),
+      );
+    } else if (res case Error(:final errMsg)) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(errMsg ?? '取消追番失败')),
+      );
+    }
+  }
+
+  Future<void> _updateFollowStatus(int status) async {
+    if (!await LoginGuard.requireLogin(context)) return;
+    final detail = _detail;
+    if (detail == null) return;
+
+    final res = await PgcHttp.updateFollowStatus(
+      seasonId: detail.seasonId,
+      status: status,
+    );
+    if (!mounted) return;
+    if (res case Success()) {
+      final label = switch (status) {
+        1 => '想看',
+        2 => '在看',
+        3 => '看过',
+        _ => '已更新',
+      };
+      setState(() {
+        _isFollowed = true;
+        _followStatus = status;
+      });
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('已更新为“$label”')),
+      );
+    } else if (res case Error(:final errMsg)) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(errMsg ?? '更新追番状态失败')),
+      );
     }
   }
 
@@ -175,19 +260,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           _buildDialogStatusOption(ctx, detail, 3, '看过'),
           const Divider(),
           SimpleDialogOption(
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(ctx);
-              final res = await PgcHttp.unfollowBangumi(seasonId: detail.seasonId);
-              if (!mounted) return;
-              if (res case Success()) {
-                setState(() {
-                  _isFollowed = false;
-                  _followStatus = 0;
-                });
-                ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                  const SnackBar(content: Text('已取消追番')),
-                );
-              }
+              _unfollowBangumi();
             },
             child: const Text('取消追番', style: TextStyle(color: Colors.red)),
           ),
@@ -204,22 +279,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   ) {
     final selected = _isFollowed && _followStatus == status;
     return SimpleDialogOption(
-      onPressed: () async {
+      onPressed: () {
         Navigator.pop(ctx);
-        final res = await PgcHttp.updateFollowStatus(
-          seasonId: detail.seasonId,
-          status: status,
-        );
-        if (!mounted) return;
-        if (res case Success()) {
-          setState(() {
-            _isFollowed = true;
-            _followStatus = status;
-          });
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            SnackBar(content: Text('已更新为“$label”')),
-          );
-        }
+        _updateFollowStatus(status);
       },
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -229,16 +291,6 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         ],
       ),
     );
-  }
-
-  String _getFollowLabel() {
-    if (!_isFollowed) return '追番';
-    return switch (_followStatus) {
-      1 => '已追番 · 想看',
-      2 => '已追番 · 在看',
-      3 => '已追番 · 看过',
-      _ => '已追番',
-    };
   }
 
   // ─────────────────────────── 精准跳转对话框 ───────────────────────────
@@ -268,7 +320,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
               final val = int.tryParse(ctrl.text.trim());
               if (val != null && val >= 1 && val <= episodes.length) {
                 Navigator.pop(ctx);
-                final targetPage = (val - 1) ~/ _episodesPerPage;
+                final targetPage = _episodesDescending
+                    ? (episodes.length - val) ~/ _episodesPerPage
+                    : (val - 1) ~/ _episodesPerPage;
                 setState(() {
                   _selectedEpisodePage = targetPage;
                 });
@@ -638,27 +692,14 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         // 追番按钮
         Expanded(
           flex: 2,
-          child: OutlinedButton.icon(
-            onPressed: _toggleFollow,
-            icon: Icon(
-              _isFollowed ? Icons.check_circle_outline : Icons.favorite_border,
-              size: 18,
-              color: _isFollowed ? Colors.pink : null,
-            ),
-            label: Text(
-              _getFollowLabel(),
-              style: TextStyle(
-                fontSize: 12,
-                color: _isFollowed ? Colors.pink : null,
-                fontWeight: _isFollowed ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-              ),
-            ),
+          child: _FollowButton(
+            isFollowed: _isFollowed,
+            followStatus: _followStatus,
+            onFollow: _followBangumi,
+            onUnfollow: _unfollowBangumi,
+            onShowStatusMenu: () {
+              if (_detail != null) _showFollowStatusDialog(_detail!);
+            },
           ),
         ),
       ],
@@ -833,14 +874,25 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
       );
     }
 
-    final ordered = _episodesDescending ? all.reversed.toList() : all;
-    final totalCount = ordered.length;
+    final totalCount = all.length;
     final pageCount = (totalCount / _episodesPerPage).ceil();
 
-    // 计算当前页的分集
-    final startIdx = _selectedEpisodePage * _episodesPerPage;
-    final endIdx = (startIdx + _episodesPerPage).clamp(0, totalCount);
-    final displayed = ordered.sublist(startIdx, endIdx);
+    if (_selectedEpisodePage >= pageCount) {
+      _selectedEpisodePage = 0;
+    }
+
+    // 根据正倒序计算当前分页的剧集列表
+    final List<BangumiEpisode> displayed;
+    if (!_episodesDescending) {
+      final startIdx = _selectedEpisodePage * _episodesPerPage;
+      final endIdx = (startIdx + _episodesPerPage).clamp(0, totalCount);
+      displayed = all.sublist(startIdx, endIdx);
+    } else {
+      final high = totalCount - _selectedEpisodePage * _episodesPerPage;
+      final low = (totalCount - (_selectedEpisodePage + 1) * _episodesPerPage + 1)
+          .clamp(1, totalCount);
+      displayed = all.sublist(low - 1, high).reversed.toList();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -888,7 +940,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
             ),
           ],
         ),
-        // 50集翻页选择器（如 1-50, 51-100...）
+        // 50集翻页选择器（正序 1-50, 51-100...；倒序 120-71, 70-21, 20-1...）
         if (pageCount > 1) ...[
           const SizedBox(height: 6),
           SingleChildScrollView(
@@ -896,12 +948,21 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
             child: Row(
               children: List.generate(pageCount, (p) {
                 final isSelected = p == _selectedEpisodePage;
-                final pStart = p * _episodesPerPage + 1;
-                final pEnd = ((p + 1) * _episodesPerPage).clamp(1, totalCount);
+                final String chipLabel;
+                if (!_episodesDescending) {
+                  final pStart = p * _episodesPerPage + 1;
+                  final pEnd = ((p + 1) * _episodesPerPage).clamp(1, totalCount);
+                  chipLabel = '$pStart-$pEnd';
+                } else {
+                  final high = totalCount - p * _episodesPerPage;
+                  final low = (totalCount - (p + 1) * _episodesPerPage + 1)
+                      .clamp(1, totalCount);
+                  chipLabel = '$high-$low';
+                }
                 return Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: ChoiceChip(
-                    label: Text('$pStart-$pEnd'),
+                    label: Text(chipLabel),
                     selected: isSelected,
                     onSelected: (val) {
                       if (val) setState(() => _selectedEpisodePage = p);
@@ -1097,6 +1158,98 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+/// 多状态追番按钮：
+/// - 未追番状态：默认显示“追番”，鼠标悬浮显示“开始追番”，点击触发追番。
+/// - 已追番状态：默认显示“正在追番”，鼠标悬浮显示“取消追番”，点击取消追番。
+/// - 支持右键/长按调出状态切换面板（想看/在看/看过）。
+class _FollowButton extends StatefulWidget {
+  final bool isFollowed;
+  final int followStatus;
+  final VoidCallback onFollow;
+  final VoidCallback onUnfollow;
+  final VoidCallback onShowStatusMenu;
+
+  const _FollowButton({
+    required this.isFollowed,
+    required this.followStatus,
+    required this.onFollow,
+    required this.onUnfollow,
+    required this.onShowStatusMenu,
+  });
+
+  @override
+  State<_FollowButton> createState() => _FollowButtonState();
+}
+
+class _FollowButtonState extends State<_FollowButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    // 动态状态判定
+    final String label;
+    final IconData icon;
+    final Color? color;
+
+    if (!widget.isFollowed) {
+      label = _isHovered ? '开始追番' : '追番';
+      icon = _isHovered ? Icons.favorite : Icons.favorite_border;
+      color = _isHovered ? cs.primary : null;
+    } else {
+      if (_isHovered) {
+        label = '取消追番';
+        icon = Icons.heart_broken_outlined;
+        color = Colors.red;
+      } else {
+        label = '正在追番';
+        icon = Icons.favorite;
+        color = Colors.pink;
+      }
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Tooltip(
+        message: widget.isFollowed ? '点击取消追番，右键/长按更改追番状态' : '点击追番',
+        child: GestureDetector(
+          onSecondaryTap: widget.isFollowed ? widget.onShowStatusMenu : null,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              if (widget.isFollowed) {
+                widget.onUnfollow();
+              } else {
+                widget.onFollow();
+              }
+            },
+            onLongPress: widget.isFollowed ? widget.onShowStatusMenu : null,
+            icon: Icon(icon, size: 18, color: color),
+            label: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: color,
+                fontWeight: widget.isFollowed ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              side: color != null
+                  ? BorderSide(color: color.withValues(alpha: 0.6))
+                  : null,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Style.radiusSm),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
