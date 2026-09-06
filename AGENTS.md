@@ -14,9 +14,13 @@
 - **执行透明度**：在执行任何代码修改指令前，必须在回答或计划中明确注明当前快照状态、Hash 以及对应的 `refs/snapshots/latest` / `stash@{0}`。
 - **快速回滚保障**：若后续修改出现逻辑偏差、编译错误或用户要求还原，可基于快照 Hash 或 `git stash apply/pop` 秒级精准回滚到改动前状态。
 
-## 核心规则 2：Flutter 开发与热重载规范
+## 核心规则 2：Flutter 开发、热重载与 Windows 双分支编译构建规范
 - 在修改任何 Dart / Flutter 代码后，检查应用运行状态并主动触发热重载或反馈运行状态。
-- 执行代码改动后必须运行 `dart analyze` 进行静态检查，确保零编译错误和零警告。
+- 执行代码改动后**严禁仅做 `dart analyze` 静态分析**，**必须依次完成以下三项完整验证**：
+  1. 静态检查：运行 `dart analyze`，确保零编译错误和零警告；
+  2. Windows Debug 分支编译验证：运行 `flutter build windows --debug`，确保 Debug 产物生成成功；
+  3. Windows Release 分支编译验证：运行 `flutter build windows --release`，确保 Release 产物生成成功。
+- 只有上述静态分析与 Windows 双模式构建全部通过后，方可进入代码提交与推送流程。
 
 ## 核心规则 3：改动完成后必须全量提交并推送到 GitHub (git commit & git push)
 - **后置强制要求**：每次完成代码编辑、重构或任务修复并通过静态分析后，**必须将当前工作区改动全量提交并立即推送到 GitHub 远程仓库（`origin/main`）**。
