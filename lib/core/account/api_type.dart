@@ -83,6 +83,7 @@ abstract final class ApiType {
       Api.liveFeedIndex,
       Api.liveSecondList,
       Api.liveRoomAreaList,
+      Api.liveRoomList,
       Api.liveSearch,
       Api.bgmRecommend,
       Api.dynTopicRcmd,

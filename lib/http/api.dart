@@ -807,6 +807,9 @@ abstract final class Api {
   static const String liveRoomAreaList =
       '${HttpString.liveBaseUrl}/room/v1/Area/getList';
 
+  static const String liveRoomList =
+      '${HttpString.liveBaseUrl}/room/v1/Area/getRoomList';
+
   static const String getLiveFavTag =
       '${HttpString.liveBaseUrl}/xlive/app-interface/v2/second/get_fav_tag';
 

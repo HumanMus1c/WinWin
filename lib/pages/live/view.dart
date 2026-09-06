@@ -24,7 +24,10 @@ class _LivePageState extends State<LivePage>
     with AutomaticKeepAliveClientMixin {
   LoadingState<LiveRecommendData> _state = LoadingState.loading();
   final List<LiveItemModel> _items = [];
+  int _page = 1;
+  bool _hasMore = true;
   bool _loading = false;
+  late final ScrollController _scrollController;
 
   @override
   bool get wantKeepAlive => true;
@@ -32,28 +35,72 @@ class _LivePageState extends State<LivePage>
   @override
   void initState() {
     super.initState();
-    _load();
+    _scrollController = ScrollController()..addListener(_onScroll);
+    _load(refresh: true);
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _checkAutoLoad() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_hasMore || _loading) return;
+      if (_scrollController.hasClients &&
+          _scrollController.position.hasContentDimensions) {
+        final pos = _scrollController.position;
+        if (pos.maxScrollExtent <= 0) {
+          _load(refresh: false);
+        }
+      }
+    });
+  }
+
+  Future<void> _load({required bool refresh}) async {
     if (_loading) return;
+    if (!refresh && !_hasMore) return;
     _loading = true;
-    setState(() => _state = LoadingState.loading());
+    if (refresh) {
+      _page = 1;
+      _items.clear();
+      _hasMore = true;
+      setState(() => _state = LoadingState.loading());
+    }
     await ensureBootstrap();
-    final res = await LiveHttp.liveRecommend();
+    final res = await LiveHttp.liveRecommend(page: _page);
     if (!mounted) return;
     switch (res) {
       case Success(:final response):
-        _items
-          ..clear()
-          ..addAll(response.list);
+        if (response.list.isEmpty) {
+          _hasMore = false;
+        } else {
+          _items.addAll(response.list);
+          _hasMore = response.list.length >= 20;
+          _page++;
+        }
         setState(() => _state = Success(response));
+        _checkAutoLoad();
       case Error():
         setState(() => _state = res);
       case Loading():
         break;
     }
     _loading = false;
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients ||
+        !_scrollController.position.hasContentDimensions) {
+      return;
+    }
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 240) {
+      _load(refresh: false);
+    }
   }
 
   @override
@@ -63,38 +110,59 @@ class _LivePageState extends State<LivePage>
     return Padding(
       padding: const EdgeInsets.only(top: 120),
       child: AppRefreshIndicator(
-        onRefresh: _load,
-        child: switch (_state) {
-          Loading() => const Center(child: CircularProgressIndicator()),
-          Error(:final errMsg) => _buildError(errMsg),
-          Success() => _items.isEmpty
-              ? _buildEmpty()
-              : CustomScrollView(
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        Style.safeSpace,
-                        Style.sm,
-                        Style.safeSpace,
-                        Style.xxl * 2,
-                      ),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 280,
-                          childAspectRatio: 0.85,
-                          mainAxisSpacing: Style.cardSpace,
-                          crossAxisSpacing: Style.cardSpace,
+        onRefresh: () => _load(refresh: true),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
+              _onScroll();
+            }
+            return false;
+          },
+          child: switch (_state) {
+            Loading() => const Center(child: CircularProgressIndicator()),
+            Error(:final errMsg) => _buildError(errMsg),
+            Success() => _items.isEmpty
+                ? _buildEmpty()
+                : CustomScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          Style.safeSpace,
+                          Style.sm,
+                          Style.safeSpace,
+                          Style.md,
                         ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, i) => _LiveCard(item: _items[i]),
-                          childCount: _items.length,
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 280,
+                            childAspectRatio: 0.85,
+                            mainAxisSpacing: Style.cardSpace,
+                            crossAxisSpacing: Style.cardSpace,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, i) {
+                              if (i >= _items.length - 2) {
+                                _onScroll();
+                              }
+                              return _LiveCard(item: _items[i]);
+                            },
+                            childCount: _items.length,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-        },
+                      SliverToBoxAdapter(
+                        child: _buildTrailer(),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: Style.xxl * 2),
+                      ),
+                    ],
+                  ),
+          },
+        ),
       ),
     );
   }
@@ -106,7 +174,7 @@ class _LivePageState extends State<LivePage>
             Text(msg ?? '加载失败'),
             const SizedBox(height: Style.md),
             FilledButton.tonal(
-              onPressed: _load,
+              onPressed: () => _load(refresh: true),
               child: const Text('重试'),
             ),
           ],
@@ -120,6 +188,28 @@ class _LivePageState extends State<LivePage>
           Center(child: Text('暂无直播')),
         ],
       );
+
+  Widget _buildTrailer() {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: Style.lg),
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    if (!_hasMore) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: Style.lg),
+        child: Center(child: Text('没有更多了')),
+      );
+    }
+    return const SizedBox.shrink();
+  }
 }
 
 /// 直播卡片：封面 + 标题 + 主播 + 人气 + 区域。
