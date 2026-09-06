@@ -8,6 +8,7 @@ import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
 import 'package:winwin/http/pgc.dart';
+import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/style.dart';
@@ -625,10 +626,13 @@ class _MyBangumiCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            SnackBar(
-              content: Text('$title ${indexShow ?? ""}'),
-              duration: const Duration(seconds: 1),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BangumiDetailPage(
+                seasonId: item.seasonId,
+                mediaId: item.mediaId,
+              ),
             ),
           );
         },
@@ -753,6 +757,18 @@ class _PgcCard extends StatelessWidget {
     return null;
   }
 
+  int? get _seasonId {
+    final v = item['season_id'] ?? item['seasonId'];
+    if (v is int) return v;
+    return int.tryParse(v?.toString() ?? '');
+  }
+
+  int? get _mediaId {
+    final v = item['media_id'] ?? item['mediaId'];
+    if (v is int) return v;
+    return int.tryParse(v?.toString() ?? '');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -761,12 +777,26 @@ class _PgcCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            SnackBar(
-              content: Text('番剧详情页待后续集成'),
-              duration: const Duration(seconds: 1),
-            ),
-          );
+          final sId = _seasonId;
+          final mId = _mediaId;
+          if (sId != null || mId != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BangumiDetailPage(
+                  seasonId: sId,
+                  mediaId: mId,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+              SnackBar(
+                content: Text(_title),
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          }
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

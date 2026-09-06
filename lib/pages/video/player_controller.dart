@@ -18,6 +18,7 @@ import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart' hide SubtitleItem;
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/pgc.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/play_url.dart';
@@ -40,7 +41,12 @@ import 'package:winwin/plugin/canvas_danmaku/canvas_danmaku.dart';
 /// [textureId] 拿到 id 后用 `Texture(textureId:)` 绘制，
 /// [videoSize] 用于保持视频帧宽高比（等效 BoxFit.contain）。
 class WinWinPlayerController {
-  WinWinPlayerController({required this.bvid, required this.cid}) {
+  WinWinPlayerController({
+    required this.bvid,
+    required this.cid,
+    this.epId,
+    this.seasonId,
+  }) {
     _playerCount++;
     _sharedPlayer ??= _createPlayer();
     attachListeners(); // 内部启动轮询（_startPolling）
@@ -48,6 +54,8 @@ class WinWinPlayerController {
 
   final String bvid;
   final int cid;
+  final int? epId;
+  final int? seasonId;
 
   /// 稿件 avid（由详情页 load 完成后设置，供心跳上报使用）。
   int? aid;
@@ -442,9 +450,9 @@ class WinWinPlayerController {
           cid: cid,
           playType: 3,
           progressSec: -1,
-        ).then((_) {
+        ).then((_) async {
           // 同时上报历史进度（progress = 0 表示已看完）。
-          return VideoHttp.reportHistory(aid: aid, cid: cid, progressSec: 0);
+          await VideoHttp.reportHistory(aid: aid, cid: cid, progressSec: 0);
         }),
       );
     }
@@ -592,10 +600,26 @@ class WinWinPlayerController {
       playing.value = false;
 
       // 1. PlayUrlCache：先查缓存，命中且未过期则跳过 HTTP。
+      final cacheKey = (epId != null && epId! > 0) ? 'ep_$epId' : bvid;
       PlayUrlModel? playUrl =
-          playUrlCache.get(bvid, cid, requestedQuality: qn) as PlayUrlModel?;
+          playUrlCache.get(cacheKey, cid, requestedQuality: qn) as PlayUrlModel?;
       if (playUrl == null) {
-        final result = await VideoHttp.videoUrl(bvid: bvid, cid: cid, qn: qn);
+        LoadingState<PlayUrlModel> result;
+        if (epId != null && epId! > 0) {
+          result = await PgcHttp.pgcPlayUrl(
+            cid: cid,
+            epId: epId,
+            seasonId: seasonId,
+            bvid: bvid,
+            qn: qn,
+          );
+          // 若 PGC 接口失败且有 bvid，回退到普通视频接口
+          if (result is Error && bvid.isNotEmpty) {
+            result = await VideoHttp.videoUrl(bvid: bvid, cid: cid, qn: qn);
+          }
+        } else {
+          result = await VideoHttp.videoUrl(bvid: bvid, cid: cid, qn: qn);
+        }
         if (_disposed) return;
         playUrl = result.dataOrNull;
         if (playUrl == null) {
@@ -615,7 +639,7 @@ class WinWinPlayerController {
               const [],
         )) {
           playUrlCache.put(
-            bvid,
+            cacheKey,
             cid,
             playUrl,
             quality: qn,
@@ -848,6 +872,9 @@ class WinWinPlayerController {
         ? mdk.PlaybackState.paused
         : mdk.PlaybackState.playing;
   }
+
+  /// 切换播放/暂停（对标 togglePlay 接口命名）
+  void togglePlay() => playOrPause();
 
   /// 暂停播放（不切换状态），用于页面被覆盖时保留单例资源。
   void pause() {

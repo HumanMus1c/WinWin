@@ -3,6 +3,10 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/models/bangumi/bangumi_detail.dart';
+import 'package:winwin/models/video/play_url.dart';
+import 'package:winwin/utils/utils.dart';
+import 'package:winwin/utils/wbi_sign.dart';
 
 /// 番剧 HTTP（移植自 PiliPlus `lib/http/pgc.dart`）。
 ///
@@ -288,6 +292,254 @@ abstract final class PgcHttp {
       );
     } else {
       return Error(res.data['message']?.toString() ?? '');
+    }
+  }
+
+  /// 获取番剧详情（/pgc/view/web/season）。
+  ///
+  /// 支持按 [seasonId]、[epId] 或 [mediaId] 查询，自动补充剧集分段。
+  static Future<LoadingState<BangumiDetail>> pgcInfo({
+    int? seasonId,
+    int? epId,
+    int? mediaId,
+  }) async {
+    try {
+      int? resolvedSeasonId = seasonId;
+      // 若仅传入 mediaId，先通过 pgcMediaInfo 换取 season_id
+      if ((resolvedSeasonId == null || resolvedSeasonId <= 0) &&
+          (epId == null || epId <= 0) &&
+          mediaId != null &&
+          mediaId > 0) {
+        final mediaRes = await Request().get(
+          Api.pgcMediaInfo,
+          queryParameters: {'media_id': mediaId},
+        );
+        if (mediaRes.data['code'] == 0) {
+          final rawSid = mediaRes.data['result']?['media']?['season_id'];
+          if (rawSid is int) {
+            resolvedSeasonId = rawSid;
+          } else if (rawSid is num) {
+            resolvedSeasonId = rawSid.toInt();
+          } else if (rawSid is String) {
+            resolvedSeasonId = int.tryParse(rawSid);
+          }
+        }
+      }
+
+      final queryParams = <String, dynamic>{};
+      if (resolvedSeasonId != null && resolvedSeasonId > 0) {
+        queryParams['season_id'] = resolvedSeasonId;
+      }
+      if (epId != null && epId > 0) {
+        queryParams['ep_id'] = epId;
+      }
+      if (queryParams.isEmpty && mediaId != null && mediaId > 0) {
+        queryParams['media_id'] = mediaId;
+      }
+
+      final res = await Request().get(
+        Api.pgcInfo,
+        queryParameters: queryParams,
+      );
+
+      if (res.data['code'] == 0 && res.data['result'] != null) {
+        var detail = BangumiDetail.fromJson(
+          Map<String, dynamic>.from(res.data['result'] as Map),
+        );
+
+        // 若主剧集为空，尝试通过 pgcSeasonSections 接口补充
+        if (detail.episodes.isEmpty && detail.seasonId > 0) {
+          final sectionRes = await pgcSeasonSections(detail.seasonId);
+          if (sectionRes case Success(:final response)) {
+            if (response.isNotEmpty) {
+              final firstSec = response.first;
+              detail = detail.copyWith(
+                episodes: firstSec.episodes,
+                sections: response.length > 1 ? response.sublist(1) : const [],
+              );
+            }
+          }
+        }
+
+        return Success(detail);
+      } else {
+        return Error(res.data['message']?.toString() ?? '获取番剧详情失败');
+      }
+    } catch (e, s) {
+      return Error('$e\n\n$s');
+    }
+  }
+
+  /// 获取剧集分段（/pgc/web/season/section）。
+  static Future<LoadingState<List<BangumiSection>>> pgcSeasonSections(
+    int seasonId,
+  ) async {
+    try {
+      final res = await Request().get(
+        Api.pgcSeasonSection,
+        queryParameters: {'season_id': seasonId},
+      );
+      if (res.data['code'] == 0 && res.data['result'] != null) {
+        final list = <BangumiSection>[];
+        final result = res.data['result'];
+        if (result is Map) {
+          if (result['main_section'] is Map) {
+            list.add(BangumiSection.fromJson(
+              Map<String, dynamic>.from(result['main_section'] as Map),
+            ));
+          }
+          if (result['section'] is List) {
+            for (final s in result['section'] as List) {
+              if (s is Map) {
+                list.add(BangumiSection.fromJson(
+                  Map<String, dynamic>.from(s),
+                ));
+              }
+            }
+          }
+        }
+        return Success(list);
+      }
+      return Error(res.data['message']?.toString() ?? '获取剧集分段失败');
+    } catch (e, s) {
+      return Error('$e\n\n$s');
+    }
+  }
+
+  /// 获取番剧播放流（/pgc/player/web/v2/playurl）。
+  static Future<LoadingState<PlayUrlModel>> pgcPlayUrl({
+    required int cid,
+    int? epId,
+    int? seasonId,
+    String? bvid,
+    int qn = 80,
+  }) async {
+    final dmImgStr = Utils.base64EncodeRandomString(16, 64);
+    final dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
+    final params = await WbiSign.makSign({
+      'ep_id': ?epId,
+      'season_id': ?seasonId,
+      'bvid': ?bvid,
+      'cid': cid,
+      'qn': qn,
+      'fnval': 4048,
+      'fourk': 1,
+      'fnver': 0,
+      'voice_balance': 0,
+      'gaia_source': 'pre-load',
+      'isGaiaAvoided': true,
+      'web_location': 1315873,
+      'try_look': 1,
+      'dm_img_list': '[]',
+      'dm_img_str': dmImgStr,
+      'dm_cover_img_str': dmCoverImgStr,
+      'dm_img_inter': '{"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
+    });
+
+    try {
+      final res = await Request().get(
+        Api.pgcUrl,
+        queryParameters: params,
+      );
+      if (res.data['code'] == 0) {
+        final result = res.data['result'];
+        final videoInfo = result is Map ? (result['video_info'] ?? result) : null;
+        if (videoInfo is Map) {
+          final model = PlayUrlModel.fromJson(Map<String, dynamic>.from(videoInfo));
+          return Success(model);
+        }
+      }
+      return Error(res.data['message']?.toString() ?? '获取播放地址失败');
+    } catch (e, s) {
+      return Error('$e\n\n$s');
+    }
+  }
+
+  /// 追番 (POST /pgc/web/follow/add)。
+  static Future<LoadingState<void>> followBangumi({required int seasonId}) async {
+    final res = await Request().post(
+      Api.pgcAdd,
+      data: {
+        'season_id': seasonId,
+        'csrf': Accounts.main.csrf,
+      },
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data['message']?.toString() ?? '追番失败');
+    }
+  }
+
+  /// 取消追番 (POST /pgc/web/follow/del)。
+  static Future<LoadingState<void>> unfollowBangumi({required int seasonId}) async {
+    final res = await Request().post(
+      Api.pgcDel,
+      data: {
+        'season_id': seasonId,
+        'csrf': Accounts.main.csrf,
+      },
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data['message']?.toString() ?? '取消追番失败');
+    }
+  }
+
+  /// 更新追番状态 (POST /pgc/web/follow/status/update)。
+  /// [status]: 1=想看, 2=在看, 3=看过。
+  static Future<LoadingState<void>> updateFollowStatus({
+    required int seasonId,
+    required int status,
+  }) async {
+    final res = await Request().post(
+      Api.pgcUpdate,
+      data: {
+        'season_id': seasonId,
+        'status': status,
+        'csrf': Accounts.main.csrf,
+      },
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data['message']?.toString() ?? '更新追番状态失败');
+    }
+  }
+
+  /// 查询单集社区互动状态（点赞/投币/收藏）。
+  static Future<LoadingState<Map<String, dynamic>>> pgcLikeCoinFav({
+    required int epId,
+  }) async {
+    final res = await Request().get(
+      Api.pgcLikeCoinFav,
+      queryParameters: {'ep_id': epId},
+    );
+    if (res.data['code'] == 0 && res.data['result'] is Map) {
+      return Success(Map<String, dynamic>.from(res.data['result'] as Map));
+    } else {
+      return Error(res.data['message']?.toString() ?? '查询互动状态失败');
+    }
+  }
+
+  /// 番剧一键三连 (POST /pgc/season/episode/like/triple)。
+  static Future<LoadingState<void>> pgcTriple({required int epId}) async {
+    final res = await Request().post(
+      Api.pgcTriple,
+      data: {
+        'ep_id': epId,
+        'csrf': Accounts.main.csrf,
+      },
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data['message']?.toString() ?? '一键三连失败');
     }
   }
 }

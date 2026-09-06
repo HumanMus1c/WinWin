@@ -98,6 +98,17 @@ class VideoStat {
   int? share;
   int? follow;
 
+  VideoStat({
+    this.view,
+    this.danmaku,
+    this.like,
+    this.coin,
+    this.favorite,
+    this.reply,
+    this.share,
+    this.follow,
+  });
+
   VideoStat.fromJson(Map<String, dynamic> json) {
     view = _asInt(json['view']);
     danmaku = _asInt(json['danmaku']);

@@ -10,6 +10,7 @@ import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
@@ -736,6 +737,19 @@ class _DynPgcCard extends StatelessWidget {
 
   void _handleUrl(BuildContext context, String url) {
     final result = BilibiliUrlParser.parseDeepLink(url);
+    if (result.isBangumi) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BangumiDetailPage(
+            seasonId: result.seasonId,
+            epId: result.epId,
+            mediaId: result.mediaId,
+          ),
+        ),
+      );
+      return;
+    }
     if (result.bvid != null) {
       Navigator.push(
         context,
@@ -1605,6 +1619,19 @@ class _DynCard extends StatelessWidget {
 
   void _handleJumpUrl(BuildContext context, String url) {
     final result = BilibiliUrlParser.parseDeepLink(url);
+    if (result.isBangumi) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BangumiDetailPage(
+            seasonId: result.seasonId,
+            epId: result.epId,
+            mediaId: result.mediaId,
+          ),
+        ),
+      );
+      return;
+    }
     if (result.bvid != null) {
       Navigator.push(
         context,

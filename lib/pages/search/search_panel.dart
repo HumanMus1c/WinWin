@@ -5,6 +5,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/search.dart';
 import 'package:winwin/models/search/result.dart';
 import 'package:winwin/models/search/search_type.dart';
+import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/colors.dart';
@@ -468,10 +469,13 @@ class _SearchPanelState extends State<SearchPanel>
       margin: const EdgeInsets.only(bottom: Style.sm),
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            SnackBar(
-              content: Text('番剧/影视功能暂未接入：${item.title}'),
-              duration: const Duration(seconds: 2),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BangumiDetailPage(
+                seasonId: item.seasonId,
+                mediaId: item.mediaId,
+              ),
             ),
           );
         },

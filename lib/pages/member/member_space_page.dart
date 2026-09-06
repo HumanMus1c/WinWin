@@ -17,6 +17,7 @@ import 'package:winwin/http/fav.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
 import 'package:winwin/models/fav/fav_models.dart';
+import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/member/season_series_detail_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
@@ -2559,11 +2560,13 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     return Card(
       child: InkWell(
         onTap: () {
-          final title = item.title ?? '番剧';
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            SnackBar(
-              content: Text('$title ${item.indexShow ?? ""}'),
-              duration: const Duration(seconds: 1),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BangumiDetailPage(
+                seasonId: item.seasonId,
+                mediaId: item.mediaId,
+              ),
             ),
           );
         },

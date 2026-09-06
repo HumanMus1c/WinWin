@@ -291,6 +291,8 @@ abstract final class Api {
 
   // 番剧/剧集明细
   static const String pgcInfo = '/pgc/view/web/season';
+  static const String pgcMediaInfo = '/pgc/review/user';
+  static const String pgcSeasonSection = '/pgc/web/season/section';
 
   static const String pugvInfo = '/pugv/view/web/season';
 

@@ -10,14 +10,23 @@ class BilibiliUrlParseResult {
   final String? bvid;
   final int? aid;
   final String? dynamicId;
+  final int? seasonId;
+  final int? epId;
+  final int? mediaId;
 
   const BilibiliUrlParseResult({
     this.bvid,
     this.aid,
     this.dynamicId,
+    this.seasonId,
+    this.epId,
+    this.mediaId,
   });
 
-  bool get isValid => bvid != null || aid != null || dynamicId != null;
+  bool get isBangumi => seasonId != null || epId != null || mediaId != null;
+
+  bool get isValid =>
+      bvid != null || aid != null || dynamicId != null || isBangumi;
 
   /// 返回视频标识（优先 BV，其次 AV）。
   String? get videoId {
@@ -31,7 +40,7 @@ class BilibiliUrlParseResult {
 
   @override
   String toString() =>
-      'BilibiliUrlParseResult(bvid: $bvid, aid: $aid, dynamicId: $dynamicId)';
+      'BilibiliUrlParseResult(bvid: $bvid, aid: $aid, dynamicId: $dynamicId, seasonId: $seasonId, epId: $epId, mediaId: $mediaId)';
 }
 
 abstract final class BilibiliUrlParser {
@@ -42,6 +51,12 @@ abstract final class BilibiliUrlParser {
   static final _avRegex = RegExp(r'av(\d+)', caseSensitive: false);
   static final _videoAidPathRegex =
       RegExp(r'/video/(\d+)(?:[/?#]|$)', caseSensitive: false);
+  static final _epRegex =
+      RegExp(r'(?:/bangumi/play/|/ep|^|\b)ep(\d+)', caseSensitive: false);
+  static final _ssRegex =
+      RegExp(r'(?:/bangumi/play/|/ss|^|\b)ss(\d+)', caseSensitive: false);
+  static final _mdRegex =
+      RegExp(r'(?:/bangumi/media/|/md|^|\b)md(\d+)', caseSensitive: false);
   static final _opusDynamicRegex =
       RegExp(r'/(opus|dynamic)/(\d+)', caseSensitive: false);
   static final _tBilibiliDynamicRegex =
@@ -93,6 +108,33 @@ abstract final class BilibiliUrlParser {
     final tMatch = _tBilibiliDynamicRegex.firstMatch(input);
     if (tMatch != null) {
       return BilibiliUrlParseResult(dynamicId: tMatch.group(1));
+    }
+
+    // ep 号 (番剧单集)
+    final epMatch = _epRegex.firstMatch(input);
+    if (epMatch != null) {
+      final epId = int.tryParse(epMatch.group(1)!);
+      if (epId != null) {
+        return BilibiliUrlParseResult(epId: epId);
+      }
+    }
+
+    // ss 号 (番剧季)
+    final ssMatch = _ssRegex.firstMatch(input);
+    if (ssMatch != null) {
+      final seasonId = int.tryParse(ssMatch.group(1)!);
+      if (seasonId != null) {
+        return BilibiliUrlParseResult(seasonId: seasonId);
+      }
+    }
+
+    // md 号 (番剧 media)
+    final mdMatch = _mdRegex.firstMatch(input);
+    if (mdMatch != null) {
+      final mediaId = int.tryParse(mdMatch.group(1)!);
+      if (mediaId != null) {
+        return BilibiliUrlParseResult(mediaId: mediaId);
+      }
     }
 
     return const BilibiliUrlParseResult();
@@ -203,6 +245,39 @@ abstract final class BilibiliUrlParser {
       return const BilibiliUrlParseResult();
     }
 
+    // bilibili://bangumi/season/{seasonId} 或 bilibili://pgc/...
+    if (host == 'bangumi' || host == 'pgc' || host == 'season') {
+      final seasonIdStr = uri.queryParameters['season_id'] ??
+          uri.queryParameters['seasonId'];
+      final epIdStr = uri.queryParameters['ep_id'] ??
+          uri.queryParameters['epId'];
+      final mediaIdStr = uri.queryParameters['media_id'] ??
+          uri.queryParameters['mediaId'];
+      int? seasonId = int.tryParse(seasonIdStr ?? '');
+      int? epId = int.tryParse(epIdStr ?? '');
+      int? mediaId = int.tryParse(mediaIdStr ?? '');
+
+      for (final segment in uri.pathSegments) {
+        if (segment.startsWith('ss')) {
+          seasonId ??= int.tryParse(segment.substring(2));
+        } else if (segment.startsWith('ep')) {
+          epId ??= int.tryParse(segment.substring(2));
+        } else if (segment.startsWith('md')) {
+          mediaId ??= int.tryParse(segment.substring(2));
+        } else if (int.tryParse(segment) != null) {
+          seasonId ??= int.tryParse(segment);
+        }
+      }
+
+      if (seasonId != null || epId != null || mediaId != null) {
+        return BilibiliUrlParseResult(
+          seasonId: seasonId,
+          epId: epId,
+          mediaId: mediaId,
+        );
+      }
+    }
+
     // bilibili://root 或 bilibili://main — 尝试从 query 解析
     final bvid = uri.queryParameters['bvid'];
     if (bvid != null) return BilibiliUrlParseResult(bvid: bvid);
@@ -215,6 +290,18 @@ abstract final class BilibiliUrlParser {
         }
         return BilibiliUrlParseResult(aid: aid);
       }
+    }
+    final seasonIdStr = uri.queryParameters['season_id'] ??
+        uri.queryParameters['seasonId'];
+    if (seasonIdStr != null) {
+      final sId = int.tryParse(seasonIdStr);
+      if (sId != null) return BilibiliUrlParseResult(seasonId: sId);
+    }
+    final epIdStr = uri.queryParameters['ep_id'] ??
+        uri.queryParameters['epId'];
+    if (epIdStr != null) {
+      final eId = int.tryParse(epIdStr);
+      if (eId != null) return BilibiliUrlParseResult(epId: eId);
     }
 
     return const BilibiliUrlParseResult();
