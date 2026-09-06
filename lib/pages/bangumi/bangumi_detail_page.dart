@@ -58,6 +58,21 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   bool _isFollowed = false;
   int _followStatus = 0; // 1=想看, 2=在看, 3=看过
 
+  // 滚动控制器与最后观看剧集自动定位
+  final ScrollController _leftScrollController = ScrollController();
+  final ScrollController _rightScrollController = ScrollController();
+  final ScrollController _narrowScrollController = ScrollController();
+  final GlobalKey _lastWatchedKey = GlobalKey();
+  bool _hasAutoLocated = false;
+
+  @override
+  void dispose() {
+    _leftScrollController.dispose();
+    _rightScrollController.dispose();
+    _narrowScrollController.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -65,9 +80,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
       _detail = widget.detail;
       _state = Success(widget.detail!);
       _syncUserStatus(widget.detail!.userStatus);
-      if (widget.detail!.seasonId > 0 && Accounts.main.isLogin) {
-        _fetchLiveUserStatus(widget.detail!.seasonId);
-      }
+      _locateProgressEpisode(widget.detail!);
     }
     _loadDetail();
   }
@@ -93,10 +106,12 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         setState(() {
           _detail = response;
           _state = Success(response);
-          _selectedEpisodePage = 0;
           _syncUserStatus(response.userStatus);
         });
-        if (response.seasonId > 0 && Accounts.main.isLogin) {
+        _locateProgressEpisode(response);
+
+        // 仅在 userStatus 仍为空且已登录时作为兜底查询，避免冗余网络请求风暴与频繁 setState 颠簸
+        if (response.userStatus == null && response.seasonId > 0 && Accounts.main.isLogin) {
           _fetchLiveUserStatus(response.seasonId);
         }
       case Error():
@@ -115,6 +130,46 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     }
   }
 
+  /// 依据云端观看记录自动计算对应集数所在的分页区间并触发高亮与滚动定位
+  void _locateProgressEpisode(BangumiDetail detail) {
+    if (_hasAutoLocated) return;
+    final lastEpId = detail.userStatus?.progressLastEpId;
+    if (lastEpId == null || lastEpId <= 0 || detail.episodes.isEmpty) return;
+
+    final epIdx = detail.episodes.indexWhere((e) => e.id == lastEpId);
+    if (epIdx < 0) return;
+
+    final total = detail.episodes.length;
+    final targetPage = _episodesDescending
+        ? (total - 1 - epIdx).clamp(0, total - 1) ~/ _episodesPerPage
+        : epIdx ~/ _episodesPerPage;
+
+    _hasAutoLocated = true;
+    if (_selectedEpisodePage != targetPage) {
+      setState(() {
+        _selectedEpisodePage = targetPage;
+      });
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToTargetEpisode();
+    });
+  }
+
+  /// 自动平滑滚动视口定位到最后观看的剧集卡片
+  void _scrollToTargetEpisode() {
+    if (!mounted) return;
+    final targetContext = _lastWatchedKey.currentContext;
+    if (targetContext != null) {
+      Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.25,
+      );
+    }
+  }
+
   /// 实时向 B 站查询当前登录账号对该番剧的追番与观看记录（解决 CDN 缓存缺失 user_status 问题）
   Future<void> _fetchLiveUserStatus(int seasonId) async {
     if (!Accounts.main.isLogin || seasonId <= 0) return;
@@ -124,6 +179,10 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
       final follow = response['follow'] == 1 ||
           (response['follow_status'] is num && (response['follow_status'] as num) > 0);
       final followStatus = response['follow_status'] as int? ?? (follow ? 2 : 0);
+      final progress = response['progress'] as Map?;
+      final lastEpId = progress?['last_ep_id'] as int?;
+      final lastTime = progress?['last_time'] as int?;
+
       setState(() {
         _isFollowed = follow;
         _followStatus = followStatus;
@@ -133,14 +192,15 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
               follow: follow ? 1 : 0,
               followStatus: followStatus,
               pay: response['pay'] as int? ?? _detail!.userStatus?.pay ?? 0,
-              progressLastEpId: (response['progress'] as Map?)?['last_ep_id'] as int? ??
-                  _detail!.userStatus?.progressLastEpId,
-              progressLastTime: (response['progress'] as Map?)?['last_time'] as int? ??
-                  _detail!.userStatus?.progressLastTime,
+              progressLastEpId: lastEpId ?? _detail!.userStatus?.progressLastEpId,
+              progressLastTime: lastTime ?? _detail!.userStatus?.progressLastTime,
             ),
           );
         }
       });
+      if (_detail != null) {
+        _locateProgressEpisode(_detail!);
+      }
     }
   }
 
@@ -479,19 +539,23 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         // 左栏：海报、数据、行动按钮、元信息、简介（40%）
         Expanded(
           flex: 4,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(Style.safeSpace),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeaderInfo(detail, cs),
-                const SizedBox(height: 16),
-                _buildActionButtons(detail, cs),
-                const SizedBox(height: 18),
-                _buildMetaSection(detail, cs),
-                const SizedBox(height: 18),
-                _buildEvaluateSection(detail, cs),
-              ],
+          child: Scrollbar(
+            controller: _leftScrollController,
+            child: SingleChildScrollView(
+              controller: _leftScrollController,
+              padding: const EdgeInsets.all(Style.safeSpace),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderInfo(detail, cs),
+                  const SizedBox(height: 16),
+                  _buildActionButtons(detail, cs),
+                  const SizedBox(height: 18),
+                  _buildMetaSection(detail, cs),
+                  const SizedBox(height: 18),
+                  _buildEvaluateSection(detail, cs),
+                ],
+              ),
             ),
           ),
         ),
@@ -501,23 +565,42 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           thickness: 1,
           color: cs.outlineVariant.withValues(alpha: 0.3),
         ),
-        // 右栏：多季切换、选集网格、花絮特典（60%）
+        // 右栏：多季切换、选集网格、花絮特典（60%）- 采用 CustomScrollView 虚拟化高性能渲染
         Expanded(
           flex: 6,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(Style.safeSpace),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (detail.seasons.length > 1) ...[
-                  _buildSeasonSelector(detail, cs),
-                  const SizedBox(height: 18),
-                ],
-                _buildEpisodesSection(detail, cs),
-                if (detail.sections.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  _buildExtraSections(detail, cs),
-                ],
+          child: Scrollbar(
+            controller: _rightScrollController,
+            child: CustomScrollView(
+              controller: _rightScrollController,
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.all(Style.safeSpace),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (detail.seasons.length > 1) ...[
+                          _buildSeasonSelector(detail, cs),
+                          const SizedBox(height: 18),
+                        ],
+                        _buildEpisodeControlHeader(detail, cs),
+                      ],
+                    ),
+                  ),
+                ),
+                ..._buildEpisodeGridSlivers(detail, cs),
+                if (detail.sections.isNotEmpty)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Style.safeSpace,
+                      12,
+                      Style.safeSpace,
+                      Style.safeSpace,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: _buildExtraSections(detail, cs),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -529,28 +612,53 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   // ─────────────────────────── 窄屏单列布局 ───────────────────────────
 
   Widget _buildNarrowLayout(BangumiDetail detail, ColorScheme cs) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(Style.safeSpace),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeaderInfo(detail, cs),
-          const SizedBox(height: 16),
-          _buildActionButtons(detail, cs),
-          const SizedBox(height: 16),
-          if (detail.seasons.length > 1) ...[
-            _buildSeasonSelector(detail, cs),
-            const SizedBox(height: 16),
-          ],
-          _buildEpisodesSection(detail, cs),
-          const SizedBox(height: 18),
-          _buildMetaSection(detail, cs),
-          const SizedBox(height: 18),
-          _buildEvaluateSection(detail, cs),
-          if (detail.sections.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            _buildExtraSections(detail, cs),
-          ],
+    return Scrollbar(
+      controller: _narrowScrollController,
+      child: CustomScrollView(
+        controller: _narrowScrollController,
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(Style.safeSpace),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderInfo(detail, cs),
+                  const SizedBox(height: 16),
+                  _buildActionButtons(detail, cs),
+                  const SizedBox(height: 16),
+                  if (detail.seasons.length > 1) ...[
+                    _buildSeasonSelector(detail, cs),
+                    const SizedBox(height: 16),
+                  ],
+                  _buildEpisodeControlHeader(detail, cs),
+                ],
+              ),
+            ),
+          ),
+          ..._buildEpisodeGridSlivers(detail, cs),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              Style.safeSpace,
+              12,
+              Style.safeSpace,
+              Style.safeSpace,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildMetaSection(detail, cs),
+                  const SizedBox(height: 18),
+                  _buildEvaluateSection(detail, cs),
+                  if (detail.sections.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildExtraSections(detail, cs),
+                  ],
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -862,37 +970,11 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     );
   }
 
-  /// 选集控制台（正倒序、50集翻页、快速跳转、选集网格）
-  Widget _buildEpisodesSection(BangumiDetail detail, ColorScheme cs) {
+  /// 选集控制栏（选集标题、正倒序、快速跳转、分页ChoiceChip选择器）
+  Widget _buildEpisodeControlHeader(BangumiDetail detail, ColorScheme cs) {
     final all = detail.episodes;
-    if (all.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text('暂无剧集数据', style: TextStyle(color: cs.outline)),
-        ),
-      );
-    }
-
     final totalCount = all.length;
     final pageCount = (totalCount / _episodesPerPage).ceil();
-
-    if (_selectedEpisodePage >= pageCount) {
-      _selectedEpisodePage = 0;
-    }
-
-    // 根据正倒序计算当前分页的剧集列表
-    final List<BangumiEpisode> displayed;
-    if (!_episodesDescending) {
-      final startIdx = _selectedEpisodePage * _episodesPerPage;
-      final endIdx = (startIdx + _episodesPerPage).clamp(0, totalCount);
-      displayed = all.sublist(startIdx, endIdx);
-    } else {
-      final high = totalCount - _selectedEpisodePage * _episodesPerPage;
-      final low = (totalCount - (_selectedEpisodePage + 1) * _episodesPerPage + 1)
-          .clamp(1, totalCount);
-      displayed = all.sublist(low - 1, high).reversed.toList();
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -912,7 +994,24 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                   onPressed: () {
                     setState(() {
                       _episodesDescending = !_episodesDescending;
-                      _selectedEpisodePage = 0;
+                      // 保持观看进度所在的分页
+                      final lastEpId = detail.userStatus?.progressLastEpId;
+                      if (lastEpId != null && lastEpId > 0) {
+                        final epIdx = detail.episodes.indexWhere((e) => e.id == lastEpId);
+                        if (epIdx >= 0) {
+                          final total = detail.episodes.length;
+                          _selectedEpisodePage = _episodesDescending
+                              ? (total - 1 - epIdx).clamp(0, total - 1) ~/ _episodesPerPage
+                              : epIdx ~/ _episodesPerPage;
+                        } else {
+                          _selectedEpisodePage = 0;
+                        }
+                      } else {
+                        _selectedEpisodePage = 0;
+                      }
+                    });
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scrollToTargetEpisode();
                     });
                   },
                   icon: Icon(
@@ -965,7 +1064,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                     label: Text(chipLabel),
                     selected: isSelected,
                     onSelected: (val) {
-                      if (val) setState(() => _selectedEpisodePage = p);
+                      if (val) {
+                        setState(() => _selectedEpisodePage = p);
+                      }
                     },
                   ),
                 );
@@ -973,160 +1074,253 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
             ),
           ),
         ],
-        const SizedBox(height: 12),
-        // 选集卡片网格
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final cardWidth = constraints.maxWidth > 500 ? 170.0 : 140.0;
-            return Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: displayed.map((ep) {
-                return _buildEpisodeCard(detail, ep, cardWidth, cs);
-              }).toList(),
-            );
-          },
-        ),
       ],
     );
   }
 
-  /// 单个选集卡片（16:9，封面、集数、标题、时长、角标）
+  /// 虚拟化剧集网格 Sliver 构建器（仅在视口内的卡片才实例化与解码图片，杜绝主线程卡死）
+  List<Widget> _buildEpisodeGridSlivers(BangumiDetail detail, ColorScheme cs) {
+    final all = detail.episodes;
+    if (all.isEmpty) {
+      return [
+        SliverToBoxAdapter(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('暂无剧集数据', style: TextStyle(color: cs.outline)),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    final totalCount = all.length;
+    final pageCount = (totalCount / _episodesPerPage).ceil();
+
+    if (_selectedEpisodePage >= pageCount) {
+      _selectedEpisodePage = 0;
+    }
+
+    // 根据正倒序计算当前分页的剧集列表
+    final List<BangumiEpisode> displayed;
+    if (!_episodesDescending) {
+      final startIdx = _selectedEpisodePage * _episodesPerPage;
+      final endIdx = (startIdx + _episodesPerPage).clamp(0, totalCount);
+      displayed = all.sublist(startIdx, endIdx);
+    } else {
+      final high = totalCount - _selectedEpisodePage * _episodesPerPage;
+      final low = (totalCount - (_selectedEpisodePage + 1) * _episodesPerPage + 1)
+          .clamp(1, totalCount);
+      displayed = all.sublist(low - 1, high).reversed.toList();
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 180,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 1.22,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final ep = displayed[index];
+              return _buildEpisodeCard(detail, ep, cs);
+            },
+            childCount: displayed.length,
+          ),
+        ),
+      ),
+    ];
+  }
+
+  /// 单个选集卡片（16:9，封面、集数、标题、时长、气泡角标根据标题字号自适应尺寸）
   Widget _buildEpisodeCard(
     BangumiDetail detail,
     BangumiEpisode ep,
-    double width,
-    ColorScheme cs,
-  ) {
-    final height = width * 9 / 16;
+    ColorScheme cs, {
+    double? customWidth,
+  }) {
     final isLastWatched = detail.userStatus?.progressLastEpId == ep.id;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(Style.radiusSm),
-      onTap: () => _openPlayer(detail, ep),
-      child: Container(
-        width: width,
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = customWidth ?? constraints.maxWidth;
+        final height = width * 9 / 16;
+
+        // 根据卡片尺寸自适应标题字号，气泡角标严格依据标题字号自适应缩放尺寸
+        final titleFontSize = (width * 0.075).clamp(10.5, 13.0);
+        final badgeFontSize = (titleFontSize * 0.76).clamp(8.0, 10.5);
+        final horizontalPadding = (titleFontSize * 0.42).clamp(3.5, 6.5);
+        final verticalPadding = (titleFontSize * 0.14).clamp(1.2, 3.0);
+        final badgeRadius = (titleFontSize * 0.28).clamp(2.5, 5.0);
+        final badgeOffset = (titleFontSize * 0.32).clamp(3.0, 5.0);
+
+        return InkWell(
+          key: isLastWatched ? _lastWatchedKey : null,
           borderRadius: BorderRadius.circular(Style.radiusSm),
-          border: isLastWatched
-              ? Border.all(color: cs.primary, width: 1.5)
-              : Border.all(color: cs.outlineVariant.withValues(alpha: 0.2)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 封面区
-            SizedBox(
-              width: width,
-              height: height,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetworkImgLayer(
-                    src: ep.cover ?? detail.cover,
-                    width: width,
-                    height: height,
-                  ),
-                  // 渐变黑底
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: 24,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black87],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // 时长
-                  if (ep.duration != null && ep.duration! > 0)
-                    Positioned(
-                      right: 4,
-                      bottom: 3,
-                      child: Text(
-                        ep.formattedDuration,
-                        style: const TextStyle(fontSize: 9.5, color: Colors.white),
-                      ),
-                    ),
-                  // 状态角标（会员、预告）
-                  if (ep.badge?.isNotEmpty == true)
-                    Positioned(
-                      right: 3,
-                      top: 3,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: ep.badge!.contains('会员') ? Colors.orange : Colors.pink,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: Text(
-                          ep.badge!,
-                          style: const TextStyle(
-                            fontSize: 8.5,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  // 上次观看标记
-                  if (isLastWatched)
-                    Positioned(
-                      left: 3,
-                      top: 3,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: cs.primary,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: const Text(
-                          '上次看到',
-                          style: TextStyle(
-                            fontSize: 8,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+          onTap: () => _openPlayer(detail, ep),
+          child: Container(
+            width: customWidth,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(Style.radiusSm),
+              border: isLastWatched
+                  ? Border.all(color: cs.primary, width: 1.5)
+                  : Border.all(color: cs.outlineVariant.withValues(alpha: 0.2)),
             ),
-            // 文字信息区
-            Padding(
-              padding: const EdgeInsets.all(6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 16:9 封面区
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      NetworkImgLayer(
+                        src: ep.cover ?? detail.cover,
+                        width: width,
+                        height: height,
+                      ),
+                      // 底部渐变黑底
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 24,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Colors.transparent, Colors.black87],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // 时长（右下角）
+                      if (ep.duration != null && ep.duration! > 0)
+                        Positioned(
+                          right: badgeOffset,
+                          bottom: badgeOffset * 0.8,
+                          child: Text(
+                            ep.formattedDuration,
+                            style: TextStyle(
+                              fontSize: badgeFontSize * 0.95,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      // 状态角标（会员、预告、限免，右上角，自适应气泡尺寸）
+                      if (ep.badge?.isNotEmpty == true)
+                        Positioned(
+                          right: badgeOffset,
+                          top: badgeOffset,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: horizontalPadding,
+                              vertical: verticalPadding,
+                            ),
+                            decoration: BoxDecoration(
+                              color: ep.badge!.contains('会员')
+                                  ? Colors.orange.shade800
+                                  : Colors.pink.shade600,
+                              borderRadius: BorderRadius.circular(badgeRadius),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              ep.badge!,
+                              style: TextStyle(
+                                fontSize: badgeFontSize,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                height: 1.1,
+                              ),
+                            ),
+                          ),
+                        ),
+                      // 上次观看标记（左上角，自适应气泡尺寸与图标大小）
+                      if (isLastWatched)
+                        Positioned(
+                          left: badgeOffset,
+                          top: badgeOffset,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: horizontalPadding,
+                              vertical: verticalPadding,
+                            ),
+                            decoration: BoxDecoration(
+                              color: cs.primary,
+                              borderRadius: BorderRadius.circular(badgeRadius),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.35),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.history_rounded,
+                                  size: badgeFontSize * 1.15,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: titleFontSize * 0.15),
+                                Text(
+                                  '上次看到',
+                                  style: TextStyle(
+                                    fontSize: badgeFontSize,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // 标题文本区
+                Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Text(
                     ep.displayTitle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: titleFontSize,
                       fontWeight: isLastWatched ? FontWeight.bold : FontWeight.normal,
                       color: isLastWatched ? cs.primary : cs.onSurface,
                       height: 1.25,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  /// 衍生内容分区（花絮、PV、预告）
+  /// 衍生内容分区（花絮、PV、预告，横向虚拟化加载）
   Widget _buildExtraSections(BangumiDetail detail, ColorScheme cs) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1143,15 +1337,19 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: sec.episodes.map((ep) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 10),
-                      child: _buildEpisodeCard(detail, ep, 150, cs),
+              SizedBox(
+                height: 155,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: sec.episodes.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 10),
+                  itemBuilder: (context, index) {
+                    final ep = sec.episodes[index];
+                    return SizedBox(
+                      width: 150,
+                      child: _buildEpisodeCard(detail, ep, cs, customWidth: 150),
                     );
-                  }).toList(),
+                  },
                 ),
               ),
             ],
