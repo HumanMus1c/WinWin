@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -16,6 +17,7 @@ import 'package:winwin/models/bangumi/bangumi_detail.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
 import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
+import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/coin_dialog.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
 import 'package:winwin/pages/video/detail_page.dart' show kDetailNarrowBreakpoint;
@@ -23,6 +25,7 @@ import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_panel.dart';
 import 'package:winwin/pages/video/send_danmaku_panel.dart';
 import 'package:winwin/pages/video/video_action_row.dart';
+import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -378,32 +381,172 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     setState(() {});
   }
 
-  Future<void> _loadSubReplies(int rootRpid) async {
-    final oid = _currentEpisode.aid;
-    if (oid == null || oid <= 0) return;
-    if (_subLoading[rootRpid] == true) return;
-    _subLoading[rootRpid] = true;
-    setState(() {});
-
-    final res = await VideoHttp.replyReplyList(
-      oid: oid,
-      root: rootRpid,
-      nextOffset: _subNextOffset[rootRpid],
+  void _gotoMemberSpace(int? mid) {
+    if (mid == null || mid <= 0) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => MemberSpacePage(mid: mid)),
     );
+  }
 
+  Future<void> _toggleLikeReply(ReplyItemModel reply) async {
+    final aid = _currentEpisode.aid;
+    final rpid = reply.rpid;
+    if (aid == null || aid <= 0 || rpid == null) return;
+    if (!await LoginGuard.requireLogin(context)) return;
     if (!mounted) return;
-    if (res case Success(:final response)) {
-      final list = response.replies;
-      final current = _subReplies[rootRpid] ?? [];
-      current.addAll(list);
-      _subReplies[rootRpid] = current;
-      _subNextOffset[rootRpid] = response.cursor?.nextOffset;
-      if (response.cursor?.isEnd == true || list.isEmpty) {
-        _subEnd[rootRpid] = true;
+
+    final wasLiked = reply.isLiked;
+    // 乐观更新
+    setState(() {
+      final idx = _replies.indexWhere((r) => r.rpid == rpid);
+      if (idx >= 0) {
+        final r = _replies[idx];
+        _replies[idx] = r.copyWith(
+          like: (r.like ?? 0) + (wasLiked ? -1 : 1),
+          action: wasLiked ? 0 : 1,
+        );
       }
+    });
+
+    final res = await VideoHttp.likeReply(
+      oid: aid,
+      rpid: rpid,
+      action: wasLiked ? 0 : 1,
+    );
+    if (!mounted) return;
+    if (res case Error(:final errMsg)) {
+      setState(() {
+        final idx = _replies.indexWhere((r) => r.rpid == rpid);
+        if (idx >= 0) {
+          final r = _replies[idx];
+          _replies[idx] = r.copyWith(
+            like: (r.like ?? 0) + (wasLiked ? 1 : -1),
+            action: wasLiked ? 1 : 0,
+          );
+        }
+      });
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(errMsg ?? '操作失败')),
+      );
     }
-    _subLoading[rootRpid] = false;
-    setState(() {});
+  }
+
+  Future<void> _toggleLikeSubReply(ReplyItemModel sub) async {
+    final aid = _currentEpisode.aid;
+    final rpid = sub.rpid;
+    if (aid == null || aid <= 0 || rpid == null) return;
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+
+    final wasLiked = sub.isLiked;
+    setState(() {
+      for (final entry in _subReplies.entries) {
+        final idx = entry.value.indexWhere((r) => r.rpid == rpid);
+        if (idx >= 0) {
+          final r = entry.value[idx];
+          entry.value[idx] = r.copyWith(
+            like: (r.like ?? 0) + (wasLiked ? -1 : 1),
+            action: wasLiked ? 0 : 1,
+          );
+          break;
+        }
+      }
+    });
+
+    final res = await VideoHttp.likeReply(
+      oid: aid,
+      rpid: rpid,
+      action: wasLiked ? 0 : 1,
+    );
+    if (!mounted) return;
+    if (res case Error(:final errMsg)) {
+      setState(() {
+        for (final entry in _subReplies.entries) {
+          final idx = entry.value.indexWhere((r) => r.rpid == rpid);
+          if (idx >= 0) {
+            final r = entry.value[idx];
+            entry.value[idx] = r.copyWith(
+              like: (r.like ?? 0) + (wasLiked ? 1 : -1),
+              action: wasLiked ? 1 : 0,
+            );
+            break;
+          }
+        }
+      });
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(errMsg ?? '操作失败')),
+      );
+    }
+  }
+
+  Future<void> _toggleSubReplies(ReplyItemModel reply) async {
+    final rpid = reply.rpid;
+    if (rpid == null) return;
+    if (_subReplies.containsKey(rpid)) {
+      setState(() {
+        _subReplies.remove(rpid);
+        _subNextOffset.remove(rpid);
+        _subEnd.remove(rpid);
+        _subLoading.remove(rpid);
+      });
+      return;
+    }
+    setState(() {
+      _subReplies[rpid] = <ReplyItemModel>[];
+      _subLoading[rpid] = true;
+    });
+    await _loadSubReplies(reply);
+  }
+
+  Future<void> _loadSubReplies(ReplyItemModel reply) async {
+    final aid = _currentEpisode.aid;
+    final rpid = reply.rpid;
+    if (aid == null || aid <= 0 || rpid == null) return;
+    final res = await VideoHttp.replyReplyList(
+      oid: aid,
+      root: rpid,
+      nextOffset: _subNextOffset[rpid],
+    );
+    if (!mounted) return;
+    switch (res) {
+      case Success(:final response):
+        _subNextOffset[rpid] = response.cursor?.nextOffset;
+        _subEnd[rpid] = response.cursor?.isEnd ?? response.replies.isEmpty;
+        _subLoading[rpid] = false;
+        setState(() {
+          _subReplies[rpid]?.addAll(response.replies);
+          if (!_subReplies.containsKey(rpid)) {
+            _subReplies[rpid] = response.replies;
+          }
+        });
+      case Error():
+        _subLoading[rpid] = false;
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(content: Text('加载回复失败')),
+        );
+      case Loading():
+        break;
+    }
+  }
+
+  void _setReplyTarget(ReplyItemModel reply, {String? targetName}) async {
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+    final name = targetName ?? reply.member?.uname ?? '';
+    setState(() {
+      _replyRoot = reply.rpid;
+      _replyHint = name.isNotEmpty ? '回复 @$name' : null;
+    });
+    _commentCtrl.clear();
+  }
+
+  void _clearReplyTarget() {
+    setState(() {
+      _replyRoot = null;
+      _replyHint = null;
+    });
+    _commentCtrl.clear();
   }
 
   Future<void> _sendComment() async {
@@ -553,51 +696,63 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
+  Widget _buildPlayerContent() {
+    return Container(
+      color: Colors.black,
+      child: playerController != null
+          ? PlayerPanel(
+              controller: playerController!,
+              cover: _currentEpisode.cover ?? widget.detail.cover,
+              fullscreen: false,
+              onToggleFullscreen: _toggleFullscreen,
+            )
+          : const Center(child: CircularProgressIndicator()),
+    );
+  }
+
   /// 桌面宽屏双栏布局（左 7: 播放器+互动+简介，右 3: 选集/评论 Tab）
   Widget _buildWideLayout(ColorScheme cs) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 左栏：播放器核心 + 视频下方交互控件与番剧简介
+        // 左栏：播放器核心 + 视频下方交互控件与番剧简介（支持向上滚动挤压缩放）
         Expanded(
           flex: 7,
-          child: Column(
-            children: [
-              // 播放器视口
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Container(
-                  color: Colors.black,
-                  child: playerController != null
-                      ? PlayerPanel(
-                          controller: playerController!,
-                          cover: _currentEpisode.cover ?? widget.detail.cover,
-                          fullscreen: false,
-                          onToggleFullscreen: _toggleFullscreen,
-                        )
-                      : const Center(child: CircularProgressIndicator()),
-                ),
-              ),
-              // 弹幕发送栏（宽度与视频一致）
-              if (playerController != null)
-                SendDanmakuPanel(controller: playerController!, inline: true),
-              // 视频下方交互控件与简介区
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(Style.safeSpace),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildInfoSection(cs),
-                      _buildDescSection(cs),
-                      _buildTagsSection(cs),
-                      const SizedBox(height: 32),
-                    ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxExtent = constraints.maxWidth * 9 / 16;
+              final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
+              return CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  VideoHeader(
+                    maxExtent: maxExtent,
+                    minExtent: minExtent,
+                    child: _buildPlayerContent(),
                   ),
-                ),
-              ),
-            ],
+                  // 弹幕发送栏（宽度与视频一致）
+                  if (playerController != null)
+                    SliverToBoxAdapter(
+                      child: SendDanmakuPanel(
+                        controller: playerController!,
+                        inline: true,
+                      ),
+                    ),
+                  // 视频下方交互控件与简介区
+                  SliverPadding(
+                    padding: const EdgeInsets.all(Style.safeSpace),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _buildInfoSection(cs),
+                        _buildDescSection(cs),
+                        _buildTagsSection(cs),
+                        const SizedBox(height: 32),
+                      ]),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
         // 分割线
@@ -630,36 +785,42 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
-  /// 窄屏单列布局（视频 + 弹幕 + 选集/简介/评论 Tab）
+  /// 窄屏单列布局（视频 + 弹幕 + 选集/简介/评论 Tab，支持滚动挤压缩放）
   Widget _buildNarrowLayout(ColorScheme cs) {
-    return Column(
-      children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Container(
-            color: Colors.black,
-            child: playerController != null
-                ? PlayerPanel(
-                    controller: playerController!,
-                    cover: _currentEpisode.cover ?? widget.detail.cover,
-                    fullscreen: false,
-                    onToggleFullscreen: _toggleFullscreen,
-                  )
-                : const Center(child: CircularProgressIndicator()),
-          ),
-        ),
-        if (playerController != null)
-          SendDanmakuPanel(controller: playerController!, inline: true),
-        TabBar(
-          controller: _narrowTabCtrl,
-          tabs: [
-            Tab(text: '选集 (${_episodes.length})'),
-            const Tab(text: '简介与互动'),
-            Tab(text: '评论 (${_replies.length})'),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxExtent = constraints.maxWidth * 9 / 16;
+        final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
+        return NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            VideoHeader(
+              maxExtent: maxExtent,
+              minExtent: minExtent,
+              child: _buildPlayerContent(),
+            ),
+            if (playerController != null)
+              SliverToBoxAdapter(
+                child: SendDanmakuPanel(
+                  controller: playerController!,
+                  inline: true,
+                ),
+              ),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SliverTabBarDelegate(
+                TabBar(
+                  controller: _narrowTabCtrl,
+                  tabs: [
+                    Tab(text: '选集 (${_episodes.length})'),
+                    const Tab(text: '简介与互动'),
+                    Tab(text: '评论 (${_replies.length})'),
+                  ],
+                ),
+                color: Theme.of(context).scaffoldBackgroundColor,
+              ),
+            ),
           ],
-        ),
-        Expanded(
-          child: TabBarView(
+          body: TabBarView(
             controller: _narrowTabCtrl,
             children: [
               _buildEpisodesSidebar(cs),
@@ -678,8 +839,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               _buildCommentsSidebar(cs),
             ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -826,250 +987,627 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   // ─────────────────────────── 评论 Sidebar ───────────────────────────
 
+  // ─────────────────────────── 评论区（共享普通视频稿件样式） ───────────────────────────
+
   Widget _buildCommentsSidebar(ColorScheme cs) {
     return Column(
       children: [
-        // 排序栏
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '全部回复 (${_replies.length})',
-                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
-              ),
-              Row(
-                children: [
-                  _buildSortBtn('最热', 3, cs),
-                  const SizedBox(width: 8),
-                  _buildSortBtn('最新', 2, cs),
-                ],
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(Style.sm, Style.xs, Style.sm, 0),
+          child: _buildCommentSortRow(cs),
+        ),
+        Expanded(child: _buildReplyListView(cs)),
+        _buildCommentInputBar(cs),
+      ],
+    );
+  }
+
+  /// 评论排序行（对标普通视频稿件 CommentSortHeader）
+  Widget _buildCommentSortRow(ColorScheme cs) {
+    final theme = Theme.of(context);
+    Widget sortBtn(String label, int mode) {
+      final selected = _replyMode == mode;
+      return TextButton(
+        onPressed: () {
+          if (_replyMode != mode) {
+            setState(() => _replyMode = mode);
+            _loadReplies(refresh: true);
+          }
+        },
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+            color: selected
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        // 评论列表
-        Expanded(
-          child: _replies.isEmpty && _loadingReplies
-              ? const Center(child: CircularProgressIndicator())
-              : _replies.isEmpty
-                  ? Center(
-                      child: Text(
-                        _replyFailed ? '加载评论失败' : '暂无评论',
-                        style: TextStyle(color: cs.outline),
-                      ),
-                    )
-                  : NotificationListener<ScrollNotification>(
-                      onNotification: (n) {
-                        if (n.metrics.pixels >= n.metrics.maxScrollExtent - 200) {
-                          _loadReplies(refresh: false);
-                        }
-                        return false;
-                      },
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        itemCount: _replies.length + 1,
-                        itemBuilder: (context, i) {
-                          if (i == _replies.length) {
-                            return Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Center(
-                                child: Text(
-                                  _replyEnd ? '没有更多评论了' : '加载中...',
-                                  style: TextStyle(fontSize: 11, color: cs.outline),
-                                ),
-                              ),
-                            );
-                          }
-                          final r = _replies[i];
-                          return _buildCommentItem(r, cs);
-                        },
-                      ),
-                    ),
-        ),
-        // 评论输入栏
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
-            border: Border(top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3))),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _commentCtrl,
-                  style: const TextStyle(fontSize: 12.5),
-                  decoration: InputDecoration(
-                    hintText: _replyHint ?? '发一条友善的评论...',
-                    hintStyle: TextStyle(fontSize: 12, color: cs.outline),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide(color: cs.outlineVariant),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: _sendingComment ? null : _sendComment,
-                style: FilledButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                ),
-                child: _sendingComment
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('发送', style: TextStyle(fontSize: 12)),
-              ),
-            ],
+      );
+    }
+
+    return Row(
+      children: [
+        sortBtn('最热', 3),
+        sortBtn('最新', 2),
+        const Spacer(),
+        Text(
+          '共 ${_replies.length} 条',
+          style: TextStyle(
+            fontSize: 12,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSortBtn(String label, int mode, ColorScheme cs) {
-    final active = _replyMode == mode;
-    return InkWell(
-      onTap: () {
-        if (_replyMode != mode) {
-          setState(() => _replyMode = mode);
-          _loadReplies(refresh: true);
-        }
-      },
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11.5,
-          fontWeight: active ? FontWeight.bold : FontWeight.normal,
-          color: active ? cs.primary : cs.outline,
-        ),
+  void _maybeLoadMoreReplies() {
+    if (_loadingReplies || _replyEnd || _replyFailed) return;
+    _loadReplies(refresh: false);
+  }
+
+  void _retryReplies() {
+    setState(() {
+      _replyFailed = false;
+    });
+    _loadReplies(refresh: true);
+  }
+
+  /// 评论列表（使用普通视频稿件设计）
+  Widget _buildReplyListView(ColorScheme cs) {
+    if (_replies.isEmpty && _loadingReplies) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(
+        Style.cardSpace,
+        Style.xs,
+        Style.safeSpace,
+        Style.md,
       ),
+      itemCount: _replies.length + 1,
+      itemBuilder: (context, index) {
+        if (index == _replies.length) return _buildReplyTrailer(cs);
+        if (index == _replies.length - 1) _maybeLoadMoreReplies();
+        return _buildReplyTile(_replies[index]);
+      },
     );
   }
 
-  Widget _buildCommentItem(ReplyItemModel r, ColorScheme cs) {
-    final member = r.member;
-    final rpid = r.rpid ?? 0;
-    final subs = _subReplies[rpid];
-    final subCount = r.rcount ?? 0;
+  /// 普通视频稿件同款评论卡片
+  Widget _buildReplyTile(ReplyItemModel reply) {
+    final theme = Theme.of(context);
+    final member = reply.member;
+    final grayStyle = TextStyle(
+      fontSize: 12,
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final rpid = reply.rpid;
+    final subReplies = rpid != null ? _subReplies[rpid] : null;
+    final subLoading = rpid != null && (_subLoading[rpid] ?? false);
+    final subEnd = rpid != null && (_subEnd[rpid] ?? false);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
+    return _card(
+      margin: const EdgeInsets.only(top: Style.sm),
+      padding: const EdgeInsets.all(Style.md),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipOval(
-            child: NetworkImgLayer(
-              src: member?.avatar,
-              width: 32,
-              height: 32,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      member?.uname ?? '',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: member?.level != null && member!.level! >= 6
-                            ? Colors.pink
-                            : cs.onSurface,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      _formatDate(r.ctime),
-                      style: TextStyle(fontSize: 10, color: cs.outline),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                SelectableText(
-                  r.content?.message ?? '',
-                  style: const TextStyle(fontSize: 12.5, height: 1.4),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        setState(() {
-                          _replyRoot = rpid;
-                          _replyHint = '回复 @${member?.uname}:';
-                        });
-                      },
-                      child: Text('回复', style: TextStyle(fontSize: 11, color: cs.primary)),
-                    ),
-                    const SizedBox(width: 16),
-                    Text('👍 ${NumUtils.formatNum(r.like)}', style: TextStyle(fontSize: 11, color: cs.outline)),
-                  ],
-                ),
-                // 楼中楼
-                if (subCount > 0 && subs == null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: InkWell(
-                      onTap: () => _loadSubReplies(rpid),
-                      child: Text(
-                        '查看 $subCount 条回复 >',
-                        style: TextStyle(fontSize: 11, color: cs.primary),
-                      ),
-                    ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 评论用户头像（点击跳转空间）
+              GestureDetector(
+                onTap: () => _gotoMemberSpace(reply.mid ?? member?.mid),
+                child: ClipOval(
+                  child: NetworkImgLayer(
+                    src: member?.avatar,
+                    width: 38,
+                    height: 38,
+                    type: 'avatar',
                   ),
-                if (subs != null && subs.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(top: 6),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ),
+              const SizedBox(width: Style.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        ...subs.map((sub) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 3),
-                              child: RichText(
-                                text: TextSpan(
-                                  style: TextStyle(fontSize: 11.5, color: cs.onSurface, height: 1.3),
-                                  children: [
-                                    TextSpan(
-                                      text: '${sub.member?.uname}: ',
-                                      style: TextStyle(fontWeight: FontWeight.w600, color: cs.primary),
-                                    ),
-                                    TextSpan(text: sub.content?.message ?? ''),
-                                  ],
+                        Flexible(
+                          child: GestureDetector(
+                            onTap: () =>
+                                _gotoMemberSpace(reply.mid ?? member?.mid),
+                            child: Text(
+                              member?.uname ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: (member?.level != null &&
+                                        member!.level! >= 6)
+                                    ? biliPink
+                                    : theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (member?.level case final lvl? when lvl > 0)
+                          Container(
+                            margin: const EdgeInsets.only(left: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              'LV$lvl',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurfaceVariant,
+                                height: 1.1,
+                              ),
+                            ),
+                          ),
+                        const Spacer(),
+                        Text(_formatDate(reply.ctime), style: grayStyle),
+                      ],
+                    ),
+                    const SizedBox(height: Style.xs),
+                    Text(
+                      reply.content?.message ?? '',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 14.5,
+                        height: 1.55,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: Style.sm),
+                    // 操作行：点赞 + 回复 + 展开折叠
+                    Row(
+                      spacing: Style.lg,
+                      children: [
+                        GestureDetector(
+                          onTap: () => _toggleLikeReply(reply),
+                          child: Row(
+                            spacing: 4,
+                            children: [
+                              Icon(
+                                reply.isLiked
+                                    ? Icons.thumb_up
+                                    : Icons.thumb_up_outlined,
+                                size: 15,
+                                color: reply.isLiked
+                                    ? biliPink
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                              Text(
+                                NumUtils.formatNum(reply.like),
+                                style: grayStyle.copyWith(
+                                  fontSize: 12,
+                                  color: reply.isLiked
+                                      ? biliPink
+                                      : theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                            )),
-                        if (_subEnd[rpid] != true)
-                          InkWell(
-                            onTap: () => _loadSubReplies(rpid),
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                _subLoading[rpid] == true ? '加载中...' : '加载更多回复...',
-                                style: TextStyle(fontSize: 11, color: cs.primary),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _setReplyTarget(reply),
+                          child: Row(
+                            spacing: 3,
+                            children: [
+                              Icon(
+                                Icons.reply,
+                                size: 15,
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
+                              Text(
+                                '回复',
+                                style: grayStyle.copyWith(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if ((reply.rcount ?? 0) > 0)
+                          GestureDetector(
+                            onTap: () => _toggleSubReplies(reply),
+                            child: Row(
+                              spacing: 2,
+                              children: [
+                                Text(
+                                  subReplies != null
+                                      ? '收起 ${reply.rcount}条回复'
+                                      : '展开 ${reply.rcount}条回复',
+                                  style: grayStyle.copyWith(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Icon(
+                                  subReplies != null
+                                      ? Icons.expand_less
+                                      : Icons.expand_more,
+                                  size: 15,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ],
                             ),
                           ),
                       ],
                     ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // 楼中楼回复列表（独立背景圆角容器包覆）
+          if (subReplies != null && subReplies.isNotEmpty) ...[
+            const SizedBox(height: Style.sm),
+            Container(
+              margin: const EdgeInsets.only(left: 46),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Style.md,
+                vertical: Style.sm,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(Style.radiusMd),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (int i = 0; i < subReplies.length; i++) ...[
+                    if (i > 0) ...[
+                      const SizedBox(height: Style.xs),
+                      Divider(
+                        height: 1,
+                        thickness: 0.5,
+                        color: theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.2),
+                      ),
+                      const SizedBox(height: Style.xs),
+                    ],
+                    _buildSubReplyTile(subReplies[i], reply),
+                  ],
+                  if (subLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: Style.sm),
+                      child: Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ),
+                  if (!subEnd && !subLoading && subReplies.length >= 3)
+                    Padding(
+                      padding: const EdgeInsets.only(top: Style.xs),
+                      child: TextButton.icon(
+                        onPressed: () => _loadSubReplies(reply),
+                        icon: const Icon(Icons.expand_more, size: 16),
+                        label: Text(
+                          '查看更多回复 ${reply.rcount != null ? "(${subReplies.length}/${reply.rcount})" : ""}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Style.sm,
+                            vertical: Style.xs,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 楼中楼单条回复
+  Widget _buildSubReplyTile(
+    ReplyItemModel sub,
+    ReplyItemModel root,
+  ) {
+    final theme = Theme.of(context);
+    final subMember = sub.member;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 第 1 行：头像 + 用户名 + 徽章 + 发布时间
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: () => _gotoMemberSpace(sub.mid ?? subMember?.mid),
+                child: ClipOval(
+                  child: NetworkImgLayer(
+                    src: subMember?.avatar,
+                    width: 28,
+                    height: 28,
+                    type: 'avatar',
                   ),
+                ),
+              ),
+              const SizedBox(width: Style.sm),
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: GestureDetector(
+                        onTap: () =>
+                            _gotoMemberSpace(sub.mid ?? subMember?.mid),
+                        child: Text(
+                          subMember?.uname ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (subMember?.level case final lvl? when lvl > 0)
+                      Container(
+                        margin: const EdgeInsets.only(left: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 3,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Text(
+                          'LV$lvl',
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Text(
+                _formatDate(sub.ctime),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          // 第 2 行：回复正文
+          Padding(
+            padding: const EdgeInsets.only(left: 36, top: 4, bottom: 4),
+            child: Text(
+              sub.content?.message ?? '',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontSize: 13.5,
+                height: 1.5,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+          // 第 3 行：操作栏（点赞 + 回复）
+          Padding(
+            padding: const EdgeInsets.only(left: 36, bottom: 2),
+            child: Row(
+              spacing: Style.md,
+              children: [
+                GestureDetector(
+                  onTap: () => _toggleLikeSubReply(sub),
+                  child: Row(
+                    spacing: 3,
+                    children: [
+                      Icon(
+                        sub.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                        size: 13,
+                        color: sub.isLiked
+                            ? biliPink
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      Text(
+                        NumUtils.formatNum(sub.like),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: sub.isLiked
+                              ? biliPink
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _setReplyTarget(
+                    root,
+                    targetName: subMember?.uname,
+                  ),
+                  child: Row(
+                    spacing: 2,
+                    children: [
+                      Icon(
+                        Icons.reply,
+                        size: 13,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      Text(
+                        '回复',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 评论列表尾部
+  Widget _buildReplyTrailer(ColorScheme cs) {
+    final theme = Theme.of(context);
+    if (_loadingReplies) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: Style.lg),
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    if (_replyFailed) {
+      return Center(
+        child: TextButton(
+          onPressed: _retryReplies,
+          child: const Text('评论加载失败，点击重试'),
+        ),
+      );
+    }
+    if (_replies.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: Style.lg),
+        child: Center(
+          child: Text(
+            '还没有评论',
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+    if (_replyEnd) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: Style.lg),
+        child: Center(
+          child: Text(
+            '没有更多评论了',
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  /// 评论输入栏（普通视频稿件同款胶囊输入框与粉色发送按钮）
+  Widget _buildCommentInputBar(ColorScheme cs) {
+    final theme = Theme.of(context);
+    final enabled = _currentEpisode.aid != null && _currentEpisode.aid! > 0;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        Style.safeSpace,
+        Style.xs,
+        Style.safeSpace,
+        Style.safeSpace,
+      ),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        border: Border(
+          top: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _commentCtrl,
+                enabled: enabled && !_sendingComment,
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: Style.lg,
+                    vertical: Style.sm,
+                  ),
+                  hintText: enabled
+                      ? (_replyHint ?? '发一条友善的评论吧~')
+                      : '当前剧集暂不支持评论',
+                  hintStyle: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(100),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceContainer
+                      .withValues(alpha: 0.5),
+                  suffixIcon: _replyRoot != null
+                      ? IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          onPressed: _clearReplyTarget,
+                        )
+                      : null,
+                ),
+                onSubmitted: (_) => _sendComment(),
+              ),
+            ),
+            const SizedBox(width: Style.sm),
+            FilledButton(
+              onPressed: enabled && !_sendingComment ? _sendComment : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: biliPink,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Style.lg,
+                  vertical: Style.sm,
+                ),
+                minimumSize: const Size(0, 40),
+              ),
+              child: _sendingComment
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('发送'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1558,3 +2096,33 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 }
+
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar tabBar;
+  final Color color;
+
+  _SliverTabBarDelegate(this.tabBar, {required this.color});
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return ColoredBox(
+      color: color,
+      child: tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
+    return tabBar != oldDelegate.tabBar || color != oldDelegate.color;
+  }
+}
+

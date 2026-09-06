@@ -175,38 +175,40 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     final c = widget.controller;
     // 安全检查：controller 已销毁时不渲染
     if (c.disposed) return const SizedBox.shrink();
-    return IgnorePointer(
-      child: ValueListenableBuilder<double>(
-        valueListenable: c.danmakuOpacity,
-        builder: (context, opacity, _) {
-          // 再次检查，防止在 builder 执行期间 controller 被销毁
-          if (c.disposed) return const SizedBox.shrink();
-          return AnimatedOpacity(
-            opacity: Pref.enableShowDanmaku
-                ? opacity.clamp(0.0, 1.0).toDouble()
-                : 0.0,
-            duration: const Duration(milliseconds: 200),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final size = Size(
-                  constraints.maxWidth.isFinite ? constraints.maxWidth : 0,
-                  constraints.maxHeight.isFinite ? constraints.maxHeight : 0,
-                );
-                return DanmakuScreen<DanmakuElem>(
-                  createdController: (engine) {
-                    c.danmakuEngine = engine;
-                    _onPlayingOrBuffering();
-                  },
-                  option: DanmakuOptions.get(
-                    fullscreen: widget.fullscreen,
-                    speed: c.playbackSpeed.value,
-                  ),
-                  size: size,
-                );
-              },
-            ),
-          );
-        },
+    return ClipRect(
+      child: IgnorePointer(
+        child: ValueListenableBuilder<double>(
+          valueListenable: c.danmakuOpacity,
+          builder: (context, opacity, _) {
+            // 再次检查，防止在 builder 执行期间 controller 被销毁
+            if (c.disposed) return const SizedBox.shrink();
+            return AnimatedOpacity(
+              opacity: Pref.enableShowDanmaku
+                  ? opacity.clamp(0.0, 1.0).toDouble()
+                  : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final size = Size(
+                    constraints.maxWidth.isFinite ? constraints.maxWidth : 0,
+                    constraints.maxHeight.isFinite ? constraints.maxHeight : 0,
+                  );
+                  return DanmakuScreen<DanmakuElem>(
+                    createdController: (engine) {
+                      c.danmakuEngine = engine;
+                      _onPlayingOrBuffering();
+                    },
+                    option: DanmakuOptions.get(
+                      fullscreen: widget.fullscreen,
+                      speed: c.playbackSpeed.value,
+                    ),
+                    size: size,
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }

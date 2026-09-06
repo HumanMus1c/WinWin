@@ -515,77 +515,79 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Stack(
-        children: [
-          RepaintBoundary.wrap(
-            ValueListenableBuilder(
-              valueListenable: _notifier,
-              builder: (context, value, child) {
-                return CustomPaint(
-                  willChange: _running,
-                  painter: ScrollDanmakuPainter(
-                    length: _scrollDanmakuItems.fold<int>(
-                        0, (p, n) => p + n.length),
-                    trackHeight: _danmakuHeight,
-                    danmakuItems: _scrollDanmakuItems,
-                    durationInMilliseconds: _scrollVelocityOrDuration,
-                    fontSize: _option.fontSize,
-                    fontWeight: _option.fontWeight,
-                    strokeWidth: _option.strokeWidth,
-                    running: _running,
-                    tick: value,
-                  ),
-                  size: widget.size,
-                );
-              },
+    return ClipRect(
+      child: IgnorePointer(
+        child: Stack(
+          children: [
+            RepaintBoundary.wrap(
+              ValueListenableBuilder(
+                valueListenable: _notifier,
+                builder: (context, value, child) {
+                  return CustomPaint(
+                    willChange: _running,
+                    painter: ScrollDanmakuPainter(
+                      length: _scrollDanmakuItems.fold<int>(
+                          0, (p, n) => p + n.length),
+                      trackHeight: _danmakuHeight,
+                      danmakuItems: _scrollDanmakuItems,
+                      durationInMilliseconds: _scrollVelocityOrDuration,
+                      fontSize: _option.fontSize,
+                      fontWeight: _option.fontWeight,
+                      strokeWidth: _option.strokeWidth,
+                      running: _running,
+                      tick: value,
+                    ),
+                    size: widget.size,
+                  );
+                },
+              ),
+              0,
             ),
-            0,
-          ),
-          RepaintBoundary.wrap(
-            ValueListenableBuilder(
-              valueListenable: _staticDanmakuItems,
-              builder: (context, value, child) {
-                return CustomPaint(
-                  painter: StaticDanmakuPainter(
-                    count: value.nonNulls.length,
-                    trackHeight: _danmakuHeight,
-                    danmakuItems: value,
-                    staticDurationInMilliseconds:
-                        _option.staticDurationInMilliseconds,
-                    fontSize: _option.fontSize,
-                    fontWeight: _option.fontWeight,
-                    strokeWidth: _option.strokeWidth,
-                    tick: _notifier.value,
-                  ),
-                  size: widget.size,
-                );
-              },
+            RepaintBoundary.wrap(
+              ValueListenableBuilder(
+                valueListenable: _staticDanmakuItems,
+                builder: (context, value, child) {
+                  return CustomPaint(
+                    painter: StaticDanmakuPainter(
+                      count: value.nonNulls.length,
+                      trackHeight: _danmakuHeight,
+                      danmakuItems: value,
+                      staticDurationInMilliseconds:
+                          _option.staticDurationInMilliseconds,
+                      fontSize: _option.fontSize,
+                      fontWeight: _option.fontWeight,
+                      strokeWidth: _option.strokeWidth,
+                      tick: _notifier.value,
+                    ),
+                    size: widget.size,
+                  );
+                },
+              ),
+              1,
             ),
-            1,
-          ),
-          RepaintBoundary.wrap(
-            ValueListenableBuilder(
-              valueListenable: _notifier, // 与滚动弹幕共用控制器
-              builder: (context, value, child) {
-                return CustomPaint(
-                  willChange: _running,
-                  painter: SpecialDanmakuPainter(
-                    length: _specialDanmakuItems.length,
-                    danmakuItems: _specialDanmakuItems,
-                    fontSize: _option.fontSize,
-                    fontWeight: _option.fontWeight,
-                    strokeWidth: _option.strokeWidth,
-                    running: _running,
-                    tick: value,
-                  ),
-                  size: widget.size,
-                );
-              },
+            RepaintBoundary.wrap(
+              ValueListenableBuilder(
+                valueListenable: _notifier, // 与滚动弹幕共用控制器
+                builder: (context, value, child) {
+                  return CustomPaint(
+                    willChange: _running,
+                    painter: SpecialDanmakuPainter(
+                      length: _specialDanmakuItems.length,
+                      danmakuItems: _specialDanmakuItems,
+                      fontSize: _option.fontSize,
+                      fontWeight: _option.fontWeight,
+                      strokeWidth: _option.strokeWidth,
+                      running: _running,
+                      tick: value,
+                    ),
+                    size: widget.size,
+                  );
+                },
+              ),
+              2,
             ),
-            2,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

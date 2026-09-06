@@ -24,12 +24,16 @@ final class ScrollDanmakuPainter extends BaseDanmakuPainter {
 
   @override
   void paint(ui.Canvas canvas, ui.Size size) {
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+
     final ui.PictureRecorder? pictureRecorder;
     final Canvas pictureCanvas;
 
     if (length > batchThreshold) {
       pictureRecorder = ui.PictureRecorder();
       pictureCanvas = Canvas(pictureRecorder);
+      pictureCanvas.clipRect(Offset.zero & size);
     } else {
       pictureRecorder = null;
       pictureCanvas = canvas;
@@ -60,6 +64,8 @@ final class ScrollDanmakuPainter extends BaseDanmakuPainter {
       canvas.drawPicture(picture);
       picture.dispose();
     }
+
+    canvas.restore();
   }
 
   void paintDanmaku(
