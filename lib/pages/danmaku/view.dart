@@ -57,12 +57,14 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     unawaited(dm.preload());
 
     c.position.addListener(_onPosition);
-    c.playing.addListener(_onPlaying);
+    c.playing.addListener(_onPlayingOrBuffering);
+    c.buffering.addListener(_onPlayingOrBuffering);
     c.seekCount.addListener(_onSeek);
     dm.localEcho.addListener(_onLocalEcho);
+    dm.danmakuLoadedSignal.addListener(_onDanmakuLoaded);
 
-    // 初始同步一次运行状态（引擎默认 running）。
-    _onPlaying();
+    // 初始同步一次运行状态（引擎就绪后会再次对齐）。
+    _onPlayingOrBuffering();
   }
 
   /// didPopNext 返回本页时重建弹幕：dispose 旧 dm（清空缓存重新拉取）+
@@ -72,9 +74,11 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     final c = widget.controller;
     // 移除旧 dm 的监听并 dispose。
     c.position.removeListener(_onPosition);
-    c.playing.removeListener(_onPlaying);
+    c.playing.removeListener(_onPlayingOrBuffering);
+    c.buffering.removeListener(_onPlayingOrBuffering);
     c.seekCount.removeListener(_onSeek);
     c.danmaku?.localEcho.removeListener(_onLocalEcho);
+    c.danmaku?.danmakuLoadedSignal.removeListener(_onDanmakuLoaded);
     c.danmaku?.dispose();
     // 清空引擎画面上的残留弹幕，重置去重标记。
     c.danmakuEngine?.clear();
@@ -104,9 +108,11 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     // 因为 ValueNotifier 仍然存在，只是不再变化
     c.danmakuReloadSignal.removeListener(_onReload);
     c.position.removeListener(_onPosition);
-    c.playing.removeListener(_onPlaying);
+    c.playing.removeListener(_onPlayingOrBuffering);
+    c.buffering.removeListener(_onPlayingOrBuffering);
     c.seekCount.removeListener(_onSeek);
     c.danmaku?.localEcho.removeListener(_onLocalEcho);
+    c.danmaku?.danmakuLoadedSignal.removeListener(_onDanmakuLoaded);
     c.danmaku?.dispose();
     c.danmaku = null;
     c.danmakuEngine = null;
@@ -140,14 +146,19 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     widget.controller.danmakuEngine?.addDanmaku(item);
   }
 
-  /// 播放/暂停联动引擎动画。
-  void _onPlaying() {
+  /// 播放/暂停与缓冲状态联动引擎动画：缓冲中或暂停时冻结，正常播放时恢复。
+  void _onPlayingOrBuffering() {
     final c = widget.controller;
-    if (c.playing.value) {
+    if (c.playing.value && !c.buffering.value) {
       c.danmakuEngine?.resume();
     } else {
       c.danmakuEngine?.pause();
     }
+  }
+
+  /// 弹幕段（6分钟）数据加载到达：若当前时间位于段内，立即触发一次范围补投。
+  void _onDanmakuLoaded() {
+    _onPosition();
   }
 
   /// seek 后清空画面上的弹幕，并重置去重标记以便新进度立即补给。
@@ -182,7 +193,10 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
                   constraints.maxHeight.isFinite ? constraints.maxHeight : 0,
                 );
                 return DanmakuScreen<DanmakuElem>(
-                  createdController: (engine) => c.danmakuEngine = engine,
+                  createdController: (engine) {
+                    c.danmakuEngine = engine;
+                    _onPlayingOrBuffering();
+                  },
                   option: DanmakuOptions.get(
                     fullscreen: widget.fullscreen,
                     speed: c.playbackSpeed.value,

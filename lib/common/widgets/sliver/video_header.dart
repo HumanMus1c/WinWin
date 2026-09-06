@@ -29,6 +29,7 @@ class VideoHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.maxExtent,
     required this.minExtent,
     required this.builder,
+    this.child,
     this.onScrollRatioChange,
   })  : assert(maxExtent >= minExtent),
         assert(minExtent >= 0);
@@ -43,6 +44,9 @@ class VideoHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   /// 构建 header 内容，[scrollRatio] 为 0.0-1.0 的收缩比例。
   final Widget Function(BuildContext context, double scrollRatio) builder;
+
+  /// 承载的子组件（用于 [shouldRebuild] 准确感知内容变化）。
+  final Widget? child;
 
   /// 收缩比例变化回调（用于顶栏渐变显示等）。
   final ValueChanged<double>? onScrollRatioChange;
@@ -67,7 +71,8 @@ class VideoHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(VideoHeaderDelegate oldDelegate) =>
       maxExtent != oldDelegate.maxExtent ||
-      minExtent != oldDelegate.minExtent;
+      minExtent != oldDelegate.minExtent ||
+      child != oldDelegate.child;
 }
 
 /// 构建播放器 header 的便捷封装。
@@ -102,6 +107,7 @@ class VideoHeader extends StatelessWidget {
       delegate: VideoHeaderDelegate(
         maxExtent: maxExtent,
         minExtent: minExtent,
+        child: child,
         onScrollRatioChange: onScrollRatioChange,
         builder: (context, scrollRatio) {
           // 收缩时圆角逐渐变为 0（pin 态全宽贴顶）

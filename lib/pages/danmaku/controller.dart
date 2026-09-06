@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:collection';
 import 'dart:ui' show Color;
 
@@ -32,6 +33,9 @@ class WinWinDanmakuController {
   /// 本地发送弹幕的回显（发送成功后置入，弹幕视图监听后上屏）。
   final ValueNotifier<DanmakuContentItem<DanmakuElem>?> localEcho =
       ValueNotifier(null);
+
+  /// 弹幕段加载完成信号：分段下载入桶后自增，视图层感知后可立即补充当前进度弹幕。
+  final ValueNotifier<int> danmakuLoadedSignal = ValueNotifier(0);
 
   /// 按 0.1s（100ms）分桶存储弹幕，key = progress ~/ 100。
   final Map<int, List<DanmakuElem>> _dmSegMap = HashMap<int, List<DanmakuElem>>();
@@ -79,10 +83,11 @@ class WinWinDanmakuController {
     }
   }
 
-  /// 预载：仅初始化过滤器。实际分段按进度懒加载。
+  /// 预载：初始化过滤器，并提前预加载第 0 段弹幕（前 6 分钟）。
   Future<void> preload() async {
     _closed = false;
     loadFilters();
+    unawaited(queryDanmaku(0));
   }
 
   /// 拉取指定段（0-based 段号），成功后分桶存储。
@@ -103,6 +108,7 @@ class WinWinDanmakuController {
           _closed = true;
         }
         handleDanmaku(response.elems);
+        danmakuLoadedSignal.value++;
         AppLogger.d('DanmakuCtrl', 'segment $segmentIndex loaded: ${response.elems.length} elems, closed=$_closed');
       case Error():
         // 失败时移除标记，允许后续重试。
@@ -234,5 +240,6 @@ class WinWinDanmakuController {
     _requestedSeg.clear();
     _uniques.clear();
     localEcho.dispose();
+    danmakuLoadedSignal.dispose();
   }
 }

@@ -593,21 +593,36 @@ class WinWinPlayerController {
       );
       final video = selection.video;
       final audio = selection.audio;
-      final videoUrl = video?.baseUrl;
-      if (video == null || videoUrl == null || videoUrl.isEmpty) {
+
+      // 提取视频 URL：优先 baseUrl，去空兜底 backupUrl
+      String? videoUrl = (video?.baseUrl?.isNotEmpty == true)
+          ? video!.baseUrl
+          : (video?.backupUrl?.isNotEmpty == true ? video!.backupUrl!.first : null);
+
+      // 兜底：如果 DASH video 为空，检查是否有 durl（非 DASH 流，内嵌完整音画）
+      bool isDurlFallback = false;
+      if (videoUrl == null || videoUrl.isEmpty) {
+        final durls = playUrl.durl;
+        if (durls != null && durls.isNotEmpty && (durls.first.url?.isNotEmpty == true)) {
+          videoUrl = durls.first.url;
+          isDurlFallback = true;
+        }
+      }
+
+      if (videoUrl == null || videoUrl.isEmpty) {
         error.value = '未获取到可播放的视频流';
         return;
       }
 
       _playUrl = playUrl;
-      _currentQn = video.id ?? qn;
+      _currentQn = video?.id ?? playUrl.quality ?? qn;
       // 通知面板重建画质按钮（_playUrl 为普通字段，不自动触发重建）。
       qualityVersion.value++;
 
       if (kDebugMode) {
         debugPrint(
           'PlayStream: bvid=$bvid qn=$_currentQn codec=${selection.videoCodec.name} '
-          'audio=${selection.audioKind.name}',
+          'audio=${selection.audioKind.name} isDurl=$isDurlFallback',
         );
       }
 
@@ -624,7 +639,14 @@ class WinWinPlayerController {
       }
 
       // 1. 设置主视频 media。
-      AppLogger.w('PlayerController', 'setMedia video: url=$videoUrl audioUrl=${audio?.baseUrl}');
+      // 提取音频 URL：优先 baseUrl，去空兜底 backupUrl（durl 模式已内嵌音频无需外部挂载）
+      final audioUrl = isDurlFallback
+          ? null
+          : ((audio?.baseUrl?.isNotEmpty == true)
+              ? audio!.baseUrl
+              : (audio?.backupUrl?.isNotEmpty == true ? audio!.backupUrl!.first : null));
+
+      AppLogger.w('PlayerController', 'setMedia video: url=$videoUrl audioUrl=$audioUrl');
       player.media = videoUrl;
       // DASH 分离音轨：以外部音轨方式挂载（prepare 之前）。
       // 参照 fvp setExternalAudio → setMedia(url, MediaType.audio) 用法：
@@ -632,7 +654,6 @@ class WinWinPlayerController {
       // 后必须调用 setActiveTracks 显式激活，否则音频轨道不会被自动选中
       // （B站 DASH 主 media 为纯视频流，无内部音频轨，导致无声）。
       // 在 prepare 之前挂载，使 prepare 能一次性加载主视频 + 外部音轨。
-      final audioUrl = audio?.baseUrl;
       if (audioUrl != null && audioUrl.isNotEmpty) {
         player.setMedia(audioUrl, mdk.MediaType.audio);
         player.activeAudioTracks = const [0];

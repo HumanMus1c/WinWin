@@ -58,6 +58,10 @@ class Win32Window {
   // Return a RECT representing the bounds of the current client area.
   RECT GetClientArea();
 
+  // Set the window title bar caption color, text color and dark mode.
+  void SetTitleBarColor(COLORREF caption_color, COLORREF text_color, bool is_dark);
+  static void SetTitleBarColor(HWND const window, COLORREF caption_color, COLORREF text_color, bool is_dark);
+
  protected:
   // Processes and route salient window messages for mouse handling,
   // size change and DPI. Delegates handling of these to member overloads that

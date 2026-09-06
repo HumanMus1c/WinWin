@@ -27,6 +27,60 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  title_bar_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(),
+          "winwin/window_title_bar",
+          &flutter::StandardMethodCodec::GetInstance());
+
+  title_bar_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() == "setTitleBarColor") {
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args != nullptr) {
+            auto color_it = args->find(flutter::EncodableValue("color"));
+            auto text_color_it = args->find(flutter::EncodableValue("textColor"));
+            auto dark_it = args->find(flutter::EncodableValue("dark"));
+            if (color_it != args->end() && dark_it != args->end()) {
+              int64_t color_val = 0;
+              if (std::holds_alternative<int32_t>(color_it->second)) {
+                color_val = std::get<int32_t>(color_it->second);
+              } else if (std::holds_alternative<int64_t>(color_it->second)) {
+                color_val = std::get<int64_t>(color_it->second);
+              }
+
+              int64_t text_color_val = 0;
+              if (text_color_it != args->end()) {
+                if (std::holds_alternative<int32_t>(text_color_it->second)) {
+                  text_color_val = std::get<int32_t>(text_color_it->second);
+                } else if (std::holds_alternative<int64_t>(text_color_it->second)) {
+                  text_color_val = std::get<int64_t>(text_color_it->second);
+                }
+              }
+
+              bool is_dark = std::get<bool>(dark_it->second);
+
+              COLORREF caption_color = RGB((color_val >> 16) & 0xFF,
+                                           (color_val >> 8) & 0xFF,
+                                           color_val & 0xFF);
+              COLORREF text_color = (text_color_it != args->end())
+                  ? RGB((text_color_val >> 16) & 0xFF,
+                        (text_color_val >> 8) & 0xFF,
+                        text_color_val & 0xFF)
+                  : (is_dark ? RGB(0xE8, 0xE8, 0xE8) : RGB(0x18, 0x19, 0x1C));
+
+              this->SetTitleBarColor(caption_color, text_color, is_dark);
+              result->Success();
+              return;
+            }
+          }
+          result->Error("INVALID_ARGUMENTS", "Invalid arguments for setTitleBarColor");
+          return;
+        }
+        result->NotImplemented();
+      });
+
   // 显式显示窗口，避免因首帧回调在无焦点/非前台或命令行启动环境下被 DWM 挂起而导致窗口永久隐藏
   this->Show();
 
@@ -47,6 +101,9 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  if (title_bar_channel_) {
+    title_bar_channel_ = nullptr;
+  }
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }

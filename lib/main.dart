@@ -11,6 +11,7 @@ import 'core/bootstrap.dart';
 import 'core/log/app_logger.dart';
 import 'core/log/sync_trace.dart';
 import 'core/storage/storage_pref.dart';
+import 'core/window/title_bar_controller.dart';
 import 'core/window/window_state_controller.dart';
 import 'pages/onboarding/user_agreement_page.dart';
 import 'pages/setting/theme_notifier.dart';
@@ -39,6 +40,9 @@ void main() async {
 
   // Phase 4.6：初始化桌面伪 PiP 窗口管理器。
   unawaited(DesktopPipController.instance.ensureInitialized());
+
+  // Windows 原生标题栏沉浸色彩同步。
+  TitleBarController.instance.init();
 
   // 日志系统初始化（L2-L4）：内存环形缓冲 + 异步落盘。
   // 不阻塞 runApp：LogCollector.init 失败时降级为仅内存缓冲，不影响启动。

@@ -823,6 +823,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (_fullscreen) {
       setState(() => _fullscreen = false);
     } else {
+      playerController?.pause();
+      playerController?.detachListeners();
       Navigator.pop(context);
     }
   }
@@ -1168,6 +1170,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 ),
                 onPressed: () {
                   SyncTrace.log('DetailPage', 'back button pressed');
+                  playerController?.pause();
+                  playerController?.detachListeners();
                   Navigator.pop(context);
                 },
               ),
@@ -1262,6 +1266,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
     return PlayerPanel(
       controller: controller,
+      cover: widget.cover ?? data?.pic,
       fullscreen: _fullscreen,
       onToggleFullscreen: _toggleFullscreen,
       onEscape: _handleEscape,

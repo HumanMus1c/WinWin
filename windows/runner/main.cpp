@@ -67,6 +67,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   flutter::DartProject project(L"data");
 
+  // Flutter 3.47 Windows 默认启用 Impeller 渲染后端，其外部视频纹理
+  //（fvp DXGI shared handle）在路由转场场景变化时光栅线程空指针崩溃
+  //（flutter_windows.dll+0x2C55F7，播放中返回必崩）。回退 Skia 后端规避。
+  project.set_impeller_switch(flutter::ImpellerSwitch::Disabled);
+
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
 

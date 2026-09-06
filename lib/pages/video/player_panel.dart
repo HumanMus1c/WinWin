@@ -38,12 +38,14 @@ class PlayerPanel extends StatefulWidget {
   const PlayerPanel({
     super.key,
     required this.controller,
+    this.cover,
     this.fullscreen = false,
     this.onToggleFullscreen,
     this.onEscape,
   });
 
   final WinWinPlayerController controller;
+  final String? cover;
   final bool fullscreen;
   final VoidCallback? onToggleFullscreen;
 
@@ -586,24 +588,49 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// 的宽高比居中显示（等效 `BoxFit.contain`）。
   /// 包裹 [RepaintBoundary] 隔离控制条/弹幕/手势等上层高频 UI 的重绘影响。
   Widget _buildVideoSurface(WinWinPlayerController c) {
+    final coverUrl = widget.cover;
     return RepaintBoundary(
       child: ValueListenableBuilder<int?>(
         valueListenable: c.textureId,
         builder: (context, texId, _) {
-          if (texId == null || texId < 0) return const SizedBox.expand();
-          final texture = Texture(textureId: texId);
           return ValueListenableBuilder<Size?>(
             valueListenable: c.videoSize,
             builder: (context, size, _) {
-              if (size == null || size.width <= 0 || size.height <= 0) {
-                return texture;
+              final hasFrame = texId != null &&
+                  texId >= 0 &&
+                  size != null &&
+                  size.width > 0 &&
+                  size.height > 0;
+
+              Widget videoWidget;
+              if (hasFrame) {
+                videoWidget = Center(
+                  child: AspectRatio(
+                    aspectRatio: size.width / size.height,
+                    child: Texture(textureId: texId),
+                  ),
+                );
+              } else if (texId != null && texId >= 0) {
+                videoWidget = Texture(textureId: texId);
+              } else {
+                videoWidget = const SizedBox.expand();
               }
-              return Center(
-                child: AspectRatio(
-                  aspectRatio: size.width / size.height,
-                  child: texture,
-                ),
-              );
+
+              if (!hasFrame && coverUrl != null && coverUrl.isNotEmpty) {
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NetworkImgLayer(
+                      src: coverUrl,
+                      width: double.infinity,
+                      height: double.infinity,
+                      borderRadius: BorderRadius.zero,
+                    ),
+                    videoWidget,
+                  ],
+                );
+              }
+              return videoWidget;
             },
           );
         },
