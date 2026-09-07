@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,7 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
 import 'package:winwin/http/toview.dart';
@@ -26,6 +28,7 @@ import 'package:winwin/pages/video/player_panel.dart';
 import 'package:winwin/pages/video/send_danmaku_panel.dart';
 import 'package:winwin/pages/video/video_action_row.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -60,9 +63,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   late final TabController _wideTabCtrl;
   late final TabController _narrowTabCtrl;
   final ScrollController _scrollController = ScrollController();
+  final ValueNotifier<double> _scrollRatio = ValueNotifier<double>(0.0);
+  bool _autoPausedByCollapse = false;
 
   // 选集排序与状态
-  bool _episodesDescending = false;
+  late bool _episodesDescending;
 
   // 评论状态（针对当集 aid/oid）
   final List<ReplyItemModel> _replies = [];
@@ -107,6 +112,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     _episodes = widget.allEpisodes ?? widget.detail.episodes;
     _isFollowed = widget.detail.userStatus?.follow == 1;
     _followStatus = widget.detail.userStatus?.followStatus ?? (_isFollowed ? 2 : 0);
+    _episodesDescending = Pref.bangumiEpisodesDescending.value;
+    Pref.bangumiEpisodesDescending.addListener(_onGlobalOrderChanged);
     _wideTabCtrl = TabController(length: 2, vsync: this);
     _narrowTabCtrl = TabController(length: 3, vsync: this);
     windowManager.addListener(this);
@@ -114,6 +121,31 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     _initPlayerForEpisode(_currentEpisode);
     _loadReplies();
     _loadEpisodeInteraction();
+  }
+
+  void _onGlobalOrderChanged() {
+    if (!mounted) return;
+    final newDesc = Pref.bangumiEpisodesDescending.value;
+    if (_episodesDescending == newDesc) return;
+    setState(() {
+      _episodesDescending = newDesc;
+    });
+  }
+
+  /// 播放器折叠自动暂停（对标 BiliPai PlayerCollapseAutoPausePolicy 与 DetailPage）。
+  void _handleCollapseAutoPause(double r) {
+    if (_fullscreen) return;
+    final ctrl = playerController;
+    if (ctrl == null || !Pref.collapseAutoPause) return;
+    if (r >= 0.98) {
+      if (ctrl.playing.value) {
+        ctrl.pause();
+        _autoPausedByCollapse = true;
+      }
+    } else if (r < 0.5 && _autoPausedByCollapse) {
+      ctrl.play();
+      _autoPausedByCollapse = false;
+    }
   }
 
   @override
@@ -127,6 +159,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   @override
   void dispose() {
+    Pref.bangumiEpisodesDescending.removeListener(_onGlobalOrderChanged);
+    _scrollRatio.dispose();
     routeObserver.unsubscribe(this);
     windowManager.removeListener(this);
     _wideTabCtrl.dispose();
@@ -649,43 +683,6 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       focusNode: FocusNode()..requestFocus(),
       onKeyEvent: _handleKey,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            '${widget.detail.title} · ${_currentEpisode.displayTitle}',
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-          ),
-          titleSpacing: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-          actions: [
-            // 跳转回详情页
-            IconButton(
-              icon: const Icon(Icons.info_outline),
-              tooltip: '查看番剧详情',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BangumiDetailPage(
-                      seasonId: widget.detail.seasonId,
-                      detail: widget.detail,
-                    ),
-                  ),
-                );
-              },
-            ),
-            // 画中画
-            IconButton(
-              icon: const Icon(Icons.picture_in_picture_alt_outlined),
-              tooltip: '画中画',
-              onPressed: () => DesktopPipController.instance.enterPip(),
-            ),
-            const SizedBox(width: 8),
-          ],
-        ),
         body: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth >= kDetailNarrowBreakpoint;
@@ -710,6 +707,139 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
+  /// 渐变顶栏：_scrollRatio=0 透明（覆盖在播放器上），=1 不透明（显示标题）。
+  /// 完全对齐普通视频稿件（DetailPage）规范。
+  Widget _buildGradientTopBar(String? title, {bool forceOpaque = false}) {
+    return ValueListenableBuilder<double>(
+      valueListenable: _scrollRatio,
+      builder: (context, scrollRatio, _) {
+        final theme = Theme.of(context);
+        final opacity = forceOpaque ? 1.0 : scrollRatio.clamp(0.0, 1.0);
+        final overVideo = opacity < 0.5;
+        // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏拍平到页面背景后，
+        // 为标题/返回箭头选出达标可读色（覆盖在播放器上时仍用白色）。
+        final barContrast = resolveAccessibleContainerColors(
+          containerColor: theme.scaffoldBackgroundColor
+              .withValues(alpha: opacity * 0.95),
+          contentColor: theme.colorScheme.onSurface,
+          backgroundColor: theme.scaffoldBackgroundColor,
+          fallbackContentColors: [
+            theme.colorScheme.onInverseSurface,
+            theme.colorScheme.scrim,
+          ],
+        );
+
+        final barContent = SizedBox(
+          height: kToolbarHeight,
+          child: Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: overVideo ? Colors.white : barContrast.contentColor,
+                ),
+                onPressed: () {
+                  playerController?.pause();
+                  playerController?.detachListeners();
+                  Navigator.maybePop(context);
+                },
+              ),
+              Expanded(
+                child: opacity > 0.05
+                    ? Opacity(
+                        opacity: opacity,
+                        child: Text(
+                          title ?? '番剧详情',
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: barContrast.contentColor,
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.info_outline,
+                  color: overVideo ? Colors.white : barContrast.contentColor,
+                ),
+                tooltip: '查看番剧详情',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BangumiDetailPage(
+                        seasonId: widget.detail.seasonId,
+                        detail: widget.detail,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.picture_in_picture_alt_outlined,
+                  color: overVideo ? Colors.white : barContrast.contentColor,
+                ),
+                tooltip: '画中画',
+                onPressed: () => DesktopPipController.instance.enterPip(),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+        );
+
+        if (opacity <= 0.01) {
+          return Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: barContent,
+            ),
+          );
+        }
+
+        return Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            bottom: false,
+            // 毛玻璃顶栏：模糊强度随 _scrollRatio 渐显（sigma 0→20），
+            // ClipRect 限定模糊区域。
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: 20 * opacity,
+                  sigmaY: 20 * opacity,
+                ),
+                child: Container(
+                  height: kToolbarHeight,
+                  decoration: BoxDecoration(
+                    color: theme.scaffoldBackgroundColor
+                        .withValues(alpha: opacity * 0.95),
+                    border: opacity > 0.5
+                        ? Border(
+                            bottom: BorderSide(
+                              color: theme.colorScheme.outlineVariant
+                                  .withValues(alpha: 0.3),
+                              width: 0.5,
+                            ),
+                          )
+                        : null,
+                  ),
+                  child: barContent,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// 桌面宽屏双栏布局（左 7: 播放器+互动+简介，右 3: 选集/评论 Tab）
   Widget _buildWideLayout(ColorScheme cs) {
     return Row(
@@ -718,41 +848,52 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         // 左栏：播放器核心 + 视频下方交互控件与番剧简介（支持向上滚动挤压缩放）
         Expanded(
           flex: 7,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final maxExtent = constraints.maxWidth * 9 / 16;
-              final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
-              return CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  VideoHeader(
-                    maxExtent: maxExtent,
-                    minExtent: minExtent,
-                    child: _buildPlayerContent(),
-                  ),
-                  // 弹幕发送栏（宽度与视频一致）
-                  if (playerController != null)
-                    SliverToBoxAdapter(
-                      child: SendDanmakuPanel(
-                        controller: playerController!,
-                        inline: true,
+          child: Stack(
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxExtent = constraints.maxWidth * 9 / 16;
+                  final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
+                  return CustomScrollView(
+                    controller: _scrollController,
+                    slivers: [
+                      VideoHeader(
+                        maxExtent: maxExtent,
+                        minExtent: minExtent,
+                        onScrollRatioChange: (r) {
+                          _handleCollapseAutoPause(r);
+                          _scrollRatio.value = r;
+                        },
+                        child: _buildPlayerContent(),
                       ),
-                    ),
-                  // 视频下方交互控件与简介区
-                  SliverPadding(
-                    padding: const EdgeInsets.all(Style.safeSpace),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        _buildInfoSection(cs),
-                        _buildDescSection(cs),
-                        _buildTagsSection(cs),
-                        const SizedBox(height: 32),
-                      ]),
-                    ),
-                  ),
-                ],
-              );
-            },
+                      // 弹幕发送栏（宽度与视频一致）
+                      if (playerController != null)
+                        SliverToBoxAdapter(
+                          child: SendDanmakuPanel(
+                            controller: playerController!,
+                            inline: true,
+                          ),
+                        ),
+                      // 视频下方交互控件与简介区
+                      SliverPadding(
+                        padding: const EdgeInsets.all(Style.safeSpace),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            _buildInfoSection(cs),
+                            _buildDescSection(cs),
+                            _buildTagsSection(cs),
+                            const SizedBox(height: 32),
+                          ]),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              _buildGradientTopBar(
+                '${widget.detail.title} · ${_currentEpisode.displayTitle}',
+              ),
+            ],
           ),
         ),
         // 分割线
@@ -787,60 +928,71 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   /// 窄屏单列布局（视频 + 弹幕 + 选集/简介/评论 Tab，支持滚动挤压缩放）
   Widget _buildNarrowLayout(ColorScheme cs) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxExtent = constraints.maxWidth * 9 / 16;
-        final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
-        return NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            VideoHeader(
-              maxExtent: maxExtent,
-              minExtent: minExtent,
-              child: _buildPlayerContent(),
-            ),
-            if (playerController != null)
-              SliverToBoxAdapter(
-                child: SendDanmakuPanel(
-                  controller: playerController!,
-                  inline: true,
+    return Stack(
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final maxExtent = constraints.maxWidth * 9 / 16;
+            final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
+            return NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                VideoHeader(
+                  maxExtent: maxExtent,
+                  minExtent: minExtent,
+                  onScrollRatioChange: (r) {
+                    _handleCollapseAutoPause(r);
+                    _scrollRatio.value = r;
+                  },
+                  child: _buildPlayerContent(),
                 ),
-              ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _SliverTabBarDelegate(
-                TabBar(
-                  controller: _narrowTabCtrl,
-                  tabs: [
-                    Tab(text: '选集 (${_episodes.length})'),
-                    const Tab(text: '简介与互动'),
-                    Tab(text: '评论 (${_replies.length})'),
-                  ],
+                if (playerController != null)
+                  SliverToBoxAdapter(
+                    child: SendDanmakuPanel(
+                      controller: playerController!,
+                      inline: true,
+                    ),
+                  ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SliverTabBarDelegate(
+                    TabBar(
+                      controller: _narrowTabCtrl,
+                      tabs: [
+                        Tab(text: '选集 (${_episodes.length})'),
+                        const Tab(text: '简介与互动'),
+                        Tab(text: '评论 (${_replies.length})'),
+                      ],
+                    ),
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                  ),
                 ),
-                color: Theme.of(context).scaffoldBackgroundColor,
+              ],
+              body: TabBarView(
+                controller: _narrowTabCtrl,
+                children: [
+                  _buildEpisodesSidebar(cs),
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.all(Style.safeSpace),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildInfoSection(cs),
+                        _buildDescSection(cs),
+                        _buildTagsSection(cs),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                  _buildCommentsSidebar(cs),
+                ],
               ),
-            ),
-          ],
-          body: TabBarView(
-            controller: _narrowTabCtrl,
-            children: [
-              _buildEpisodesSidebar(cs),
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(Style.safeSpace),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoSection(cs),
-                    _buildDescSection(cs),
-                    _buildTagsSection(cs),
-                    const SizedBox(height: 32),
-                  ],
-                ),
-              ),
-              _buildCommentsSidebar(cs),
-            ],
-          ),
-        );
-      },
+            );
+          },
+        ),
+        _buildGradientTopBar(
+          '${widget.detail.title} · ${_currentEpisode.displayTitle}',
+        ),
+      ],
     );
   }
 
@@ -862,7 +1014,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               ),
               TextButton.icon(
                 onPressed: () {
-                  setState(() => _episodesDescending = !_episodesDescending);
+                  Pref.setBangumiEpisodesDescending(!_episodesDescending);
                 },
                 icon: Icon(
                   _episodesDescending ? Icons.arrow_downward : Icons.arrow_upward,

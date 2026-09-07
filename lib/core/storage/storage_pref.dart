@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
 
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/material.dart' show ThemeMode, ValueNotifier;
 import 'package:hive_ce/hive.dart';
 
 import 'package:winwin/core/account/login_utils.dart' show LoginUtils;
@@ -390,5 +390,17 @@ abstract final class Pref {
     }
     final json = jsonEncode(info.toJson());
     _localCache.put(LocalCacheKey.userInfoCache, CredentialCrypto.encrypt(json));
+  }
+
+  // ---------- bangumi ----------
+  static final ValueNotifier<bool> bangumiEpisodesDescending = ValueNotifier<bool>(
+    _setting.get(SettingBoxKey.bangumiEpisodesDescending, defaultValue: false) as bool,
+  );
+
+  static void setBangumiEpisodesDescending(bool value) {
+    if (bangumiEpisodesDescending.value != value) {
+      bangumiEpisodesDescending.value = value;
+    }
+    _setting.put(SettingBoxKey.bangumiEpisodesDescending, value);
   }
 }

@@ -85,6 +85,7 @@ abstract final class SettingBoxKey {
       replyLengthLimit = 'replyLengthLimit',
       showArgueMsg = 'showArgueMsg',
       reverseFromFirst = 'reverseFromFirst',
+      bangumiEpisodesDescending = 'bangumiEpisodesDescending',
       badCertificateCallback = 'badCertificateCallback',
       continuePlayingPart = 'continuePlayingPart',
       cdnSpeedTest = 'cdnSpeedTest',

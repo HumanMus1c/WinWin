@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
 import 'package:winwin/models/bangumi/bangumi_detail.dart';
@@ -47,7 +48,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   BangumiDetail? _detail;
 
   // 选集排序与分页
-  bool _episodesDescending = false;
+  late bool _episodesDescending;
   int _selectedEpisodePage = 0;
   static const int _episodesPerPage = 50;
 
@@ -67,6 +68,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
   @override
   void dispose() {
+    Pref.bangumiEpisodesDescending.removeListener(_onGlobalOrderChanged);
     _leftScrollController.dispose();
     _rightScrollController.dispose();
     _narrowScrollController.dispose();
@@ -76,6 +78,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   @override
   void initState() {
     super.initState();
+    _episodesDescending = Pref.bangumiEpisodesDescending.value;
+    Pref.bangumiEpisodesDescending.addListener(_onGlobalOrderChanged);
     if (widget.detail != null) {
       _detail = widget.detail;
       _state = Success(widget.detail!);
@@ -83,6 +87,28 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
       _locateProgressEpisode(widget.detail!);
     }
     _loadDetail();
+  }
+
+  void _onGlobalOrderChanged() {
+    if (!mounted) return;
+    final newDesc = Pref.bangumiEpisodesDescending.value;
+    if (_episodesDescending == newDesc) return;
+    setState(() {
+      _episodesDescending = newDesc;
+      final detail = _detail;
+      if (detail != null) {
+        final lastEpId = detail.userStatus?.progressLastEpId;
+        if (lastEpId != null && lastEpId > 0) {
+          final epIdx = detail.episodes.indexWhere((e) => e.id == lastEpId);
+          if (epIdx >= 0) {
+            final total = detail.episodes.length;
+            _selectedEpisodePage = _episodesDescending
+                ? (total - 1 - epIdx).clamp(0, total - 1) ~/ _episodesPerPage
+                : epIdx ~/ _episodesPerPage;
+          }
+        }
+      }
+    });
   }
 
   Future<void> _loadDetail({int? seasonId, int? epId, int? mediaId}) async {
@@ -992,24 +1018,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                 // 正倒序切换
                 TextButton.icon(
                   onPressed: () {
-                    setState(() {
-                      _episodesDescending = !_episodesDescending;
-                      // 保持观看进度所在的分页
-                      final lastEpId = detail.userStatus?.progressLastEpId;
-                      if (lastEpId != null && lastEpId > 0) {
-                        final epIdx = detail.episodes.indexWhere((e) => e.id == lastEpId);
-                        if (epIdx >= 0) {
-                          final total = detail.episodes.length;
-                          _selectedEpisodePage = _episodesDescending
-                              ? (total - 1 - epIdx).clamp(0, total - 1) ~/ _episodesPerPage
-                              : epIdx ~/ _episodesPerPage;
-                        } else {
-                          _selectedEpisodePage = 0;
-                        }
-                      } else {
-                        _selectedEpisodePage = 0;
-                      }
-                    });
+                    Pref.setBangumiEpisodesDescending(!_episodesDescending);
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _scrollToTargetEpisode();
                     });
