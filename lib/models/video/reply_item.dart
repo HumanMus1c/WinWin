@@ -15,8 +15,11 @@ class ReplyItemModel {
   int? rcount;
 
   /// 点赞状态：0=未操作，1=已点赞，2=已点踩。
-  /// 位于 reply_control.action。
+  /// B 站评论接口返回顶层 action，同时兼容容错 reply_control.action。
   int? action;
+
+  /// UP 主互动标记（UP 主点赞/UP 主回复）。
+  ReplyUpAction? upAction;
 
   ReplyItemModel({
     this.rpid,
@@ -27,6 +30,7 @@ class ReplyItemModel {
     this.ctime,
     this.rcount,
     this.action,
+    this.upAction,
   });
 
   ReplyItemModel.fromJson(Map<String, dynamic> json)
@@ -42,13 +46,26 @@ class ReplyItemModel {
           like: _asInt(json['like']),
           ctime: _asInt(json['ctime']),
           rcount: _asInt(json['rcount']),
-          action: _asInt(json['reply_control']?['action']),
+          action: _asInt(json['action'] ?? json['reply_control']?['action']) ?? 0,
+          upAction: json['up_action'] is Map<String, dynamic>
+              ? ReplyUpAction.fromJson(
+                  (json['up_action'] as Map).cast<String, dynamic>(),
+                )
+              : null,
         );
 
   /// 是否已点赞。
   bool get isLiked => action == 1;
 
-  ReplyItemModel copyWith({int? like, int? action}) => ReplyItemModel(
+  /// 是否已点踩。
+  bool get isDisliked => action == 2;
+
+  ReplyItemModel copyWith({
+    int? like,
+    int? action,
+    ReplyUpAction? upAction,
+  }) =>
+      ReplyItemModel(
         rpid: rpid,
         mid: mid,
         member: member,
@@ -57,7 +74,23 @@ class ReplyItemModel {
         ctime: ctime,
         rcount: rcount,
         action: action ?? this.action,
+        upAction: upAction ?? this.upAction,
       );
+}
+
+/// UP 主对评论的互动标记（点赞/回复）。
+class ReplyUpAction {
+  final bool like;
+  final bool reply;
+
+  const ReplyUpAction({this.like = false, this.reply = false});
+
+  factory ReplyUpAction.fromJson(Map<String, dynamic> json) {
+    return ReplyUpAction(
+      like: json['like'] == true || json['like'] == 1,
+      reply: json['reply'] == true || json['reply'] == 1,
+    );
+  }
 }
 
 class ReplyMember {

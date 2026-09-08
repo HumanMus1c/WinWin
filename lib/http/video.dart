@@ -16,6 +16,7 @@ import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
+import 'package:winwin/models/video/video_relation.dart';
 import 'package:winwin/models/video/video_tag.dart';
 import 'package:winwin/utils/global_data.dart';
 import 'package:winwin/utils/id_utils.dart';
@@ -301,6 +302,7 @@ abstract final class VideoHttp {
     String? nextOffset,
     int mode = 3,
   }) async {
+    final account = Accounts.main;
     final res = await Request().get(
       Api.replyMain,
       queryParameters: {
@@ -311,6 +313,14 @@ abstract final class VideoHttp {
         'pagination_str': jsonEncode({'offset': nextOffset ?? ''}),
         'web_location': '1315873',
       },
+      options: Options(
+        headers: {
+          'origin': 'https://www.bilibili.com',
+          'referer': 'https://www.bilibili.com',
+          'user-agent': BrowserUa.pc,
+        },
+        extra: {'account': account},
+      ),
     );
     if (res.data['code'] == 0) {
       return Success(
@@ -329,6 +339,7 @@ abstract final class VideoHttp {
     required int root,
     String? nextOffset,
   }) async {
+    final account = Accounts.main;
     final res = await Request().get(
       Api.replyReplyList,
       queryParameters: {
@@ -339,6 +350,14 @@ abstract final class VideoHttp {
         'pagination_str': jsonEncode({'offset': nextOffset ?? ''}),
         'web_location': '1315873',
       },
+      options: Options(
+        headers: {
+          'origin': 'https://www.bilibili.com',
+          'referer': 'https://www.bilibili.com',
+          'user-agent': BrowserUa.pc,
+        },
+        extra: {'account': account},
+      ),
     );
     if (res.data['code'] == 0) {
       return Success(
@@ -662,6 +681,42 @@ abstract final class VideoHttp {
       return const Success(null);
     } else {
       return Error(res.data['message']);
+    }
+  }
+
+  /// 查询当前登录用户对稿件的互动状态（`/x/web-interface/archive/relation`）。
+  ///
+  /// 返回点赞、投币、收藏、点踩、关注作者等真实云端姿态。未登录时返回错误。
+  static Future<LoadingState<VideoRelationModel>> videoRelation({
+    required String bvid,
+    int? aid,
+  }) async {
+    final account = Accounts.main;
+    if (!account.isLogin) return const Error('未登录');
+    final effectiveAid = aid ?? (bvid.isNotEmpty ? IdUtils.bv2av(bvid) : null);
+    final res = await Request().get(
+      Api.videoRelation,
+      queryParameters: {
+        'bvid': bvid,
+        if (effectiveAid != null && effectiveAid > 0) 'aid': effectiveAid,
+      },
+      options: Options(
+        headers: {
+          'origin': 'https://www.bilibili.com',
+          'referer': 'https://www.bilibili.com/video/$bvid',
+          'user-agent': BrowserUa.pc,
+        },
+        extra: {'account': account},
+      ),
+    );
+    if (res.data['code'] == 0 && res.data['data'] != null) {
+      return Success(
+        VideoRelationModel.fromJson(
+          (res.data['data'] as Map).cast<String, dynamic>(),
+        ),
+      );
+    } else {
+      return Error(res.data['message']?.toString() ?? '获取互动状态失败');
     }
   }
 }

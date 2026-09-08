@@ -12,6 +12,7 @@ import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
+import 'package:winwin/http/reply.dart';
 import 'package:winwin/http/toview.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/main.dart';
@@ -423,6 +424,24 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
+  void _updateReplyInState(
+    int rpid,
+    ReplyItemModel Function(ReplyItemModel) updater,
+  ) {
+    setState(() {
+      final idx = _replies.indexWhere((r) => r.rpid == rpid);
+      if (idx >= 0) {
+        _replies[idx] = updater(_replies[idx]);
+      }
+      for (final entry in _subReplies.entries) {
+        final subIdx = entry.value.indexWhere((r) => r.rpid == rpid);
+        if (subIdx >= 0) {
+          entry.value[subIdx] = updater(entry.value[subIdx]);
+        }
+      }
+    });
+  }
+
   Future<void> _toggleLikeReply(ReplyItemModel reply) async {
     final aid = _currentEpisode.aid;
     final rpid = reply.rpid;
@@ -431,17 +450,15 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     if (!mounted) return;
 
     final wasLiked = reply.isLiked;
-    // 乐观更新
-    setState(() {
-      final idx = _replies.indexWhere((r) => r.rpid == rpid);
-      if (idx >= 0) {
-        final r = _replies[idx];
-        _replies[idx] = r.copyWith(
-          like: (r.like ?? 0) + (wasLiked ? -1 : 1),
-          action: wasLiked ? 0 : 1,
-        );
-      }
-    });
+    final wasDisliked = reply.isDisliked;
+
+    _updateReplyInState(
+      rpid,
+      (r) => r.copyWith(
+        like: (r.like ?? 0) + (wasLiked ? -1 : 1),
+        action: wasLiked ? 0 : 1,
+      ),
+    );
 
     final res = await VideoHttp.likeReply(
       oid: aid,
@@ -450,69 +467,59 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
     if (!mounted) return;
     if (res case Error(:final errMsg)) {
-      setState(() {
-        final idx = _replies.indexWhere((r) => r.rpid == rpid);
-        if (idx >= 0) {
-          final r = _replies[idx];
-          _replies[idx] = r.copyWith(
-            like: (r.like ?? 0) + (wasLiked ? 1 : -1),
-            action: wasLiked ? 1 : 0,
-          );
-        }
-      });
+      _updateReplyInState(
+        rpid,
+        (r) => r.copyWith(
+          like: (r.like ?? 0) + (wasLiked ? 1 : -1),
+          action: wasLiked ? 1 : (wasDisliked ? 2 : 0),
+        ),
+      );
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         SnackBar(content: Text(errMsg ?? '操作失败')),
       );
     }
   }
 
-  Future<void> _toggleLikeSubReply(ReplyItemModel sub) async {
+  Future<void> _toggleDislikeReply(ReplyItemModel reply) async {
     final aid = _currentEpisode.aid;
-    final rpid = sub.rpid;
+    final rpid = reply.rpid;
     if (aid == null || aid <= 0 || rpid == null) return;
     if (!await LoginGuard.requireLogin(context)) return;
     if (!mounted) return;
 
-    final wasLiked = sub.isLiked;
-    setState(() {
-      for (final entry in _subReplies.entries) {
-        final idx = entry.value.indexWhere((r) => r.rpid == rpid);
-        if (idx >= 0) {
-          final r = entry.value[idx];
-          entry.value[idx] = r.copyWith(
-            like: (r.like ?? 0) + (wasLiked ? -1 : 1),
-            action: wasLiked ? 0 : 1,
-          );
-          break;
-        }
-      }
-    });
+    final wasDisliked = reply.isDisliked;
+    final wasLiked = reply.isLiked;
 
-    final res = await VideoHttp.likeReply(
+    _updateReplyInState(
+      rpid,
+      (r) => r.copyWith(
+        like: (r.like ?? 0) - (wasLiked ? 1 : 0),
+        action: wasDisliked ? 0 : 2,
+      ),
+    );
+
+    final res = await ReplyHttp.hateReply(
+      type: 1,
+      action: wasDisliked ? 0 : 1,
       oid: aid,
       rpid: rpid,
-      action: wasLiked ? 0 : 1,
     );
     if (!mounted) return;
     if (res case Error(:final errMsg)) {
-      setState(() {
-        for (final entry in _subReplies.entries) {
-          final idx = entry.value.indexWhere((r) => r.rpid == rpid);
-          if (idx >= 0) {
-            final r = entry.value[idx];
-            entry.value[idx] = r.copyWith(
-              like: (r.like ?? 0) + (wasLiked ? 1 : -1),
-              action: wasLiked ? 1 : 0,
-            );
-            break;
-          }
-        }
-      });
+      _updateReplyInState(
+        rpid,
+        (r) => r.copyWith(
+          like: (r.like ?? 0) + (wasLiked ? 1 : 0),
+          action: wasDisliked ? 2 : (wasLiked ? 1 : 0),
+        ),
+      );
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         SnackBar(content: Text(errMsg ?? '操作失败')),
       );
     }
   }
+
+  Future<void> _toggleLikeSubReply(ReplyItemModel sub) => _toggleLikeReply(sub);
 
   Future<void> _toggleSubReplies(ReplyItemModel reply) async {
     final rpid = reply.rpid;
@@ -1323,7 +1330,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       ),
                     ),
                     const SizedBox(height: Style.sm),
-                    // 操作行：点赞 + 回复 + 展开折叠
+                    // 操作行：点赞 + 点踩 + UP主赞 + 回复 + 展开折叠
                     Row(
                       spacing: Style.lg,
                       children: [
@@ -1353,6 +1360,38 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                             ],
                           ),
                         ),
+                        GestureDetector(
+                          onTap: () => _toggleDislikeReply(reply),
+                          child: Icon(
+                            reply.isDisliked
+                                ? Icons.thumb_down
+                                : Icons.thumb_down_outlined,
+                            size: 15,
+                            color: reply.isDisliked
+                                ? biliPink
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (reply.upAction?.like == true)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: biliPink.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: const Text(
+                              'UP主觉得很赞',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: biliPink,
+                                fontWeight: FontWeight.w500,
+                                height: 1.1,
+                              ),
+                            ),
+                          ),
                         GestureDetector(
                           onTap: () => _setReplyTarget(reply),
                           child: Row(
@@ -1564,7 +1603,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               ),
             ),
           ),
-          // 第 3 行：操作栏（点赞 + 回复）
+          // 第 3 行：操作栏（点赞 + 点踩 + UP主赞 + 回复）
           Padding(
             padding: const EdgeInsets.only(left: 36, bottom: 2),
             child: Row(
@@ -1594,6 +1633,38 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                     ],
                   ),
                 ),
+                GestureDetector(
+                  onTap: () => _toggleDislikeReply(sub),
+                  child: Icon(
+                    sub.isDisliked
+                        ? Icons.thumb_down
+                        : Icons.thumb_down_outlined,
+                    size: 13,
+                    color: sub.isDisliked
+                        ? biliPink
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (sub.upAction?.like == true)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 3,
+                      vertical: 0.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: biliPink.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: const Text(
+                      'UP主觉得很赞',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        color: biliPink,
+                        fontWeight: FontWeight.w500,
+                        height: 1.1,
+                      ),
+                    ),
+                  ),
                 GestureDetector(
                   onTap: () => _setReplyTarget(
                     root,
@@ -2096,10 +2167,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     if (!await LoginGuard.requireLogin(context)) return;
     final aid = _currentEpisode.aid;
     if (aid != null && aid > 0) {
-      final next = !_hasLike;
-      final res = await VideoHttp.likeVideo(aid: aid, type: next);
+      final wasLiked = _hasLike;
+      final res = await VideoHttp.likeVideo(aid: aid, type: wasLiked);
       if (res case Success()) {
-        setState(() => _hasLike = next);
+        setState(() => _hasLike = !wasLiked);
       }
     }
   }

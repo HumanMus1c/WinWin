@@ -18,6 +18,7 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/follow.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
+import 'package:winwin/http/reply.dart';
 import 'package:winwin/http/toview.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/main.dart';
@@ -273,13 +274,16 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           unawaited(_applyPlayInfo(ctrl, cid, detailDurSec, aid: aid));
           ctrl.load();
         }
-        // 互动初始态（对标 BiliPai checkInteractionStatus，来自 req_user）。
+        // 互动初始态（来自 req_user 或并发拉取云端 videoRelation 真实姿态）。
         _hasLike = response.reqUser?.like ?? false;
         _coinNum = response.reqUser?.coin ?? 0;
         _hasFav = response.reqUser?.favorite ?? false;
         _hasDislike = false;
         _isFollowed = response.reqUser?.follow == 1;
         _loadWatchLaterStatus(response.aid);
+        if (Accounts.main.isLogin) {
+          unawaited(_syncVideoRelation(aid: response.aid));
+        }
         if (response.owner?.mid != null) {
           unawaited(_checkFollowStatus(response.owner!.mid!));
         }
@@ -362,8 +366,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
   }
 
-  Future<void> _loadReplies({required int oid, String? nextOffset}) async {
+  Future<void> _loadReplies({
+    required int oid,
+    String? nextOffset,
+    bool refresh = false,
+  }) async {
     if (_loadingReplies) return;
+    if (refresh) {
+      _replies.clear();
+      _nextOffset = null;
+      _replyEnd = false;
+      _replyFailed = false;
+      _subReplies.clear();
+    }
     _loadingReplies = true;
     if (_replies.isNotEmpty) {
       setState(() {}); // 让尾部 spinner 立即出现
@@ -444,6 +459,36 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     setState(() => _inWatchLater = false);
   }
 
+  /// 云端同步稿件互动状态（点赞/投币/收藏/点踩/关注，/x/web-interface/archive/relation）。
+  Future<void> _syncVideoRelation({int? aid}) async {
+    if (!Accounts.main.isLogin) return;
+    final effectiveAid = aid ?? _detailState.dataOrNull?.aid;
+    final res = await VideoHttp.videoRelation(bvid: widget.bvid, aid: effectiveAid);
+    if (!mounted) return;
+    if (res case Success(:final response)) {
+      setState(() {
+        _hasLike = response.like;
+        _hasDislike = response.dislike;
+        _coinNum = response.coin;
+        _hasFav = response.favorite;
+        _isFollowed = response.attention;
+      });
+    }
+  }
+
+  /// 校验登录态并在发生新登录时立即全量拉取云端互动与刷新评论。
+  Future<bool> _requireLoginAndSync() async {
+    final wasLogin = Accounts.main.isLogin;
+    if (!await LoginGuard.requireLogin(context)) return false;
+    if (!wasLogin && mounted) {
+      final aid = _detailState.dataOrNull?.aid;
+      unawaited(_syncVideoRelation(aid: aid));
+      _loadWatchLaterStatus(aid);
+      if (aid != null) _loadReplies(oid: aid, refresh: true);
+    }
+    return true;
+  }
+
   /// 更新稿件 stat 计数（乐观更新/回滚共用，[fn] 内直接改写字段）。
   void _adjustStat(void Function(VideoStat stat) fn) {
     final stat = _detailState.dataOrNull?.stat;
@@ -455,7 +500,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Future<void> _actionLike() async {
     final aid = _detailState.dataOrNull?.aid;
     if (aid == null) return;
-    if (!await LoginGuard.requireLogin(context)) return;
+    if (!await _requireLoginAndSync()) return;
     if (!mounted) return;
     final wasLiked = _hasLike;
     _adjustStat((s) {
@@ -488,7 +533,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       _toast('已完成三连');
       return;
     }
-    if (!await LoginGuard.requireLogin(context)) return;
+    if (!await _requireLoginAndSync()) return;
     if (!mounted) return;
     final res = await VideoHttp.ugcTriple(bvid: widget.bvid, aid: aid);
     if (!mounted) return;
@@ -519,7 +564,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Future<void> _actionCoin() async {
     final aid = _detailState.dataOrNull?.aid;
     if (aid == null) return;
-    if (!await LoginGuard.requireLogin(context)) return;
+    if (!await _requireLoginAndSync()) return;
     if (!mounted) return;
     if (_coinNum >= 2) {
       _toast('达到投币上限啦~');
@@ -563,7 +608,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Future<void> _actionDislike() async {
     final aid = _detailState.dataOrNull?.aid;
     if (aid == null) return;
-    if (!await LoginGuard.requireLogin(context)) return;
+    if (!await _requireLoginAndSync()) return;
     if (!mounted) return;
     final wasDisliked = _hasDislike;
     final cancelledLike = !wasDisliked && _hasLike;
@@ -594,7 +639,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Future<void> _actionFav() async {
     final aid = _detailState.dataOrNull?.aid;
     if (aid == null) return;
-    if (!await LoginGuard.requireLogin(context)) return;
+    if (!await _requireLoginAndSync()) return;
     if (!mounted) return;
     showFavPanel(context, rid: aid, onSuccess: (isFav) {
       if (!mounted) return;
@@ -625,7 +670,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Future<void> _actionWatchLater() async {
     final aid = _detailState.dataOrNull?.aid;
     if (aid == null) return;
-    if (!await LoginGuard.requireLogin(context)) return;
+    if (!await _requireLoginAndSync()) return;
     if (!mounted) return;
     final inList = _inWatchLater ?? false;
     final res = inList
@@ -691,28 +736,46 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
   }
 
-  // ─────────────────────────── 评论点赞 ───────────────────────────
+  // ─────────────────────────── 评论点赞与点踩 ───────────────────────────
 
-  /// 切换评论点赞状态。
+  /// 统一在主评论与楼中楼缓存中按 rpid 更新评论条目。
+  void _updateReplyInState(
+    int rpid,
+    ReplyItemModel Function(ReplyItemModel) updater,
+  ) {
+    setState(() {
+      final idx = _replies.indexWhere((r) => r.rpid == rpid);
+      if (idx >= 0) {
+        _replies[idx] = updater(_replies[idx]);
+      }
+      for (final entry in _subReplies.entries) {
+        final subIdx = entry.value.indexWhere((r) => r.rpid == rpid);
+        if (subIdx >= 0) {
+          entry.value[subIdx] = updater(entry.value[subIdx]);
+        }
+      }
+    });
+  }
+
+  /// 切换评论点赞状态（点赞与点踩互斥）。
   Future<void> _toggleLikeReply(ReplyItemModel reply) async {
     final aid = _detailState.dataOrNull?.aid;
     final rpid = reply.rpid;
     if (aid == null || rpid == null) return;
-    if (!await LoginGuard.requireLogin(context)) return;
+    if (!await _requireLoginAndSync()) return;
     if (!mounted) return;
 
     final wasLiked = reply.isLiked;
-    // 乐观更新：先切换 UI 状态。
-    setState(() {
-      final idx = _replies.indexWhere((r) => r.rpid == rpid);
-      if (idx >= 0) {
-        final r = _replies[idx];
-        _replies[idx] = r.copyWith(
-          like: (r.like ?? 0) + (wasLiked ? -1 : 1),
-          action: wasLiked ? 0 : 1,
-        );
-      }
-    });
+    final wasDisliked = reply.isDisliked;
+
+    // 乐观更新：若已赞则取消（action=0, like-1）；若未赞则点赞（action=1, like+1）。
+    _updateReplyInState(
+      rpid,
+      (r) => r.copyWith(
+        like: (r.like ?? 0) + (wasLiked ? -1 : 1),
+        action: wasLiked ? 0 : 1,
+      ),
+    );
 
     final res = await VideoHttp.likeReply(
       oid: aid,
@@ -722,16 +785,53 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (!mounted) return;
     if (res case Error(:final errMsg)) {
       // 回滚乐观更新。
-      setState(() {
-        final idx = _replies.indexWhere((r) => r.rpid == rpid);
-        if (idx >= 0) {
-          final r = _replies[idx];
-          _replies[idx] = r.copyWith(
-            like: (r.like ?? 0) + (wasLiked ? 1 : -1),
-            action: wasLiked ? 1 : 0,
-          );
-        }
-      });
+      _updateReplyInState(
+        rpid,
+        (r) => r.copyWith(
+          like: (r.like ?? 0) + (wasLiked ? 1 : -1),
+          action: wasLiked ? 1 : (wasDisliked ? 2 : 0),
+        ),
+      );
+      _toast(errMsg ?? '操作失败');
+    }
+  }
+
+  /// 切换评论点踩状态（点踩与点赞互斥）。
+  Future<void> _toggleDislikeReply(ReplyItemModel reply) async {
+    final aid = _detailState.dataOrNull?.aid;
+    final rpid = reply.rpid;
+    if (aid == null || rpid == null) return;
+    if (!await _requireLoginAndSync()) return;
+    if (!mounted) return;
+
+    final wasDisliked = reply.isDisliked;
+    final wasLiked = reply.isLiked;
+
+    // 乐观更新：若已踩则取消踩（action=0）；若未踩则点踩（action=2），若之前点赞过则赞数-1。
+    _updateReplyInState(
+      rpid,
+      (r) => r.copyWith(
+        like: (r.like ?? 0) - (wasLiked ? 1 : 0),
+        action: wasDisliked ? 0 : 2,
+      ),
+    );
+
+    final res = await ReplyHttp.hateReply(
+      type: 1,
+      action: wasDisliked ? 0 : 1,
+      oid: aid,
+      rpid: rpid,
+    );
+    if (!mounted) return;
+    if (res case Error(:final errMsg)) {
+      // 回滚乐观更新。
+      _updateReplyInState(
+        rpid,
+        (r) => r.copyWith(
+          like: (r.like ?? 0) + (wasLiked ? 1 : 0),
+          action: wasDisliked ? 2 : (wasLiked ? 1 : 0),
+        ),
+      );
       _toast(errMsg ?? '操作失败');
     }
   }
@@ -1677,7 +1777,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       ),
                     ),
                     const SizedBox(height: Style.sm),
-                    // 操作行：点赞 + 回复 + 展开折叠
+                    // 操作行：点赞 + 点踩 + UP主赞 + 回复 + 展开折叠
                     Row(
                       spacing: Style.lg,
                       children: [
@@ -1707,6 +1807,38 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             ],
                           ),
                         ),
+                        GestureDetector(
+                          onTap: () => _toggleDislikeReply(reply),
+                          child: Icon(
+                            reply.isDisliked
+                                ? Icons.thumb_down
+                                : Icons.thumb_down_outlined,
+                            size: 15,
+                            color: reply.isDisliked
+                                ? biliPink
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (reply.upAction?.like == true)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: biliPink.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: const Text(
+                              'UP主觉得很赞',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: biliPink,
+                                fontWeight: FontWeight.w500,
+                                height: 1.1,
+                              ),
+                            ),
+                          ),
                         GestureDetector(
                           onTap: () => _setReplyTarget(reply),
                           child: Row(
@@ -1954,7 +2086,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               spacing: Style.md,
               children: [
                 GestureDetector(
-                  onTap: () => _toggleLikeSubReply(sub),
+                  onTap: () => _toggleLikeReply(sub),
                   child: Row(
                     spacing: 3,
                     children: [
@@ -1977,6 +2109,38 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     ],
                   ),
                 ),
+                GestureDetector(
+                  onTap: () => _toggleDislikeReply(sub),
+                  child: Icon(
+                    sub.isDisliked
+                        ? Icons.thumb_down
+                        : Icons.thumb_down_outlined,
+                    size: 13,
+                    color: sub.isDisliked
+                        ? biliPink
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (sub.upAction?.like == true)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 3,
+                      vertical: 0.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: biliPink.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: const Text(
+                      'UP主觉得很赞',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        color: biliPink,
+                        fontWeight: FontWeight.w500,
+                        height: 1.1,
+                      ),
+                    ),
+                  ),
                 GestureDetector(
                   onTap: () => _setReplyTarget(
                     root,
@@ -2006,55 +2170,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         ],
       ),
     );
-  }
-
-  /// 楼中楼点赞（乐观更新）。
-  Future<void> _toggleLikeSubReply(ReplyItemModel sub) async {
-    final aid = _detailState.dataOrNull?.aid;
-    final rpid = sub.rpid;
-    if (aid == null || rpid == null) return;
-    if (!await LoginGuard.requireLogin(context)) return;
-    if (!mounted) return;
-
-    final wasLiked = sub.isLiked;
-    // 乐观更新。
-    setState(() {
-      for (final entry in _subReplies.entries) {
-        final idx = entry.value.indexWhere((r) => r.rpid == rpid);
-        if (idx >= 0) {
-          final r = entry.value[idx];
-          entry.value[idx] = r.copyWith(
-            like: (r.like ?? 0) + (wasLiked ? -1 : 1),
-            action: wasLiked ? 0 : 1,
-          );
-          break;
-        }
-      }
-    });
-
-    final res = await VideoHttp.likeReply(
-      oid: aid,
-      rpid: rpid,
-      action: wasLiked ? 0 : 1,
-    );
-    if (!mounted) return;
-    if (res case Error(:final errMsg)) {
-      // 回滚。
-      setState(() {
-        for (final entry in _subReplies.entries) {
-          final idx = entry.value.indexWhere((r) => r.rpid == rpid);
-          if (idx >= 0) {
-            final r = entry.value[idx];
-            entry.value[idx] = r.copyWith(
-              like: (r.like ?? 0) + (wasLiked ? 1 : -1),
-              action: wasLiked ? 1 : 0,
-            );
-            break;
-          }
-        }
-      });
-      _toast(errMsg ?? '操作失败');
-    }
   }
 
   /// 评论输入栏（固定在左栏底部，默认给当前稿件发布一级评论；
