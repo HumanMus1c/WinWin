@@ -15,7 +15,9 @@ import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/log/sync_trace.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/http/follow.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/member.dart';
 import 'package:winwin/http/toview.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/main.dart';
@@ -119,6 +121,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 是否在稍后再看列表（null=未知/未登录）
   bool? _inWatchLater;
+
+  /// 作者关注状态（初始值来自 detail 接口 req_user.follow 或 /x/relation）
+  bool _isFollowed = false;
+
+  /// 是否正在更新作者关注状态（防止重复点击）
+  bool _isFollowUpdating = false;
 
   /// Phase 7.6.3：VideoHeader 收缩比例（0.0=展开，1.0=pin），用于顶栏渐变。
   final ValueNotifier<double> _scrollRatio = ValueNotifier<double>(0.0);
@@ -270,7 +278,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         _coinNum = response.reqUser?.coin ?? 0;
         _hasFav = response.reqUser?.favorite ?? false;
         _hasDislike = false;
+        _isFollowed = response.reqUser?.follow == 1;
         _loadWatchLaterStatus(response.aid);
+        if (response.owner?.mid != null) {
+          unawaited(_checkFollowStatus(response.owner!.mid!));
+        }
         setState(() => _detailState = Success(response));
         if (response.aid != null) {
           _loadReplies(oid: response.aid!);
@@ -626,6 +638,54 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         _toast(inList ? '已从稍后再看移除' : 'yeah！稍后再看');
       case Error(:final errMsg):
         _toast(errMsg ?? '操作失败');
+      case Loading():
+        break;
+    }
+  }
+
+  // ─────────────────────────── 作者关注 ───────────────────────────
+
+  /// 查询与稿件作者的关系（/x/relation）。
+  Future<void> _checkFollowStatus(int mid) async {
+    if (!Accounts.main.isLogin) return;
+    final res = await FollowHttp.relation(fid: mid);
+    if (!mounted) return;
+    if (res case Success(:final response)) {
+      final attr = (response['attribute'] as num?)?.toInt() ?? 0;
+      // 0: 未关注, 1: 悄悄关注, 2: 已关注, 6: 互相关注
+      final isFollowed = attr == 1 || attr == 2 || attr == 6;
+      if (_isFollowed != isFollowed) {
+        setState(() => _isFollowed = isFollowed);
+      }
+    }
+  }
+
+  /// 切换作者关注状态。
+  Future<void> _toggleFollow() async {
+    final ownerMid = _detailState.dataOrNull?.owner?.mid;
+    if (ownerMid == null) return;
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+    if (_isFollowUpdating) return;
+
+    final isCurrentlyFollowed = _isFollowed;
+    final act = isCurrentlyFollowed ? 2 : 1; // 1: 关注, 2: 取消关注
+
+    setState(() => _isFollowUpdating = true);
+    final res = await MemberHttp.relationMod(
+      mid: ownerMid,
+      act: act,
+      reSrc: 14,
+    );
+    if (!mounted) return;
+    setState(() => _isFollowUpdating = false);
+
+    switch (res) {
+      case Success():
+        setState(() => _isFollowed = !isCurrentlyFollowed);
+        _toast(isCurrentlyFollowed ? '已取消关注' : '关注成功');
+      case Error(:final errMsg):
+        _toast(errMsg ?? (isCurrentlyFollowed ? '取消关注失败' : '关注失败'));
       case Loading():
         break;
     }
@@ -1354,28 +1414,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   ),
                 ),
               ),
-              // 关注按钮：未登录→登录页；已登录→TODO 接入关注接口
-              FilledButton.tonal(
-                style: FilledButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
+              // 关注按钮：未登录/未关注/已关注，支持 Hover 状态切换与取关
+              if (owner?.mid != null &&
+                  !(Accounts.main.isLogin &&
+                      Accounts.main.mid == owner!.mid))
+                _AuthorFollowButton(
+                  isFollowed: _isFollowed,
+                  isLoading: _isFollowUpdating,
+                  onPressed: _toggleFollow,
                 ),
-                onPressed: () async {
-                  if (!await LoginGuard.requireLogin(context)) return;
-                  // TODO: 接入关注/取关接口（需 FollowHttp）
-                  if (!mounted) return;
-                  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                    const SnackBar(
-                      content: Text('关注接口待接入'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                },
-                child: const Text('关注'),
-              ),
             ],
           ),
           const Divider(height: Style.xl),
@@ -2454,16 +2501,20 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   child: SkeletonLine(width: 100, height: 14),
                 ),
               ),
-              FilledButton.tonal(
-                style: FilledButton.styleFrom(
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
+                    horizontal: 14,
                     vertical: 6,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(Style.radiusSm),
                   ),
                 ),
                 onPressed: null,
-                child: const Text('关注'),
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: const Text('关注', style: TextStyle(fontSize: 12.5)),
               ),
             ],
           ),
@@ -2632,3 +2683,91 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         '${pad(dt.hour)}:${pad(dt.minute)}';
   }
 }
+
+/// 稿件作者关注按钮：
+/// - 未关注状态：默认显示“关注”，鼠标悬浮显示“开始关注”。
+/// - 已关注状态：默认显示“已关注”，鼠标悬浮显示“取消关注”，点击取消关注。
+class _AuthorFollowButton extends StatefulWidget {
+  final bool isFollowed;
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  const _AuthorFollowButton({
+    required this.isFollowed,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  @override
+  State<_AuthorFollowButton> createState() => _AuthorFollowButtonState();
+}
+
+class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    final String label;
+    final IconData icon;
+    final Color? color;
+
+    if (!widget.isFollowed) {
+      label = _isHovered ? '开始关注' : '关注';
+      icon = Icons.add_rounded;
+      color = _isHovered ? cs.primary : null;
+    } else {
+      if (_isHovered) {
+        label = '取消关注';
+        icon = Icons.close_rounded;
+        color = Colors.red;
+      } else {
+        label = '已关注';
+        icon = Icons.check_rounded;
+        color = cs.outline;
+      }
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Tooltip(
+        message: widget.isFollowed ? '点击取消关注' : '点击关注',
+        child: OutlinedButton.icon(
+          onPressed: widget.isLoading ? null : widget.onPressed,
+          icon: widget.isLoading
+              ? SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: color ?? cs.primary,
+                  ),
+                )
+              : Icon(icon, size: 16, color: color),
+          label: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: color,
+              fontWeight:
+                  widget.isFollowed ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            side: color != null
+                ? BorderSide(color: color.withValues(alpha: 0.6))
+                : null,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Style.radiusSm),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

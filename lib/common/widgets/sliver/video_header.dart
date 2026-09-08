@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:winwin/theme/app_shapes.dart';
 
 /// 视频详情页头部 Sliver（Phase 7.6.1）。
 ///
@@ -77,7 +76,7 @@ class VideoHeaderDelegate extends SliverPersistentHeaderDelegate {
 
 /// 构建播放器 header 的便捷封装。
 ///
-/// 自动应用 [AppShapes] 的圆角，并在收缩时隐藏圆角（pin 态全宽）。
+/// 使用矩形裁切，保证播放器底部边缘平直并与下方面板无缝拼接。
 class VideoHeader extends StatelessWidget {
   const VideoHeader({
     super.key,
@@ -101,7 +100,6 @@ class VideoHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.ios;
     return SliverPersistentHeader(
       pinned: true,
       delegate: VideoHeaderDelegate(
@@ -110,12 +108,7 @@ class VideoHeader extends StatelessWidget {
         child: child,
         onScrollRatioChange: onScrollRatioChange,
         builder: (context, scrollRatio) {
-          // 收缩时圆角逐渐变为 0（pin 态全宽贴顶）
-          final radius = shapes.medium.x * (1.0 - scrollRatio);
-          return ClipRRect(
-            borderRadius: BorderRadius.vertical(
-              bottom: Radius.circular(radius),
-            ),
+          return ClipRect(
             child: ColoredBox(
               color: Colors.black,
               child: SizedBox(
