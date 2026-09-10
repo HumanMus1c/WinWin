@@ -58,22 +58,31 @@ abstract final class CdnPolicy {
   }
 
   /// 从给定的候选音视频 URL 列表中，结合用户 CDN 偏好与 MCDN 规避策略，
-  /// 解析出最稳定、速度最优的播放 URL。
+  /// 解析出最稳定、速度最优的所有可用播放 URL 候选列表（去重且按优质官方节点优先排序）。
   ///
-  /// [urls]：通常为 `video.allUrls` 或 `audio.allUrls`（包含 baseUrl 及全部 backupUrl）。
+  /// [urls]：通常为 `video.playUrls` 或 `audio.playUrls`（包含 baseUrl 及全部 backupUrl）。
   /// [service]：用户指定的 CDN偏好，若为 null 则读取 [Pref.defaultCDNService]。
   /// [isAudio]：是否为音频轨（若开启 [Pref.disableAudioCDN] 则不改写音频宿主）。
-  static String resolveUrl(
+  static List<String> resolveAllUrls(
     Iterable<String> urls, {
     CDNService? service,
     bool isAudio = false,
   }) {
-    if (urls.isEmpty) return '';
+    if (urls.isEmpty) return const [];
     service ??= Pref.defaultCDNService;
 
-    // 若用户显式选择 baseUrl，直通原样返回第一条
+    // 若用户显式选择 baseUrl，直通原样返回列表
     if (service == CDNService.baseUrl) {
-      return urls.first;
+      return urls.where((u) => u.isNotEmpty).toList();
+    }
+
+    final result = <String>[];
+    final seen = <String>{};
+
+    void addCandidate(String candidate) {
+      if (candidate.isNotEmpty && seen.add(candidate)) {
+        result.add(candidate);
+      }
     }
 
     String? mcdnTf;
@@ -97,46 +106,57 @@ abstract final class CdnPolicy {
       if (_mirrorRegex.hasMatch(url)) {
         if (isMcdnNode) {
           // 极少数情况下官方镜像后缀带 os=mcdn，记下路径备用，继续寻找更干净的镜像
-          mcdnUpgcxcode = url;
+          mcdnUpgcxcode ??= url;
           continue;
         }
 
         // 命中纯净的官方镜像
         if (service == CDNService.backupUrl ||
             (isAudio && Pref.disableAudioCDN)) {
-          return url;
+          addCandidate(url);
+          continue;
         }
 
         // 用户指定了特定服务商 Host，替换并重置端口为 443
         final targetHost = service.host ?? CDNService.ali.host!;
-        return uri.replace(scheme: 'https', host: targetHost, port: 443).toString();
+        addCandidate(
+          uri.replace(scheme: 'https', host: targetHost, port: 443).toString(),
+        );
+        continue;
       }
 
       // 2. 匹配 MCDN TF 规则
       if (_mCdnTfRegex.hasMatch(url)) {
-        mcdnTf = url;
+        mcdnTf ??= url;
         continue;
       }
 
       // 3. 记录包含 /upgcxcode/ 的备用链接（如来自 MCDN 节点的链接）
       if (url.contains('/upgcxcode/')) {
         if (isMcdnNode) {
-          mcdnUpgcxcode = url;
+          mcdnUpgcxcode ??= url;
           continue;
         }
         // 非 MCDN 但包含 /upgcxcode/（可能为 302 域或海外节点）
         if (service == CDNService.backupUrl) {
-          return url;
+          addCandidate(url);
+        } else {
+          final targetHost = service.host ?? CDNService.ali.host!;
+          addCandidate(
+            uri.replace(scheme: 'https', host: targetHost, port: 443).toString(),
+          );
         }
-        final targetHost = service.host ?? CDNService.ali.host!;
-        return uri.replace(scheme: 'https', host: targetHost, port: 443).toString();
+        continue;
       }
 
       // 4. 百度云旧节点兜底
       if (url.contains('szbdyd.com')) {
         final hostname =
             uri.queryParameters['xy_usource'] ?? (service.host ?? CDNService.ali.host!);
-        return uri.replace(scheme: 'https', host: hostname, port: 443).toString();
+        addCandidate(
+          uri.replace(scheme: 'https', host: hostname, port: 443).toString(),
+        );
+        continue;
       }
 
       if (kDebugMode) {
@@ -146,24 +166,46 @@ abstract final class CdnPolicy {
 
     // 若循环结束未命中纯净镜像：
     // 如果存在 /upgcxcode/（哪怕是 MCDN 返回的），重定向至官方镜像（默认阿里云 443 端口）彻底逃生
-    if (mcdnUpgcxcode != null) {
+    if (result.isEmpty && mcdnUpgcxcode != null) {
       final targetHost = service.host ?? CDNService.ali.host!;
       try {
-        return Uri.parse(mcdnUpgcxcode)
+        final escaped = Uri.parse(mcdnUpgcxcode)
             .replace(scheme: 'https', host: targetHost, port: 443)
             .toString();
+        addCandidate(escaped);
       } catch (_) {}
     }
 
     // 若存在 mcdnTf，经 proxy-tf-all-ws 转发
-    if (mcdnTf != null) {
-      return Uri(
-        scheme: 'https',
-        host: _proxyTf,
-        queryParameters: {'url': mcdnTf},
-      ).toString();
+    if (result.isEmpty && mcdnTf != null) {
+      addCandidate(
+        Uri(
+          scheme: 'https',
+          host: _proxyTf,
+          queryParameters: {'url': mcdnTf},
+        ).toString(),
+      );
     }
 
-    return last;
+    if (result.isEmpty && last.isNotEmpty) {
+      addCandidate(last);
+    }
+
+    return result;
+  }
+
+  /// 从给定的候选音视频 URL 列表中，结合用户 CDN 偏好与 MCDN 规避策略，
+  /// 解析出首选播放 URL。
+  ///
+  /// [urls]：通常为 `video.playUrls` 或 `audio.playUrls`（包含 baseUrl 及全部 backupUrl）。
+  /// [service]：用户指定的 CDN偏好，若为 null 则读取 [Pref.defaultCDNService]。
+  /// [isAudio]：是否为音频轨（若开启 [Pref.disableAudioCDN] 则不改写音频宿主）。
+  static String resolveUrl(
+    Iterable<String> urls, {
+    CDNService? service,
+    bool isAudio = false,
+  }) {
+    final all = resolveAllUrls(urls, service: service, isAudio: isAudio);
+    return all.isNotEmpty ? all.first : '';
   }
 }

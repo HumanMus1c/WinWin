@@ -86,4 +86,46 @@ void main() {
       expect(resolved, equals(mcdnUrl));
     });
   });
+
+  group('CdnPolicy.resolveAllUrls', () {
+    const mcdnUrl =
+        'https://qmvr62x.edge.mountaintoys.cn:4483/upgcxcode/44/07/213506144/213506144-1-30080.m4s?e=123&os=mcdn&mcdnid=50061388';
+    const officialCosUrl =
+        'https://upos-sz-mirrorcos.bilivideo.com/upgcxcode/44/07/213506144/213506144-1-30080.m4s?e=123';
+    const officialAliUrl =
+        'https://upos-sz-mirrorali.bilivideo.com/upgcxcode/44/07/213506144/213506144-1-30080.m4s?e=123';
+    const officialHwUrl =
+        'https://upos-sz-mirrorhw.bilivideo.com/upgcxcode/44/07/213506144/213506144-1-30080.m4s?e=123';
+
+    test('过滤 MCDN 并返回所有纯净官方候选节点，去重并保持顺序', () {
+      final candidates = [
+        mcdnUrl,
+        officialCosUrl,
+        officialAliUrl,
+        officialCosUrl, // 重复项
+        officialHwUrl,
+      ];
+      final resolved = CdnPolicy.resolveAllUrls(
+        candidates,
+        service: CDNService.backupUrl,
+      );
+      expect(resolved.length, equals(3));
+      expect(resolved[0], equals(officialCosUrl));
+      expect(resolved[1], equals(officialAliUrl));
+      expect(resolved[2], equals(officialHwUrl));
+    });
+
+    test('全为 MCDN 时，至少逃生返回一个纯净官方镜像候选', () {
+      final candidates = [mcdnUrl];
+      final resolved = CdnPolicy.resolveAllUrls(
+        candidates,
+        service: CDNService.backupUrl,
+      );
+      expect(resolved.length, equals(1));
+      final uri = Uri.parse(resolved.first);
+      expect(uri.host, equals('upos-sz-mirrorali.bilivideo.com'));
+      expect(uri.port, equals(443));
+    });
+  });
 }
+

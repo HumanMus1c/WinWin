@@ -168,6 +168,25 @@ class WinWinPlayerController {
   PlayUrlModel? _pendingHdrUpgrade;
   /// 缓冲假死计时（毫秒），用于超时检测与自愈。
   int _bufferingStallMs = 0;
+  /// 用户意图播放标志（playWhenReady）：与底层瞬态解码器 playing 状态解耦。
+  /// 用户点击暂停时为 false，起播/恢复时为 true。用于看门狗准确判定卡死。
+  bool _userIntentPlaying = true;
+  /// 上次轮询到的播放进度（毫秒），用于检测进度是否停滞。
+  int _lastPolledPosMs = -1;
+  /// 是否正在执行卡顿自愈（防重入）。
+  bool _isRecovering = false;
+  /// 连续自愈失败重试计数。
+  int _stallRecoveryRetryCount = 0;
+  /// 视频可用 CDN 候选 URL 列表（已过滤 MCDN/PCDN）。
+  List<String> _videoCdnCandidates = const [];
+  /// 音频可用 CDN 候选 URL 列表（已过滤 MCDN/PCDN）。
+  List<String> _audioCdnCandidates = const [];
+  /// 当前正在使用的 CDN 候选下标。
+  int _currentCdnIndex = 0;
+  /// 当前生效的视频播放直链。
+  String? _currentVideoUrl;
+  /// 当前生效的音频播放直链。
+  String? _currentAudioUrl;
 
   // ── 心跳上报（Phase 4.2）──
   /// 心跳定时器：每 5 秒上报一次播放进度。
@@ -209,18 +228,21 @@ class WinWinPlayerController {
     player.setProperty('avformat.extension_picky', '0');
     player.setProperty('avformat.allowed_segment_extensions', 'ALL');
 
-    // 全量网络流断线自动重连配置：
+    // 全量网络流断线自动重连与防死锁超时配置：
     // B站 CDN 在客户端由于缓冲满暂停读取时可能在 60s 左右主动切断连接。
     // reconnect_at_eof: 遇到服务端非预期 FIN/EOF 时自动以 Range 请求重连，杜绝误判为音画结束。
     // reconnect_streamed: 开启流式传输重连。
     // reconnect_on_network_error: 偶发网络波动或丢包时重试。
     // reconnect_on_http_error: 瞬态 4xx/5xx 错误时重试。
+    // avio.timeout / avio.rw_timeout: FFmpeg 默认无超时无限阻塞，设置 10s 超时防死锁（微秒）。
     player.setProperty('avio.reconnect', '1');
     player.setProperty('avio.reconnect_at_eof', '1');
     player.setProperty('avio.reconnect_streamed', '1');
     player.setProperty('avio.reconnect_delay_max', '5');
     player.setProperty('avio.reconnect_on_network_error', '1');
     player.setProperty('avio.reconnect_on_http_error', '4xx,5xx');
+    player.setProperty('avio.timeout', '10000000');
+    player.setProperty('avio.rw_timeout', '10000000');
 
     // 解复用器包缓存与容错：加速 seek，避免重复请求 CDN，容忍轻微网络丢包。
     player.setProperty('demux.buffer.ranges', '50');
@@ -229,8 +251,9 @@ class WinWinPlayerController {
 
     // 缓冲窗口（VOD 点播模式）：
     // min: 2000ms（起播与再缓冲防抖门限，避免 1s 极小缓冲导致的反复启停死循环）；
-    // max: 最大缓冲窗口（结合 Pref.bufferSec 确保充足网络水位，保底 60s）。
-    final maxBufMs = (Pref.bufferSec * 1000).clamp(60000.0, 300000.0).toInt();
+    // max: 最大缓冲窗口（结合 Pref.bufferSec 确保充足网络水位，钳制在 30s~90s，
+    // 避免 3 分钟以上过大缓冲导致网络长时间静默而触发 CDN 60s 闲置断线）。
+    final maxBufMs = (Pref.bufferSec * 1000).clamp(30000.0, 90000.0).toInt();
     player.setBufferRange(min: 2000, max: maxBufMs);
 
     player.volume = volume.value / 100.0;
@@ -249,16 +272,21 @@ class WinWinPlayerController {
         playing.value = event.newValue == mdk.PlaybackState.playing;
       }))
       ..add(player.onEvent.listen((ev) {
-        if (_disposed || _loading) return;
+        if (_disposed || _loading || _isRecovering) return;
         // NOTE: for 'reader.buffering' the error field is progress [0,100],
         // not an error code; real mdk failures carry negative codes.
         // -1 语义同 prepare 的 -1（already loading/open），不是硬错误：
         // 共享 player 切换 media 时 setMedia 已触发 open，onEvent "open" 返回 -1
         // 表示"已在加载"。仅对 < -1 的硬错误报错（与 prepare 判断一致）。
         if (ev.error < -1) {
-          // 直接覆盖：让最新错误显示给用户。原 ??= 会忽略后续错误，
-          // 网络恢复后又断开时用户看不到最新错误信息。
           AppLogger.e('PlayerController', 'onEvent error: code=${ev.error} detail=${ev.detail}');
+          // 参照 BiliPai PlayerErrorRecoveryPolicy：网络断开/错误时优先触发自愈重连或切线，
+          // 而非直接向用户弹窗中断播放。
+          if (ready.value && _userIntentPlaying && _stallRecoveryRetryCount < 3) {
+            AppLogger.w('PlayerController', 'Triggering stream self-healing after onEvent error');
+            unawaited(_recoverStalledStream(isNetworkError: true));
+            return;
+          }
           error.value = '播放错误 ${ev.error}: ${ev.detail}';
         }
       }))
@@ -266,14 +294,19 @@ class WinWinPlayerController {
         if (_disposed) return;
         final oldValue = event.oldValue;
         final newValue = event.newValue;
-        // 缓冲中 / 缓冲完成（映射同 fvp 的 bufferingStart / bufferingEnd）。
-        if (!oldValue.test(mdk.MediaStatus.buffering) &&
-            newValue.test(mdk.MediaStatus.buffering)) {
+        // 缓冲中 / 缓冲完成（同时监听 buffering 与 stalled 位，映射同 fvp 的 bufferingStart / bufferingEnd）。
+        final wasBufferingOrStalled =
+            oldValue.test(mdk.MediaStatus.buffering | mdk.MediaStatus.stalled);
+        final isBufferingOrStalled =
+            newValue.test(mdk.MediaStatus.buffering | mdk.MediaStatus.stalled);
+        if (!wasBufferingOrStalled && isBufferingOrStalled) {
           buffering.value = true;
         }
         if (!oldValue.test(mdk.MediaStatus.buffered) &&
             newValue.test(mdk.MediaStatus.buffered)) {
           buffering.value = false;
+          _bufferingStallMs = 0;
+          _stallRecoveryRetryCount = 0;
           AppLogger.i('PlayerController', 'onMediaStatus: buffered (duration=${player.mediaInfo.duration}ms)');
           // media 加载完成：获取正确的 duration 和 videoSize。
           // 避免切换 media 时拿到旧 media 的值（B 的 duration 比 A 长，
@@ -355,16 +388,35 @@ class WinWinPlayerController {
       if (position.value != newPos) {
         position.value = newPos;
       }
-      // 缓冲假死兜底（Watchdog）：若因 CDN 闲置断线或丢包处于缓冲中超过 8 秒且正在播放，
-      // 触发一次在位 seek，强制解复用器刷新并重新向 CDN 发起 Range 请求，避免永久卡死在 0% 缓冲。
-      if (buffering.value && playing.value) {
-        _bufferingStallMs += 100;
-        if (_bufferingStallMs >= 8000) {
-          _bufferingStallMs = 0;
-          AppLogger.w('PlayerController', 'Buffering stall detected (8s), auto-recovering stream at ${posMs}ms');
-          unawaited(player.seek(position: posMs));
+      // 进度推进检测：若播放进度在前进，清零卡顿计时。
+      final isPosAdvancing = posMs > _lastPolledPosMs;
+      if (isPosAdvancing) {
+        _lastPolledPosMs = posMs;
+        _bufferingStallMs = 0;
+      }
+
+      // 卡死看门狗（Watchdog，参照 BiliPai resolvePlaybackStallRecoveryDecision）：
+      // 1. 用户意图播放（_userIntentPlaying，非手动暂停）；
+      // 2. 处于缓冲中（buffering.value）或底层报告 stalled，且进度未推进；
+      // 3. 达到 4.5 秒门限（早于 CDN 60s 闲置与长缓冲超时，及时自愈无感续播）。
+      if (_userIntentPlaying && !buffering.value && !isPosAdvancing && playing.value) {
+        final status = player.mediaStatus;
+        if (status.test(mdk.MediaStatus.stalled | mdk.MediaStatus.buffering) || player.buffered() <= 0) {
+          buffering.value = true;
         }
-      } else {
+      }
+
+      if (_userIntentPlaying && buffering.value && !_isRecovering) {
+        _bufferingStallMs += 100;
+        if (_bufferingStallMs >= 4500) {
+          _bufferingStallMs = 0;
+          AppLogger.w(
+            'PlayerController',
+            'Buffering stall detected (4.5s) at ${posMs}ms, triggering stream recovery',
+          );
+          unawaited(_recoverStalledStream());
+        }
+      } else if (!_userIntentPlaying) {
         _bufferingStallMs = 0;
       }
       // SponsorBlock 自动跳过：检查当前位置是否在可跳过段落内。
@@ -660,25 +712,41 @@ class WinWinPlayerController {
       final video = selection.video;
       final audio = selection.audio;
 
-      // 提取视频 URL：经 CdnPolicy 过滤 MCDN/PCDN 矿渣节点并智能优选官方镜像
-      String? videoUrl = (video != null && video.playUrls.isNotEmpty)
-          ? CdnPolicy.resolveUrl(video.playUrls)
-          : null;
+      // 提取视频候选 URL：经 CdnPolicy 过滤 MCDN/PCDN 矿渣节点并智能优选官方镜像候选列表
+      _videoCdnCandidates = (video != null && video.playUrls.isNotEmpty)
+          ? CdnPolicy.resolveAllUrls(video.playUrls)
+          : const [];
 
       // 兜底：如果 DASH video 为空，检查是否有 durl（非 DASH 流，内嵌完整音画）
       bool isDurlFallback = false;
-      if (videoUrl == null || videoUrl.isEmpty) {
+      if (_videoCdnCandidates.isEmpty) {
         final durls = playUrl.durl;
         if (durls != null && durls.isNotEmpty && durls.first.playUrls.isNotEmpty) {
-          videoUrl = CdnPolicy.resolveUrl(durls.first.playUrls);
-          isDurlFallback = videoUrl.isNotEmpty;
+          _videoCdnCandidates = CdnPolicy.resolveAllUrls(durls.first.playUrls);
+          isDurlFallback = _videoCdnCandidates.isNotEmpty;
         }
       }
 
-      if (videoUrl == null || videoUrl.isEmpty) {
+      if (_videoCdnCandidates.isEmpty) {
         error.value = '未获取到可播放的视频流';
         return;
       }
+
+      // 提取音频候选 URL（durl 模式已内嵌音频无需外部挂载）
+      _audioCdnCandidates = (isDurlFallback || audio == null || audio.playUrls.isEmpty)
+          ? const []
+          : CdnPolicy.resolveAllUrls(audio.playUrls, isAudio: true);
+
+      _currentCdnIndex = 0;
+      final videoUrl = _videoCdnCandidates.first;
+      final audioUrl = _audioCdnCandidates.isNotEmpty ? _audioCdnCandidates.first : null;
+      _currentVideoUrl = videoUrl;
+      _currentAudioUrl = audioUrl;
+
+      _userIntentPlaying = true;
+      _lastPolledPosMs = (start ?? Duration.zero).inMilliseconds;
+      _bufferingStallMs = 0;
+      _stallRecoveryRetryCount = 0;
 
       _playUrl = playUrl;
       _currentQn = video?.id ?? playUrl.quality ?? qn;
@@ -688,7 +756,8 @@ class WinWinPlayerController {
       if (kDebugMode) {
         debugPrint(
           'PlayStream: bvid=$bvid qn=$_currentQn codec=${selection.videoCodec.name} '
-          'audio=${selection.audioKind.name} isDurl=$isDurlFallback',
+          'audio=${selection.audioKind.name} isDurl=$isDurlFallback '
+          'candidates=${_videoCdnCandidates.length}',
         );
       }
 
@@ -712,14 +781,9 @@ class WinWinPlayerController {
       }
 
       // 1. 设置主视频 media。
-      // 提取音频 URL：经 CdnPolicy 过滤 MCDN/PCDN 并智能优选官方镜像（durl 模式已内嵌音频无需外部挂载）
-      final audioUrl = (isDurlFallback || audio == null || audio.playUrls.isEmpty)
-          ? null
-          : CdnPolicy.resolveUrl(audio.playUrls, isAudio: true);
-
       AppLogger.w(
         'PlayerController',
-        'setMedia video: cdn=${Pref.defaultCDNService.name} videoUrl=$videoUrl audioUrl=$audioUrl',
+        'setMedia video: cdn=${Pref.defaultCDNService.name} candidates=${_videoCdnCandidates.length} videoUrl=$videoUrl audioUrl=$audioUrl',
       );
       player.media = videoUrl;
       // DASH 分离音轨：以外部音轨方式挂载（prepare 之前）。
@@ -868,12 +932,93 @@ class WinWinPlayerController {
     }
   }
 
+  /// 缓冲卡死/网络断流自愈恢复策略（深度移植自 BiliPai PlaybackStallRecoveryPolicy & PiliPlus refreshPlayer）。
+  ///
+  /// 核心逻辑：
+  /// 1. 记录卡死断点毫秒级进度 `resumePos`；
+  /// 2. 若有多条候选 CDN 镜像，自动按次序轮换切换至下一条可用镜像（多 CDN 容灾）；
+  /// 3. 重新设置底层解复用器音视频源，彻底切断挂死/闲置超时失效的旧 Socket，建立全新 HTTP Range 连接；
+  /// 4. 在原位 seek 恢复播放，复用现有 Texture 避免黑屏闪烁。
+  Future<void> _recoverStalledStream({bool isNetworkError = false}) async {
+    final player = _player;
+    if (_disposed || player == null || _isRecovering || !ready.value) return;
+    _isRecovering = true;
+    _stallRecoveryRetryCount++;
+    try {
+      final resumePosMs = player.position;
+      final resumeDuration = Duration(milliseconds: resumePosMs > 0 ? resumePosMs : 0);
+
+      AppLogger.w(
+        'PlayerController',
+        'Executing playback stall recovery (retry=$_stallRecoveryRetryCount, netErr=$isNetworkError) at ${resumeDuration.inSeconds}s',
+      );
+
+      // 1. 若有多条可用 CDN 镜像，轮换切换到下一条线路（参照 BiliPai PlaybackStallRecoveryPolicy）
+      if (_videoCdnCandidates.length > 1) {
+        _currentCdnIndex = (_currentCdnIndex + 1) % _videoCdnCandidates.length;
+        _currentVideoUrl = _videoCdnCandidates[_currentCdnIndex];
+        if (_audioCdnCandidates.isNotEmpty) {
+          _currentAudioUrl = _audioCdnCandidates[_currentCdnIndex % _audioCdnCandidates.length];
+        }
+        AppLogger.w(
+          'PlayerController',
+          'Switching CDN candidate: line=${_currentCdnIndex + 1}/${_videoCdnCandidates.length} videoUrl=$_currentVideoUrl',
+        );
+      }
+
+      final videoUrl = _currentVideoUrl;
+      final audioUrl = _currentAudioUrl;
+      if (videoUrl == null || videoUrl.isEmpty) {
+        AppLogger.e('PlayerController', 'No valid video url to recover stream');
+        return;
+      }
+
+      // 2. 重新挂载媒体源并触发底层 Range 重连
+      player.media = videoUrl;
+      if (audioUrl != null && audioUrl.isNotEmpty) {
+        player.setMedia(audioUrl, mdk.MediaType.audio);
+        player.activeAudioTracks = const [0];
+      }
+
+      final ret = await player.prepare();
+      if (_disposed) return;
+      if (ret >= 0) {
+        if (resumePosMs > 0) {
+          await player.seek(position: resumePosMs);
+        }
+      } else {
+        if (resumePosMs > 0) {
+          _pendingSeek = resumeDuration;
+        }
+      }
+
+      player.state = mdk.PlaybackState.playing;
+      buffering.value = false;
+      _bufferingStallMs = 0;
+      _lastPolledPosMs = resumePosMs;
+      AppLogger.w(
+        'PlayerController',
+        'Stream stall recovery successfully executed at ${resumeDuration.inSeconds}s',
+      );
+    } catch (e, s) {
+      AppLogger.e('PlayerController', 'Stream stall recovery failed', error: e, stackTrace: s);
+    } finally {
+      _isRecovering = false;
+    }
+  }
+
   void playOrPause() {
     final player = _player;
     if (player == null || _disposed) return;
-    player.state = player.state == mdk.PlaybackState.playing
-        ? mdk.PlaybackState.paused
-        : mdk.PlaybackState.playing;
+    if (player.state == mdk.PlaybackState.playing) {
+      _userIntentPlaying = false;
+      _bufferingStallMs = 0;
+      player.state = mdk.PlaybackState.paused;
+    } else {
+      _userIntentPlaying = true;
+      _bufferingStallMs = 0;
+      player.state = mdk.PlaybackState.playing;
+    }
   }
 
   /// 切换播放/暂停（对标 togglePlay 接口命名）
@@ -883,6 +1028,8 @@ class WinWinPlayerController {
   void pause() {
     final player = _player;
     if (player == null || _disposed) return;
+    _userIntentPlaying = false;
+    _bufferingStallMs = 0;
     if (player.state == mdk.PlaybackState.playing) {
       player.state = mdk.PlaybackState.paused;
     }
@@ -893,6 +1040,8 @@ class WinWinPlayerController {
   void play() {
     final player = _player;
     if (player == null || _disposed) return;
+    _userIntentPlaying = true;
+    _bufferingStallMs = 0;
     if (player.state == mdk.PlaybackState.paused) {
       player.state = mdk.PlaybackState.playing;
     }
@@ -902,6 +1051,7 @@ class WinWinPlayerController {
     final player = _player;
     if (player == null || _disposed) return;
     _bufferingStallMs = 0;
+    _lastPolledPosMs = to.inMilliseconds;
     unawaited(player.seek(position: to.inMilliseconds));
     seekCount.value++;
   }
