@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:winwin/common/skeleton/video_card_h.dart';
@@ -6,6 +8,7 @@ import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/event/event_bus.dart';
 import 'package:winwin/core/log/api_blackbox.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -44,17 +47,41 @@ class _ToviewPageState extends State<ToviewPage> {
   bool _loading = true;
   bool _isLoadingMore = false;
   String? _error;
+  StreamSubscription<WatchLaterEvent>? _watchLaterSubscription;
 
   @override
   void initState() {
     super.initState();
     AccountService().addListener(_onAccountChanged);
     _scrollController.addListener(_onScroll);
+    _initWatchLaterSubscription();
     _load(refresh: true);
+  }
+
+  void _initWatchLaterSubscription() {
+    _watchLaterSubscription =
+        EventBus().on<WatchLaterEvent>().listen((event) {
+      if (!mounted) return;
+      if (!event.inWatchLater) {
+        final removed = _items.any((i) => i.aid == event.aid);
+        if (removed) {
+          setState(() {
+            _items.removeWhere((i) => i.aid == event.aid);
+            if (_totalCount != null && _totalCount! > 0) {
+              _totalCount = _totalCount! - 1;
+            }
+          });
+        }
+      } else {
+        _load(refresh: true);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _watchLaterSubscription?.cancel();
+    _watchLaterSubscription = null;
     AccountService().removeListener(_onAccountChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
@@ -176,6 +203,11 @@ class _ToviewPageState extends State<ToviewPage> {
           _items.remove(item);
           if (_totalCount != null) _totalCount = _totalCount! - 1;
         });
+        EventBus().emit(WatchLaterEvent(
+          aid: item.aid!,
+          bvid: item.bvid,
+          inWatchLater: false,
+        ));
       case Error(:final errMsg):
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
           SnackBar(content: Text(errMsg ?? '移除失败')),

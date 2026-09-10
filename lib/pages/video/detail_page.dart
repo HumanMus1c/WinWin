@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -17,20 +16,17 @@ import 'package:winwin/core/log/sync_trace.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/follow.dart';
 import 'package:winwin/http/loading_state.dart';
-import 'package:winwin/http/member.dart';
 import 'package:winwin/http/reply.dart';
-import 'package:winwin/http/toview.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/main.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
 import 'package:winwin/models/video/video_tag.dart';
-import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/search/search_result_page.dart';
-import 'package:winwin/pages/video/coin_dialog.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
+import 'package:winwin/pages/video/mixins/video_interaction_mixin.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_panel.dart';
 import 'package:winwin/pages/video/send_danmaku_panel.dart';
@@ -69,7 +65,11 @@ class VideoDetailPage extends StatefulWidget {
 }
 
 class _VideoDetailPageState extends State<VideoDetailPage>
-    with RouteAware, WindowListener, SingleTickerProviderStateMixin {
+    with
+        RouteAware,
+        WindowListener,
+        SingleTickerProviderStateMixin,
+        VideoInteractionMixin<VideoDetailPage> {
   final ScrollController scrollController = ScrollController();
   WinWinPlayerController? playerController;
 
@@ -106,28 +106,23 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   bool _fullscreen = false;
   bool _descExpanded = false;
 
-  // ── 稿件互动状态（对标 BiliPai VideoInteractionUseCase，
-  //    初始值来自 detail 接口 req_user）──
-  /// 是否已点赞
-  bool _hasLike = false;
+  @override
+  int? get interactionAid => _detailState.dataOrNull?.aid;
 
-  /// 是否已点踩
-  bool _hasDislike = false;
+  @override
+  String get interactionBvid => widget.bvid;
 
-  /// 已投币数量
-  int _coinNum = 0;
+  @override
+  int? get interactionOwnerMid => _detailState.dataOrNull?.owner?.mid;
 
-  /// 是否已收藏
-  bool _hasFav = false;
+  @override
+  Future<bool> requireLoginAndSync() => _requireLoginAndSync();
 
-  /// 是否在稍后再看列表（null=未知/未登录）
-  bool? _inWatchLater;
+  @override
+  void adjustStat(void Function(VideoStat stat) fn) => _adjustStat(fn);
 
-  /// 作者关注状态（初始值来自 detail 接口 req_user.follow 或 /x/relation）
-  bool _isFollowed = false;
-
-  /// 是否正在更新作者关注状态（防止重复点击）
-  bool _isFollowUpdating = false;
+  @override
+  void showToast(String msg) => _toast(msg);
 
   /// Phase 7.6.3：VideoHeader 收缩比例（0.0=展开，1.0=pin），用于顶栏渐变。
   final ValueNotifier<double> _scrollRatio = ValueNotifier<double>(0.0);
@@ -148,6 +143,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     super.initState();
     _rightTabCtrl = TabController(length: 2, vsync: this);
     windowManager.addListener(this);
+    initInteractionEventBus();
     _loadDetail();
     _loadRelated();
     _loadTags();
@@ -176,6 +172,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     SyncTrace.log('DetailPage', 'dispose after playerController.dispose');
     scrollController.dispose();
     _commentCtrl.dispose();
+    disposeInteractionEventBus();
     super.dispose();
     SyncTrace.log('DetailPage', 'dispose done');
   }
@@ -275,11 +272,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           ctrl.load();
         }
         // 互动初始态（来自 req_user 或并发拉取云端 videoRelation 真实姿态）。
-        _hasLike = response.reqUser?.like ?? false;
-        _coinNum = response.reqUser?.coin ?? 0;
-        _hasFav = response.reqUser?.favorite ?? false;
-        _hasDislike = false;
-        _isFollowed = response.reqUser?.follow == 1;
+        hasLike = response.reqUser?.like ?? false;
+        coinNum = response.reqUser?.coin ?? 0;
+        hasFav = response.reqUser?.favorite ?? false;
+        hasDislike = false;
+        isFollowed = response.reqUser?.follow == 1;
         _loadWatchLaterStatus(response.aid);
         if (Accounts.main.isLogin) {
           unawaited(_syncVideoRelation(aid: response.aid));
@@ -436,45 +433,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     _loadReplies(oid: aid);
   }
 
-  // ─────────────────── 稿件互动（对标 BiliPai VideoInteractionUseCase）───
+  // ─────────────────── 稿件互动（委托至 VideoInteractionMixin）───
 
-  /// 查询当前稿件是否在稍后再看列表（仅登录态，分页扫描直到命中或到底）。
-  Future<void> _loadWatchLaterStatus(int? aid) async {
-    if (aid == null || !Accounts.main.isLogin) return;
-    for (int pn = 1; pn <= 5; pn++) {
-      final res = await ToviewHttp.toviewList(page: pn);
-      if (!mounted) return;
-      if (res case Success(:final response)) {
-        final list = response.list ?? const [];
-        if (list.any((i) => i.aid == aid)) {
-          setState(() => _inWatchLater = true);
-          return;
-        }
-        if (list.length < 20) break; // 已到尾页
-      } else {
-        break;
-      }
-    }
-    if (!mounted) return;
-    setState(() => _inWatchLater = false);
-  }
+  /// 查询当前稿件是否在稍后再看列表。
+  Future<void> _loadWatchLaterStatus(int? aid) => loadWatchLaterStatus(aid);
 
   /// 云端同步稿件互动状态（点赞/投币/收藏/点踩/关注，/x/web-interface/archive/relation）。
-  Future<void> _syncVideoRelation({int? aid}) async {
-    if (!Accounts.main.isLogin) return;
-    final effectiveAid = aid ?? _detailState.dataOrNull?.aid;
-    final res = await VideoHttp.videoRelation(bvid: widget.bvid, aid: effectiveAid);
-    if (!mounted) return;
-    if (res case Success(:final response)) {
-      setState(() {
-        _hasLike = response.like;
-        _hasDislike = response.dislike;
-        _coinNum = response.coin;
-        _hasFav = response.favorite;
-        _isFollowed = response.attention;
-      });
-    }
-  }
+  Future<void> _syncVideoRelation({int? aid}) => syncVideoRelation(aid: aid);
 
   /// 校验登录态并在发生新登录时立即全量拉取云端互动与刷新评论。
   Future<bool> _requireLoginAndSync() async {
@@ -497,196 +462,25 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   /// （取消）点赞；点赞与点踩互斥，点赞时自动清除点踩态。
-  Future<void> _actionLike() async {
-    final aid = _detailState.dataOrNull?.aid;
-    if (aid == null) return;
-    if (!await _requireLoginAndSync()) return;
-    if (!mounted) return;
-    final wasLiked = _hasLike;
-    _adjustStat((s) {
-      _hasLike = !wasLiked;
-      _hasDislike = false;
-      s.like = (s.like ?? 0) + (wasLiked ? -1 : 1);
-    });
-    final res = await VideoHttp.likeVideo(aid: aid, type: wasLiked);
-    if (!mounted) return;
-    switch (res) {
-      case Success(:final response):
-        if (response != null && response.isNotEmpty) _toast(response);
-      case Error(:final errMsg):
-        // 回滚乐观更新。
-        _adjustStat((s) {
-          _hasLike = wasLiked;
-          s.like = (s.like ?? 0) + (wasLiked ? 1 : -1);
-        });
-        _toast(errMsg ?? '操作失败');
-      case Loading():
-        break;
-    }
-  }
+  Future<void> _actionLike() => actionLikeVideo();
 
   /// 长按点赞一键三连：点赞 + 投币×2 + 收藏默认收藏夹。
-  Future<void> _actionTriple() async {
-    final aid = _detailState.dataOrNull?.aid;
-    if (aid == null) return;
-    if (_hasLike && _coinNum >= 2 && _hasFav) {
-      _toast('已完成三连');
-      return;
-    }
-    if (!await _requireLoginAndSync()) return;
-    if (!mounted) return;
-    final res = await VideoHttp.ugcTriple(bvid: widget.bvid, aid: aid);
-    if (!mounted) return;
-    switch (res) {
-      case Success(:final response):
-        _adjustStat((s) {
-          if (response.like && !_hasLike) s.like = (s.like ?? 0) + 1;
-          if (response.coin) {
-            final add =
-                (response.multiply > 0 ? response.multiply : 2) - _coinNum;
-            if (add > 0) s.coin = (s.coin ?? 0) + add;
-          }
-          if (response.fav && !_hasFav) s.favorite = (s.favorite ?? 0) + 1;
-          _hasLike = _hasLike || response.like;
-          if (response.coin) _coinNum = 2;
-          _hasFav = _hasFav || response.fav;
-          _hasDislike = false;
-        });
-        _toast(response.allSuccess ? '三连成功' : '三连部分成功');
-      case Error(:final errMsg):
-        _toast(errMsg ?? '三连失败');
-      case Loading():
-        break;
-    }
-  }
+  Future<void> _actionTriple() => actionTripleVideo();
 
   /// 投币入口：弹对话框选择数量与是否同时点赞。
-  Future<void> _actionCoin() async {
-    final aid = _detailState.dataOrNull?.aid;
-    if (aid == null) return;
-    if (!await _requireLoginAndSync()) return;
-    if (!mounted) return;
-    if (_coinNum >= 2) {
-      _toast('达到投币上限啦~');
-      return;
-    }
-    showCoinDialog(context, onPay: (count, withLike) => _doCoin(aid, count, withLike));
-  }
-
-  Future<void> _doCoin(int aid, int count, bool withLike) async {
-    final remain = 2 - _coinNum;
-    final actual = count > remain ? remain : count;
-    if (actual <= 0) {
-      _toast('达到投币上限啦~');
-      return;
-    }
-    final res = await VideoHttp.coinVideo(
-      aid: aid,
-      multiply: actual,
-      selectLike: withLike ? 1 : 0,
-    );
-    if (!mounted) return;
-    switch (res) {
-      case Success():
-        _adjustStat((s) {
-          s.coin = (s.coin ?? 0) + actual;
-          _coinNum += actual;
-          if (withLike && !_hasLike) {
-            _hasLike = true;
-            s.like = (s.like ?? 0) + 1;
-          }
-        });
-        _toast('投币成功');
-      case Error(:final errMsg):
-        _toast(errMsg ?? '投币失败');
-      case Loading():
-        break;
-    }
-  }
+  Future<void> _actionCoin() => actionCoinVideo();
 
   /// （取消）点踩；点踩时自动取消点赞（B 站语义二者互斥）。
-  Future<void> _actionDislike() async {
-    final aid = _detailState.dataOrNull?.aid;
-    if (aid == null) return;
-    if (!await _requireLoginAndSync()) return;
-    if (!mounted) return;
-    final wasDisliked = _hasDislike;
-    final cancelledLike = !wasDisliked && _hasLike;
-    _adjustStat((s) {
-      _hasDislike = !wasDisliked;
-      if (cancelledLike) {
-        _hasLike = false;
-        s.like = (s.like ?? 0) - 1;
-      }
-    });
-    final res = await VideoHttp.dislikeVideo(aid: aid, type: wasDisliked);
-    if (!mounted) return;
-    if (res case Error(:final errMsg)) {
-      // 回滚乐观更新。
-      _adjustStat((s) {
-        _hasDislike = wasDisliked;
-        if (cancelledLike) {
-          _hasLike = true;
-          s.like = (s.like ?? 0) + 1;
-        }
-      });
-      _toast(errMsg ?? '操作失败');
-    }
-  }
+  Future<void> _actionDislike() => actionDislikeVideo();
 
-  /// 收藏：弹出收藏夹选择面板（复用收藏夹页 showFavPanel，
-  /// 对标 BiliPai FavoriteFolderSheet 多选收藏夹）。
-  Future<void> _actionFav() async {
-    final aid = _detailState.dataOrNull?.aid;
-    if (aid == null) return;
-    if (!await _requireLoginAndSync()) return;
-    if (!mounted) return;
-    showFavPanel(context, rid: aid, onSuccess: (isFav) {
-      if (!mounted) return;
-      _adjustStat((s) {
-        if (isFav != _hasFav) {
-          _hasFav = isFav;
-          s.favorite = (s.favorite ?? 0) + (isFav ? 1 : -1);
-        }
-      });
-    });
-  }
+  /// 收藏：弹出收藏夹选择面板。
+  Future<void> _actionFav() => actionFavVideo();
 
   /// 分享：复制视频链接到剪贴板 + 尽力而为上报分享计数。
-  Future<void> _actionShare() async {
-    final aid = _detailState.dataOrNull?.aid;
-    await Clipboard.setData(
-      ClipboardData(text: 'https://www.bilibili.com/video/${widget.bvid}'),
-    );
-    if (!mounted) return;
-    _toast('视频链接已复制');
-    if (aid != null && Accounts.main.isLogin) {
-      // 上报失败不影响体验，不 await。
-      VideoHttp.shareVideo(aid: aid);
-    }
-  }
+  Future<void> _actionShare() => actionShareVideo();
 
   /// 切换稍后再看（对标 BiliPai toggleWatchLater）。
-  Future<void> _actionWatchLater() async {
-    final aid = _detailState.dataOrNull?.aid;
-    if (aid == null) return;
-    if (!await _requireLoginAndSync()) return;
-    if (!mounted) return;
-    final inList = _inWatchLater ?? false;
-    final res = inList
-        ? await ToviewHttp.delToview(aid.toString())
-        : await ToviewHttp.addToview(aid: aid);
-    if (!mounted) return;
-    switch (res) {
-      case Success():
-        setState(() => _inWatchLater = !inList);
-        _toast(inList ? '已从稍后再看移除' : 'yeah！稍后再看');
-      case Error(:final errMsg):
-        _toast(errMsg ?? '操作失败');
-      case Loading():
-        break;
-    }
-  }
+  Future<void> _actionWatchLater() => actionWatchLaterVideo();
 
   // ─────────────────────────── 作者关注 ───────────────────────────
 
@@ -698,43 +492,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (res case Success(:final response)) {
       final attr = (response['attribute'] as num?)?.toInt() ?? 0;
       // 0: 未关注, 1: 悄悄关注, 2: 已关注, 6: 互相关注
-      final isFollowed = attr == 1 || attr == 2 || attr == 6;
-      if (_isFollowed != isFollowed) {
-        setState(() => _isFollowed = isFollowed);
+      final followed = attr == 1 || attr == 2 || attr == 6;
+      if (isFollowed != followed) {
+        setState(() => isFollowed = followed);
       }
     }
   }
 
   /// 切换作者关注状态。
-  Future<void> _toggleFollow() async {
-    final ownerMid = _detailState.dataOrNull?.owner?.mid;
-    if (ownerMid == null) return;
-    if (!await LoginGuard.requireLogin(context)) return;
-    if (!mounted) return;
-    if (_isFollowUpdating) return;
-
-    final isCurrentlyFollowed = _isFollowed;
-    final act = isCurrentlyFollowed ? 2 : 1; // 1: 关注, 2: 取消关注
-
-    setState(() => _isFollowUpdating = true);
-    final res = await MemberHttp.relationMod(
-      mid: ownerMid,
-      act: act,
-      reSrc: 14,
-    );
-    if (!mounted) return;
-    setState(() => _isFollowUpdating = false);
-
-    switch (res) {
-      case Success():
-        setState(() => _isFollowed = !isCurrentlyFollowed);
-        _toast(isCurrentlyFollowed ? '已取消关注' : '关注成功');
-      case Error(:final errMsg):
-        _toast(errMsg ?? (isCurrentlyFollowed ? '取消关注失败' : '关注失败'));
-      case Loading():
-        break;
-    }
-  }
+  Future<void> _toggleFollow() => toggleFollowOwner();
 
   // ─────────────────────────── 评论点赞与点踩 ───────────────────────────
 
@@ -1519,8 +1285,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   !(Accounts.main.isLogin &&
                       Accounts.main.mid == owner!.mid))
                 _AuthorFollowButton(
-                  isFollowed: _isFollowed,
-                  isLoading: _isFollowUpdating,
+                  isFollowed: isFollowed,
+                  isLoading: isFollowUpdating,
                   onPressed: _toggleFollow,
                 ),
             ],
@@ -1530,11 +1296,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           //（对标 BiliPai ActionButtonsRow）。
           VideoActionRow(
             stat: stat,
-            hasLike: _hasLike,
-            hasDislike: _hasDislike,
-            coinNum: _coinNum,
-            hasFav: _hasFav,
-            inWatchLater: _inWatchLater,
+            hasLike: hasLike,
+            hasDislike: hasDislike,
+            coinNum: coinNum,
+            hasFav: hasFav,
+            inWatchLater: inWatchLater,
             onLike: _actionLike,
             onTriple: _actionTriple,
             onCoin: _actionCoin,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +14,7 @@ import 'package:winwin/common/widgets/medal_widget.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/event/event_bus.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/fav.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -129,6 +132,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   // 关系状态 (0=未关注, 1=悄关, 2=已关注, 4/6=互关, 128=拉黑, -10=特关)
   int _relationStatus = 0;
   bool _isFollowingUpdating = false;
+  StreamSubscription<FollowEvent>? _followSubscription;
 
   /// 计算当前对外开放可见的 Tab 列表（未公开或私密板块直接不展示）。
   List<_SpaceTabType> get _availableTabs {
@@ -184,11 +188,32 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   void initState() {
     super.initState();
     _tabController = TabController(length: _availableTabs.length, vsync: this);
+    _initFollowSubscription();
     _loadAll();
+  }
+
+  void _initFollowSubscription() {
+    _followSubscription = EventBus().on<FollowEvent>().listen((event) {
+      if (!mounted) return;
+      if (event.mid == widget.mid) {
+        final isCurrentlyFollowed = _relationStatus == 1 ||
+            _relationStatus == 2 ||
+            _relationStatus == 4 ||
+            _relationStatus == 6 ||
+            _relationStatus == -10;
+        if (isCurrentlyFollowed != event.isFollowing) {
+          setState(() {
+            _relationStatus = event.isFollowing ? 2 : 0;
+          });
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _followSubscription?.cancel();
+    _followSubscription = null;
     _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -484,9 +509,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     switch (res) {
       case Success():
+        final newFollowing = !isCurrentlyFollowed;
         setState(() {
-          _relationStatus = isCurrentlyFollowed ? 0 : 2;
+          _relationStatus = newFollowing ? 2 : 0;
         });
+        EventBus().emit(FollowEvent(
+          mid: widget.mid,
+          isFollowing: newFollowing,
+        ));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(isCurrentlyFollowed ? '已取消关注' : '关注成功')),
         );
