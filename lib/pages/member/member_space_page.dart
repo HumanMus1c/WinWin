@@ -76,9 +76,11 @@ class MemberSpacePage extends StatefulWidget {
 }
 
 class _MemberSpacePageState extends State<MemberSpacePage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
+  final List<TabController> _pendingDisposeControllers = [];
+  bool _isDisposed = false;
 
   LoadingState<MemberSpaceData> _spaceState = LoadingState.loading();
   MemberCardInfoData? _cardInfo;
@@ -134,12 +136,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   bool _isFollowingUpdating = false;
   StreamSubscription<FollowEvent>? _followSubscription;
 
-  /// 计算当前对外开放可见的 Tab 列表（未公开或私密板块直接不展示）。
+  /// 计算当前对外开放可见的 Tab 列表（未公开或私密板块保留 Tab 并展示隐私状态）。
   List<_SpaceTabType> get _availableTabs {
     final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
     final tabs = <_SpaceTabType>[_SpaceTabType.video];
 
-    // 合集与系列：本人可见，或者有公开合集数据
+    // 合集与系列：本人可见，或者有公开合集数据/合集计数
     if (isOwner || _seasonsSeries.isNotEmpty || (_navNum != null && _navNum!.channel > 0)) {
       tabs.add(_SpaceTabType.seasons);
     }
@@ -147,22 +149,19 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     // 动态：公开基础板块
     tabs.add(_SpaceTabType.dynamics);
 
-    // 收藏夹：本人可见，或者已确认公开且非隐私设置未公开
-    final isFavPublic = !_favFailed && (_favFolders.isNotEmpty || (_navNum != null && _navNum!.favourite > 0));
-    if (isOwner || isFavPublic) {
+    // 收藏夹：本人可见，或者有收藏夹数据/收藏计数（隐私设置未公开时在 Tab 内展示隐私提示）
+    if (isOwner || _favFolders.isNotEmpty || (_navNum != null && _navNum!.favourite > 0)) {
       tabs.add(_SpaceTabType.fav);
     }
 
-    // 追番追剧：本人可见，或者已确认公开且非隐私设置未公开
+    // 追番追剧：本人可见，或者有追番数据/追番计数（隐私设置未公开时在 Tab 内展示隐私提示）
     final bangumiCount = _navNum != null ? (_navNum!.bangumi + _navNum!.cinema) : _bangumiList.length;
-    final isBangumiPublic = !_bangumiFailed && (_bangumiList.isNotEmpty || (_navNum != null && bangumiCount > 0));
-    if (isOwner || isBangumiPublic) {
+    if (isOwner || _bangumiList.isNotEmpty || (_navNum != null && bangumiCount > 0)) {
       tabs.add(_SpaceTabType.bangumi);
     }
 
-    // 点赞视频：本人可见，或者已确认公开且非隐私设置未公开
-    final isLikedPublic = !_likedFailed && (_likedVideos.isNotEmpty || (_navNum != null && _navNum!.like > 0));
-    if (isOwner || isLikedPublic) {
+    // 点赞视频：本人可见，或者有公开点赞视频/点赞计数
+    if (isOwner || _likedVideos.isNotEmpty || (_navNum != null && _navNum!.like > 0)) {
       tabs.add(_SpaceTabType.liked);
     }
 
@@ -172,15 +171,24 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   void _syncTabController() {
+    if (_isDisposed || !mounted) return;
     final tabs = _availableTabs;
     if (_tabController.length != tabs.length) {
-      final oldIndex = _tabController.index;
-      _tabController.dispose();
+      final oldController = _tabController;
+      final oldIndex = oldController.index;
       _tabController = TabController(
         length: tabs.length,
         vsync: this,
         initialIndex: oldIndex.clamp(0, tabs.length - 1),
       );
+      _pendingDisposeControllers.add(oldController);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_isDisposed) return;
+        for (final c in _pendingDisposeControllers) {
+          c.dispose();
+        }
+        _pendingDisposeControllers.clear();
+      });
     }
   }
 
@@ -212,8 +220,13 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   @override
   void dispose() {
+    _isDisposed = true;
     _followSubscription?.cancel();
     _followSubscription = null;
+    for (final c in _pendingDisposeControllers) {
+      c.dispose();
+    }
+    _pendingDisposeControllers.clear();
     _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -238,14 +251,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     setState(() => _spaceState = LoadingState.loading());
     final res = await MemberHttp.space(mid: widget.mid);
     if (!mounted) return;
-    setState(() => _spaceState = res);
-
     if (res case Success(:final response)) {
       final card = response.card;
       if (card != null) {
         _relationStatus = card.relation ?? 0;
       }
     }
+    _syncTabController();
+    setState(() => _spaceState = res);
   }
 
   Future<void> _loadCardInfo() async {
@@ -444,9 +457,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         _seasonEnd = items.isEmpty || _seasonsSeries.length >= total;
         _seasonPage++;
         _seasonFailed = false;
+        _syncTabController();
         setState(() {});
       case Error():
         _seasonFailed = true;
+        _syncTabController();
         setState(() {});
       case Loading():
         break;
@@ -658,7 +673,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         },
         body: TabBarView(
           controller: _tabController,
-          children: tabs.map((t) => _buildTabContent(t, card)).toList(),
+          children: tabs.map((t) => KeyedSubtree(
+            key: ValueKey(t),
+            child: _buildTabContent(t, card),
+          )).toList(),
         ),
       ),
     );
