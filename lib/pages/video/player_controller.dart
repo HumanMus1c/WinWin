@@ -11,6 +11,7 @@ import 'package:winwin/core/cache/play_url_cache.dart';
 import 'package:winwin/core/log/sync_trace.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/player/sponsorblock_usecase.dart';
+import 'package:winwin/core/policy/cdn_policy.dart';
 import 'package:winwin/core/policy/stream_selection_policy.dart';
 import 'package:winwin/core/policy/video_load_policy.dart';
 import 'package:winwin/core/storage/storage.dart';
@@ -226,10 +227,11 @@ class WinWinPlayerController {
     player.setProperty('demux.buffer.protocols', 'http,https');
     player.setProperty('demux.max_errors', '50');
 
-    // 扩大缓冲窗口（VOD 点播模式）：
-    // min: 1000ms 起播；max: 180000ms (3分钟)。
-    // 彻底解决之前 max 仅设 20s 导致音频流提前写满后停读网络、触发 CDN 60s 闲置断流并假死阻塞的问题。
-    player.setBufferRange(min: 1000, max: 180000);
+    // 缓冲窗口（VOD 点播模式）：
+    // min: 2000ms（起播与再缓冲防抖门限，避免 1s 极小缓冲导致的反复启停死循环）；
+    // max: 最大缓冲窗口（结合 Pref.bufferSec 确保充足网络水位，保底 60s）。
+    final maxBufMs = (Pref.bufferSec * 1000).clamp(60000.0, 300000.0).toInt();
+    player.setBufferRange(min: 2000, max: maxBufMs);
 
     player.volume = volume.value / 100.0;
     return player;
@@ -658,18 +660,18 @@ class WinWinPlayerController {
       final video = selection.video;
       final audio = selection.audio;
 
-      // 提取视频 URL：优先 baseUrl，去空兜底 backupUrl
-      String? videoUrl = (video?.baseUrl?.isNotEmpty == true)
-          ? video!.baseUrl
-          : (video?.backupUrl?.isNotEmpty == true ? video!.backupUrl!.first : null);
+      // 提取视频 URL：经 CdnPolicy 过滤 MCDN/PCDN 矿渣节点并智能优选官方镜像
+      String? videoUrl = (video != null && video.playUrls.isNotEmpty)
+          ? CdnPolicy.resolveUrl(video.playUrls)
+          : null;
 
       // 兜底：如果 DASH video 为空，检查是否有 durl（非 DASH 流，内嵌完整音画）
       bool isDurlFallback = false;
       if (videoUrl == null || videoUrl.isEmpty) {
         final durls = playUrl.durl;
-        if (durls != null && durls.isNotEmpty && (durls.first.url?.isNotEmpty == true)) {
-          videoUrl = durls.first.url;
-          isDurlFallback = true;
+        if (durls != null && durls.isNotEmpty && durls.first.playUrls.isNotEmpty) {
+          videoUrl = CdnPolicy.resolveUrl(durls.first.playUrls);
+          isDurlFallback = videoUrl.isNotEmpty;
         }
       }
 
@@ -710,14 +712,15 @@ class WinWinPlayerController {
       }
 
       // 1. 设置主视频 media。
-      // 提取音频 URL：优先 baseUrl，去空兜底 backupUrl（durl 模式已内嵌音频无需外部挂载）
-      final audioUrl = isDurlFallback
+      // 提取音频 URL：经 CdnPolicy 过滤 MCDN/PCDN 并智能优选官方镜像（durl 模式已内嵌音频无需外部挂载）
+      final audioUrl = (isDurlFallback || audio == null || audio.playUrls.isEmpty)
           ? null
-          : ((audio?.baseUrl?.isNotEmpty == true)
-              ? audio!.baseUrl
-              : (audio?.backupUrl?.isNotEmpty == true ? audio!.backupUrl!.first : null));
+          : CdnPolicy.resolveUrl(audio.playUrls, isAudio: true);
 
-      AppLogger.w('PlayerController', 'setMedia video: url=$videoUrl audioUrl=$audioUrl');
+      AppLogger.w(
+        'PlayerController',
+        'setMedia video: cdn=${Pref.defaultCDNService.name} videoUrl=$videoUrl audioUrl=$audioUrl',
+      );
       player.media = videoUrl;
       // DASH 分离音轨：以外部音轨方式挂载（prepare 之前）。
       // 参照 fvp setExternalAudio → setMedia(url, MediaType.audio) 用法：

@@ -8,6 +8,7 @@ import 'package:winwin/core/account/login_utils.dart' show LoginUtils;
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/models/user/user_info.dart';
+import 'package:winwin/models/common/cdn_type.dart';
 import 'package:winwin/utils/credential_crypto.dart';
 import 'package:winwin/theme/ui_style.dart';
 
@@ -135,6 +136,22 @@ abstract final class Pref {
       'demuxer-max-back-bytes': '0',
     };
   }
+
+  static CDNService get defaultCDNService {
+    if (_setting.get(SettingBoxKey.CDNService) case final String cdnName) {
+      try {
+        return CDNService.values.byName(cdnName);
+      } catch (_) {}
+    }
+    return CDNService.backupUrl;
+  }
+
+  static set defaultCDNService(CDNService service) {
+    _setting.put(SettingBoxKey.CDNService, service.name);
+  }
+
+  static bool get disableAudioCDN =>
+      _setting.get(SettingBoxKey.disableAudioCDN, defaultValue: false);
 
   static double get playSpeedDefault =>
       _video.get(VideoBoxKey.playSpeedDefault, defaultValue: 1.0);

@@ -181,6 +181,8 @@ class Durl {
         if (url != null && url!.isNotEmpty) url!,
         ...?backupUrl,
       ];
+
+  List<String> get playUrls => urls;
 }
 
 /// playurl 返回的 support_formats 节点项。

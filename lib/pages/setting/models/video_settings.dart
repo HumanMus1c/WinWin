@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/models/common/cdn_type.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
 
@@ -59,6 +60,26 @@ List<SettingsModel> get videoSettings => [
           );
           if (res != null) {
             await GStorage.setting.put(SettingBoxKey.defaultAudioQa, res);
+            setState();
+          }
+        },
+      ),
+      NormalModel(
+        title: 'CDN 服务节点',
+        leading: const Icon(Icons.cloud_outlined),
+        getSubtitle: () =>
+            '当前使用：${Pref.defaultCDNService.desc}，如遇缓冲频繁请尝试切换',
+        onTap: (context, setState) async {
+          final res = await showDialog<CDNService>(
+            context: context,
+            builder: (context) => SelectDialog<CDNService>(
+              title: 'CDN 服务节点',
+              value: Pref.defaultCDNService,
+              values: CDNService.values.map((i) => (i, i.desc)).toList(),
+            ),
+          );
+          if (res != null) {
+            Pref.defaultCDNService = res;
             setState();
           }
         },
