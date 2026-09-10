@@ -404,23 +404,41 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           FilledButton(
             onPressed: () {
               final val = int.tryParse(ctrl.text.trim());
-              if (val != null && val >= 1 && val <= episodes.length) {
-                Navigator.pop(ctx);
-                final targetPage = _episodesDescending
-                    ? (episodes.length - val) ~/ _episodesPerPage
-                    : (val - 1) ~/ _episodesPerPage;
-                setState(() {
-                  _selectedEpisodePage = targetPage;
-                });
-                final targetEp = episodes[val - 1];
-                if (_detail != null) {
-                  _openPlayer(_detail!, targetEp);
+              if (val != null && val >= 1) {
+                // 优先寻找集数匹配的正片（非预告），未找到时降级查找
+                BangumiEpisode? targetEp = episodes.cast<BangumiEpisode?>().firstWhere(
+                      (e) =>
+                          e?.title.trim() == val.toString() &&
+                          e?.badge != '预告',
+                      orElse: () => null,
+                    );
+                targetEp ??= episodes.cast<BangumiEpisode?>().firstWhere(
+                      (e) => e?.title.trim() == val.toString(),
+                      orElse: () => null,
+                    );
+                if (targetEp == null && val <= episodes.length) {
+                  targetEp = episodes[val - 1];
                 }
-              } else {
-                ScaffoldMessenger.maybeOf(ctx)?.showSnackBar(
-                  const SnackBar(content: Text('请输入有效集数范围')),
-                );
+
+                if (targetEp != null) {
+                  Navigator.pop(ctx);
+                  final epIdx = episodes.indexOf(targetEp);
+                  final total = episodes.length;
+                  final targetPage = _episodesDescending
+                      ? (total - 1 - epIdx).clamp(0, total - 1) ~/ _episodesPerPage
+                      : epIdx ~/ _episodesPerPage;
+                  setState(() {
+                    _selectedEpisodePage = targetPage;
+                  });
+                  if (_detail != null) {
+                    _openPlayer(_detail!, targetEp);
+                  }
+                  return;
+                }
               }
+              ScaffoldMessenger.maybeOf(ctx)?.showSnackBar(
+                const SnackBar(content: Text('未找到对应集数')),
+              );
             },
             child: const Text('跳转播放'),
           ),
@@ -1250,7 +1268,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                             decoration: BoxDecoration(
                               color: ep.badge!.contains('会员')
                                   ? Colors.orange.shade800
-                                  : Colors.pink.shade600,
+                                  : (ep.badge == '预告'
+                                      ? Colors.black.withValues(alpha: 0.65)
+                                      : Colors.pink.shade600),
                               borderRadius: BorderRadius.circular(badgeRadius),
                               boxShadow: [
                                 BoxShadow(
@@ -1340,31 +1360,61 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     );
   }
 
-  /// 衍生内容分区（花絮、PV、预告，横向虚拟化加载）
+  /// 衍生内容分区（花絮、PV、特典等，横向虚拟化加载，共享全局正倒序状态）
   Widget _buildExtraSections(BangumiDetail detail, ColorScheme cs) {
+    // 过滤掉已融入主选集列表的独立预告板块
+    final visibleSections = detail.sections
+        .where((sec) => sec.title.trim() != '预告' && sec.title.trim() != '预告片')
+        .toList();
+
+    if (visibleSections.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: detail.sections.map((sec) {
+      children: visibleSections.map((sec) {
         if (sec.episodes.isEmpty) return const SizedBox.shrink();
+        final displayedEpisodes = _episodesDescending
+            ? sec.episodes.reversed.toList()
+            : sec.episodes;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${sec.title} (${sec.episodes.length})',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  Text(
+                    '${sec.title} (${sec.episodes.length})',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _episodesDescending ? '倒序' : '正序',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: cs.outline,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
               SizedBox(
                 height: 155,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  itemCount: sec.episodes.length,
+                  itemCount: displayedEpisodes.length,
                   separatorBuilder: (context, index) => const SizedBox(width: 10),
                   itemBuilder: (context, index) {
-                    final ep = sec.episodes[index];
+                    final ep = displayedEpisodes[index];
                     return SizedBox(
                       width: 150,
                       child: _buildEpisodeCard(detail, ep, cs, customWidth: 150),

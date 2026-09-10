@@ -358,7 +358,7 @@ abstract final class PgcHttp {
               detail = detail.copyWith(
                 episodes: firstSec.episodes,
                 sections: response.length > 1 ? response.sublist(1) : const [],
-              );
+              ).normalizeEpisodesAndTrailers();
             }
           }
         }
