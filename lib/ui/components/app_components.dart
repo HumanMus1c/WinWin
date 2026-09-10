@@ -8,6 +8,11 @@ import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/ui_style.dart';
 
+export 'app_desktop_interaction.dart';
+export 'app_press_feedback.dart';
+export 'official_verify_badge.dart';
+export 'user_vip_badge.dart';
+
 /// ─────────────────────────────────────────────────────────────────
 /// 自适应基础控件集合（Phase 7.3）
 ///
