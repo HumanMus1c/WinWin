@@ -48,19 +48,7 @@ class AppShapes extends ThemeExtension<AppShapes> {
   /// 当前风格（供组件做风格特判时使用）。
   final UiStyle style;
 
-  // ── iOS（连续曲率基准值）──
-  static const ios = AppShapes(
-    tiny: Radius.circular(4),
-    small: Radius.circular(10),
-    medium: Radius.circular(12),
-    large: Radius.circular(14),
-    extraLarge: Radius.circular(20),
-    floating: Radius.circular(28),
-    pill: Radius.circular(100),
-    style: UiStyle.ios,
-  );
-
-  // ── Material 3（×0.9 缩放）──
+  // ── Material 3（×0.9 缩放，对齐 BiliPai MD3_CORNER_RADIUS_SCALE = 0.9f）──
   static const material3 = AppShapes(
     tiny: Radius.circular(4),
     small: Radius.circular(9),
@@ -72,7 +60,7 @@ class AppShapes extends ThemeExtension<AppShapes> {
     style: UiStyle.material3,
   );
 
-  // ── Miuix（×1.15 缩放，扁平大圆角）──
+  // ── Miuix（×1.15 缩放，扁平大圆角，对齐 BiliPai MIUIX_CORNER_RADIUS_SCALE = 1.15f）──
   static const miuix = AppShapes(
     tiny: Radius.circular(6),
     small: Radius.circular(12),
@@ -84,9 +72,12 @@ class AppShapes extends ThemeExtension<AppShapes> {
     style: UiStyle.miuix,
   );
 
+  /// 兼容旧代码：映射到 [miuix]（对齐 upstream 单向迁移规则）。
+  @Deprecated('Use miuix or material3 instead. Upstream BiliPai maps iOS to MIUIX.')
+  static const ios = miuix;
+
   /// 按 [UiStyle] 解析对应 Token。
   static AppShapes forStyle(UiStyle style) => switch (style) {
-        UiStyle.ios => ios,
         UiStyle.material3 => material3,
         UiStyle.miuix => miuix,
       };

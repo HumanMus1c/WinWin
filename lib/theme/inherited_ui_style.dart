@@ -23,12 +23,12 @@ class InheritedUiStyle extends InheritedWidget {
 
   /// 从最近的 [InheritedUiStyle] 祖先读取当前 [UiStyle]。
   ///
-  /// 若树中无 [InheritedUiStyle]（如测试环境），回退到 [UiStyle.ios]
+  /// 若树中无 [InheritedUiStyle]（如测试环境），回退到 [UiStyle.material3]
   /// （默认风格），避免抛异常。
   static UiStyle of(BuildContext context) {
     final widget =
         context.dependOnInheritedWidgetOfExactType<InheritedUiStyle>();
-    return widget?.style ?? UiStyle.ios;
+    return widget?.style ?? UiStyle.material3;
   }
 
   @override
@@ -41,7 +41,7 @@ class InheritedUiStyle extends InheritedWidget {
 /// 用法：
 /// ```dart
 /// UiStyleScope(
-///   style: UiStyle.ios,
+///   style: UiStyle.material3,
 ///   child: ...,
 /// )
 /// ```

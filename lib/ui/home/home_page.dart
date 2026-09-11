@@ -142,8 +142,8 @@ class _HomeTopBarState extends State<_HomeTopBar> {
     final service = AccountService();
     final isLogin = service.isLogin;
     final faceUrl = service.face;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
-    final chrome = theme.extension<AppChrome>() ?? AppChrome.ios;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final chrome = theme.extension<AppChrome>() ?? AppChrome.material3;
     final style = InheritedUiStyle.of(context);
     final renderer = resolvePrimitiveRenderer(style);
 
@@ -158,10 +158,7 @@ class _HomeTopBarState extends State<_HomeTopBar> {
     );
     final barContentColor = barContrast.contentColor;
 
-    final barRadius = switch (renderer) {
-      PrimitiveRenderer.ios => Style.radiusFloating,
-      _ => chrome.containerRadius,
-    };
+    final barRadius = chrome.containerRadius;
     final showShadow = renderer != PrimitiveRenderer.miuix;
 
     return Padding(
@@ -300,8 +297,8 @@ class _CategoryTabRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
-    final chrome = theme.extension<AppChrome>() ?? AppChrome.ios;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final chrome = theme.extension<AppChrome>() ?? AppChrome.material3;
     final style = InheritedUiStyle.of(context);
     final renderer = resolvePrimitiveRenderer(style);
     final tabs = HomeTabType.defaultOrder;
@@ -315,10 +312,7 @@ class _CategoryTabRow extends StatelessWidget {
       fallbackContentColors: [cs.onSurface, cs.onInverseSurface],
     );
     final contentColor = barContrast.contentColor;
-    final barRadius = switch (renderer) {
-      PrimitiveRenderer.ios => Style.radiusFloating,
-      _ => chrome.containerRadius,
-    };
+    final barRadius = chrome.containerRadius;
     final showShadow = renderer != PrimitiveRenderer.miuix;
 
     return Padding(

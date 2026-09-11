@@ -92,7 +92,7 @@ class UserVipBadge extends StatelessWidget {
     final text = resolveUserVipBadgeLabel(label, vipType);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
 
     final baseContainer = containerColor ?? cs.secondaryContainer;
     final baseContent = contentColor ?? cs.onSecondaryContainer;

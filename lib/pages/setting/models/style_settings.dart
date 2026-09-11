@@ -15,7 +15,7 @@ import 'package:winwin/theme/ui_style_notifier.dart';
 ///
 /// 移植自 PiliPlus 的 `styleSettings`，仅保留桌面端适用项。
 List<SettingsModel> get styleSettings => [
-      // ── Phase 7.1：界面风格（Material 3 / Miuix / iOS 热切换） ──
+      // ── Phase 7.1：界面风格（Material 3 / Miuix 热切换） ──
       NormalModel(
         title: '界面风格',
         leading: const Icon(Icons.palette_outlined),
@@ -30,7 +30,6 @@ List<SettingsModel> get styleSettings => [
               values: UiStyle.values.map((e) => (e, e.label)).toList(),
               subtitleBuilder: (_, index) {
                 final desc = switch (UiStyle.values[index]) {
-                  UiStyle.ios => 'Cupertino 控件 + 连续曲率圆角 + 扩散阴影',
                   UiStyle.material3 => 'M3 原生控件 + 标准 tonal elevation',
                   UiStyle.miuix => '扁平控件 + 0 elevation + 1.15× 圆角',
                 };

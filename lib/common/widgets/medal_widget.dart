@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 
-import 'package:winwin/theme/style.dart';
+import 'package:winwin/theme/app_shapes.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/ui_style.dart';
 
-/// 粉丝勋章徽章组件（对齐 B 站官方与 PiliPlus 视觉样式）。
+/// 粉丝勋章徽章组件（对齐 B 站官方与自适应设计系统）。
+///
+/// 遵循 [UiStyle] 自适应规范：
+/// - **Material 3**：[AppShapes.tinyBorder] 微倒角，0 扩散阴影，双色块自然拼合；
+/// - **Miuix**：全圆角胶囊形态，0 阴影纯扁平，药丸级紧凑布局。
 class MedalWidget extends StatelessWidget {
   const MedalWidget({
     super.key,
@@ -23,18 +29,28 @@ class MedalWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final style = InheritedUiStyle.of(context);
+    final renderer = resolvePrimitiveRenderer(style);
+
+    final outerRadius = switch (renderer) {
+      PrimitiveRenderer.material3 => shapes.tinyBorder,
+      PrimitiveRenderer.miuix => shapes.pillBorder,
+    };
+    final innerRadius = switch (renderer) {
+      PrimitiveRenderer.material3 => BorderRadius.circular(3),
+      PrimitiveRenderer.miuix => shapes.pillBorder,
+    };
+
     Widget child = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: EdgeInsets.symmetric(
+        horizontal: renderer == PrimitiveRenderer.miuix ? 6 : 5,
+        vertical: 1.5,
+      ),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(Style.radiusXs),
-        boxShadow: [
-          BoxShadow(
-            color: backgroundColor.withValues(alpha: 0.35),
-            blurRadius: 3,
-            offset: const Offset(0, 1),
-          ),
-        ],
+        borderRadius: outerRadius,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -56,10 +72,10 @@ class MedalWidget extends StatelessWidget {
           ),
           const SizedBox(width: 3),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(Style.radiusXs - 1),
+              borderRadius: innerRadius,
             ),
             child: Text(
               '$level',
@@ -84,10 +100,11 @@ class MedalWidget extends StatelessWidget {
     if (onTap != null) {
       return InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(Style.radiusXs),
+        borderRadius: outerRadius,
         child: child,
       );
     }
     return child;
   }
 }
+

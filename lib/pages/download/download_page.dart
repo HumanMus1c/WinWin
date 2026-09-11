@@ -135,7 +135,7 @@ class _DownloadPageState extends State<DownloadPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
 
     return Scaffold(
       appBar: AppBar(

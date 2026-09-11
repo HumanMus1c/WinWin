@@ -41,7 +41,7 @@ class VideoCardH extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = VideoCardData.from(videoItem);
     final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
     final radius = shapes.medium;
     final int duration = data.duration;
     final double? progress = data.progress;

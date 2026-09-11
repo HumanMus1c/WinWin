@@ -15,10 +15,10 @@ import 'package:winwin/theme/ui_style.dart';
 /// 存 int（0=ios, 1=material3, 2=miuix）。
 ///
 /// **初始化时机**：构造时不访问 [GStorage]（此时 Hive 可能尚未初始化），
-/// 初始值固定为 [UiStyle.ios]（默认风格）；`ensureBootstrap()` 完成后由
+/// 初始值固定为 [UiStyle.material3]（默认风格）；`ensureBootstrap()` 完成后由
 /// `main.dart` 调用 [refresh] 从持久化存储读取实际值。
 class UiStyleNotifier extends ValueNotifier<UiStyle> {
-  UiStyleNotifier._() : super(UiStyle.ios);
+  UiStyleNotifier._() : super(UiStyle.material3);
 
   static final UiStyleNotifier instance = UiStyleNotifier._();
 
@@ -27,7 +27,7 @@ class UiStyleNotifier extends ValueNotifier<UiStyle> {
   void refresh() {
     final raw = GStorage.setting.get(
       SettingBoxKey.uiStyle,
-      defaultValue: UiStyle.ios.legacyInt,
+      defaultValue: UiStyle.material3.legacyInt,
     ) as int;
     value = UiStyle.fromLegacyInt(raw);
   }

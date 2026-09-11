@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winwin/common/widgets/level_badge.dart';
+import 'package:winwin/common/widgets/medal_widget.dart';
 import 'package:winwin/theme/contrast_policy.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
 void main() {
@@ -150,6 +154,109 @@ void main() {
       await tester.tap(find.text('Press Target'));
       await tester.pumpAndSettle();
       expect(tapped, isTrue);
+    });
+  });
+
+  group('LevelBadge & MedalWidget Dual Style Tests', () {
+    testWidgets('renders LevelBadge in Material 3 and Miuix without crash',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                UiStyleScope(
+                  style: UiStyle.material3,
+                  child: LevelBadge(level: 6),
+                ),
+                UiStyleScope(
+                  style: UiStyle.miuix,
+                  child: LevelBadge(level: 5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Lv6'), findsOneWidget);
+      expect(find.text('Lv5'), findsOneWidget);
+    });
+
+    testWidgets('renders MedalWidget in Material 3 and Miuix without crash',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                UiStyleScope(
+                  style: UiStyle.material3,
+                  child: MedalWidget(
+                    medalName: '牌子A',
+                    level: 16,
+                    backgroundColor: Color(0xFFFB7299),
+                  ),
+                ),
+                UiStyleScope(
+                  style: UiStyle.miuix,
+                  child: MedalWidget(
+                    medalName: '牌子B',
+                    level: 20,
+                    backgroundColor: Color(0xFF00A1D6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('牌子A'), findsOneWidget);
+      expect(find.text('16'), findsOneWidget);
+      expect(find.text('牌子B'), findsOneWidget);
+      expect(find.text('20'), findsOneWidget);
+    });
+
+    testWidgets('renders AppSwitch and AppSegmentedControl in both styles',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                const UiStyleScope(
+                  style: UiStyle.material3,
+                  child: AppSwitch(value: true, onChanged: null),
+                ),
+                const UiStyleScope(
+                  style: UiStyle.miuix,
+                  child: AppSwitch(value: false, onChanged: null),
+                ),
+                UiStyleScope(
+                  style: UiStyle.material3,
+                  child: AppSegmentedControl<int>(
+                    value: 0,
+                    segments: const [(0, 'Tab1'), (1, 'Tab2')],
+                    onChanged: (_) {},
+                  ),
+                ),
+                UiStyleScope(
+                  style: UiStyle.miuix,
+                  child: AppSegmentedControl<int>(
+                    value: 1,
+                    segments: const [(0, 'TabA'), (1, 'TabB')],
+                    onChanged: (_) {},
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Tab1'), findsOneWidget);
+      expect(find.text('TabA'), findsOneWidget);
     });
   });
 }

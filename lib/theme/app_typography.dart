@@ -46,19 +46,6 @@ class AppTypography extends ThemeExtension<AppTypography> {
   /// 当前风格。
   final UiStyle style;
 
-  // ── iOS（Segoe UI 适配版，保留轻微紧凑感）──
-  // 原 SF Pro 值 -0.41/-0.24/-0.08 在 Segoe UI 上过紧导致字形奇怪，
-  // 调整为温和负值保留 iOS 视觉差异但不影响可读性。
-  static const ios = AppTypography(
-    titleLetterSpacing: -0.1,
-    labelLetterSpacing: 0.0,
-    bodyLetterSpacing: 0.0,
-    headlineWeight: FontWeight.w600,
-    titleWeight: FontWeight.w600,
-    bodyWeight: FontWeight.w400,
-    style: UiStyle.ios,
-  );
-
   // ── Material 3（规范间距）──
   static const material3 = AppTypography(
     titleLetterSpacing: 0.15,
@@ -70,7 +57,7 @@ class AppTypography extends ThemeExtension<AppTypography> {
     style: UiStyle.material3,
   );
 
-  // ── Miuix（扁平舒展）──
+  // ── Miuix（扁平舒展，对齐 BiliMiuixTypography 视觉调性）──
   static const miuix = AppTypography(
     titleLetterSpacing: 0.0,
     labelLetterSpacing: 0.0,
@@ -81,9 +68,12 @@ class AppTypography extends ThemeExtension<AppTypography> {
     style: UiStyle.miuix,
   );
 
+  /// 兼容旧代码：映射到 [miuix]（对齐 upstream 单向迁移规则）。
+  @Deprecated('Use miuix or material3 instead. Upstream BiliPai maps iOS to MIUIX.')
+  static const ios = miuix;
+
   /// 按 [UiStyle] 解析对应 Token。
   static AppTypography forStyle(UiStyle style) => switch (style) {
-        UiStyle.ios => ios,
         UiStyle.material3 => material3,
         UiStyle.miuix => miuix,
       };

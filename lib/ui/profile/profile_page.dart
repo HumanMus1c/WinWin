@@ -195,7 +195,7 @@ class _UserInfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.ios;
+    final typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.material3;
 
     final levelInfo = info?.levelInfo;
     final hasLevel = levelInfo?.currentLevel != null;
@@ -404,7 +404,6 @@ class _LevelBadge extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final style = InheritedUiStyle.of(context);
     final (bg, fg) = switch (resolvePrimitiveRenderer(style)) {
-      PrimitiveRenderer.ios => (biliPink, Colors.white),
       PrimitiveRenderer.material3 => (cs.primary, cs.onPrimary),
       PrimitiveRenderer.miuix => (cs.secondaryContainer, cs.onSecondaryContainer),
     };

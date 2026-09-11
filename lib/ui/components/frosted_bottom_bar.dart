@@ -57,15 +57,11 @@ class FrostedBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.ios;
+    final chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.material3;
     final style = InheritedUiStyle.of(context);
     final renderer = resolvePrimitiveRenderer(style);
 
-    final radius = switch (renderer) {
-      PrimitiveRenderer.ios => Style.radiusFloating,
-      PrimitiveRenderer.material3 => chrome.containerRadius,
-      PrimitiveRenderer.miuix => chrome.containerRadius,
-    };
+    final radius = chrome.containerRadius;
 
     return SafeArea(
       child: Padding(

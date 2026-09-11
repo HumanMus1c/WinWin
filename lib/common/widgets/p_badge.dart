@@ -35,7 +35,7 @@ class PBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
     final style = InheritedUiStyle.of(context);
 
     switch (type) {
@@ -145,7 +145,7 @@ class _ProgressBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Miuix 用胶囊；iOS/MD3 用细圆角矩形
+    // Miuix 用全圆角胶囊；MD3 用微圆角矩形
     final r = style == UiStyle.miuix ? const Radius.circular(100) : radius;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),

@@ -58,7 +58,7 @@ class _PgcPageState extends State<PgcPage>
     super.build(context);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
 
     // 嵌入 HomePage 时顶部留白 112 避开浮动顶栏(60) + 分类标签行(36)
     return Padding(

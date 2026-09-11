@@ -29,7 +29,7 @@ class VideoCardV extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = VideoCardData.from(videoItem);
-    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.ios;
+    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.material3;
     final radius = shapes.medium;
 
     return RepaintBoundary(

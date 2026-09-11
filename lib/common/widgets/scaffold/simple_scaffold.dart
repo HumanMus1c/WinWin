@@ -58,8 +58,8 @@ class SimpleScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final chrome = theme.extension<AppChrome>() ?? AppChrome.ios;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final chrome = theme.extension<AppChrome>() ?? AppChrome.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
     final style = InheritedUiStyle.of(context);
     final renderer = resolvePrimitiveRenderer(style);
 
@@ -74,10 +74,9 @@ class SimpleScaffold extends StatelessWidget {
       );
     }
 
-    // 三风格顶栏外观差异：
-    // - iOS：透明背景 + 底部细分割线（滚动时显现）
+    // 两套风格顶栏外观差异：
     // - MD3：表面色 + scrolledUnderElevation
-    // - Miuix：透明背景 + 无分割线
+    // - Miuix：透明背景 + 无分割线（扁平通透）
     final effectiveAppBar = appBar != null
         ? _StyleAwareAppBar(
             chrome: chrome,
@@ -142,20 +141,6 @@ class _StyleAwareAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     switch (renderer) {
-      case PrimitiveRenderer.ios:
-        // iOS：透明背景 + 底部细分割线
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: cs.surface.withValues(alpha: 0.92),
-            border: Border(
-              bottom: BorderSide(
-                color: cs.outlineVariant.withValues(alpha: 0.4),
-                width: 0.5,
-              ),
-            ),
-          ),
-          child: child,
-        );
       case PrimitiveRenderer.material3:
         // MD3：表面色 + scrolledUnderElevation（由 Material 自动处理）
         return Material(

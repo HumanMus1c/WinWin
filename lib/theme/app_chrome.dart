@@ -44,17 +44,6 @@ class AppChrome extends ThemeExtension<AppChrome> {
   /// 当前风格。
   final UiStyle style;
 
-  // ── iOS（扩散阴影 + 细分割线）──
-  static const ios = AppChrome(
-    containerRadius: 20,
-    pillRadius: 10,
-    elevation: 1,
-    tonalElevation: 0,
-    showDividers: true,
-    scrolledUnderElevation: 0,
-    style: UiStyle.ios,
-  );
-
   // ── Material 3（tonal elevation + 标准 M3 阴影）──
   static const material3 = AppChrome(
     containerRadius: 24,
@@ -66,7 +55,7 @@ class AppChrome extends ThemeExtension<AppChrome> {
     style: UiStyle.material3,
   );
 
-  // ── Miuix（扁平 0 elevation + 无分割线）──
+  // ── Miuix（扁平 0 elevation + 无分割线，对齐 BiliPai tonalSurfaceElevationDp = 0）──
   static const miuix = AppChrome(
     containerRadius: 20,
     pillRadius: 22,
@@ -77,9 +66,12 @@ class AppChrome extends ThemeExtension<AppChrome> {
     style: UiStyle.miuix,
   );
 
+  /// 兼容旧代码：映射到 [miuix]（对齐 upstream 单向迁移规则）。
+  @Deprecated('Use miuix or material3 instead. Upstream BiliPai maps iOS to MIUIX.')
+  static const ios = miuix;
+
   /// 按 [UiStyle] 解析对应 Token。
   static AppChrome forStyle(UiStyle style) => switch (style) {
-        UiStyle.ios => ios,
         UiStyle.material3 => material3,
         UiStyle.miuix => miuix,
       };

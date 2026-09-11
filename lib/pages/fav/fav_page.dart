@@ -287,7 +287,7 @@ class _FavFolderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
     final radius = shapes.medium;
     final hasCover = folder.cover.isNotEmpty;
 
@@ -682,7 +682,7 @@ class _FavVideoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
     final radius = shapes.medium;
     final duration = item.duration ?? 0;
     final isInvalid = item.bvid == null || item.bvid!.isEmpty;

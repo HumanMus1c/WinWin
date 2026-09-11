@@ -21,7 +21,6 @@ class AppTheme {
   /// 浅色主题（按 [style] 解析，可注入 [fontFamily]）。
   static ThemeData lightFor(UiStyle style, {String? fontFamily}) =>
       _applyFont(switch (style) {
-        UiStyle.ios => _iosLight,
         UiStyle.material3 => _md3Light,
         UiStyle.miuix => _miuixLight,
       }, fontFamily);
@@ -29,16 +28,15 @@ class AppTheme {
   /// 深色主题（按 [style] 解析，可注入 [fontFamily]）。
   static ThemeData darkFor(UiStyle style, {String? fontFamily}) =>
       _applyFont(switch (style) {
-        UiStyle.ios => _iosDark,
         UiStyle.material3 => _md3Dark,
         UiStyle.miuix => _miuixDark,
       }, fontFamily);
 
-  /// 向后兼容：默认 iOS 浅色主题。
-  static ThemeData get light => lightFor(UiStyle.ios);
+  /// 默认 Material 3 浅色主题。
+  static ThemeData get light => lightFor(UiStyle.material3);
 
-  /// 向后兼容：默认 iOS 深色主题。
-  static ThemeData get dark => darkFor(UiStyle.ios);
+  /// 默认 Material 3 深色主题。
+  static ThemeData get dark => darkFor(UiStyle.material3);
 
   /// 将 [fontFamily]（或字体标识键）注入 [ThemeData] 的 textTheme / primaryTextTheme。
   ///
@@ -53,7 +51,7 @@ class AppTheme {
     );
   }
 
-  /// 按 [UiStyle] 组装三套设计 Token（[AppShapes] / [AppTypography] /
+  /// 按 [UiStyle] 组装设计 Token（[AppShapes] / [AppTypography] /
   /// [AppChrome]），挂载到 [ThemeData.extensions]，组件通过
   /// `Theme.of(context).extension<AppShapes>()` 等读取。
   static Iterable<ThemeExtension<dynamic>> _extensionsFor(UiStyle style) => [
@@ -62,73 +60,6 @@ class AppTheme {
         AppChrome.forStyle(style),
       ];
 
-  // ─────────────────────────── iOS ───────────────────────────
-
-  static const _iosRadiusSmall = Radius.circular(10);
-  static const _iosRadiusMedium = Radius.circular(12);
-  static const _iosRadiusLarge = Radius.circular(14);
-  static const _iosRadiusXLarge = Radius.circular(20);
-  static const _iosRadiusFloating = Radius.circular(28);
-
-  static ThemeData get _iosLight => ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        colorScheme: const ColorScheme.light(
-          primary: iosBlue,
-          onPrimary: Colors.white,
-          secondary: iosSystemGray,
-          surface: lightSurface,
-          surfaceContainer: iosSystemGray5,
-          surfaceContainerHighest: iosSystemGray4,
-          onSurface: Color(0xFF1C1C1E),
-          onSurfaceVariant: iosSystemGray,
-          error: iosRed,
-        ),
-        scaffoldBackgroundColor: lightBackground,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          color: lightSurface,
-          elevation: 0,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(_iosRadiusMedium),
-          ),
-        ),
-        extensions: _extensionsFor(UiStyle.ios),
-      );
-
-  static ThemeData get _iosDark => ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: const ColorScheme.dark(
-          primary: iosBlue,
-          onPrimary: Colors.white,
-          secondary: iosSystemGray2,
-          surface: darkSurface,
-          surfaceContainer: darkSurfaceVariant,
-          surfaceContainerHighest: Color(0xFF363636),
-          onSurface: Color(0xFFE8E8E8),
-          onSurfaceVariant: Color(0xFFB0B0B0),
-          error: iosRed,
-        ),
-        scaffoldBackgroundColor: darkBackground,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          color: darkSurface,
-          elevation: 0,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(_iosRadiusMedium),
-          ),
-        ),
-        extensions: _extensionsFor(UiStyle.ios),
-      );
 
   // ─────────────────────────── Material 3 ───────────────────────────
 
@@ -320,31 +251,26 @@ class AppTheme {
 
   /// 通用：按风格返回圆角半径（供组件层使用）。
   static Radius radiusSmall(UiStyle style) => switch (style) {
-        UiStyle.ios => _iosRadiusSmall,
         UiStyle.material3 => _md3RadiusSmall,
         UiStyle.miuix => _miuixRadiusSmall,
       };
 
   static Radius radiusMedium(UiStyle style) => switch (style) {
-        UiStyle.ios => _iosRadiusMedium,
         UiStyle.material3 => _md3RadiusMedium,
         UiStyle.miuix => _miuixRadiusMedium,
       };
 
   static Radius radiusLarge(UiStyle style) => switch (style) {
-        UiStyle.ios => _iosRadiusLarge,
         UiStyle.material3 => _md3RadiusLarge,
         UiStyle.miuix => _miuixRadiusLarge,
       };
 
   static Radius radiusXLarge(UiStyle style) => switch (style) {
-        UiStyle.ios => _iosRadiusXLarge,
         UiStyle.material3 => _md3RadiusXLarge,
         UiStyle.miuix => _miuixRadiusXLarge,
       };
 
   static Radius radiusFloating(UiStyle style) => switch (style) {
-        UiStyle.ios => _iosRadiusFloating,
         UiStyle.material3 => _md3RadiusFloating,
         UiStyle.miuix => _miuixRadiusFloating,
       };
