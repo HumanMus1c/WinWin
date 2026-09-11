@@ -84,11 +84,7 @@ class _FollowPageState extends State<FollowPage>
     );
   }
 
-  late final gridDelegate = SliverGridDelegateWithExtentAndRatio(
-    mainAxisSpacing: Style.cardSpace,
-    crossAxisSpacing: Style.cardSpace,
-    maxCrossAxisExtent: 240.0,
-    childAspectRatio: Style.aspectRatio,
+  late final gridDelegate = Grid.videoCardVDelegate(
     mainAxisExtent: MediaQuery.textScalerOf(context).scale(90),
   );
 

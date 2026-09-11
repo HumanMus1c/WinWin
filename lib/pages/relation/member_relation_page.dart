@@ -6,8 +6,10 @@ import 'package:winwin/http/fan.dart';
 import 'package:winwin/http/follow.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
+import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/grid.dart';
 
 /// 关系列表类型：关注列表 / 粉丝列表。
 enum RelationType { followings, fans }
@@ -120,34 +122,92 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
               ? _buildErrorView()
-              : RefreshIndicator(
-                  color: biliPink,
-                  onRefresh: () => _load(refresh: true),
-                  child: ListView.builder(
-                    itemCount: _items.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == _items.length) {
-                        if (_hasMore) {
-                          _load();
-                          return const Padding(
-                            padding: EdgeInsets.all(Style.md),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: biliPink,
+              : _items.isEmpty
+                  ? _buildEmptyView()
+                  : RefreshIndicator(
+                      color: biliPink,
+                      onRefresh: () => _load(refresh: true),
+                      child: CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          SliverPadding(
+                            padding: const EdgeInsets.all(Style.safeSpace),
+                            sliver: SliverGrid.builder(
+                              gridDelegate: Grid.userCardDelegate(
+                                maxCrossAxisExtent: 440.0,
+                                mainAxisExtent: 76.0,
+                              ),
+                              itemCount: _items.length,
+                              itemBuilder: (context, index) {
+                                if (index >= _items.length - 4 &&
+                                    _hasMore &&
+                                    !_loading) {
+                                  _load();
+                                }
+                                return _RelationCard(
+                                  member: _items[index],
+                                  onTap: () => _gotoMember(_items[index]),
+                                );
+                              },
+                            ),
+                          ),
+                          if (_hasMore)
+                            const SliverToBoxAdapter(
+                              child: Padding(
+                                padding: EdgeInsets.all(Style.md),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: biliPink,
+                                  ),
+                                ),
                               ),
                             ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      }
-                      return _RelationTile(
-                        member: _items[index],
-                        onTap: () => _gotoMember(_items[index]),
-                      );
-                    },
-                  ),
-                ),
+                          if (!_hasMore && _items.isNotEmpty)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.all(Style.md),
+                                child: Center(
+                                  child: Text(
+                                    '没有更多了',
+                                    style: TextStyle(
+                                      color:
+                                          Theme.of(context).colorScheme.outline,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+    );
+  }
+
+  Widget _buildEmptyView() {
+    final theme = Theme.of(context);
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.people_outline,
+            size: 48,
+            color: theme.colorScheme.outline,
+          ),
+          const SizedBox(height: Style.sm),
+          Text(
+            widget.type == RelationType.followings ? '暂无关注' : '暂无粉丝',
+            style: TextStyle(color: theme.colorScheme.outline),
+          ),
+          const SizedBox(height: Style.md),
+          OutlinedButton(
+            onPressed: () => _load(refresh: true),
+            child: const Text('刷新'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -178,9 +238,9 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
   }
 }
 
-/// 单个关系成员条目：头像 + 名字 + 签名。
-class _RelationTile extends StatelessWidget {
-  const _RelationTile({required this.member, required this.onTap});
+/// 单个关系成员卡片（宫格视图：圆角卡片 + 头像 + 名字 + 签名）。
+class _RelationCard extends StatelessWidget {
+  const _RelationCard({required this.member, required this.onTap});
 
   final _RelationMember member;
   final VoidCallback onTap;
@@ -188,27 +248,61 @@ class _RelationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return ListTile(
-      leading: NetworkImgLayer(
-        src: member.face,
-        width: 48,
-        height: 48,
-        type: 'avatar',
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.ios;
+    final radius = shapes.medium;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.all(radius),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              NetworkImgLayer(
+                src: member.face,
+                width: 48,
+                height: 48,
+                type: 'avatar',
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      member.uname ?? '未知用户',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      (member.sign?.isNotEmpty ?? false)
+                          ? member.sign!
+                          : '这个人很神秘',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: theme.colorScheme.outline.withValues(alpha: 0.6),
+              ),
+            ],
+          ),
+        ),
       ),
-      title: Text(
-        member.uname ?? '未知用户',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-      ),
-      subtitle: Text(
-        (member.sign?.isNotEmpty ?? false) ? member.sign! : '这个人很神秘',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.bodySmall,
-      ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: onTap,
     );
   }
 }

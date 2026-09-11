@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 
+import 'package:winwin/common/widgets/video_card/video_card_h.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/search.dart';
 import 'package:winwin/models/search/result.dart';
@@ -10,7 +11,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
 
 /// 搜索面板 — 单个 Tab 对应的结果列表。
@@ -127,6 +128,37 @@ class _SearchPanelState extends State<SearchPanel>
     await _loadData();
   }
 
+  SliverGridDelegate _getGridDelegate() {
+    switch (widget.searchType) {
+      case SearchType.video:
+        return Grid.videoCardHDelegate(
+          maxCrossAxisExtent: 440.0,
+          mainAxisExtent: 110.0,
+        );
+      case SearchType.biliUser:
+        return Grid.userCardDelegate(
+          maxCrossAxisExtent: 440.0,
+          mainAxisExtent: 76.0,
+        );
+      case SearchType.liveRoom:
+        return Grid.videoCardHDelegate(
+          maxCrossAxisExtent: 440.0,
+          mainAxisExtent: 110.0,
+        );
+      case SearchType.mediaBangumi:
+      case SearchType.mediaFt:
+        return Grid.pgcCardDelegate(
+          maxCrossAxisExtent: 440.0,
+          mainAxisExtent: 130.0,
+        );
+      case SearchType.article:
+        return Grid.videoCardHDelegate(
+          maxCrossAxisExtent: 440.0,
+          mainAxisExtent: 110.0,
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -141,19 +173,27 @@ class _SearchPanelState extends State<SearchPanel>
     }
     return RefreshIndicator(
       onRefresh: _onRefresh,
-      child: ListView.builder(
+      child: CustomScrollView(
         controller: _scrollController,
-        padding: const EdgeInsets.all(Style.md),
-        itemCount: _items.length + 1,
-        itemBuilder: (context, index) {
-          if (index >= _items.length - 2) {
-            _loadMore();
-          }
-          if (index == _items.length) {
-            return _buildFooter();
-          }
-          return _buildItem(_items[index]);
-        },
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(Style.safeSpace),
+            sliver: SliverGrid.builder(
+              gridDelegate: _getGridDelegate(),
+              itemCount: _items.length,
+              itemBuilder: (context, index) {
+                if (index >= _items.length - 4) {
+                  _loadMore();
+                }
+                return _buildItem(_items[index]);
+              },
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: _buildFooter(),
+          ),
+        ],
       ),
     );
   }
@@ -172,96 +212,19 @@ class _SearchPanelState extends State<SearchPanel>
   // ─────────────────────────── 视频卡片 ───────────────────────────
 
   Widget _buildVideoCard(SearchVideoItemModel item) {
-    final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: Style.sm),
-      child: InkWell(
-        onTap: () {
-          if (item.bvid != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => VideoDetailPage(bvid: item.bvid!),
-              ),
-            );
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(Style.sm),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 封面
-              ClipRRect(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: CachedNetworkImage(
-                  imageUrl: item.cover ?? '',
-                  width: 160,
-                  height: 100,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) => Container(
-                    color: theme.colorScheme.surfaceContainer,
-                  ),
-                  errorBuilder: (_, _, _) => Container(
-                    color: theme.colorScheme.surfaceContainer,
-                    width: 160,
-                    height: 100,
-                    child: const Icon(Icons.error_outline),
-                  ),
-                ),
-              ),
-              const SizedBox(width: Style.md),
-              // 信息
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (item.badge != null)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 4),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: biliPink,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: Text(
-                          item.badge!,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 10),
-                        ),
-                      ),
-                    Text(
-                      item.title ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'UP: ${item.author ?? ''}',
-                      style: TextStyle(
-                          fontSize: 12, color: theme.colorScheme.outline),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${NumUtils.formatNum(item.play)}播放 · ${NumUtils.formatNum(item.danmaku)}弹幕',
-                      style: TextStyle(
-                          fontSize: 11, color: theme.colorScheme.outline),
-                    ),
-                    if (item.duration != null && item.duration! > 0)
-                      Text(
-                        DurationUtils.formatDuration(item.duration),
-                        style: TextStyle(
-                            fontSize: 11, color: theme.colorScheme.outline),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return VideoCardH(
+      videoItem: item,
+      coverWidth: 144,
+      onTap: () {
+        if (item.bvid != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => VideoDetailPage(bvid: item.bvid!),
+            ),
+          );
+        }
+      },
     );
   }
 
@@ -270,7 +233,7 @@ class _SearchPanelState extends State<SearchPanel>
   Widget _buildUserCard(SearchUserItemModel item) {
     final theme = Theme.of(context);
     return Card(
-      margin: const EdgeInsets.only(bottom: Style.sm),
+      margin: EdgeInsets.zero,
       child: InkWell(
         onTap: () {
           if (item.mid != null) {
@@ -283,7 +246,7 @@ class _SearchPanelState extends State<SearchPanel>
           }
         },
         child: Padding(
-          padding: const EdgeInsets.all(Style.md),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
               ClipOval(
@@ -301,22 +264,29 @@ class _SearchPanelState extends State<SearchPanel>
                   ),
                 ),
               ),
-              const SizedBox(width: Style.md),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Text(
-                          item.uname ?? '',
-                          style: theme.textTheme.titleSmall,
+                        Flexible(
+                          child: Text(
+                            item.uname ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                         if (item.level != null) ...[
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 3, vertical: 0),
+                                horizontal: 4, vertical: 1),
                             decoration: BoxDecoration(
                               color: Colors.orange,
                               borderRadius: BorderRadius.circular(2),
@@ -324,17 +294,21 @@ class _SearchPanelState extends State<SearchPanel>
                             child: Text(
                               'Lv${item.level}',
                               style: const TextStyle(
-                                  color: Colors.white, fontSize: 10),
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
                       ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       '粉丝: ${NumUtils.formatNum(item.fans)}  视频: ${NumUtils.formatNum(item.videos)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 12, color: theme.colorScheme.outline),
+                          fontSize: 11, color: theme.colorScheme.outline),
                     ),
                     if (item.verifyInfo != null &&
                         item.verifyInfo!.isNotEmpty)
@@ -350,6 +324,7 @@ class _SearchPanelState extends State<SearchPanel>
               ),
               if (item.isLive == 1)
                 Container(
+                  margin: const EdgeInsets.only(left: 6),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
@@ -373,7 +348,7 @@ class _SearchPanelState extends State<SearchPanel>
   Widget _buildLiveCard(SearchLiveItemModel item) {
     final theme = Theme.of(context);
     return Card(
-      margin: const EdgeInsets.only(bottom: Style.sm),
+      margin: EdgeInsets.zero,
       child: InkWell(
         onTap: () {
           // 直播间跳转暂未实现，显示提示
@@ -385,50 +360,51 @@ class _SearchPanelState extends State<SearchPanel>
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(Style.sm),
+          padding: const EdgeInsets.all(8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: Stack(
-                  children: [
-                    CachedNetworkImage(
-                      imageUrl: item.cover ?? '',
-                      width: 160,
-                      height: 100,
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) => Container(
-                        color: theme.colorScheme.surfaceContainer,
-                      ),
-                      errorBuilder: (_, _, _) => Container(
-                        color: theme.colorScheme.surfaceContainer,
-                        width: 160,
-                        height: 100,
-                        child: const Icon(Icons.error_outline),
-                      ),
-                    ),
-                    Positioned(
-                      left: 4,
-                      bottom: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: biliPink,
-                          borderRadius: BorderRadius.circular(2),
+                child: SizedBox(
+                  width: 144,
+                  height: 144 * 9 / 16,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: item.cover ?? '',
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) => Container(
+                          color: theme.colorScheme.surfaceContainer,
                         ),
-                        child: Text(
-                          '${NumUtils.formatNum(item.online)}人气',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 10),
+                        errorBuilder: (_, _, _) => Container(
+                          color: theme.colorScheme.surfaceContainer,
+                          child: const Icon(Icons.error_outline),
                         ),
                       ),
-                    ),
-                  ],
+                      Positioned(
+                        left: 4,
+                        bottom: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: biliPink,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: Text(
+                            '${NumUtils.formatNum(item.online)}人气',
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 10),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: Style.md),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,18 +415,33 @@ class _SearchPanelState extends State<SearchPanel>
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.uname ?? '',
-                      style: TextStyle(
-                          fontSize: 12, color: theme.colorScheme.outline),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.person_outline,
+                            size: 13, color: theme.colorScheme.outline),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            item.uname ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12, color: theme.colorScheme.outline),
+                          ),
+                        ),
+                      ],
                     ),
-                    if (item.cateName != null)
+                    if (item.cateName != null) ...[
+                      const SizedBox(height: 4),
                       Text(
                         item.cateName!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                             fontSize: 11, color: theme.colorScheme.outline),
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -466,7 +457,7 @@ class _SearchPanelState extends State<SearchPanel>
   Widget _buildPgcCard(SearchPgcItemModel item) {
     final theme = Theme.of(context);
     return Card(
-      margin: const EdgeInsets.only(bottom: Style.sm),
+      margin: EdgeInsets.zero,
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -480,29 +471,29 @@ class _SearchPanelState extends State<SearchPanel>
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(Style.sm),
+          padding: const EdgeInsets.all(8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: CachedNetworkImage(
-                  imageUrl: item.cover ?? '',
+                child: SizedBox(
                   width: 80,
-                  height: 110,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) => Container(
-                    color: theme.colorScheme.surfaceContainer,
-                  ),
-                  errorBuilder: (_, _, _) => Container(
-                    color: theme.colorScheme.surfaceContainer,
-                    width: 80,
-                    height: 110,
-                    child: const Icon(Icons.error_outline),
+                  height: 114,
+                  child: CachedNetworkImage(
+                    imageUrl: item.cover ?? '',
+                    fit: BoxFit.cover,
+                    placeholder: (_, _) => Container(
+                      color: theme.colorScheme.surfaceContainer,
+                    ),
+                    errorBuilder: (_, _, _) => Container(
+                      color: theme.colorScheme.surfaceContainer,
+                      child: const Icon(Icons.error_outline),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: Style.md),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -513,36 +504,38 @@ class _SearchPanelState extends State<SearchPanel>
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall,
                     ),
-                    if (item.orgTitle != null) ...[
+                    if (item.orgTitle != null &&
+                        item.orgTitle!.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         item.orgTitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 12, color: theme.colorScheme.outline),
+                            fontSize: 11, color: theme.colorScheme.outline),
                       ),
                     ],
                     const SizedBox(height: 4),
-                    if (item.areas != null)
+                    if (item.areas != null || item.styles != null)
                       Text(
-                        item.areas!,
-                        style: TextStyle(
-                            fontSize: 11, color: theme.colorScheme.outline),
-                      ),
-                    if (item.styles != null)
-                      Text(
-                        item.styles!,
+                        [item.areas, item.styles]
+                            .where((s) => s != null && s.isNotEmpty)
+                            .join(' · '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                             fontSize: 11, color: theme.colorScheme.outline),
                       ),
+                    const Spacer(),
                     if (item.indexShow != null)
                       Text(
                         item.indexShow!,
-                        style: TextStyle(
-                            fontSize: 11, color: biliPink),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 11,
+                            color: biliPink,
+                            fontWeight: FontWeight.w500),
                       ),
                   ],
                 ),
@@ -558,8 +551,9 @@ class _SearchPanelState extends State<SearchPanel>
 
   Widget _buildArticleCard(SearchArticleItemModel item) {
     final theme = Theme.of(context);
+    final hasImg = item.imageUrls != null && item.imageUrls!.isNotEmpty;
     return Card(
-      margin: const EdgeInsets.only(bottom: Style.sm),
+      margin: EdgeInsets.zero,
       child: InkWell(
         onTap: () {
           ScaffoldMessenger.maybeOf(context)?.showSnackBar(
@@ -570,26 +564,28 @@ class _SearchPanelState extends State<SearchPanel>
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(Style.md),
+          padding: const EdgeInsets.all(8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (item.imageUrls != null && item.imageUrls!.isNotEmpty)
+              if (hasImg) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(Style.radiusSm),
-                  child: CachedNetworkImage(
-                    imageUrl: item.imageUrls!.first,
+                  child: SizedBox(
                     width: 120,
-                    height: 80,
-                    fit: BoxFit.cover,
-                    placeholder: (_, _) => Container(
-                      color: theme.colorScheme.surfaceContainer,
+                    height: 94,
+                    child: CachedNetworkImage(
+                      imageUrl: item.imageUrls!.first,
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) => Container(
+                        color: theme.colorScheme.surfaceContainer,
+                      ),
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     ),
-                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                 ),
-              if (item.imageUrls != null && item.imageUrls!.isNotEmpty)
-                const SizedBox(width: Style.md),
+                const SizedBox(width: 10),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -600,17 +596,17 @@ class _SearchPanelState extends State<SearchPanel>
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall,
                     ),
-                    if (item.desc != null) ...[
+                    if (item.desc != null && item.desc!.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         item.desc!,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 12, color: theme.colorScheme.outline),
+                            fontSize: 11, color: theme.colorScheme.outline),
                       ),
                     ],
-                    const SizedBox(height: 4),
+                    const Spacer(),
                     Text(
                       '${NumUtils.formatNum(item.view)}阅读 · ${NumUtils.formatNum(item.like)}喜欢',
                       style: TextStyle(

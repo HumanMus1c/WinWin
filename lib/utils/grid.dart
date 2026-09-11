@@ -64,6 +64,34 @@ abstract final class Grid {
         mainAxisSpacing: mainAxisSpacing,
         crossAxisSpacing: crossAxisSpacing,
       );
+
+  /// 用户卡片网格代理（如关注列表/粉丝列表/搜索用户结果）。
+  static SliverGridDelegateWithMaxCrossAxisExtent userCardDelegate({
+    double maxCrossAxisExtent = 440.0,
+    double mainAxisExtent = 76.0,
+    double mainAxisSpacing = Style.cardSpace,
+    double crossAxisSpacing = Style.cardSpace,
+  }) =>
+      SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: maxCrossAxisExtent,
+        mainAxisExtent: mainAxisExtent,
+        mainAxisSpacing: mainAxisSpacing,
+        crossAxisSpacing: crossAxisSpacing,
+      );
+
+  /// PGC卡片网格代理（如搜索番剧/影视结果）。
+  static SliverGridDelegateWithMaxCrossAxisExtent pgcCardDelegate({
+    double maxCrossAxisExtent = 440.0,
+    double mainAxisExtent = 130.0,
+    double mainAxisSpacing = Style.cardSpace,
+    double crossAxisSpacing = Style.cardSpace,
+  }) =>
+      SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: maxCrossAxisExtent,
+        mainAxisExtent: mainAxisExtent,
+        mainAxisSpacing: mainAxisSpacing,
+        crossAxisSpacing: crossAxisSpacing,
+      );
 }
 
 /// A [SliverGridDelegate] that lays out tiles with a maximum cross-axis
