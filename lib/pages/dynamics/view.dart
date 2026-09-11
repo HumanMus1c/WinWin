@@ -16,6 +16,7 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/id_utils.dart';
@@ -63,7 +64,8 @@ class _DynamicsPageState extends State<DynamicsPage>
 
   @override
   Widget build(BuildContext context) {
-    InheritedUiStyle.of(context);
+    final style = InheritedUiStyle.of(context);
+    final renderer = resolvePrimitiveRenderer(style);
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
@@ -75,12 +77,14 @@ class _DynamicsPageState extends State<DynamicsPage>
           indicatorSize: TabBarIndicatorSize.label,
           labelPadding: const EdgeInsets.symmetric(horizontal: Style.md),
         ),
-        shape: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-        ),
+        shape: renderer == PrimitiveRenderer.miuix
+            ? Border(
+                bottom: BorderSide(
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  width: 0.5,
+                ),
+              )
+            : null,
       ),
       body: TabBarView(
         controller: _tabController,

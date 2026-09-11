@@ -6,6 +6,8 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/ui_style.dart';
 
 /// 个人页各内容分区的统一标题行（对齐 PiliPlus `ListTile` 标题规范）。
 class ProfileSectionHeader extends StatelessWidget {
@@ -26,6 +28,8 @@ class ProfileSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final style = InheritedUiStyle.of(context);
+    final renderer = resolvePrimitiveRenderer(style);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
@@ -60,8 +64,10 @@ class ProfileSectionHeader extends StatelessWidget {
                     ],
                     const SizedBox(width: 4),
                     Icon(
-                      Icons.arrow_forward_ios,
-                      size: 14,
+                      renderer == PrimitiveRenderer.material3
+                          ? Icons.chevron_right
+                          : Icons.arrow_forward_ios,
+                      size: renderer == PrimitiveRenderer.material3 ? 18 : 14,
                       color: cs.outline,
                     ),
                   ],

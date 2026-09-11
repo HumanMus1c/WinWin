@@ -40,6 +40,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    InheritedUiStyle.of(context);
     return Scaffold(
       body: Stack(
         children: [
@@ -161,125 +162,160 @@ class _HomeTopBarState extends State<_HomeTopBar> {
     final barRadius = chrome.containerRadius;
     final showShadow = renderer != PrimitiveRenderer.miuix;
 
+    final searchBg = renderer == PrimitiveRenderer.material3
+        ? cs.surfaceContainerHighest
+        : cs.surfaceContainer.withValues(alpha: 0.5);
+    final searchFg = renderer == PrimitiveRenderer.material3
+        ? cs.onSurfaceVariant
+        : barContentColor;
+
+    final rowContent = Row(
+      children: [
+        // Avatar (login entry)
+        GestureDetector(
+          onTap: _onAvatarTap,
+          child: Container(
+            width: 36,
+            height: 36,
+            margin: const EdgeInsets.only(left: Style.md),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: isLogin
+                  ? null
+                  : LinearGradient(
+                      colors: [coverGradients[3].start, coverGradients[3].end],
+                    ),
+              border: Border.all(
+                color: renderer == PrimitiveRenderer.material3
+                    ? cs.outlineVariant
+                    : Colors.white.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: isLogin && faceUrl.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: faceUrl,
+                    placeholder: (_, _) => const ColoredBox(
+                      color: Colors.grey,
+                      child: SizedBox.expand(),
+                    ),
+                    errorBuilder: (_, _, _) => const ColoredBox(
+                      color: Colors.grey,
+                      child: Center(
+                        child: Icon(Icons.person, color: Colors.white, size: 20),
+                      ),
+                    ),
+                    fit: BoxFit.cover,
+                  )
+                : const Icon(Icons.person, color: Colors.white, size: 20),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Search pill
+        Expanded(
+          child: GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const SearchPage(),
+              ),
+            ),
+            child: Container(
+              height: 36,
+              decoration: BoxDecoration(
+                color: searchBg,
+                borderRadius: renderer == PrimitiveRenderer.material3
+                    ? BorderRadius.circular(24)
+                    : shapes.pillBorder,
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 12),
+                  Icon(Icons.search,
+                      size: 18,
+                      color: searchFg),
+                  const SizedBox(width: 6),
+                  Text(
+                    '搜索视频、UP主...',
+                    style: TextStyle(
+                      color: searchFg,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Settings icon
+        Padding(
+          padding: const EdgeInsets.only(right: Style.md),
+          child: GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const SettingPage(),
+              ),
+            ),
+            child: Icon(
+              renderer == PrimitiveRenderer.material3
+                  ? Icons.settings_outlined
+                  : Icons.settings,
+              color: searchFg,
+              size: 22,
+            ),
+          ),
+        ),
+      ],
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Style.lg, vertical: Style.sm),
-      // 毛玻璃顶栏（Frosted Top Bar）：与 FrostedBottomBar 同质感参数
-      // （sigma 20 + surface α0.72），ClipRRect 限定模糊区域。
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(barRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            height: Style.topBarHeight,
-            decoration: BoxDecoration(
-          color: barColor,
-          borderRadius: BorderRadius.circular(barRadius),
-          border: Border.all(
-            color: cs.outline.withValues(alpha: renderer == PrimitiveRenderer.miuix ? 0 : 0.1),
-            width: 0.5,
-          ),
-          boxShadow: showShadow
-              ? [
+      child: renderer == PrimitiveRenderer.material3
+          ? Container(
+              height: Style.topBarHeight,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
-                ]
-              : const [],
-        ),
-        child: Row(
-          children: [
-            // Avatar (login entry)
-            GestureDetector(
-              onTap: _onAvatarTap,
-              child: Container(
-                width: 36,
-                height: 36,
-                margin: const EdgeInsets.only(left: Style.md),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: isLogin
-                      ? null
-                      : LinearGradient(
-                          colors: [coverGradients[3].start, coverGradients[3].end],
-                        ),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: isLogin && faceUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: faceUrl,
-                        placeholder: (_, _) => const ColoredBox(
-                          color: Colors.grey,
-                          child: SizedBox.expand(),
-                        ),
-                        errorBuilder: (_, _, _) => const ColoredBox(
-                          color: Colors.grey,
-                          child: Center(
-                            child: Icon(Icons.person, color: Colors.white, size: 20),
-                          ),
-                        ),
-                        fit: BoxFit.cover,
-                      )
-                    : const Icon(Icons.person, color: Colors.white, size: 20),
+                ],
               ),
-            ),
-            const SizedBox(width: 12),
-            // Search pill
-            Expanded(
-              child: GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SearchPage(),
-                  ),
-                ),
+              child: rowContent,
+            )
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(barRadius),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: Container(
-                  height: 36,
+                  height: Style.topBarHeight,
                   decoration: BoxDecoration(
-                    color: cs.surfaceContainer.withValues(alpha: 0.5),
-                    borderRadius: shapes.pillBorder,
+                    color: barColor,
+                    borderRadius: BorderRadius.circular(barRadius),
+                    border: Border.all(
+                      color: cs.outline.withValues(alpha: 0),
+                      width: 0.5,
+                    ),
+                    boxShadow: showShadow
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : const [],
                   ),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 12),
-                      Icon(Icons.search,
-                          size: 18,
-                          color: barContentColor),
-                      const SizedBox(width: 6),
-                      Text(
-                        '搜索视频、UP主...',
-                        style: TextStyle(
-                          color: barContentColor,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: rowContent,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            // Settings icon
-            Padding(
-              padding: const EdgeInsets.only(right: Style.md),
-              child: GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SettingPage(),
-                  ),
-                ),
-                child: Icon(Icons.settings,
-                    color: barContentColor, size: 22),
-              ),
-            ),
-          ],
-        ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -317,65 +353,111 @@ class _CategoryTabRow extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Style.lg),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(barRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            height: 36,
-            decoration: BoxDecoration(
-              color: barColor,
-              borderRadius: BorderRadius.circular(barRadius),
-              border: Border.all(
-                color: cs.outline.withValues(
-                  alpha: renderer == PrimitiveRenderer.miuix ? 0 : 0.1,
-                ),
-                width: 0.5,
+      child: renderer == PrimitiveRenderer.material3
+          ? Container(
+              height: 36,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(20),
               ),
-              boxShadow: showShadow
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : const [],
-            ),
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: Style.md),
-              itemCount: tabs.length,
-              separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
-              itemBuilder: (context, index) {
-                final isSelected = index == selectedIndex;
-                final baseColor = cs.primary;
-                return GestureDetector(
-                  onTap: () => onSelect(index),
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: isSelected ? baseColor.withValues(alpha: 0.28) : Colors.transparent,
-                      borderRadius: shapes.pillBorder,
-                    ),
-                    child: Text(
-                      tabs[index].label,
-                      style: TextStyle(
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+                itemCount: tabs.length,
+                separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
+                itemBuilder: (context, index) {
+                  final isSelected = index == selectedIndex;
+                  return GestureDetector(
+                    onTap: () => onSelect(index),
+                    child: Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
                         color: isSelected
-                            ? baseColor
-                            : contentColor.withValues(alpha: 0.78),
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            ? cs.secondaryContainer
+                            : Colors.transparent,
+                        borderRadius: shapes.pillBorder,
+                      ),
+                      child: Text(
+                        tabs[index].label,
+                        style: TextStyle(
+                          color: isSelected
+                              ? cs.onSecondaryContainer
+                              : cs.onSurfaceVariant,
+                          fontSize: 13,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
                       ),
                     ),
+                  );
+                },
+              ),
+            )
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(barRadius),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: barColor,
+                    borderRadius: BorderRadius.circular(barRadius),
+                    border: Border.all(
+                      color: cs.outline.withValues(
+                        alpha: 0,
+                      ),
+                      width: 0.5,
+                    ),
+                    boxShadow: showShadow
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : const [],
                   ),
-                );
-              },
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: Style.md),
+                    itemCount: tabs.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
+                    itemBuilder: (context, index) {
+                      final isSelected = index == selectedIndex;
+                      final baseColor = cs.primary;
+                      return GestureDetector(
+                        onTap: () => onSelect(index),
+                        child: Container(
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? baseColor.withValues(alpha: 0.28)
+                                : Colors.transparent,
+                            borderRadius: shapes.pillBorder,
+                          ),
+                          child: Text(
+                            tabs[index].label,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? baseColor
+                                  : contentColor.withValues(alpha: 0.78),
+                              fontSize: 13,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }

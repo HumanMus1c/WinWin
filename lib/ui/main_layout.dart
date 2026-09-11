@@ -66,18 +66,41 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final style = InheritedUiStyle.of(context);
+    final renderer = resolvePrimitiveRenderer(style);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= kRailBreakpoint;
         if (wide) {
           return Row(
             children: [
-              AppNavRail(
-                currentIndex: widget.currentIndex,
-                onSelect: widget.onSelect,
-              ),
+              renderer == PrimitiveRenderer.material3
+                  ? _buildMaterial3Rail(context)
+                  : AppNavRail(
+                      currentIndex: widget.currentIndex,
+                      onSelect: widget.onSelect,
+                    ),
               Expanded(child: widget.body),
             ],
+          );
+        }
+        if (renderer == PrimitiveRenderer.material3) {
+          return Scaffold(
+            body: widget.body,
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: widget.currentIndex,
+              onDestinationSelected: widget.onSelect,
+              destinations: navDestinations
+                  .map(
+                    (d) => NavigationDestination(
+                      icon: Icon(d.outlinedIcon),
+                      selectedIcon: Icon(d.filledIcon),
+                      label: d.label,
+                    ),
+                  )
+                  .toList(),
+            ),
           );
         }
         return Stack(
@@ -108,6 +131,24 @@ class _MainLayoutState extends State<MainLayout> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildMaterial3Rail(BuildContext context) {
+    return NavigationRail(
+      selectedIndex: widget.currentIndex,
+      onDestinationSelected: widget.onSelect,
+      labelType: NavigationRailLabelType.all,
+      groupAlignment: 0.0,
+      destinations: navDestinations
+          .map(
+            (d) => NavigationRailDestination(
+              icon: Icon(d.outlinedIcon),
+              selectedIcon: Icon(d.filledIcon),
+              label: Text(d.label),
+            ),
+          )
+          .toList(),
     );
   }
 }

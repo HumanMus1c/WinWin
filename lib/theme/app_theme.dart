@@ -109,7 +109,7 @@ class AppTheme {
           scrolledUnderElevation: 3,
         ),
         cardTheme: CardThemeData(
-          color: md3LightSurface,
+          color: md3LightSurfaceContainerLow,
           elevation: 1,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(_md3RadiusMedium),
@@ -122,6 +122,27 @@ class AppTheme {
         ),
         listTileTheme: const ListTileThemeData(
           contentPadding: EdgeInsets.symmetric(horizontal: 16),
+        ),
+        navigationRailTheme: NavigationRailThemeData(
+          backgroundColor: Colors.transparent,
+          indicatorColor: md3LightSecondaryContainer,
+          indicatorShape: const StadiumBorder(),
+          selectedIconTheme: const IconThemeData(color: md3LightOnSecondaryContainer),
+          unselectedIconTheme: const IconThemeData(color: md3LightOnSurfaceVariant),
+          selectedLabelTextStyle: const TextStyle(
+            color: md3LightOnSurface,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+          unselectedLabelTextStyle: const TextStyle(
+            color: md3LightOnSurfaceVariant,
+            fontSize: 12,
+          ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: md3LightSurfaceContainer,
+          indicatorColor: md3LightSecondaryContainer,
+          indicatorShape: const StadiumBorder(),
         ),
         extensions: _extensionsFor(UiStyle.material3),
       );
@@ -164,7 +185,7 @@ class AppTheme {
           scrolledUnderElevation: 3,
         ),
         cardTheme: CardThemeData(
-          color: md3DarkSurface,
+          color: md3DarkSurfaceContainer,
           elevation: 1,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(_md3RadiusMedium),
@@ -177,6 +198,27 @@ class AppTheme {
         ),
         listTileTheme: const ListTileThemeData(
           contentPadding: EdgeInsets.symmetric(horizontal: 16),
+        ),
+        navigationRailTheme: NavigationRailThemeData(
+          backgroundColor: Colors.transparent,
+          indicatorColor: md3DarkSecondaryContainer,
+          indicatorShape: const StadiumBorder(),
+          selectedIconTheme: const IconThemeData(color: md3DarkOnSecondaryContainer),
+          unselectedIconTheme: const IconThemeData(color: md3DarkOnSurfaceVariant),
+          selectedLabelTextStyle: const TextStyle(
+            color: md3DarkOnSurface,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+          unselectedLabelTextStyle: const TextStyle(
+            color: md3DarkOnSurfaceVariant,
+            fontSize: 12,
+          ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: md3DarkSurfaceContainer,
+          indicatorColor: md3DarkSecondaryContainer,
+          indicatorShape: const StadiumBorder(),
         ),
         extensions: _extensionsFor(UiStyle.material3),
       );
