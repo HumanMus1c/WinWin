@@ -115,6 +115,14 @@ class AppTheme {
             borderRadius: BorderRadius.all(_md3RadiusMedium),
           ),
         ),
+        dialogTheme: DialogThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(_md3RadiusLarge),
+          ),
+        ),
+        listTileTheme: const ListTileThemeData(
+          contentPadding: EdgeInsets.symmetric(horizontal: 16),
+        ),
         extensions: _extensionsFor(UiStyle.material3),
       );
 
@@ -161,6 +169,14 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(_md3RadiusMedium),
           ),
+        ),
+        dialogTheme: DialogThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(_md3RadiusLarge),
+          ),
+        ),
+        listTileTheme: const ListTileThemeData(
+          contentPadding: EdgeInsets.symmetric(horizontal: 16),
         ),
         extensions: _extensionsFor(UiStyle.material3),
       );
@@ -209,6 +225,18 @@ class AppTheme {
             borderRadius: BorderRadius.all(_miuixRadiusMedium),
           ),
         ),
+        dialogTheme: DialogThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(_miuixRadiusLarge),
+          ),
+        ),
+        listTileTheme: ListTileThemeData(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(_miuixRadiusSmall),
+          ),
+        ),
         extensions: _extensionsFor(UiStyle.miuix),
       );
 
@@ -244,6 +272,18 @@ class AppTheme {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(_miuixRadiusMedium),
+          ),
+        ),
+        dialogTheme: DialogThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(_miuixRadiusLarge),
+          ),
+        ),
+        listTileTheme: ListTileThemeData(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(_miuixRadiusSmall),
           ),
         ),
         extensions: _extensionsFor(UiStyle.miuix),

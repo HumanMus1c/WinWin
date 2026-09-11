@@ -98,6 +98,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    InheritedUiStyle.of(context);
     final service = AccountService();
     final info = service.userInfo;
     final isLogin = service.isLogin;

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/setting_type.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 通用设置列表：按 [settingType] 渲染对应的设置项列表。
 ///
@@ -22,42 +24,29 @@ class CommonSetting extends StatefulWidget {
 }
 
 class _CommonSettingState extends State<CommonSetting> {
-  late List<SettingsModel> settings;
-
-  void _initSetting() {
-    settings = widget.settingType.settings;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _initSetting();
-  }
-
-  @override
-  void didUpdateWidget(CommonSetting oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.settingType != oldWidget.settingType) {
-      _initSetting();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final style = InheritedUiStyle.of(context);
+    final settings = widget.settingType.settings;
     final showAppBar = widget.showAppBar;
     final padding = MediaQuery.viewPaddingOf(context);
     return Scaffold(
       appBar: showAppBar ? AppBar(title: Text(widget.settingType.title)) : null,
-      body: ListView.builder(
-        key: ValueKey(widget.settingType),
+      body: ListView(
+        key: ValueKey('${widget.settingType.name}_${style.name}'),
         padding: EdgeInsets.only(
-          left: showAppBar ? padding.left : 0,
-          right: showAppBar ? padding.right : 0,
+          left: showAppBar ? padding.left + Style.md : Style.md,
+          right: showAppBar ? padding.right + Style.md : Style.md,
+          top: Style.md,
           bottom: padding.bottom + 100,
         ),
-        itemCount: settings.length,
-        itemBuilder: (context, index) => settings[index].widget,
+        children: [
+          AppGroup(
+            children: settings.map((s) => s.widget).toList(),
+          ),
+        ],
       ),
     );
   }
 }
+

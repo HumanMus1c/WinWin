@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:winwin/pages/setting/about_page.dart';
 import 'package:winwin/pages/setting/common_setting.dart';
 import 'package:winwin/pages/setting/setting_type.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
@@ -51,6 +52,7 @@ class _SettingPageState extends State<SettingPage> {
 
   @override
   Widget build(BuildContext context) {
+    InheritedUiStyle.of(context);
     final theme = Theme.of(context);
     final padding = MediaQuery.viewPaddingOf(context);
     return Scaffold(

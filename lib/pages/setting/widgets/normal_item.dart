@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/ui_style.dart';
+
 /// 普通设置项：标题 + 副标题 + leading + trailing + onTap。
 ///
 /// 移植自 PiliPlus 的 `NormalItem`，去除 GetX 依赖。
@@ -35,6 +38,8 @@ class NormalItem extends StatefulWidget {
 class _NormalItemState extends State<NormalItem> {
   @override
   Widget build(BuildContext context) {
+    final style = InheritedUiStyle.of(context);
+    final renderer = resolvePrimitiveRenderer(style);
     final theme = Theme.of(context);
     Widget? subtitle;
     final text = widget.subtitle ?? widget.getSubtitle?.call();
@@ -50,22 +55,76 @@ class _NormalItemState extends State<NormalItem> {
     }
     // trailing 限宽防溢出（对标 BiliPai 数值 maxWidth 200dp）。
     final trailing = widget.getTrailing?.call(theme);
-    return ListTile(
-      contentPadding: widget.contentPadding,
-      onTap: widget.onTap == null ? null : () => widget.onTap!(context, refresh),
-      title: Text(
-        widget.title ?? widget.getTitle!(),
-        style: widget.titleStyle ?? theme.textTheme.titleMedium,
-      ),
-      subtitle: subtitle,
-      leading: widget.leading,
-      trailing: trailing == null
-          ? null
-          : ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 200),
-              child: trailing,
+
+    switch (renderer) {
+      case PrimitiveRenderer.material3:
+        return ListTile(
+          contentPadding: widget.contentPadding,
+          onTap: widget.onTap == null
+              ? null
+              : () => widget.onTap!(context, refresh),
+          title: Text(
+            widget.title ?? widget.getTitle!(),
+            style: widget.titleStyle ?? theme.textTheme.titleMedium,
+          ),
+          subtitle: subtitle,
+          leading: widget.leading,
+          trailing: trailing == null
+              ? null
+              : ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 200),
+                  child: trailing,
+                ),
+        );
+      case PrimitiveRenderer.miuix:
+        return InkWell(
+          onTap: widget.onTap == null
+              ? null
+              : () => widget.onTap!(context, refresh),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: widget.contentPadding ??
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                if (widget.leading != null) ...[
+                  IconTheme(
+                    data: IconThemeData(
+                      color: theme.colorScheme.primary,
+                      size: 22,
+                    ),
+                    child: widget.leading!,
+                  ),
+                  const SizedBox(width: 14),
+                ],
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.title ?? widget.getTitle!(),
+                        style: widget.titleStyle ?? theme.textTheme.bodyLarge,
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        subtitle,
+                      ],
+                    ],
+                  ),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 200),
+                    child: trailing,
+                  ),
+                ],
+              ],
             ),
-    );
+          ),
+        );
+    }
   }
 
   void refresh() {
@@ -74,3 +133,4 @@ class _NormalItemState extends State<NormalItem> {
     }
   }
 }
+

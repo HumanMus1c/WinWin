@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/whisper/view.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
 import 'home/home_page.dart';
 import 'main_layout.dart';
 import 'profile/profile_page.dart';
@@ -31,6 +32,7 @@ class _AppRootState extends State<AppRoot> {
 
   @override
   Widget build(BuildContext context) {
+    InheritedUiStyle.of(context);
     // Esc 全局返回上一级：键盘事件从焦点节点向上冒泡，对话框/底部弹层
     // 的 ModalRoute 自带 Esc 关闭快捷键、播放器内 PlayerFocus 自行消费
     // Esc（全屏态退出全屏），均先于本层处理；未消费时才由这里兜底
@@ -57,9 +59,9 @@ class _AppRootState extends State<AppRoot> {
             index: _currentIndex,
             children: [
               HomePage(onGotoProfile: () => _onSelect(_indexOf(AppPage.profile))),
-              const DynamicsPage(),
-              const HistoryPage(),
-              const WhisperPage(),
+              DynamicsPage(),
+              HistoryPage(),
+              WhisperPage(),
               ProfilePage(onNavigate: (p) => _onSelect(_indexOf(p))),
             ],
           ),

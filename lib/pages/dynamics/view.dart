@@ -14,6 +14,7 @@ import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/grid.dart';
@@ -62,6 +63,7 @@ class _DynamicsPageState extends State<DynamicsPage>
 
   @override
   Widget build(BuildContext context) {
+    InheritedUiStyle.of(context);
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(

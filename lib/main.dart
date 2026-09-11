@@ -161,6 +161,10 @@ class WinWinApp extends StatelessWidget {
                     darkTheme: AppTheme.darkFor(uiStyle, fontFamily: fontFamily),
                     themeMode: themeMode,
                     navigatorObservers: [routeObserver],
+                    builder: (context, child) => UiStyleScope(
+                      style: uiStyle,
+                      child: child ?? const SizedBox.shrink(),
+                    ),
                     home: const AgreementGate(child: AppRoot()),
                   ),
                 );
@@ -223,6 +227,7 @@ class _AgreementGateState extends State<AgreementGate> {
 
   @override
   Widget build(BuildContext context) {
+    InheritedUiStyle.of(context);
     final bootstrapError = _bootstrapError;
     if (bootstrapError != null) {
       final isDark = Theme.of(context).brightness == Brightness.dark;

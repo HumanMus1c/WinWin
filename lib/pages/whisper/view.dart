@@ -11,6 +11,7 @@ import 'package:winwin/pages/whisper/msg_feed/reply_me_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/sys_msg_page.dart';
 import 'package:winwin/pages/whisper/session/session_list_section.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 
 /// 消息页（Phase 7.7.3）。
@@ -102,6 +103,7 @@ class _WhisperPageState extends State<WhisperPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    InheritedUiStyle.of(context);
     final theme = Theme.of(context);
     // 四类互动入口固定在顶部，仅下方会话列表可滚动。
     return Scaffold(
