@@ -294,14 +294,13 @@ class WinWinPlayerController {
         if (isPlaying) {
           completed.value = false;
         } else if (event.newValue == mdk.PlaybackState.stopped) {
-          // 播放器到达流末尾自然停止（keep_open 未设置时 mdk 进入 stopped）
+          // 播放器到达流末尾自然停止（keep_open 未设置时 mdk 在所有帧渲染完成后进入 stopped）
           final durMs = duration.value.inMilliseconds;
           final posMs = player.position;
           if (!_loading &&
               ready.value &&
-              (completed.value ||
-                  _reportedEnd ||
-                  (durMs > 0 && posMs >= durMs - 1500))) {
+              durMs > 0 &&
+              posMs >= durMs - 1500) {
             _handlePlaybackEnded();
           }
         }
@@ -329,12 +328,6 @@ class WinWinPlayerController {
         if (_disposed) return;
         final oldValue = event.oldValue;
         final newValue = event.newValue;
-
-        // 视频播放到达流末尾
-        if (newValue.test(mdk.MediaStatus.end)) {
-          _handlePlaybackEnded();
-          return;
-        }
 
         // 缓冲中 / 缓冲完成（同时监听 buffering 与 stalled 位，映射同 fvp 的 bufferingStart / bufferingEnd）。
         final wasBufferingOrStalled =
@@ -439,10 +432,10 @@ class WinWinPlayerController {
         _bufferingStallMs = 0;
       }
 
-      // 自然播放结束检测（对标 PiliPlus duration - position <= 500ms）：
-      // 某些流由于格式原因末帧与容器时长有几十毫秒差，未触发 MediaStatus.end 时以此收敛。
+      // 自然播放结束检测（对标 PiliPlus duration - position <= 50）：
+      // 某些流由于格式原因末帧与容器时长有几十毫秒差，在非播放中且进度停止时收敛。
       final durMs = duration.value.inMilliseconds;
-      final isNearEnd = durMs > 0 && posMs >= durMs - 500;
+      final isNearEnd = durMs > 0 && posMs >= durMs - 200;
       if (isNearEnd && !isPosAdvancing && !playing.value) {
         _handlePlaybackEnded();
         return;
@@ -713,6 +706,8 @@ class WinWinPlayerController {
       duration.value = Duration.zero;
       playing.value = false;
       completed.value = false;
+      _reportedEnd = false;
+      _bufferingStallMs = 0;
 
       // 1. PlayUrlCache：先查缓存，命中且未过期则跳过 HTTP。
       final cacheKey = (epId != null && epId! > 0) ? 'ep_$epId' : bvid;
@@ -1088,7 +1083,7 @@ class WinWinPlayerController {
       // 若处于播放完成状态（或停留在片尾），点击重播从头开始播放（对标 PiliPlus onDoubleTapCenter）
       final durMs = duration.value.inMilliseconds;
       final posMs = player.position;
-      if (completed.value || (durMs > 0 && posMs >= durMs - 500)) {
+      if (completed.value || (durMs > 0 && posMs >= durMs - 200)) {
         unawaited(replay());
         return;
       }
@@ -1131,7 +1126,7 @@ class WinWinPlayerController {
     if (player == null || _disposed) return;
     final durMs = duration.value.inMilliseconds;
     final posMs = player.position;
-    if (completed.value || (durMs > 0 && posMs >= durMs - 500)) {
+    if (completed.value || (durMs > 0 && posMs >= durMs - 200)) {
       unawaited(replay());
       return;
     }
@@ -1147,7 +1142,7 @@ class WinWinPlayerController {
     final player = _player;
     if (player == null || _disposed) return;
     final durMs = duration.value.inMilliseconds;
-    if (durMs > 0 && to.inMilliseconds < durMs - 1000) {
+    if (durMs > 0 && to.inMilliseconds < durMs - 500) {
       completed.value = false;
     }
     _bufferingStallMs = 0;
