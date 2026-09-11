@@ -696,34 +696,34 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// 点击穿透到手势层（_onVideoTap → playOrPause）。
   Widget _buildCenterPlayButton() {
     final c = widget.controller;
-    return ValueListenableBuilder<bool>(
-      valueListenable: c.playing,
-      builder: (context, isPlaying, _) {
-        return ValueListenableBuilder<bool>(
-          valueListenable: c.ready,
-          builder: (context, isReady, _) {
-            if (!isReady || isPlaying) return const SizedBox.shrink();
-            return const Positioned.fill(
-              child: IgnorePointer(
-                child: Center(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0x8C000000),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(Style.md),
-                      child: Icon(
-                        Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 44,
-                      ),
-                    ),
+    return ListenableBuilder(
+      listenable: Listenable.merge([c.playing, c.ready, c.completed]),
+      builder: (context, _) {
+        final isPlaying = c.playing.value;
+        final isReady = c.ready.value;
+        final isCompleted = c.completed.value;
+        if (!isReady || isPlaying) return const SizedBox.shrink();
+        return Positioned.fill(
+          child: IgnorePointer(
+            child: Center(
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  color: Color(0x8C000000),
+                  shape: BoxShape.circle,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(Style.md),
+                  child: Icon(
+                    isCompleted
+                        ? Icons.replay_rounded
+                        : Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 44,
                   ),
                 ),
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );
@@ -821,18 +821,25 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// 播放/暂停按钮。
   Widget _buildPlayPauseButton() {
     final c = widget.controller;
-    return ValueListenableBuilder<bool>(
-      valueListenable: c.playing,
-      builder: (context, isPlaying, _) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([c.playing, c.completed]),
+      builder: (context, _) {
+        final isPlaying = c.playing.value;
+        final isCompleted = c.completed.value;
         return HoverContainer(
           onTap: c.playOrPause,
           borderRadius: 6.0,
           padding: const EdgeInsets.all(6),
           hoverColor: Colors.white.withValues(alpha: 0.12),
-          child: Icon(
-            isPlaying ? Icons.pause : Icons.play_arrow,
-            color: Colors.white,
-            size: 24,
+          child: Tooltip(
+            message: isCompleted ? '重新播放' : (isPlaying ? '暂停' : '播放'),
+            child: Icon(
+              isPlaying
+                  ? Icons.pause
+                  : (isCompleted ? Icons.replay : Icons.play_arrow),
+              color: Colors.white,
+              size: 24,
+            ),
           ),
         );
       },

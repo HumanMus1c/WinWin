@@ -81,6 +81,10 @@ class WinWinPlayerController {
   final ValueNotifier<bool> ready = ValueNotifier(false);
   final ValueNotifier<double> volume = ValueNotifier(80);
 
+  /// 视频播放是否已自然结束（到达片尾）。
+  final ValueNotifier<bool> completed = ValueNotifier(false);
+  bool get isCompleted => completed.value;
+
   /// mdk 注册的 Flutter Texture id，供面板 `Texture(textureId:)` 渲染。
   /// 首帧就绪前 / 画质切换重建纹理期间为 null。
   final ValueNotifier<int?> textureId = ValueNotifier(null);
@@ -260,6 +264,22 @@ class WinWinPlayerController {
     return player;
   }
 
+  /// 视频播放自然结束统一收敛处理（对标 PiliPlus stream.completed & BiliPai STATE_ENDED）。
+  void _handlePlaybackEnded() {
+    if (_disposed) return;
+    if (completed.value) return;
+    completed.value = true;
+    playing.value = false;
+    buffering.value = false;
+    _userIntentPlaying = false;
+    _bufferingStallMs = 0;
+    _maybeReportPlaybackEnd();
+    AppLogger.i(
+      'PlayerController',
+      'Playback completed naturally at ${position.value.inSeconds}s/${duration.value.inSeconds}s',
+    );
+  }
+
   /// 将本 controller 的事件监听挂载到共享 [_sharedPlayer]。
   /// 每个 controller 实例持有自己的订阅，dispose 时由 [detachListeners] 移除。
   /// 供页面 [RouteAware.didPopNext] 重新挂载（参照 PiliPlus addStatusLister）。
@@ -269,7 +289,22 @@ class WinWinPlayerController {
     _subscriptions
       ..add(player.onStateChanged.listen((event) {
         if (_disposed) return;
-        playing.value = event.newValue == mdk.PlaybackState.playing;
+        final isPlaying = event.newValue == mdk.PlaybackState.playing;
+        playing.value = isPlaying;
+        if (isPlaying) {
+          completed.value = false;
+        } else if (event.newValue == mdk.PlaybackState.stopped) {
+          // 播放器到达流末尾自然停止（keep_open 未设置时 mdk 进入 stopped）
+          final durMs = duration.value.inMilliseconds;
+          final posMs = player.position;
+          if (!_loading &&
+              ready.value &&
+              (completed.value ||
+                  _reportedEnd ||
+                  (durMs > 0 && posMs >= durMs - 1500))) {
+            _handlePlaybackEnded();
+          }
+        }
       }))
       ..add(player.onEvent.listen((ev) {
         if (_disposed || _loading || _isRecovering) return;
@@ -294,13 +329,22 @@ class WinWinPlayerController {
         if (_disposed) return;
         final oldValue = event.oldValue;
         final newValue = event.newValue;
+
+        // 视频播放到达流末尾
+        if (newValue.test(mdk.MediaStatus.end)) {
+          _handlePlaybackEnded();
+          return;
+        }
+
         // 缓冲中 / 缓冲完成（同时监听 buffering 与 stalled 位，映射同 fvp 的 bufferingStart / bufferingEnd）。
         final wasBufferingOrStalled =
             oldValue.test(mdk.MediaStatus.buffering | mdk.MediaStatus.stalled);
         final isBufferingOrStalled =
             newValue.test(mdk.MediaStatus.buffering | mdk.MediaStatus.stalled);
         if (!wasBufferingOrStalled && isBufferingOrStalled) {
-          buffering.value = true;
+          if (!completed.value) {
+            buffering.value = true;
+          }
         }
         if (!oldValue.test(mdk.MediaStatus.buffered) &&
             newValue.test(mdk.MediaStatus.buffered)) {
@@ -395,8 +439,24 @@ class WinWinPlayerController {
         _bufferingStallMs = 0;
       }
 
+      // 自然播放结束检测（对标 PiliPlus duration - position <= 500ms）：
+      // 某些流由于格式原因末帧与容器时长有几十毫秒差，未触发 MediaStatus.end 时以此收敛。
+      final durMs = duration.value.inMilliseconds;
+      final isNearEnd = durMs > 0 && posMs >= durMs - 500;
+      if (isNearEnd && !isPosAdvancing && !playing.value) {
+        _handlePlaybackEnded();
+        return;
+      }
+
+      // 若已处于播放完毕状态，或已到达片尾 1 秒内，绝对禁止触发缓冲与卡死看门狗。
+      if (completed.value || (durMs > 0 && posMs >= durMs - 1000)) {
+        buffering.value = false;
+        _bufferingStallMs = 0;
+        return;
+      }
+
       // 卡死看门狗（Watchdog，参照 BiliPai resolvePlaybackStallRecoveryDecision）：
-      // 1. 用户意图播放（_userIntentPlaying，非手动暂停）；
+      // 1. 用户意图播放（_userIntentPlaying，非手动暂停，且未播放完毕）；
       // 2. 处于缓冲中（buffering.value）或底层报告 stalled，且进度未推进；
       // 3. 达到 4.5 秒门限（早于 CDN 60s 闲置与长缓冲超时，及时自愈无感续播）。
       if (_userIntentPlaying && !buffering.value && !isPosAdvancing && playing.value) {
@@ -652,6 +712,7 @@ class WinWinPlayerController {
       position.value = Duration.zero;
       duration.value = Duration.zero;
       playing.value = false;
+      completed.value = false;
 
       // 1. PlayUrlCache：先查缓存，命中且未过期则跳过 HTTP。
       final cacheKey = (epId != null && epId! > 0) ? 'ep_$epId' : bvid;
@@ -942,6 +1003,15 @@ class WinWinPlayerController {
   Future<void> _recoverStalledStream({bool isNetworkError = false}) async {
     final player = _player;
     if (_disposed || player == null || _isRecovering || !ready.value) return;
+
+    // 已播放完毕或已处于片尾边界，严禁触发流自愈（杜绝 EOF seek 音频回绕片头）。
+    final durMs = duration.value.inMilliseconds;
+    final curPosMs = player.position;
+    if (completed.value || (durMs > 0 && curPosMs >= durMs - 1000)) {
+      _handlePlaybackEnded();
+      return;
+    }
+
     _isRecovering = true;
     _stallRecoveryRetryCount++;
     try {
@@ -1015,10 +1085,29 @@ class WinWinPlayerController {
       _bufferingStallMs = 0;
       player.state = mdk.PlaybackState.paused;
     } else {
+      // 若处于播放完成状态（或停留在片尾），点击重播从头开始播放（对标 PiliPlus onDoubleTapCenter）
+      final durMs = duration.value.inMilliseconds;
+      final posMs = player.position;
+      if (completed.value || (durMs > 0 && posMs >= durMs - 500)) {
+        unawaited(replay());
+        return;
+      }
       _userIntentPlaying = true;
       _bufferingStallMs = 0;
       player.state = mdk.PlaybackState.playing;
     }
+  }
+
+  /// 重新从头开始播放。
+  Future<void> replay() async {
+    final player = _player;
+    if (player == null || _disposed) return;
+    completed.value = false;
+    _userIntentPlaying = true;
+    _bufferingStallMs = 0;
+    _reportedEnd = false;
+    await player.seek(position: 0);
+    player.state = mdk.PlaybackState.playing;
   }
 
   /// 切换播放/暂停（对标 togglePlay 接口命名）
@@ -1040,9 +1129,16 @@ class WinWinPlayerController {
   void play() {
     final player = _player;
     if (player == null || _disposed) return;
+    final durMs = duration.value.inMilliseconds;
+    final posMs = player.position;
+    if (completed.value || (durMs > 0 && posMs >= durMs - 500)) {
+      unawaited(replay());
+      return;
+    }
     _userIntentPlaying = true;
     _bufferingStallMs = 0;
-    if (player.state == mdk.PlaybackState.paused) {
+    if (player.state == mdk.PlaybackState.paused ||
+        player.state == mdk.PlaybackState.stopped) {
       player.state = mdk.PlaybackState.playing;
     }
   }
@@ -1050,6 +1146,10 @@ class WinWinPlayerController {
   void seek(Duration to) {
     final player = _player;
     if (player == null || _disposed) return;
+    final durMs = duration.value.inMilliseconds;
+    if (durMs > 0 && to.inMilliseconds < durMs - 1000) {
+      completed.value = false;
+    }
     _bufferingStallMs = 0;
     _lastPolledPosMs = to.inMilliseconds;
     unawaited(player.seek(position: to.inMilliseconds));
