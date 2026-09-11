@@ -11,6 +11,7 @@ import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
+import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
@@ -521,23 +522,36 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final style = InheritedUiStyle.of(context);
+    final renderer = resolvePrimitiveRenderer(style);
+    final cs = Theme.of(context).colorScheme;
+
+    Widget trailingChevron(ThemeData theme) => Icon(
+          renderer == PrimitiveRenderer.material3
+              ? Icons.chevron_right
+              : Icons.arrow_forward_ios,
+          size: renderer == PrimitiveRenderer.material3 ? 20 : 14,
+          color: theme.colorScheme.outline,
+        );
+
     return Column(
       children: [
         AppGroup(
           margin: const EdgeInsets.symmetric(horizontal: Style.lg),
           children: [
-            AppListItem(
-              icon: Icons.swap_horiz,
+            NormalItem(
+              leading: Icon(Icons.swap_horiz, color: cs.primary),
               title: '账号切换',
-              iconTint: iosBlue,
-              onTap: () => onGuarded(context, (_) {}),
+              getTrailing: trailingChevron,
+              onTap: (ctx, _) => onGuarded(context, (_) {}),
             ),
             if (isLogin)
-              AppListItem(
-                icon: Icons.logout,
+              NormalItem(
+                leading: const Icon(Icons.logout, color: Colors.red),
                 title: '退出登录',
-                iconTint: Colors.red,
-                onTap: () => onLogout(context),
+                titleStyle: const TextStyle(color: Colors.red),
+                getTrailing: trailingChevron,
+                onTap: (ctx, _) => onLogout(context),
               ),
           ],
         ),
@@ -545,11 +559,11 @@ class _SettingsGroup extends StatelessWidget {
         AppGroup(
           margin: const EdgeInsets.symmetric(horizontal: Style.lg),
           children: [
-            AppListItem(
-              icon: Icons.settings,
+            NormalItem(
+              leading: Icon(Icons.settings, color: cs.primary),
               title: '设置',
-              iconTint: iosBlue,
-              onTap: () => Navigator.push(
+              getTrailing: trailingChevron,
+              onTap: (ctx, _) => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const SettingPage()),
               ),

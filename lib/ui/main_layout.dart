@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
-import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'components/frosted_bottom_bar.dart';
 
@@ -177,8 +176,7 @@ class AppNavRail extends StatelessWidget {
 
     return SafeArea(
       child: Container(
-        width: 84,
-        padding: const EdgeInsets.symmetric(vertical: Style.md),
+        width: 80,
         decoration: BoxDecoration(
           color: cs.surface,
           border: Border(
@@ -188,50 +186,59 @@ class AppNavRail extends StatelessWidget {
             ),
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: navDestinations.asMap().entries.map((entry) {
-            final i = entry.key;
-            final d = entry.value;
-            final selected = i == currentIndex;
-            final color = selected ? d.color : cs.onSurfaceVariant;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => onSelect(i),
-                behavior: HitTestBehavior.opaque,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? d.color.withValues(alpha: renderer == PrimitiveRenderer.miuix ? 0.12 : 0.18)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(chrome.pillRadius),
-                      ),
-                      child: Icon(
-                        selected ? d.filledIcon : d.outlinedIcon,
-                        color: color,
-                        size: 24,
-                      ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: navDestinations.asMap().entries.map((entry) {
+              final i = entry.key;
+              final d = entry.value;
+              final selected = i == currentIndex;
+              final color = selected ? d.color : cs.onSurfaceVariant;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: InkResponse(
+                  onTap: () => onSelect(i),
+                  radius: 28,
+                  child: SizedBox(
+                    width: 64,
+                    height: 56,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? d.color.withValues(alpha: renderer == PrimitiveRenderer.miuix ? 0.12 : 0.18)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(chrome.pillRadius),
+                          ),
+                          child: Icon(
+                            selected ? d.filledIcon : d.outlinedIcon,
+                            color: color,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          d.label,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 11,
+                            fontWeight:
+                                selected ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      d.label,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 11,
-                        fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
