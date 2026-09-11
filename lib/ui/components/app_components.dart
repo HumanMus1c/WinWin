@@ -136,13 +136,13 @@ class AppGroup extends StatelessWidget {
 
     return Container(
       margin: margin,
-      decoration: BoxDecoration(
+      child: Material(
         color: bgColor,
         borderRadius: BorderRadius.circular(r),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: t.chrome.showDividers ? _withDividers(context, children) : children,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: t.chrome.showDividers ? _withDividers(context, children) : children,
+        ),
       ),
     );
   }
@@ -287,6 +287,7 @@ class AppListItem extends StatelessWidget {
     this.iconTint,
     this.trailing,
     this.onTap,
+    this.borderRadius,
   });
 
   final IconData icon;
@@ -295,6 +296,7 @@ class AppListItem extends StatelessWidget {
   final Color? iconTint;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final BorderRadius? borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -306,6 +308,9 @@ class AppListItem extends StatelessWidget {
     switch (resolvePrimitiveRenderer(t.style)) {
       case PrimitiveRenderer.material3:
         return ListTile(
+          shape: borderRadius != null
+              ? RoundedRectangleBorder(borderRadius: borderRadius!)
+              : null,
           onTap: onTap,
           leading: Icon(icon, color: tint),
           title: Text(title),
@@ -314,6 +319,7 @@ class AppListItem extends StatelessWidget {
         );
       case PrimitiveRenderer.miuix:
         return InkWell(
+          borderRadius: borderRadius,
           onTap: onTap,
           child: Container(
             constraints: const BoxConstraints(minHeight: 56),

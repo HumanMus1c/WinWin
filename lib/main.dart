@@ -1,11 +1,12 @@
 import 'dart:async' show unawaited;
-import 'dart:io' show pid;
+import 'dart:io' show Platform, pid;
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:catcher_2/catcher_2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/mdk.dart' as mdk;
+import 'package:window_manager/window_manager.dart';
 
 import 'core/bootstrap.dart';
 import 'core/log/app_logger.dart';
@@ -76,37 +77,49 @@ void main() async {
     }
   });
 
-  // The video player kernel (fvp/mdk) needs no manual init here: the fvp
-  // plugin's dartPluginClass auto-registers on startup (mdk key + globals).
-  // The Windows runner shows the window only after the first frame renders,
-  // so bootstrap (Hive → accounts → Dio) must not block runApp(). Controllers
-  // await ensureBootstrap() themselves before touching the network.
-  unawaited(
-    ensureBootstrap().then((_) {
-      ThemeNotifier.instance.refresh();
-      // Phase 7.1：从持久化存储读取实际 UI 风格。
-      UiStyleNotifier.instance.refresh();
-      // 字体设置：从持久化存储读取并加载自定义字体（如有）。
-      AppFontNotifier.instance.refresh();
-      // 恢复上次窗口尺寸/位置/最大化状态，并开始监听变更以持久化。
-      WindowStateController.instance.restoreAndListen();
-    }).catchError((Object error, StackTrace stackTrace) {
-      SyncTrace.log('main', 'ensureBootstrap async failed: $error');
-      AppLogger.e('main', 'ensureBootstrap async failed',
-          error: error, stackTrace: stackTrace);
-    }),
-  );
+  // 对标 PiliPlus 极速启动架构：
+  // 极轻量本地存储 bootstrap（Hive/Accounts/Request，仅耗时十数毫秒）与 windowManager 并行执行。
+  Object? bootstrapError;
+  try {
+    await Future.wait([
+      ensureBootstrap(),
+      if (Platform.isWindows || Platform.isMacOS || Platform.isLinux)
+        windowManager.ensureInitialized(),
+    ]);
+    ThemeNotifier.instance.refresh();
+    UiStyleNotifier.instance.refresh();
+    AppFontNotifier.instance.refresh();
+  } catch (error, stackTrace) {
+    bootstrapError = error;
+    SyncTrace.log('main', 'ensureBootstrap failed: $error');
+    AppLogger.e('main', 'ensureBootstrap failed',
+        error: error, stackTrace: stackTrace);
+  }
 
-  // L5：崩溃捕获 — Catcher2 包装根 widget，handlers = [JsonFileHandler, ConsoleHandler]。
-  // JsonFileHandler 把崩溃 Report 以 NDJSON 追加到 .winwin_logs.json。
-  // 默认开启（L7 阶段接入 Pref.enableLog 后改为用户可控）。
-  final jsonHandler = await JsonFileHandler.init();
+  if ((Platform.isWindows || Platform.isMacOS || Platform.isLinux) &&
+      bootstrapError == null) {
+    const windowOptions = WindowOptions(
+      minimumSize: Size(640, 400),
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+      title: 'WinWin',
+    );
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await WindowStateController.instance.restoreAndListen();
+    });
+  }
+
+  // 崩溃捕获与启动
+  JsonFileHandler? jsonHandler;
+  try {
+    jsonHandler = await JsonFileHandler.init();
+  } catch (_) {}
   final handlers = <ReportHandler>[
     ?jsonHandler,
     ConsoleHandler(),
   ];
   Catcher2(
-    rootWidget: const WinWinApp(),
+    rootWidget: WinWinApp(bootstrapError: bootstrapError),
     debugConfig: Catcher2Options(SilentReportMode(), handlers),
     releaseConfig: Catcher2Options(SilentReportMode(), handlers),
   );
@@ -136,7 +149,9 @@ class AppScrollBehavior extends MaterialScrollBehavior {
 }
 
 class WinWinApp extends StatelessWidget {
-  const WinWinApp({super.key});
+  const WinWinApp({super.key, this.bootstrapError});
+
+  final Object? bootstrapError;
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +180,10 @@ class WinWinApp extends StatelessWidget {
                       style: uiStyle,
                       child: child ?? const SizedBox.shrink(),
                     ),
-                    home: const AgreementGate(child: AppRoot()),
+                    home: AgreementGate(
+                      bootstrapError: bootstrapError,
+                      child: const AppRoot(),
+                    ),
                   ),
                 );
               },
@@ -179,13 +197,14 @@ class WinWinApp extends StatelessWidget {
 
 /// 用户协议门禁壳层。
 ///
-/// 在 [ensureBootstrap] 完成前显示加载占位（此时 Hive 尚未就绪，无法读取确认状态）；
-/// 已确认 → 直接渲染 [child]（AppRoot）；未确认 → 展示 [UserAgreementPage]，
-/// 确认后写回持久化并切换到主界面。不阻塞 runApp，遵守现有 bootstrap 约定。
+/// 在本地存储就绪后直接根据持久化状态秒开渲染 [child]（AppRoot）；
+/// 未确认时展示 [UserAgreementPage]，确认后写回持久化并切换到主界面；
+/// 异常（如多开文件锁定）时展示居中重试面板。
 class AgreementGate extends StatefulWidget {
-  const AgreementGate({super.key, required this.child});
+  const AgreementGate({super.key, required this.child, this.bootstrapError});
 
   final Widget child;
+  final Object? bootstrapError;
 
   @override
   State<AgreementGate> createState() => _AgreementGateState();
@@ -199,7 +218,17 @@ class _AgreementGateState extends State<AgreementGate> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _bootstrapError = widget.bootstrapError;
+    if (_bootstrapError == null) {
+      try {
+        _acked = Pref.userAgreementAck;
+      } catch (_) {
+        _acked = null;
+      }
+    }
+    if (_acked == null && _bootstrapError == null) {
+      _load();
+    }
   }
 
   void _load() {
@@ -208,6 +237,9 @@ class _AgreementGateState extends State<AgreementGate> {
       _bootstrapError = null;
     });
     ensureBootstrap().then((_) {
+      ThemeNotifier.instance.refresh();
+      UiStyleNotifier.instance.refresh();
+      AppFontNotifier.instance.refresh();
       if (!mounted) return;
       final acked = Pref.userAgreementAck;
       setState(() {

@@ -12,6 +12,8 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
+import 'package:winwin/theme/app_chrome.dart';
+import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
@@ -525,6 +527,12 @@ class _SettingsGroup extends StatelessWidget {
     final style = InheritedUiStyle.of(context);
     final renderer = resolvePrimitiveRenderer(style);
     final cs = Theme.of(context).colorScheme;
+    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.material3;
+    final chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.material3;
+    final r = Radius.circular(switch (renderer) {
+      PrimitiveRenderer.material3 => chrome.containerRadius,
+      PrimitiveRenderer.miuix => shapes.large.x,
+    });
 
     Widget trailingChevron(ThemeData theme) => Icon(
           renderer == PrimitiveRenderer.material3
@@ -543,6 +551,9 @@ class _SettingsGroup extends StatelessWidget {
               leading: Icon(Icons.swap_horiz, color: cs.primary),
               title: '账号切换',
               getTrailing: trailingChevron,
+              borderRadius: isLogin
+                  ? BorderRadius.vertical(top: r)
+                  : BorderRadius.all(r),
               onTap: (ctx, _) => onGuarded(context, (_) {}),
             ),
             if (isLogin)
@@ -551,6 +562,7 @@ class _SettingsGroup extends StatelessWidget {
                 title: '退出登录',
                 titleStyle: const TextStyle(color: Colors.red),
                 getTrailing: trailingChevron,
+                borderRadius: BorderRadius.vertical(bottom: r),
                 onTap: (ctx, _) => onLogout(context),
               ),
           ],
@@ -563,6 +575,7 @@ class _SettingsGroup extends StatelessWidget {
               leading: Icon(Icons.settings, color: cs.primary),
               title: '设置',
               getTrailing: trailingChevron,
+              borderRadius: BorderRadius.all(r),
               onTap: (ctx, _) => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const SettingPage()),

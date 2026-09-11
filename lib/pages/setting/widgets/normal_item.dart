@@ -17,6 +17,7 @@ class NormalItem extends StatefulWidget {
   final void Function(BuildContext context, VoidCallback setState)? onTap;
   final EdgeInsetsGeometry? contentPadding;
   final TextStyle? titleStyle;
+  final BorderRadius? borderRadius;
 
   const NormalItem({
     this.title,
@@ -28,6 +29,7 @@ class NormalItem extends StatefulWidget {
     this.onTap,
     this.contentPadding,
     this.titleStyle,
+    this.borderRadius,
     super.key,
   }) : assert(title != null || getTitle != null);
 
@@ -59,6 +61,9 @@ class _NormalItemState extends State<NormalItem> {
     switch (renderer) {
       case PrimitiveRenderer.material3:
         return ListTile(
+          shape: widget.borderRadius != null
+              ? RoundedRectangleBorder(borderRadius: widget.borderRadius!)
+              : null,
           contentPadding: widget.contentPadding,
           onTap: widget.onTap == null
               ? null
@@ -78,6 +83,7 @@ class _NormalItemState extends State<NormalItem> {
         );
       case PrimitiveRenderer.miuix:
         return InkWell(
+          borderRadius: widget.borderRadius,
           onTap: widget.onTap == null
               ? null
               : () => widget.onTap!(context, refresh),

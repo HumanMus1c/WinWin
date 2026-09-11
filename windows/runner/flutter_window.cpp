@@ -81,9 +81,7 @@ bool FlutterWindow::OnCreate() {
         result->NotImplemented();
       });
 
-  // 显式显示窗口，避免因首帧回调在无焦点/非前台或命令行启动环境下被 DWM 挂起而导致窗口永久隐藏
-  this->Show();
-
+  // 仅在 Flutter 首帧绘制完成后才显示窗口，消除原生窗口提前呈现导致的启动白屏闪烁
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
     ::SetWindowPos(GetHandle(), HWND_TOP, 0, 0, 0, 0,
