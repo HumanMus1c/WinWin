@@ -49,6 +49,55 @@ abstract final class LiveHttp {
     }
   }
 
+  /// 获取直播一级分区列表（免登录接口 `Api.liveRoomAreaList`）。
+  static Future<LoadingState<List<LiveAreaItem>>> liveAreaList() async {
+    try {
+      final res = await Request().get<dynamic>(Api.liveRoomAreaList);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0) {
+        final rawList = data['data'] as List<dynamic>? ?? const [];
+        final areas = rawList
+            .map((e) => LiveAreaItem.fromJson(e as Map<String, dynamic>))
+            .where((e) => e.id > 0 && e.name.isNotEmpty)
+            .toList();
+        return Success(areas);
+      }
+      return Error(data['message']?.toString() ?? '获取直播分区失败');
+    } on DioException catch (e) {
+      return Error('获取直播分区失败：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('获取直播分区失败：$e');
+    }
+  }
+
+  /// 获取当前登录用户关注的主播正在直播列表（`Api.liveFollow`）。
+  static Future<LoadingState<LiveFollowData>> liveFollow({
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    try {
+      final res = await Request().get<dynamic>(
+        Api.liveFollow,
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+          'ignoreRecord': 1,
+          'hit_ab': true,
+        },
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0) {
+        final rawData = data['data'] as Map<String, dynamic>? ?? {};
+        return Success(LiveFollowData.fromJson(rawData));
+      }
+      return Error(data['message']?.toString() ?? '获取关注直播失败');
+    } on DioException catch (e) {
+      return Error('获取关注直播失败：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('获取关注直播失败：$e');
+    }
+  }
+
   /// 直播间信息（`/xlive/web-room/v1/index/getH5InfoByRoom`）。
   ///
   /// [roomId] 为直播间号。返回 [LiveRoomInfo]，含标题、主播、直播状态等。
@@ -75,6 +124,81 @@ abstract final class LiveHttp {
   }
 }
 
+/// 直播分区条目（一级/二级父子分区）。
+class LiveAreaItem {
+  final int id;
+  final String name;
+  final String? pic;
+  final List<LiveAreaItem> children;
+
+  const LiveAreaItem({
+    required this.id,
+    required this.name,
+    this.pic,
+    this.children = const [],
+  });
+
+  factory LiveAreaItem.fromJson(Map<String, dynamic> json) {
+    final rawList = json['list'] as List<dynamic>?;
+    return LiveAreaItem(
+      id: _asInt(json['id']) ?? 0,
+      name: json['name']?.toString() ?? '',
+      pic: _http2https(json['pic']?.toString()),
+      children: rawList != null
+          ? rawList
+              .map((e) => LiveAreaItem.fromJson(e as Map<String, dynamic>))
+              .toList()
+          : const [],
+    );
+  }
+
+  /// 预置的官方核心直播父分区列表（用于网络异常或首屏即时呈现兜底）。
+  static const List<LiveAreaItem> defaultAreas = [
+    LiveAreaItem(id: 2, name: '网游'),
+    LiveAreaItem(id: 3, name: '手游'),
+    LiveAreaItem(id: 6, name: '单机游戏'),
+    LiveAreaItem(id: 1, name: '娱乐'),
+    LiveAreaItem(id: 5, name: '电台'),
+    LiveAreaItem(id: 9, name: '虚拟主播'),
+    LiveAreaItem(id: 14, name: '聊天室'),
+    LiveAreaItem(id: 10, name: '生活'),
+    LiveAreaItem(id: 11, name: '知识'),
+    LiveAreaItem(id: 13, name: '赛事'),
+    LiveAreaItem(id: 15, name: '互动玩法'),
+    LiveAreaItem(id: 16, name: '购物'),
+  ];
+}
+
+/// 关注直播列表数据包。
+class LiveFollowData {
+  final List<LiveItemModel> list;
+  final int liveCount;
+  final int count;
+
+  LiveFollowData({
+    this.list = const [],
+    this.liveCount = 0,
+    this.count = 0,
+  });
+
+  factory LiveFollowData.fromJson(Map<String, dynamic> json) {
+    final rawList = json['list'] as List<dynamic>? ?? const [];
+    final list = rawList
+        .where((e) {
+          if (e is! Map<String, dynamic>) return false;
+          final status = e['live_status'];
+          return status == null || status == 1;
+        })
+        .map((e) => LiveItemModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return LiveFollowData(
+      list: list,
+      liveCount: _asInt(json['live_count']) ?? list.length,
+      count: _asInt(json['count']) ?? list.length,
+    );
+  }
+}
+
 /// 推荐直播列表数据。
 class LiveRecommendData {
   final List<LiveItemModel> list;
@@ -93,7 +217,7 @@ class LiveRecommendData {
   }
 }
 
-/// 直播卡片条目（推荐流）。
+/// 直播卡片条目（推荐流 / 关注流 / 分区流通用）。
 class LiveItemModel {
   final int? roomId;
   final int? uid;
@@ -121,15 +245,18 @@ class LiveItemModel {
     final liveStatus = json['live_status'];
     final rawCover = json['cover']?.toString();
     final rawUserCover = json['user_cover']?.toString();
+    final rawRoomCover = json['room_cover']?.toString();
     final rawPic = json['pic']?.toString();
     final effectiveCover = (rawCover != null && rawCover.isNotEmpty)
         ? rawCover
         : (rawUserCover != null && rawUserCover.isNotEmpty)
             ? rawUserCover
-            : rawPic;
+            : (rawRoomCover != null && rawRoomCover.isNotEmpty)
+                ? rawRoomCover
+                : rawPic;
 
     return LiveItemModel(
-      roomId: _asInt(json['roomid']),
+      roomId: _asInt(json['roomid'] ?? json['room_id']),
       uid: _asInt(json['uid']),
       title: json['title']?.toString(),
       cover: _http2https(effectiveCover),
