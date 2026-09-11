@@ -7,13 +7,10 @@ import 'package:winwin/core/account/login_utils.dart';
 import 'package:winwin/core/log/api_blackbox.dart';
 import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/pages/dynamics/view.dart';
-import 'package:winwin/pages/fav/fav_page.dart';
-import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
-import 'package:winwin/pages/toview/toview_page.dart';
 import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
@@ -21,10 +18,11 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
+import 'package:winwin/ui/profile/widgets/profile_sections.dart';
 
 /// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术按 [UiStyle] 三风格切换。
 ///
-/// 结构（PiliPlus 布局）：
+/// 结构（PiliPlus 布局升级版）：
 /// ```
 /// ┌────────────────────────────────────────────┐
 /// │ ┌──┐  Username [LV]                        │
@@ -33,8 +31,17 @@ import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 /// ├────────────────────────────────────────────┤
 /// │   动态        关注        粉丝             │ 3 统计方格
 /// ├────────────────────────────────────────────┤
-/// │   ⬇          📜          ⭐          ⏰    │ 4 动作方格
-/// │ 离线缓存   历史记录    我的收藏   稍后再看 │
+/// │ 离线缓存 [>]                           [🔄]│
+/// │ [===== 横向直接展示内容卡片列表 =====]     │
+/// ├────────────────────────────────────────────┤
+/// │ 我的收藏 [>]                           [🔄]│
+/// │ [===== 横向直接展示内容卡片列表 =====]     │
+/// ├────────────────────────────────────────────┤
+/// │ 历史记录 [>]                           [🔄]│
+/// │ [===== 横向直接展示内容卡片列表 =====]     │
+/// ├────────────────────────────────────────────┤
+/// │ 稍后再看 [>]                           [🔄]│
+/// │ [===== 横向直接展示内容卡片列表 =====]     │
 /// ├────────────────────────────────────────────┤
 /// │ 账号切换                                >  │
 /// │ 退出登录                                >  │ AppGroup
@@ -42,7 +49,7 @@ import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 /// └────────────────────────────────────────────┘
 /// ```
 ///
-/// 所有控件（[AppActionTile] / [AppProgressBar] / [AppGroup] / [AppListItem]）
+/// 所有控件（[AppProgressBar] / [AppGroup] / [AppListItem]）
 /// 均读取 [InheritedUiStyle.of] 后用 [resolvePrimitiveRenderer] 分发三风格。
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, this.onNavigate});
@@ -58,6 +65,11 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final _downloadKey = GlobalKey<ProfileDownloadSectionState>();
+  final _favKey = GlobalKey<ProfileFavSectionState>();
+  final _historyKey = GlobalKey<ProfileHistorySectionState>();
+  final _toviewKey = GlobalKey<ProfileToviewSectionState>();
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +86,16 @@ class _ProfilePageState extends State<ProfilePage> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _onRefresh() async {
+    await Future.wait([
+      LoginUtils.onLoginMain(),
+      _downloadKey.currentState?.reload() ?? Future.value(),
+      _favKey.currentState?.reload() ?? Future.value(),
+      _historyKey.currentState?.reload() ?? Future.value(),
+      _toviewKey.currentState?.reload() ?? Future.value(),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final service = AccountService();
@@ -82,29 +104,40 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.only(top: 16, bottom: 100),
-          children: [
-            _UserInfoSection(info: info, isLogin: isLogin),
-            const SizedBox(height: 10),
-            _StatsRow(
-              info: info,
-              isLogin: isLogin,
-              onGuarded: _guarded,
-              onNavigate: widget.onNavigate,
-            ),
-            const SizedBox(height: 10),
-            _ActionGrid(
-              onGuarded: _guarded,
-              onNavigate: widget.onNavigate,
-            ),
-            const SizedBox(height: Style.md),
-            _SettingsGroup(
-              isLogin: isLogin,
-              onGuarded: _guarded,
-              onLogout: _onLogout,
-            ),
-          ],
+        child: RefreshIndicator(
+          color: biliPink,
+          onRefresh: _onRefresh,
+          child: ListView(
+            padding: const EdgeInsets.only(top: 16, bottom: 100),
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              _UserInfoSection(info: info, isLogin: isLogin),
+              const SizedBox(height: 10),
+              _StatsRow(
+                info: info,
+                isLogin: isLogin,
+                onGuarded: _guarded,
+                onNavigate: widget.onNavigate,
+              ),
+              const SizedBox(height: 12),
+              ProfileDownloadSection(key: _downloadKey),
+              const SizedBox(height: 12),
+              ProfileFavSection(key: _favKey),
+              const SizedBox(height: 12),
+              ProfileHistorySection(
+                key: _historyKey,
+                onNavigate: widget.onNavigate,
+              ),
+              const SizedBox(height: 12),
+              ProfileToviewSection(key: _toviewKey),
+              const SizedBox(height: Style.md),
+              _SettingsGroup(
+                isLogin: isLogin,
+                onGuarded: _guarded,
+                onLogout: _onLogout,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -469,54 +502,7 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════
-// 4 动作方格 — 离线缓存 / 历史记录 / 我的收藏 / 稍后再看
-// ════════════════════════════════════════════════════════════════
 
-class _ActionGrid extends StatelessWidget {
-  const _ActionGrid({required this.onGuarded, this.onNavigate});
-
-  final Future<void> Function(BuildContext, void Function(BuildContext)) onGuarded;
-  final ValueChanged<AppPage>? onNavigate;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          AppActionTile(
-            icon: Icons.download_outlined,
-            label: '离线缓存',
-            onTap: () => onGuarded(context, (_) {}),
-          ),
-          AppActionTile(
-            icon: Icons.history,
-            label: '历史记录',
-            // 切换到根导航「历史」tab，与导航栏入口共用同一实例。
-            onTap: () => onGuarded(
-              context,
-              (ctx) => onNavigate != null
-                  ? onNavigate!(AppPage.history)
-                  : showHistoryPage(ctx),
-            ),
-          ),
-          AppActionTile(
-            icon: Icons.bookmark_outline,
-            label: '我的收藏',
-            onTap: () => onGuarded(context, showFavPage),
-          ),
-          AppActionTile(
-            icon: Icons.watch_later_outlined,
-            label: '稍后再看',
-            onTap: () => onGuarded(context, showToviewPage),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ════════════════════════════════════════════════════════════════
 // 设置组 — 账号切换 / 退出登录 / 设置（AppGroup + AppListItem）
