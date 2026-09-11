@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/common/widgets/level_icon.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/utils/num_utils.dart';
 
+export 'package:winwin/common/widgets/level_icon.dart';
+
 /// B 站等级对应颜色。
 abstract final class LevelColors {
-  static const Color lv0 = Color(0xFFBFBFBF);
-  static const Color lv1 = Color(0xFFBFBFBF);
-  static const Color lv2 = Color(0xFF95DDB2);
-  static const Color lv3 = Color(0xFF92D1E5);
-  static const Color lv4 = Color(0xFFFFB37C);
-  static const Color lv5 = Color(0xFFFF6C00);
-  static const Color lv6 = Color(0xFFFF0000);
+  static const Color lv0 = Color(0xFFC0C0C0);
+  static const Color lv1 = Color(0xFFC0C0C0);
+  static const Color lv2 = Color(0xFF8BD29B);
+  static const Color lv3 = Color(0xFF7BCDEF);
+  static const Color lv4 = Color(0xFFFEBB8B);
+  static const Color lv5 = Color(0xFFEE672A);
+  static const Color lv6 = Color(0xFFF04C49);
   static const Color senior = Color(0xFFFF7A00);
 
   static Color forLevel(int level, {bool isSenior = false}) {
@@ -33,9 +36,10 @@ abstract final class LevelColors {
 
 /// 用户等级徽章组件（Lv.0 ~ Lv.6 + 硬核会员）。
 ///
-/// 遵循 [UiStyle] 自适应规范：
-/// - **Material 3**：微圆角矩形（[AppShapes.tiny]），0 扩散阴影，紧凑色块几何；
-/// - **Miuix**：扁平圆润大胶囊（全圆角），0 阴影纯扁平。
+/// 采用哔哩哔哩官方 Canvas 矢量绘制设计（对齐 PiliPlus 与官方 App）：
+/// - 官方液晶数码字模；
+/// - 官方切角背景与阶梯色彩（Lv0/1 银灰、Lv2 浅绿、Lv3 晴蓝、Lv4 暖黄、Lv5 亮橙、Lv6 鲜红）；
+/// - 硬核会员闪电标识（⚡）。
 class LevelBadge extends StatelessWidget {
   const LevelBadge({
     super.key,
@@ -52,55 +56,11 @@ class LevelBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
-    final color = LevelColors.forLevel(level, isSenior: isSenior);
-
-    final effectiveHeight = height ?? (renderer == PrimitiveRenderer.miuix ? 15.0 : 16.0);
-    final effectiveFontSize = fontSize ?? (renderer == PrimitiveRenderer.miuix ? 9.5 : 10.0);
-    final radius = switch (renderer) {
-      PrimitiveRenderer.material3 => shapes.tinyBorder,
-      PrimitiveRenderer.miuix => shapes.pillBorder,
-    };
-
-    return Container(
+    final effectiveHeight = height ?? 13.0;
+    return UserLevel(
+      level,
       height: effectiveHeight,
-      padding: EdgeInsets.symmetric(
-        horizontal: renderer == PrimitiveRenderer.miuix ? 6.0 : 5.0,
-        vertical: 1.0,
-      ),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: radius,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (isSenior) ...[
-            const Icon(Icons.bolt, size: 11, color: Colors.white),
-            const SizedBox(width: 1),
-          ],
-          Text(
-            'Lv$level',
-            strutStyle: StrutStyle(
-              height: 1,
-              leading: 0,
-              fontSize: effectiveFontSize,
-              fontWeight: FontWeight.bold,
-            ),
-            style: TextStyle(
-              fontSize: effectiveFontSize,
-              height: 1,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ],
-      ),
+      flash: isSenior,
     );
   }
 }

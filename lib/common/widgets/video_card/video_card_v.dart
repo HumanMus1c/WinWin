@@ -107,9 +107,9 @@ class VideoCardV extends StatelessWidget {
               spacing: 2,
               children: [
                 if (rcmdReason != null && rcmdReason.isNotEmpty)
-                  PBadge(text: rcmdReason, type: PBadgeType.badge),
+                  PBadge(text: rcmdReason, type: PBadgeType.highlight),
                 if (isFollowed)
-                  const PBadge(text: '已关注', type: PBadgeType.badge),
+                  const PBadge(text: '已关注', type: PBadgeType.status),
                 if (ownerName.isNotEmpty)
                   Flexible(
                     child: GestureDetector(

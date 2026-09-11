@@ -19,6 +19,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
+import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 import 'package:winwin/ui/profile/widgets/profile_sections.dart';
@@ -334,7 +335,7 @@ class _UserInfoSection extends StatelessWidget {
                           ),
                         ),
                         if (hasLevel)
-                          _LevelBadge(level: levelInfo!.currentLevel!),
+                          LevelBadge(level: levelInfo!.currentLevel!, height: 12),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -397,37 +398,6 @@ class _UserInfoSection extends StatelessWidget {
   }
 }
 
-/// 等级徽章 — 小圆角胶囊，按风格切换底色。
-class _LevelBadge extends StatelessWidget {
-  const _LevelBadge({required this.level});
-
-  final int level;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final style = InheritedUiStyle.of(context);
-    final (bg, fg) = switch (resolvePrimitiveRenderer(style)) {
-      PrimitiveRenderer.material3 => (cs.primary, cs.onPrimary),
-      PrimitiveRenderer.miuix => (cs.secondaryContainer, cs.onSecondaryContainer),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        'LV$level',
-        style: TextStyle(
-          color: fg,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
 
 // ════════════════════════════════════════════════════════════════
 // 3 统计方格 — 动态 / 关注 / 粉丝

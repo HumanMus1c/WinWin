@@ -939,7 +939,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 if (isVip)
                   PBadge(
                     text: card.vip?.labelText ?? '大会员',
-                    type: PBadgeType.badge,
+                    type: PBadgeType.vip,
                   ),
                 LevelBadge(level: level, isSenior: isSenior),
                 if (medal != null)

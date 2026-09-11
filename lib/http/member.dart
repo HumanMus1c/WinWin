@@ -1223,6 +1223,17 @@ abstract final class ColorUtils {
     final str = value.toString().trim();
     if (str.isEmpty) return fallback;
     try {
+      // 优先处理 B 站常用的 24 位无前缀十进制数字颜色（如 16740608、65535 等）
+      if (!str.startsWith('#') && !str.toLowerCase().startsWith('0x')) {
+        final directDecimal = int.tryParse(str);
+        if (directDecimal != null) {
+          if (directDecimal <= 0xFFFFFF) {
+            return Color(0xFF000000 | directDecimal);
+          }
+          return Color(directDecimal);
+        }
+      }
+
       var hex = str.replaceAll('#', '');
       if (hex.startsWith('0x') || hex.startsWith('0X')) {
         hex = hex.substring(2);
