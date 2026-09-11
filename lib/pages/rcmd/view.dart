@@ -93,6 +93,14 @@ class _RcmdPageState extends State<RcmdPage>
                         ),
                       );
                     },
+                    onRemove: () {
+                      if (controller.loadingState.value case Success(:final response)) {
+                        if (response != null && index < response.length) {
+                          response.removeAt(index);
+                          controller.loadingState.refresh();
+                        }
+                      }
+                    },
                   );
                 },
                 itemCount: response.length,

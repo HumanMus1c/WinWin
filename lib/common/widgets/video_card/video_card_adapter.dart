@@ -1,8 +1,10 @@
 import 'package:winwin/models/fav/fav_models.dart';
 import 'package:winwin/models/history/history_models.dart';
 import 'package:winwin/models/search/result.dart';
+import 'package:winwin/models/toview/toview_models.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/models/video/related_video.dart';
+import 'package:winwin/utils/id_utils.dart';
 
 /// 统一视频卡片数据适配结构体。
 ///
@@ -21,6 +23,11 @@ class VideoCardData {
   final String? rcmdReason;
   final bool isFollowed;
   final double? progress; // 0.0 ~ 1.0 归一化进度
+  final int? aid;
+  final int? cid;
+  final String? goto;
+  final int? param;
+  final ThreePoint? threePoint;
 
   const VideoCardData({
     this.bvid,
@@ -34,6 +41,11 @@ class VideoCardData {
     this.rcmdReason,
     this.isFollowed = false,
     this.progress,
+    this.aid,
+    this.cid,
+    this.goto,
+    this.param,
+    this.threePoint,
   });
 
   /// 从任意已知或未知数据类型中高效安全地提取卡片展示字段。
@@ -43,6 +55,9 @@ class VideoCardData {
 
     // 1. 推荐流基类模型 (包含 Web 推荐与 App 推荐)
     if (item is BaseRcmdVideoItemModel) {
+      final aid = item is RcmdVideoItemAppModel
+          ? (item.param ?? (item.bvid != null ? IdUtils.bv2av(item.bvid!) : null))
+          : (item.bvid != null ? IdUtils.bv2av(item.bvid!) : item.param);
       return VideoCardData(
         bvid: item.bvid,
         cover: item.cover,
@@ -54,11 +69,17 @@ class VideoCardData {
         danmakuCount: item.stat.danmu,
         rcmdReason: item.rcmdReason,
         isFollowed: item.isFollowed,
+        aid: aid,
+        cid: item.cid,
+        goto: item.goto,
+        param: item.param,
+        threePoint: item.threePoint,
       );
     }
 
     // 2. 相关推荐模型 (RelatedVideoItem)
     if (item is RelatedVideoItem) {
+      final aid = item.aid ?? (item.bvid != null ? IdUtils.bv2av(item.bvid!) : null);
       return VideoCardData(
         bvid: item.bvid,
         cover: item.pic,
@@ -68,6 +89,7 @@ class VideoCardData {
         mid: item.owner?.mid,
         playCount: item.stat?.view,
         danmakuCount: item.stat?.danmaku,
+        aid: aid,
       );
     }
 
@@ -78,6 +100,8 @@ class VideoCardData {
       if (prog != null && prog > 1 && dur > 0) {
         prog = (prog / dur).clamp(0.0, 1.0);
       }
+      final aid = item.history.oid ??
+          (item.history.bvid != null ? IdUtils.bv2av(item.history.bvid!) : null);
       return VideoCardData(
         bvid: item.history.bvid,
         cover: item.cover,
@@ -86,11 +110,14 @@ class VideoCardData {
         ownerName: item.authorName ?? '',
         mid: item.authorMid,
         progress: prog,
+        aid: aid,
+        cid: item.history.cid,
       );
     }
 
     // 4. 收藏夹详情项 (FavDetailItem)
     if (item is FavDetailItem) {
+      final aid = item.id ?? (item.bvid != null ? IdUtils.bv2av(item.bvid!) : null);
       return VideoCardData(
         bvid: item.bvid,
         cover: item.cover,
@@ -100,11 +127,13 @@ class VideoCardData {
         mid: item.upper?.mid,
         playCount: item.cntInfo?.play,
         danmakuCount: item.cntInfo?.danmaku,
+        aid: aid,
       );
     }
 
     // 5. 搜索结果视频模型 (SearchVideoItemModel)
     if (item is SearchVideoItemModel) {
+      final aid = item.aid ?? (item.bvid != null ? IdUtils.bv2av(item.bvid!) : null);
       return VideoCardData(
         bvid: item.bvid,
         cover: item.cover,
@@ -114,10 +143,34 @@ class VideoCardData {
         mid: item.mid,
         playCount: item.play,
         danmakuCount: item.danmaku,
+        aid: aid,
       );
     }
 
-    // 6. Map 结构回退
+    // 6. 稍后再看模型 (LaterItem)
+    if (item is LaterItem) {
+      final dur = item.duration ?? 0;
+      double? prog = item.progress?.toDouble();
+      if (prog != null && prog > 1 && dur > 0) {
+        prog = (prog / dur).clamp(0.0, 1.0);
+      }
+      final aid = item.aid ?? (item.bvid != null ? IdUtils.bv2av(item.bvid!) : null);
+      return VideoCardData(
+        bvid: item.bvid,
+        cover: item.pic,
+        title: item.title ?? '',
+        duration: dur,
+        ownerName: item.owner?.name ?? '',
+        mid: item.owner?.mid,
+        playCount: item.stat?.view,
+        danmakuCount: item.stat?.danmaku,
+        progress: prog,
+        aid: aid,
+        cid: item.cid,
+      );
+    }
+
+    // 7. Map 结构回退
     if (item is Map) {
       final dur = (item['duration'] as num?)?.toInt() ?? 0;
       double? prog = (item['progress'] as num?)?.toDouble();
@@ -145,8 +198,15 @@ class VideoCardData {
         danmakuCount = (item['danmu'] ?? item['danmaku']) as int?;
       }
 
+      final bvid = item['bvid']?.toString();
+      final aid = (item['aid'] ?? item['id']) as int? ??
+          (bvid != null ? IdUtils.bv2av(bvid) : null);
+      final cid = (item['cid'] as num?)?.toInt();
+      final param = (item['param'] as num?)?.toInt();
+      final goto = item['goto']?.toString();
+
       return VideoCardData(
-        bvid: item['bvid']?.toString(),
+        bvid: bvid,
         cover: (item['cover'] ?? item['pic'])?.toString(),
         title: item['title']?.toString() ?? '',
         duration: dur,
@@ -157,6 +217,10 @@ class VideoCardData {
         rcmdReason: item['rcmd_reason']?.toString(),
         isFollowed: item['is_followed'] == true,
         progress: prog,
+        aid: aid,
+        cid: cid,
+        goto: goto,
+        param: param,
       );
     }
 
@@ -178,6 +242,12 @@ class VideoCardData {
       final int? danmakuCount = _tryVal<int?>(() => (stat?.danmu ?? stat?.danmaku ?? dyn.danmaku) as int?);
       final String? rcmdReason = _tryVal<String?>(() => dyn.rcmdReason?.toString());
       final bool isFollowed = _tryVal<bool?>(() => dyn.isFollowed == true) ?? false;
+      final int? aid = _tryVal<int?>(() => (dyn.aid ?? dyn.id ?? dyn.param) as int?) ??
+          (bvid != null ? IdUtils.bv2av(bvid) : null);
+      final int? cid = _tryVal<int?>(() => dyn.cid as int?);
+      final String? goto = _tryVal<String?>(() => dyn.goto?.toString());
+      final int? param = _tryVal<int?>(() => dyn.param as int?);
+      final ThreePoint? threePoint = _tryVal<ThreePoint?>(() => dyn.threePoint as ThreePoint?);
       return VideoCardData(
         bvid: bvid,
         cover: cover,
@@ -189,6 +259,11 @@ class VideoCardData {
         danmakuCount: danmakuCount,
         rcmdReason: rcmdReason,
         isFollowed: isFollowed,
+        aid: aid,
+        cid: cid,
+        goto: goto,
+        param: param,
+        threePoint: threePoint,
       );
     } catch (_) {
       return const VideoCardData();

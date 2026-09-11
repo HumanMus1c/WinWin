@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
+import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
@@ -23,6 +24,7 @@ class VideoCardH extends StatelessWidget {
     this.heroTag,
     this.coverWidth = 160,
     this.showStat = true,
+    this.onRemove,
   });
 
   final dynamic videoItem;
@@ -37,6 +39,9 @@ class VideoCardH extends StatelessWidget {
   /// 是否显示播放/弹幕数统计。
   final bool showStat;
 
+  /// 卡片移除回调（如不感兴趣、拉黑 UP 主后触发列表局部移除）。
+  final VoidCallback? onRemove;
+
   @override
   Widget build(BuildContext context) {
     final data = VideoCardData.from(videoItem);
@@ -45,11 +50,35 @@ class VideoCardH extends StatelessWidget {
     final radius = shapes.medium;
     final int duration = data.duration;
     final double? progress = data.progress;
+    Offset? lastTapPosition;
 
     return RepaintBoundary(
       child: Card(
         child: InkWell(
           onTap: onTap,
+          onSecondaryTapDown: (details) {
+            lastTapPosition = details.globalPosition;
+          },
+          onSecondaryTapUp: (details) {
+            showVideoContextMenu(
+              context: context,
+              position: details.globalPosition,
+              data: data,
+              videoItem: videoItem,
+              onRemove: onRemove,
+            );
+          },
+          onLongPress: () {
+            if (lastTapPosition != null) {
+              showVideoContextMenu(
+                context: context,
+                position: lastTapPosition!,
+                data: data,
+                videoItem: videoItem,
+                onRemove: onRemove,
+              );
+            }
+          },
           borderRadius: BorderRadius.all(radius),
           child: Padding(
             padding: const EdgeInsets.all(8),
@@ -141,6 +170,14 @@ class VideoCardH extends StatelessWidget {
                   style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
                 ),
               ),
+              if (!showStat) ...[
+                const Spacer(),
+                VideoPopupMenu(
+                  data: data,
+                  videoItem: videoItem,
+                  onRemove: onRemove,
+                ),
+              ],
             ],
           ),
         if (showStat) ...[
@@ -159,6 +196,12 @@ class VideoCardH extends StatelessWidget {
               Text(
                 NumUtils.formatNum(danmakuCount),
                 style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+              ),
+              const Spacer(),
+              VideoPopupMenu(
+                data: data,
+                videoItem: videoItem,
+                onRemove: onRemove,
               ),
             ],
           ),

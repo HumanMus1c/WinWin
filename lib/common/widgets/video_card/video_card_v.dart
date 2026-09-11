@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
+import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
@@ -18,6 +19,7 @@ class VideoCardV extends StatelessWidget {
     required this.videoItem,
     this.onTap,
     this.heroTag,
+    this.onRemove,
   });
 
   final dynamic videoItem;
@@ -26,16 +28,43 @@ class VideoCardV extends StatelessWidget {
   /// Hero 共享元素 tag（非空时启用封面转场）。建议传 `'cover_$bvid'`。
   final Object? heroTag;
 
+  /// 卡片移除回调（如不感兴趣、拉黑 UP 主后触发列表局部移除）。
+  final VoidCallback? onRemove;
+
   @override
   Widget build(BuildContext context) {
     final data = VideoCardData.from(videoItem);
     final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.material3;
     final radius = shapes.medium;
+    Offset? lastTapPosition;
 
     return RepaintBoundary(
       child: Card(
         child: InkWell(
           onTap: onTap,
+          onSecondaryTapDown: (details) {
+            lastTapPosition = details.globalPosition;
+          },
+          onSecondaryTapUp: (details) {
+            showVideoContextMenu(
+              context: context,
+              position: details.globalPosition,
+              data: data,
+              videoItem: videoItem,
+              onRemove: onRemove,
+            );
+          },
+          onLongPress: () {
+            if (lastTapPosition != null) {
+              showVideoContextMenu(
+                context: context,
+                position: lastTapPosition!,
+                data: data,
+                videoItem: videoItem,
+                onRemove: onRemove,
+              );
+            }
+          },
           borderRadius: BorderRadius.all(radius),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,6 +176,12 @@ class VideoCardV extends StatelessWidget {
                       ),
                     ),
                   ),
+                const Spacer(),
+                VideoPopupMenu(
+                  data: data,
+                  videoItem: videoItem,
+                  onRemove: onRemove,
+                ),
               ],
             ),
           ],

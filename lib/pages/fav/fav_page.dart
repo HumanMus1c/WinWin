@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
+import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/bootstrap.dart';
@@ -688,10 +690,33 @@ class _FavVideoCard extends StatelessWidget {
     final isInvalid = item.bvid == null || item.bvid!.isEmpty;
     final upper = item.upper;
     final cnt = item.cntInfo;
+    final data = VideoCardData.from(item);
+    Offset? lastTapPosition;
 
     return Card(
       child: InkWell(
         onTap: onTap,
+        onSecondaryTapDown: (details) {
+          lastTapPosition = details.globalPosition;
+        },
+        onSecondaryTapUp: (details) {
+          showVideoContextMenu(
+            context: context,
+            position: details.globalPosition,
+            data: data,
+            videoItem: item,
+          );
+        },
+        onLongPress: () {
+          if (lastTapPosition != null) {
+            showVideoContextMenu(
+              context: context,
+              position: lastTapPosition!,
+              data: data,
+              videoItem: item,
+            );
+          }
+        },
         borderRadius: BorderRadius.all(radius),
         child: Padding(
           padding: const EdgeInsets.all(8),
@@ -805,6 +830,11 @@ class _FavVideoCard extends StatelessWidget {
                                 ),
                               ),
                             ],
+                            const Spacer(),
+                            VideoPopupMenu(
+                              data: data,
+                              videoItem: item,
+                            ),
                           ],
                         ),
                       ],

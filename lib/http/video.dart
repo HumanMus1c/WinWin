@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import 'package:winwin/common/constants.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/models/common/account_type.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/browser_ua.dart';
@@ -572,6 +573,77 @@ abstract final class VideoHttp {
       return const Success(null);
     } else {
       return Error(res.data is String ? res.data : res.data['message']);
+    }
+  }
+
+  /// 推送不感兴趣反馈（移植自 PiliPlus `lib/http/video.dart`）。
+  static Future<LoadingState<void>> feedDislike({
+    required String goto,
+    required int id,
+    int? reasonId,
+    int? feedbackId,
+  }) async {
+    final account = Accounts.get(AccountType.recommend);
+    if ((account.accessKey ?? '').isEmpty) {
+      return const Error('请退出账号后重新登录');
+    }
+    assert((reasonId != null) ^ (feedbackId != null));
+    try {
+      final res = await Request().get<dynamic>(
+        Api.feedDislike,
+        queryParameters: {
+          'goto': goto,
+          'id': id,
+          'reason_id': ?reasonId,
+          'feedback_id': ?feedbackId,
+          'build': 1,
+          'mobi_app': 'android',
+        },
+        options: Options(extra: {'account': account}),
+      );
+      final data = res.data;
+      if (data is Map<String, dynamic> && data['code'] == 0) {
+        return const Success(null);
+      } else {
+        return Error(data is Map ? (data['message']?.toString() ?? '提交失败') : '提交失败');
+      }
+    } catch (e) {
+      return Error('提交失败: $e');
+    }
+  }
+
+  /// 推送不感兴趣取消（移植自 PiliPlus `lib/http/video.dart`）。
+  static Future<LoadingState<void>> feedDislikeCancel({
+    required String goto,
+    required int id,
+    int? reasonId,
+    int? feedbackId,
+  }) async {
+    final account = Accounts.get(AccountType.recommend);
+    if ((account.accessKey ?? '').isEmpty) {
+      return const Error('请退出账号后重新登录');
+    }
+    try {
+      final res = await Request().get<dynamic>(
+        Api.feedDislikeCancel,
+        queryParameters: {
+          'goto': goto,
+          'id': id,
+          'reason_id': ?reasonId,
+          'feedback_id': ?feedbackId,
+          'build': 1,
+          'mobi_app': 'android',
+        },
+        options: Options(extra: {'account': account}),
+      );
+      final data = res.data;
+      if (data is Map<String, dynamic> && data['code'] == 0) {
+        return const Success(null);
+      } else {
+        return Error(data is Map ? (data['message']?.toString() ?? '撤销失败') : '撤销失败');
+      }
+    } catch (e) {
+      return Error('撤销失败: $e');
     }
   }
 

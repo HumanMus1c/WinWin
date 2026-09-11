@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
+import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/bootstrap.dart';
@@ -465,9 +467,35 @@ class _ToviewCard extends StatelessWidget {
       progressFraction = 1.0;
     }
 
+    final data = VideoCardData.from(item);
+    Offset? lastTapPosition;
+
     return Card(
       child: InkWell(
         onTap: onTap,
+        onSecondaryTapDown: (details) {
+          lastTapPosition = details.globalPosition;
+        },
+        onSecondaryTapUp: (details) {
+          showVideoContextMenu(
+            context: context,
+            position: details.globalPosition,
+            data: data,
+            videoItem: item,
+            onRemove: onRemove,
+          );
+        },
+        onLongPress: () {
+          if (lastTapPosition != null) {
+            showVideoContextMenu(
+              context: context,
+              position: lastTapPosition!,
+              data: data,
+              videoItem: item,
+              onRemove: onRemove,
+            );
+          }
+        },
         borderRadius: BorderRadius.all(radius),
         child: Padding(
           padding: const EdgeInsets.all(8),
@@ -596,6 +624,12 @@ class _ToviewCard extends StatelessWidget {
                               ),
                             ],
                             const Spacer(),
+                            VideoPopupMenu(
+                              data: data,
+                              videoItem: item,
+                              onRemove: onRemove,
+                            ),
+                            const SizedBox(width: 4),
                             IconButton(
                               icon: const Icon(Icons.close, size: 14),
                               tooltip: '从稍后再看移除',

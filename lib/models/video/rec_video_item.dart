@@ -90,6 +90,7 @@ abstract class BaseRcmdVideoItemModel {
   String? uri;
   int? param;
   String? pgcBadge;
+  ThreePoint? threePoint;
 }
 
 /// Item of the web recommend feed (`/x/web-interface/wbi/index/top/feed/rcmd`).
@@ -155,6 +156,46 @@ class RcmdVideoItemAppModel extends BaseRcmdVideoItemModel {
     }
 
     cardType = json['card_type'];
+    threePoint = json['three_point_v2'] is List
+        ? ThreePoint.fromJson(json['three_point_v2'] as List)
+        : null;
     desc = json['desc'];
+  }
+}
+
+/// 推荐流卡片三点交互反馈模型（移植自 PiliPlus `lib/models/home/rcmd/result.dart`）。
+class ThreePoint {
+  List<Reason>? dislikeReasons;
+  List<Reason>? feedbacks;
+
+  ThreePoint.fromJson(List json) {
+    for (final elem in json) {
+      if (elem is! Map) continue;
+      switch (elem['type']) {
+        case 'feedback':
+          feedbacks = (elem['reasons'] as List?)
+              ?.map((i) => Reason.fromJson(Map<String, dynamic>.from(i as Map)))
+              .toList();
+          break;
+        case 'dislike':
+          dislikeReasons = (elem['reasons'] as List?)
+              ?.map((i) => Reason.fromJson(Map<String, dynamic>.from(i as Map)))
+              .toList();
+          break;
+      }
+    }
+  }
+}
+
+/// 不感兴趣 / 反馈理由细项。
+class Reason {
+  int? id;
+  String? name;
+  String? toast;
+
+  Reason.fromJson(Map<String, dynamic> json) {
+    id = json['id'] is int ? json['id'] as int : int.tryParse('${json['id'] ?? ''}');
+    name = json['name']?.toString();
+    toast = json['toast']?.toString();
   }
 }
