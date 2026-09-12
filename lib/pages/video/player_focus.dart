@@ -26,6 +26,7 @@ class PlayerFocus extends StatefulWidget {
     required this.controller,
     required this.child,
     this.onToggleFullscreen,
+    this.onToggleInAppFullscreen,
     this.onEscape,
     this.onScreenshot,
     this.onToggleDanmaku,
@@ -36,6 +37,7 @@ class PlayerFocus extends StatefulWidget {
   final WinWinPlayerController controller;
   final Widget child;
   final VoidCallback? onToggleFullscreen;
+  final VoidCallback? onToggleInAppFullscreen;
 
   /// Esc 键回调（固定语义：返回上一级——全屏态退出全屏，否则退出页面）。
   final VoidCallback? onEscape;
@@ -85,6 +87,11 @@ class _PlayerFocusState extends State<PlayerFocus> {
     // F = 全屏切换
     if (key == LogicalKeyboardKey.keyF) {
       widget.onToggleFullscreen?.call();
+      return true;
+    }
+    // W = 网页全屏切换（对标 B 站 Web 端）
+    if (key == LogicalKeyboardKey.keyW) {
+      widget.onToggleInAppFullscreen?.call();
       return true;
     }
     // M = 静音切换

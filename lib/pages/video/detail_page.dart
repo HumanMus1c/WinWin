@@ -104,6 +104,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   String? _replyHint;
 
   bool _fullscreen = false;
+  bool _inAppFullscreen = false;
   bool _descExpanded = false;
 
   @override
@@ -186,7 +187,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 展开回落（ratio<0.5）且本次确系折叠自动暂停时恢复播放并复位。
   /// 全屏态与手动暂停均不触发，避免覆盖用户意图。
   void _handleCollapseAutoPause(double r) {
-    if (_fullscreen) return;
+    if (_fullscreen || _inAppFullscreen) return;
     final ctrl = playerController;
     if (ctrl == null || !Pref.collapseAutoPause) return;
     if (r >= 0.98) {
@@ -761,13 +762,21 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     await windowManager.setFullScreen(next);
   }
 
+  void _toggleInAppFullscreen() {
+    if (playerController == null) return;
+    setState(() => _inAppFullscreen = !_inAppFullscreen);
+  }
+
   /// Esc 键固定语义：返回上一级。
-  /// 全屏态退出全屏回到默认布局；默认布局退出详情页。
+  /// 优先退出显示器全屏；其次退出网页全屏；默认布局退出详情页。
   void _handleEscape() {
-    SyncTrace.log('DetailPage', 'escape pressed, fullscreen=$_fullscreen');
+    SyncTrace.log('DetailPage',
+        'escape pressed, fullscreen=$_fullscreen, inAppFullscreen=$_inAppFullscreen');
     if (_fullscreen) {
       setState(() => _fullscreen = false);
       windowManager.setFullScreen(false);
+    } else if (_inAppFullscreen) {
+      setState(() => _inAppFullscreen = false);
     } else {
       playerController?.pause();
       playerController?.detachListeners();
@@ -780,16 +789,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   @override
   Widget build(BuildContext context) {
     final String? upName = _detailState.dataOrNull?.owner?.name;
+    final isFillWindow = _fullscreen || _inAppFullscreen;
     return Scaffold(
-      backgroundColor: _fullscreen ? Colors.black : null,
-      body: _fullscreen
+      backgroundColor: isFillWindow ? Colors.black : null,
+      body: isFillWindow
           ? Stack(
               children: [
                 Positioned.fill(
                   child: PlayerPanel(
                     controller: playerController!,
-                    fullscreen: true,
+                    fullscreen: _fullscreen,
+                    inAppFullscreen: _inAppFullscreen,
                     onToggleFullscreen: _toggleFullscreen,
+                    onToggleInAppFullscreen: _toggleInAppFullscreen,
                     onEscape: _handleEscape,
                   ),
                 ),
@@ -1214,7 +1226,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       controller: controller,
       cover: widget.cover ?? data?.pic,
       fullscreen: _fullscreen,
+      inAppFullscreen: _inAppFullscreen,
       onToggleFullscreen: _toggleFullscreen,
+      onToggleInAppFullscreen: _toggleInAppFullscreen,
       onEscape: _handleEscape,
     );
   }

@@ -40,14 +40,20 @@ class PlayerPanel extends StatefulWidget {
     required this.controller,
     this.cover,
     this.fullscreen = false,
+    this.inAppFullscreen = false,
     this.onToggleFullscreen,
+    this.onToggleInAppFullscreen,
     this.onEscape,
   });
 
   final WinWinPlayerController controller;
   final String? cover;
   final bool fullscreen;
+
+  /// 是否处于网页全屏（铺满应用程序窗口，不修改系统原生窗口样式与最大化/还原属性）
+  final bool inAppFullscreen;
   final VoidCallback? onToggleFullscreen;
+  final VoidCallback? onToggleInAppFullscreen;
 
   /// Esc 键回调（固定语义：返回上一级）。
   final VoidCallback? onEscape;
@@ -328,6 +334,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
       controller: c,
       enabled: !_locked,
       onToggleFullscreen: widget.onToggleFullscreen,
+      onToggleInAppFullscreen: widget.onToggleInAppFullscreen,
       onEscape: () {
         if (_chapterPanelOpen) {
           setState(() => _chapterPanelOpen = false);
@@ -364,7 +371,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     child: WinWinDanmaku(
                       key: ValueKey('danmaku_${c.cid}'),
                       controller: c,
-                      fullscreen: widget.fullscreen,
+                      fullscreen: widget.fullscreen || widget.inAppFullscreen,
                     ),
                   ),
                   // Phase 4.4：字幕层（底部居中，IgnorePointer 不拦截手势）。
@@ -782,7 +789,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 onPressed: () => showDanmakuSettingsPanel(
                   context,
                   controller: c,
-                  fullscreen: widget.fullscreen,
+                  fullscreen: widget.fullscreen || widget.inAppFullscreen,
                 ),
               ),
               _iconButton(
@@ -801,17 +808,22 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   tooltip: '画中画',
                   onPressed: () => DesktopPipController.instance.togglePip(),
                 ),
-              HoverContainer(
-                onTap: widget.onToggleFullscreen,
-                borderRadius: 6.0,
-                padding: const EdgeInsets.all(6),
-                hoverColor: Colors.white.withValues(alpha: 0.12),
-                child: Icon(
-                  widget.fullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
-                  color: Colors.white,
-                  size: 22,
+              if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
+                _iconButton(
+                  icon: widget.inAppFullscreen
+                      ? Icons.crop_square
+                      : Icons.crop_square_outlined,
+                  tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
+                  onPressed: widget.onToggleInAppFullscreen!,
                 ),
-              ),
+              if (widget.onToggleFullscreen != null)
+                _iconButton(
+                  icon: widget.fullscreen
+                      ? Icons.fullscreen_exit
+                      : Icons.fullscreen,
+                  tooltip: widget.fullscreen ? '退出全屏' : '全屏',
+                  onPressed: widget.onToggleFullscreen!,
+                ),
             ],
           ),
         ],
@@ -1220,7 +1232,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
           onTap: () => showSubtitleSettingsPanel(
             context,
             controller: c,
-            fullscreen: widget.fullscreen,
+            fullscreen: widget.fullscreen || widget.inAppFullscreen,
           ),
           borderRadius: Style.radiusFull,
           padding: const EdgeInsets.symmetric(
@@ -1375,7 +1387,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
         if (cue == null) return const SizedBox.shrink();
         final text = cue.text.trim();
         if (text.isEmpty) return const SizedBox.shrink();
-        final scale = widget.fullscreen
+        final isLarge = widget.fullscreen || widget.inAppFullscreen;
+        final scale = isLarge
             ? Pref.subtitleFontScaleFS
             : Pref.subtitleFontScale;
         final bgOpacity = Pref.subtitleBgOpacity;
@@ -1389,7 +1402,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
             padding: EdgeInsets.only(
               left: padH,
               right: padH,
-              bottom: padB + (widget.fullscreen ? 60 : 48),
+              bottom: padB + (isLarge ? 60 : 48),
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(

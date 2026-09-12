@@ -90,6 +90,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   String? _replyHint;
 
   bool _fullscreen = false;
+  bool _inAppFullscreen = false;
   bool _hasLike = false;
   int _coinNum = 0;
   bool _hasFav = false;
@@ -135,7 +136,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   /// 播放器折叠自动暂停（对标 BiliPai PlayerCollapseAutoPausePolicy 与 DetailPage）。
   void _handleCollapseAutoPause(double r) {
-    if (_fullscreen) return;
+    if (_fullscreen || _inAppFullscreen) return;
     final ctrl = playerController;
     if (ctrl == null || !Pref.collapseAutoPause) return;
     if (r >= 0.98) {
@@ -649,6 +650,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         ctrl.setVolume((ctrl.volume.value - 5).clamp(0, 100));
       case LogicalKeyboardKey.keyF:
         _toggleFullscreen();
+      case LogicalKeyboardKey.keyW:
+        _toggleInAppFullscreen();
+      case LogicalKeyboardKey.escape:
+        _handleEscape();
     }
   }
 
@@ -656,6 +661,20 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     final next = !_fullscreen;
     setState(() => _fullscreen = next);
     await windowManager.setFullScreen(next);
+  }
+
+  void _toggleInAppFullscreen() {
+    setState(() => _inAppFullscreen = !_inAppFullscreen);
+  }
+
+  void _handleEscape() {
+    if (_fullscreen) {
+      _toggleFullscreen();
+    } else if (_inAppFullscreen) {
+      _toggleInAppFullscreen();
+    } else {
+      Navigator.maybePop(context);
+    }
   }
 
   static String _formatDate(int? seconds) {
@@ -671,7 +690,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    if (_fullscreen) {
+    final isFill = _fullscreen || _inAppFullscreen;
+    if (isFill) {
       return KeyboardListener(
         focusNode: FocusNode()..requestFocus(),
         onKeyEvent: _handleKey,
@@ -681,8 +701,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               ? PlayerPanel(
                   controller: playerController!,
                   cover: _currentEpisode.cover ?? widget.detail.cover,
-                  fullscreen: true,
+                  fullscreen: _fullscreen,
+                  inAppFullscreen: _inAppFullscreen,
                   onToggleFullscreen: _toggleFullscreen,
+                  onToggleInAppFullscreen: _toggleInAppFullscreen,
+                  onEscape: _handleEscape,
                 )
               : const Center(child: CircularProgressIndicator()),
         ),
@@ -711,7 +734,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               controller: playerController!,
               cover: _currentEpisode.cover ?? widget.detail.cover,
               fullscreen: false,
+              inAppFullscreen: false,
               onToggleFullscreen: _toggleFullscreen,
+              onToggleInAppFullscreen: _toggleInAppFullscreen,
+              onEscape: _handleEscape,
             )
           : const Center(child: CircularProgressIndicator()),
     );
