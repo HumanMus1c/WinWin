@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
+import 'package:winwin/core/window/desktop_fullscreen.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
 
 /// 窗口位置/大小记忆控制器。
@@ -96,8 +97,9 @@ class WindowStateController with WindowListener {
         pos.dy < screen.height - 100;
   }
 
-  /// 防抖保存常规尺寸/位置（最大化/PiP 状态下跳过）。
+  /// 防抖保存常规尺寸/位置（全屏/最大化/PiP 状态下跳过）。
   void _scheduleSave() {
+    if (DesktopFullscreen.isFullScreen) return;
     if (DesktopPipController.instance.isInPipMode) return;
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 500), _saveNormalState);
@@ -105,6 +107,7 @@ class WindowStateController with WindowListener {
 
   Future<void> _saveNormalState() async {
     try {
+      if (DesktopFullscreen.isFullScreen) return;
       if (await windowManager.isMaximized()) return;
       if (DesktopPipController.instance.isInPipMode) return;
       final size = await windowManager.getSize();

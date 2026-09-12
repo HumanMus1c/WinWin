@@ -22,6 +22,7 @@ import 'package:winwin/models/video/video_detail.dart';
 import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/coin_dialog.dart';
+import 'package:winwin/core/window/desktop_fullscreen.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
 import 'package:winwin/pages/video/detail_page.dart' show kDetailNarrowBreakpoint;
 import 'package:winwin/pages/video/player_controller.dart';
@@ -169,7 +170,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     _narrowTabCtrl.dispose();
     DesktopPipController.instance.exitPip();
     if (_fullscreen) {
-      windowManager.setFullScreen(false);
+      DesktopFullscreen.exit();
     }
     playerController?.dispose();
     _scrollController.dispose();
@@ -660,7 +661,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   Future<void> _toggleFullscreen() async {
     final next = !_fullscreen;
     setState(() => _fullscreen = next);
-    await windowManager.setFullScreen(next);
+    if (next) {
+      await DesktopFullscreen.enter();
+    } else {
+      await DesktopFullscreen.exit();
+    }
   }
 
   void _toggleInAppFullscreen() {

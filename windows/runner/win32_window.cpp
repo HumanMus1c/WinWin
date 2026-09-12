@@ -230,6 +230,34 @@ Win32Window::MessageHandler(HWND hwnd,
       // 阻止 GDI 擦除背景，避免硬件渲染表面（DirectComposition/Impeller）在调整大小时出现白屏闪烁
       return 1;
 
+    case WM_NCCALCSIZE: {
+      if (is_fullscreen_) {
+        // 全屏模式下无边框无标题栏，客户区铺满整个物理窗口
+        return 0;
+      }
+      break;
+    }
+
+    case WM_GETMINMAXINFO: {
+      if (is_fullscreen_) {
+        MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lparam);
+        HMONITOR hMonitor = ::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        MONITORINFO mi = {sizeof(MONITORINFO)};
+        if (::GetMonitorInfo(hMonitor, &mi)) {
+          LONG width = mi.rcMonitor.right - mi.rcMonitor.left;
+          LONG height = mi.rcMonitor.bottom - mi.rcMonitor.top;
+          mmi->ptMaxSize.x = width;
+          mmi->ptMaxSize.y = height;
+          mmi->ptMaxPosition.x = mi.rcMonitor.left;
+          mmi->ptMaxPosition.y = mi.rcMonitor.top;
+          mmi->ptMaxTrackSize.x = width;
+          mmi->ptMaxTrackSize.y = height;
+          return 0;
+        }
+      }
+      break;
+    }
+
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
       return 0;
@@ -326,3 +354,54 @@ void Win32Window::UpdateTheme(HWND const window) {
       is_dark ? RGB(0xE8, 0xE8, 0xE8) : RGB(0x18, 0x19, 0x1C);
   SetTitleBarColor(window, caption_color, text_color, is_dark);
 }
+
+void Win32Window::SetFullScreen(bool fullscreen) {
+  if (is_fullscreen_ == fullscreen || window_handle_ == nullptr) {
+    return;
+  }
+
+  if (fullscreen) {
+    // 1. 保存进入全屏前的窗口状态（包含最大化标志 showCmd 与常规矩形坐标）
+    wp_prev_.length = sizeof(WINDOWPLACEMENT);
+    ::GetWindowPlacement(window_handle_, &wp_prev_);
+
+    // 2. 保存进入全屏前的窗口样式
+    style_before_fullscreen_ = static_cast<DWORD>(::GetWindowLongPtr(window_handle_, GWL_STYLE));
+
+    // 3. 获取当前窗口所在的最近显示器信息
+    HMONITOR hMonitor = ::MonitorFromWindow(window_handle_, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi = {sizeof(MONITORINFO)};
+    if (::GetMonitorInfo(hMonitor, &mi)) {
+      is_fullscreen_ = true;
+
+      // 4. 去除标准可重置边框及标题栏（WS_OVERLAPPEDWINDOW），
+      // 并清除 WS_MAXIMIZE 样式，使系统不将窗口尺寸钳制在工作区内
+      DWORD new_style = (style_before_fullscreen_ & ~WS_OVERLAPPEDWINDOW) & ~WS_MAXIMIZE;
+      ::SetWindowLongPtr(window_handle_, GWL_STYLE, new_style);
+
+      // 5. 将窗口置于顶层并贴满当前显示器的整个物理屏幕（涵盖任务栏，实现真全屏）
+      ::SetWindowPos(window_handle_, HWND_TOP,
+                     mi.rcMonitor.left,
+                     mi.rcMonitor.top,
+                     mi.rcMonitor.right - mi.rcMonitor.left,
+                     mi.rcMonitor.bottom - mi.rcMonitor.top,
+                     SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+    }
+  } else {
+    is_fullscreen_ = false;
+
+    // 1. 恢复原有窗口样式
+    ::SetWindowLongPtr(window_handle_, GWL_STYLE, style_before_fullscreen_);
+
+    // 2. 恢复进入全屏前的窗口状态：
+    // 若此前是最大化，SetWindowPlacement 会精确恢复为 SW_SHOWMAXIMIZED；
+    // 若此前是常规自定义窗口，会恢复其正常位置与尺寸。
+    ::SetWindowPlacement(window_handle_, &wp_prev_);
+
+    // 3. 触发非客户区重绘，恢复原生标题栏与最大化/还原按钮功能
+    ::SetWindowPos(window_handle_, nullptr, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                   SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+  }
+}
+

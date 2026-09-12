@@ -81,6 +81,54 @@ bool FlutterWindow::OnCreate() {
         result->NotImplemented();
       });
 
+  fullscreen_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(),
+          "winwin/fullscreen",
+          &flutter::StandardMethodCodec::GetInstance());
+
+  fullscreen_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() == "enterFullScreen") {
+          this->SetFullScreen(true);
+          result->Success(flutter::EncodableValue(true));
+          return;
+        } else if (call.method_name() == "exitFullScreen") {
+          this->SetFullScreen(false);
+          result->Success(flutter::EncodableValue(false));
+          return;
+        } else if (call.method_name() == "isFullScreen") {
+          result->Success(flutter::EncodableValue(this->IsFullScreen()));
+          return;
+        }
+        result->NotImplemented();
+      });
+
+  mediakit_video_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(),
+          "com.alexmercerind/media_kit_video",
+          &flutter::StandardMethodCodec::GetInstance());
+
+  mediakit_video_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() == "Utils.EnterNativeFullscreen") {
+          this->SetFullScreen(true);
+          result->Success();
+          return;
+        } else if (call.method_name() == "Utils.ExitNativeFullscreen") {
+          this->SetFullScreen(false);
+          result->Success();
+          return;
+        } else if (call.method_name() == "Utils.IsNativeFullscreen") {
+          result->Success(flutter::EncodableValue(this->IsFullScreen()));
+          return;
+        }
+        result->NotImplemented();
+      });
+
   // 仅在 Flutter 首帧绘制完成后才显示窗口，消除原生窗口提前呈现导致的启动白屏闪烁
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
@@ -102,6 +150,12 @@ void FlutterWindow::OnDestroy() {
   if (title_bar_channel_) {
     title_bar_channel_ = nullptr;
   }
+  if (fullscreen_channel_) {
+    fullscreen_channel_ = nullptr;
+  }
+  if (mediakit_video_channel_) {
+    mediakit_video_channel_ = nullptr;
+  }
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -113,6 +167,30 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // 全屏状态下优先处理非客户区与尺寸限制，避免第三方插件（如 window_manager）
+  // 错误钳制显示器全屏尺寸或保留标题栏
+  if (IsFullScreen()) {
+    if (message == WM_NCCALCSIZE) {
+      return 0;
+    }
+    if (message == WM_GETMINMAXINFO) {
+      MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lparam);
+      HMONITOR hMonitor = ::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+      MONITORINFO mi = {sizeof(MONITORINFO)};
+      if (::GetMonitorInfo(hMonitor, &mi)) {
+        LONG width = mi.rcMonitor.right - mi.rcMonitor.left;
+        LONG height = mi.rcMonitor.bottom - mi.rcMonitor.top;
+        mmi->ptMaxSize.x = width;
+        mmi->ptMaxSize.y = height;
+        mmi->ptMaxPosition.x = mi.rcMonitor.left;
+        mmi->ptMaxPosition.y = mi.rcMonitor.top;
+        mmi->ptMaxTrackSize.x = width;
+        mmi->ptMaxTrackSize.y = height;
+        return 0;
+      }
+    }
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

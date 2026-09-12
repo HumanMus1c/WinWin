@@ -25,6 +25,7 @@ import 'package:winwin/models/video/video_detail.dart';
 import 'package:winwin/models/video/video_tag.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/search/search_result_page.dart';
+import 'package:winwin/core/window/desktop_fullscreen.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
 import 'package:winwin/pages/video/mixins/video_interaction_mixin.dart';
 import 'package:winwin/pages/video/player_controller.dart';
@@ -169,7 +170,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     // 退出时如果处于 PiP 模式，恢复窗口。
     DesktopPipController.instance.exitPip();
     if (_fullscreen) {
-      windowManager.setFullScreen(false);
+      DesktopFullscreen.exit();
     }
     SyncTrace.log('DetailPage', 'dispose before playerController.dispose');
     playerController?.dispose();
@@ -759,7 +760,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (playerController == null) return;
     final next = !_fullscreen;
     setState(() => _fullscreen = next);
-    await windowManager.setFullScreen(next);
+    if (next) {
+      await DesktopFullscreen.enter();
+    } else {
+      await DesktopFullscreen.exit();
+    }
   }
 
   void _toggleInAppFullscreen() {
@@ -774,7 +779,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         'escape pressed, fullscreen=$_fullscreen, inAppFullscreen=$_inAppFullscreen');
     if (_fullscreen) {
       setState(() => _fullscreen = false);
-      windowManager.setFullScreen(false);
+      DesktopFullscreen.exit();
     } else if (_inAppFullscreen) {
       setState(() => _inAppFullscreen = false);
     } else {

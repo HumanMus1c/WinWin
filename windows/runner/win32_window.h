@@ -62,6 +62,10 @@ class Win32Window {
   void SetTitleBarColor(COLORREF caption_color, COLORREF text_color, bool is_dark);
   static void SetTitleBarColor(HWND const window, COLORREF caption_color, COLORREF text_color, bool is_dark);
 
+  // Fullscreen management (PiliPlus / Chromium native borderless fullscreen)
+  void SetFullScreen(bool fullscreen);
+  bool IsFullScreen() const { return is_fullscreen_; }
+
  protected:
   // Processes and route salient window messages for mouse handling,
   // size change and DPI. Delegates handling of these to member overloads that
@@ -98,6 +102,11 @@ class Win32Window {
   static void UpdateTheme(HWND const window);
 
   bool quit_on_close_ = false;
+
+  // Fullscreen state
+  bool is_fullscreen_ = false;
+  WINDOWPLACEMENT wp_prev_ = {sizeof(WINDOWPLACEMENT)};
+  DWORD style_before_fullscreen_ = 0;
 
   // window handle for top level window.
   HWND window_handle_ = nullptr;
