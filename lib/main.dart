@@ -6,7 +6,7 @@ import 'package:catcher_2/catcher_2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/mdk.dart' as mdk;
-import 'package:window_manager/window_manager.dart';
+import 'package:window_manager/window_manager.dart' hide calcWindowPosition;
 
 import 'core/bootstrap.dart';
 import 'core/log/app_logger.dart';
@@ -24,6 +24,7 @@ import 'theme/inherited_ui_style.dart';
 import 'theme/ui_style.dart';
 import 'theme/ui_style_notifier.dart';
 import 'ui/app.dart';
+import 'utils/calc_window_position.dart';
 import 'utils/json_file_handler.dart';
 
 /// 全局路由观察器，供 VideoDetailPage 监听 push/pop 事件，
@@ -105,7 +106,16 @@ void main() async {
       title: 'WinWin',
     );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await WindowStateController.instance.restoreAndListen();
+      final windowSize = WindowStateController.instance.savedWindowSize;
+      await windowManager.setBounds(
+        await calcWindowPosition(windowSize) & windowSize,
+      );
+      if (WindowStateController.instance.isMaximized) {
+        await windowManager.maximize();
+      }
+      await windowManager.show();
+      await windowManager.focus();
+      WindowStateController.instance.startListening();
     });
   }
 

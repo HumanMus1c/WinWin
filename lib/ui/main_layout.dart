@@ -71,60 +71,62 @@ class _MainLayoutState extends State<MainLayout> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= kRailBreakpoint;
-        if (wide) {
-          return Row(
-            children: [
+        return Row(
+          children: [
+            if (wide)
               renderer == PrimitiveRenderer.material3
                   ? _buildMaterial3Rail(context)
                   : AppNavRail(
                       currentIndex: widget.currentIndex,
                       onSelect: widget.onSelect,
                     ),
-              Expanded(child: widget.body),
-            ],
-          );
-        }
-        if (renderer == PrimitiveRenderer.material3) {
-          return Scaffold(
-            body: widget.body,
-            bottomNavigationBar: NavigationBar(
-              selectedIndex: widget.currentIndex,
-              onDestinationSelected: widget.onSelect,
-              destinations: navDestinations
-                  .map(
-                    (d) => NavigationDestination(
-                      icon: Icon(d.outlinedIcon),
-                      selectedIcon: Icon(d.filledIcon),
-                      label: d.label,
+            Expanded(
+              child: Stack(
+                children: [
+                  NotificationListener<ScrollNotification>(
+                    onNotification: _onScroll,
+                    child: widget.body,
+                  ),
+                  if (!wide && renderer == PrimitiveRenderer.material3)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: NavigationBar(
+                        selectedIndex: widget.currentIndex,
+                        onDestinationSelected: widget.onSelect,
+                        destinations: navDestinations
+                            .map(
+                              (d) => NavigationDestination(
+                                icon: Icon(d.outlinedIcon),
+                                selectedIcon: Icon(d.filledIcon),
+                                label: d.label,
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    )
+                  else if (!wide)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: _bottomBarVisible,
+                        builder: (context, visible, child) =>
+                            AnimatedSlide(
+                          offset: visible ? Offset.zero : const Offset(0, 1.4),
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          child: child,
+                        ),
+                        child: FrostedBottomBar(
+                          currentIndex: widget.currentIndex,
+                          onSelect: widget.onSelect,
+                        ),
+                      ),
                     ),
-                  )
-                  .toList(),
-            ),
-          );
-        }
-        return Stack(
-          children: [
-            NotificationListener<ScrollNotification>(
-              onNotification: _onScroll,
-              child: widget.body,
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: ValueListenableBuilder<bool>(
-                valueListenable: _bottomBarVisible,
-                builder: (context, visible, child) =>
-                    AnimatedSlide(
-                  offset: visible ? Offset.zero : const Offset(0, 1.4),
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  child: child,
-                ),
-                child: FrostedBottomBar(
-                  currentIndex: widget.currentIndex,
-                  onSelect: widget.onSelect,
-                ),
+                ],
               ),
             ),
           ],

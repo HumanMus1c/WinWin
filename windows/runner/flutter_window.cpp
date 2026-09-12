@@ -102,14 +102,9 @@ bool FlutterWindow::OnCreate() {
         result->NotImplemented();
       });
 
-  // 仅在 Flutter 首帧绘制完成后才显示窗口，消除原生窗口提前呈现导致的启动白屏闪烁
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
-    ::SetWindowPos(GetHandle(), HWND_TOP, 0, 0, 0, 0,
-                   SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-    ::SetForegroundWindow(GetHandle());
-    ::BringWindowToTop(GetHandle());
-  });
+  // flutter_controller_->engine()->SetNextFrameCallback([&]() {
+  //   this->Show();
+  // });
 
   // Flutter can complete the first frame before the "show window" callback is
   // registered. The following call ensures a frame is pending to ensure the

@@ -26,14 +26,27 @@ class WindowStateController with WindowListener {
   bool _listening = false;
   Timer? _saveTimer;
 
-  /// 恢复窗口状态并开始监听（需 [GStorage.init] 完成后调用）。
-  Future<void> restoreAndListen() async {
-    // 保证 windowManager 已初始化（内部幂等）。
-    await DesktopPipController.instance.ensureInitialized();
+  Size get savedWindowSize {
+    final raw = GStorage.setting.get(SettingBoxKey.windowSize);
+    return _readSize(raw) ?? const Size(1280, 720);
+  }
+
+  bool get isMaximized =>
+      GStorage.setting.get(SettingBoxKey.isWindowMaximized, defaultValue: false) == true;
+
+  /// 挂载窗口事件监听（在窗口初始化并显示后调用，避免初始化干扰）。
+  void startListening() {
     if (!_listening) {
       windowManager.addListener(this);
       _listening = true;
     }
+  }
+
+  /// 恢复窗口状态并开始监听（需 [GStorage.init] 完成后调用）。
+  Future<void> restoreAndListen() async {
+    // 保证 windowManager 已初始化（内部幂等）。
+    await DesktopPipController.instance.ensureInitialized();
+    startListening();
 
     final box = GStorage.setting;
     final maximized = box.get(SettingBoxKey.isWindowMaximized, defaultValue: false) == true;
