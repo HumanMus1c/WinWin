@@ -139,7 +139,10 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     }
     final items = dm.getDanmakuRange(_lastProgressMs + 100, ms);
     _lastProgressMs = ms;
-    for (final item in items) {
+    // 突发高密弹幕削峰保护：单周期（100ms）限制最多投递 30 条弹幕，
+    // 避免网络回包或瞬态时间跳跃时数十条弹幕扎堆同步布局排版引发 UI 线程掉帧。
+    final toAdd = items.length > 30 ? items.sublist(items.length - 30) : items;
+    for (final item in toAdd) {
       engine.addDanmaku(item);
     }
   }
@@ -185,19 +188,20 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     final c = widget.controller;
     // 安全检查：controller 已销毁时不渲染
     if (c.disposed) return const SizedBox.shrink();
-    return ClipRect(
-      child: IgnorePointer(
-        child: ValueListenableBuilder<double>(
-          valueListenable: c.danmakuOpacity,
-          builder: (context, opacity, _) {
-            // 再次检查，防止在 builder 执行期间 controller 被销毁
-            if (c.disposed) return const SizedBox.shrink();
-            return AnimatedOpacity(
-              opacity: Pref.enableShowDanmaku
-                  ? opacity.clamp(0.0, 1.0).toDouble()
-                  : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: LayoutBuilder(
+    return RepaintBoundary(
+      child: ClipRect(
+        child: IgnorePointer(
+          child: ValueListenableBuilder<double>(
+            valueListenable: c.danmakuOpacity,
+            builder: (context, opacity, _) {
+              // 再次检查，防止在 builder 执行期间 controller 被销毁
+              if (c.disposed) return const SizedBox.shrink();
+              return AnimatedOpacity(
+                opacity: Pref.enableShowDanmaku
+                    ? opacity.clamp(0.0, 1.0).toDouble()
+                    : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: LayoutBuilder(
                 builder: (context, constraints) {
                   final size = Size(
                     constraints.maxWidth.isFinite ? constraints.maxWidth : 0,
@@ -221,6 +225,7 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
           },
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

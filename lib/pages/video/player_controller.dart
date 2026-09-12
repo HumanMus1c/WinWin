@@ -237,14 +237,24 @@ class WinWinPlayerController {
   mdk.Player _createPlayer() {
     final player = mdk.Player();
 
-    // 显式设置 video decoders（与 fvp video_player_mdk.dart Windows 默认一致）。
-    // mdk.Player() 默认 decoder 为 'auto'（通常=FFmpeg），但不显式设置时
-    // D3D11 硬解 / dav1d AV1 软解不会被自动选中，导致 HEVC/AV1 decode error。
-    // 顺序即优先级：D3D11 硬解 → FFmpeg 软解 → dav1d AV1 专用软解。
-    player.videoDecoders = const ['D3D11', 'FFmpeg', 'dav1d'];
-
-    // 网络流稳健性 / 格式探测（参照 fvp video_player_mdk.dart 默认项与 FFmpeg 规范）。
-    player.setProperty('video.decoder', 'shader_resource=0');
+    // 显式设置 video decoders（完整对齐 fvp video_player_mdk.dart Windows 推荐配置）。
+    // Windows 平台首选 Microsoft 原生 Media Foundation Transform D3D11 硬解（MFT:d3d=11），
+    // 其次使用 Direct3D 11 (D3D11)、DXVA、CUDA，若用户关闭硬解则仅使用纯软解。
+    if (Pref.enableHA) {
+      player.videoDecoders = const [
+        'MFT:d3d=11',
+        'D3D11',
+        'DXVA',
+        'CUDA',
+        'hap',
+        'FFmpeg',
+        'dav1d',
+      ];
+      player.setProperty('video.decoder', 'shader_resource=1');
+    } else {
+      player.videoDecoders = const ['FFmpeg', 'dav1d'];
+      player.setProperty('video.decoder', 'shader_resource=0');
+    }
     player.setProperty('avformat.strict', 'experimental');
     player.setProperty('avformat.safe', '0');
     player.setProperty('avformat.rtsp_transport', 'tcp');
@@ -776,8 +786,8 @@ class WinWinPlayerController {
         }
       }
 
-      // 2. StreamSelectionPolicy：编解码器感知选流（AV1 > HEVC > AVC），
-      // 替换原 pickVideo/pickAudio。桌面端默认全档位解码能力。
+      // 2. StreamSelectionPolicy：编解码器感知选流（通用硬解优先 HEVC > AVC > AV1），
+      // 优先保障 100% GPU 零拷贝硬解，彻底杜绝无 AV1 专用硬解模块设备上的 CPU 软解掉帧。
       final selection = StreamSelectionPolicy.selectStreams(
         playUrl,
         maxQn: maxQn,

@@ -17,12 +17,15 @@ final class SpecialDanmakuPainter extends BaseDanmakuPainter {
     required super.fontWeight,
     required super.strokeWidth,
     required super.running,
-    required super.tick,
+    super.tick = 0,
+    super.tickNotifier,
+    super.repaint,
     super.batchThreshold,
   });
 
   void paintDanmaku(ui.Canvas canvas, ui.Size size, DanmakuItem item) {
-    final elapsed = tick - (item.drawTick ??= tick);
+    final curTick = currentTick;
+    final elapsed = curTick - (item.drawTick ??= curTick);
     final content = item.content as SpecialDanmakuContentItem;
     if (0 <= elapsed && elapsed < content.duration) {
       _paintSpecialDanmaku(canvas, item, content, size, elapsed);
@@ -67,27 +70,10 @@ final class SpecialDanmakuPainter extends BaseDanmakuPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final ui.PictureRecorder? pictureRecorder;
-    final Canvas pictureCanvas;
-    final length = danmakuItems.length;
-
-    if (length > batchThreshold) {
-      pictureRecorder = ui.PictureRecorder();
-      pictureCanvas = Canvas(pictureRecorder);
-    } else {
-      pictureRecorder = null;
-      pictureCanvas = canvas;
-    }
     for (var i in danmakuItems) {
       if (i.expired) continue;
 
-      paintDanmaku(pictureCanvas, size, i);
-    }
-
-    if (pictureRecorder != null) {
-      final ui.Picture picture = pictureRecorder.endRecording();
-      canvas.drawPicture(picture);
-      picture.dispose();
+      paintDanmaku(canvas, size, i);
     }
   }
 }

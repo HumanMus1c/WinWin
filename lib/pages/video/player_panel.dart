@@ -158,13 +158,13 @@ class _PlayerPanelState extends State<PlayerPanel> {
       ),
     );
     final png = await c.screenshot();
-    if (!mounted || png == null) {
+    if (!mounted) return;
+    if (png == null) {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         const SnackBar(content: Text('截图失败'), duration: Duration(seconds: 1)),
       );
       return;
     }
-    if (!mounted) return;
     _showScreenshotPreview(png);
   }
 
@@ -366,17 +366,21 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 fit: StackFit.expand,
                 children: [
                   _buildVideoSurface(c),
-                  // 弹幕层（IgnorePointer，不拦截鼠标/点击）。
+                  // 弹幕层（IgnorePointer，不拦截鼠标/点击；RepaintBoundary 隔离高频重绘）。
                   Positioned.fill(
-                    child: WinWinDanmaku(
-                      key: ValueKey('danmaku_${c.cid}'),
-                      controller: c,
-                      fullscreen: widget.fullscreen || widget.inAppFullscreen,
+                    child: RepaintBoundary(
+                      child: WinWinDanmaku(
+                        key: ValueKey('danmaku_${c.cid}'),
+                        controller: c,
+                        fullscreen: widget.fullscreen || widget.inAppFullscreen,
+                      ),
                     ),
                   ),
-                  // Phase 4.4：字幕层（底部居中，IgnorePointer 不拦截手势）。
+                  // Phase 4.4：字幕层（底部居中，IgnorePointer 不拦截手势；RepaintBoundary 隔离）。
                   Positioned.fill(
-                    child: IgnorePointer(child: _buildSubtitleLayer(c)),
+                    child: RepaintBoundary(
+                      child: IgnorePointer(child: _buildSubtitleLayer(c)),
+                    ),
                   ),
                   // Phase 4.3：手势层 — 单击(播放/暂停) + 双击(快进/快退) +
                   // 长按(3x倍速) + 水平拖动(快进)。
@@ -411,18 +415,20 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      child: ValueListenableBuilder<bool>(
-                        valueListenable: _controlsVisible,
-                        builder: (context, visible, _) {
-                          return AnimatedOpacity(
-                            opacity: visible ? 1.0 : 0.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: IgnorePointer(
-                              ignoring: !visible,
-                              child: _buildControlBar(),
-                            ),
-                          );
-                        },
+                      child: RepaintBoundary(
+                        child: ValueListenableBuilder<bool>(
+                          valueListenable: _controlsVisible,
+                          builder: (context, visible, _) {
+                            return AnimatedOpacity(
+                              opacity: visible ? 1.0 : 0.0,
+                              duration: const Duration(milliseconds: 200),
+                              child: IgnorePointer(
+                                ignoring: !visible,
+                                child: _buildControlBar(),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                 ],
@@ -885,8 +891,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
         c.position,
         c.duration,
         c.viewPointsNotifier,
+        _controlsVisible,
       ]),
       builder: (context, _) {
+        if (!_controlsVisible.value) {
+          return const SizedBox(width: 80, height: 16);
+        }
         final pos = DurationUtils.formatDuration(c.position.value.inSeconds);
         final dur = DurationUtils.formatDuration(c.duration.value.inSeconds);
         final curChapter = c.currentChapter();
@@ -965,8 +975,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
         c.position,
         c.duration,
         c.viewPointsNotifier,
+        _controlsVisible,
       ]),
       builder: (context, _) {
+        if (!_controlsVisible.value && !_draggingProgress) {
+          return const SizedBox(height: 18);
+        }
         final durSec = c.duration.value.inSeconds.toDouble();
         final maxSec = durSec > 0 ? durSec : 1.0;
         final posSec = _draggingProgress

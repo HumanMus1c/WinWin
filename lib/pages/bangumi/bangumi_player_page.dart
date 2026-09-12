@@ -108,9 +108,12 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   int? _lastOpSkippedEpId;
   int? _lastEdSkippedEpId;
 
+  final FocusNode _keyboardFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
+    _keyboardFocusNode.requestFocus();
     _currentEpisode = widget.initialEpisode;
     _episodes = widget.allEpisodes ?? widget.detail.episodes;
     _isFollowed = widget.detail.userStatus?.follow == 1;
@@ -175,6 +178,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     playerController?.dispose();
     _scrollController.dispose();
     _commentCtrl.dispose();
+    _keyboardFocusNode.dispose();
     super.dispose();
   }
 
@@ -698,7 +702,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     final isFill = _fullscreen || _inAppFullscreen;
     if (isFill) {
       return KeyboardListener(
-        focusNode: FocusNode()..requestFocus(),
+        focusNode: _keyboardFocusNode,
         onKeyEvent: _handleKey,
         child: Scaffold(
           backgroundColor: Colors.black,
@@ -718,7 +722,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     }
 
     return KeyboardListener(
-      focusNode: FocusNode()..requestFocus(),
+      focusNode: _keyboardFocusNode,
       onKeyEvent: _handleKey,
       child: Scaffold(
         body: LayoutBuilder(

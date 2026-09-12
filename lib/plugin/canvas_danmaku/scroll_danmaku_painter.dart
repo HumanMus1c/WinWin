@@ -18,7 +18,9 @@ final class ScrollDanmakuPainter extends BaseDanmakuPainter {
     required super.fontWeight,
     required super.strokeWidth,
     required super.running,
-    required super.tick,
+    super.tick = 0,
+    super.tickNotifier,
+    super.repaint,
     super.batchThreshold,
   });
 
@@ -26,18 +28,6 @@ final class ScrollDanmakuPainter extends BaseDanmakuPainter {
   void paint(ui.Canvas canvas, ui.Size size) {
     canvas.save();
     canvas.clipRect(Offset.zero & size);
-
-    final ui.PictureRecorder? pictureRecorder;
-    final Canvas pictureCanvas;
-
-    if (length > batchThreshold) {
-      pictureRecorder = ui.PictureRecorder();
-      pictureCanvas = Canvas(pictureRecorder);
-      pictureCanvas.clipRect(Offset.zero & size);
-    } else {
-      pictureRecorder = null;
-      pictureCanvas = canvas;
-    }
 
     DanmakuItem? suspend;
     int suspendIndex = 0;
@@ -51,18 +41,12 @@ final class ScrollDanmakuPainter extends BaseDanmakuPainter {
           continue;
         }
 
-        paintDanmaku(pictureCanvas, size, i, index * trackHeight);
+        paintDanmaku(canvas, size, i, index * trackHeight);
       }
     }
 
     if (suspend case final suspend?) {
-      paintDanmaku(pictureCanvas, size, suspend, suspendIndex * trackHeight);
-    }
-
-    if (pictureRecorder != null) {
-      final ui.Picture picture = pictureRecorder.endRecording();
-      canvas.drawPicture(picture);
-      picture.dispose();
+      paintDanmaku(canvas, size, suspend, suspendIndex * trackHeight);
     }
 
     canvas.restore();
@@ -79,21 +63,22 @@ final class ScrollDanmakuPainter extends BaseDanmakuPainter {
       fontWeight,
       strokeWidth,
     );
+    final curTick = currentTick;
     if (!item.suspend) {
       final startPosition = size.width;
       final endPosition = -item.width;
 
       if (item.drawTick == null) {
         item
-          ..drawTick = tick
+          ..drawTick = curTick
           ..xPosition = startPosition;
       } else {
         if (durationInMilliseconds.isNegative) {
-          item.xPosition += (tick - item.drawTick!) * durationInMilliseconds;
+          item.xPosition += (curTick - item.drawTick!) * durationInMilliseconds;
         } else {
           final distance = startPosition - endPosition;
           item.xPosition +=
-              ((item.drawTick! - tick) / durationInMilliseconds) * distance;
+              ((item.drawTick! - curTick) / durationInMilliseconds) * distance;
         }
       }
 
@@ -111,6 +96,6 @@ final class ScrollDanmakuPainter extends BaseDanmakuPainter {
       strokeWidth,
     );
 
-    item.drawTick = tick;
+    item.drawTick = curTick;
   }
 }

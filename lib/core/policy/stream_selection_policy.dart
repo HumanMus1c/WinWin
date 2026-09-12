@@ -86,14 +86,21 @@ class StreamSelectionPolicy {
     return VideoCodec.unknown;
   }
 
-  /// 编解码器评分：AV1 +3 / HEVC +2 / AVC +1 / unknown 0。
-  static int codecScore(VideoCodec codec) {
+  /// 编解码器评分：默认优先通用硬件解码（HEVC +3 / AVC +2 / AV1 +1 / unknown 0）。
+  /// 优先选取具备广泛 GPU 零拷贝硬解支持的格式（HEVC/AVC），避免回退到 dav1d CPU 软解引发卡顿掉帧。
+  static int codecScore(VideoCodec codec, {List<VideoCodec>? preferredOrder}) {
+    if (preferredOrder != null && preferredOrder.isNotEmpty) {
+      final idx = preferredOrder.indexOf(codec);
+      if (idx >= 0) {
+        return preferredOrder.length - idx;
+      }
+    }
     switch (codec) {
-      case VideoCodec.av1:
-        return 3;
       case VideoCodec.hevc:
-        return 2;
+        return 3;
       case VideoCodec.avc:
+        return 2;
+      case VideoCodec.av1:
         return 1;
       case VideoCodec.unknown:
         return 0;
@@ -130,6 +137,7 @@ class StreamSelectionPolicy {
     List<DashVideo>? videos, {
     int maxQn = 80,
     DeviceCodecCapability capability = DeviceCodecCapability.av1,
+    List<VideoCodec>? preferredCodecs,
   }) {
     if (videos == null || videos.isEmpty) return null;
 
@@ -156,7 +164,7 @@ class StreamSelectionPolicy {
     for (final track in topTracks) {
       final codec = identifyVideoCodec(track.codecs);
       if (!isCodecSupported(codec, capability)) continue;
-      final score = codecScore(codec);
+      final score = codecScore(codec, preferredOrder: preferredCodecs);
       // 同分时保留 bandwidth 更高的（更高质量）。
       if (score > bestScore ||
           (score == bestScore &&
@@ -222,9 +230,15 @@ class StreamSelectionPolicy {
     int maxQn = 80,
     DeviceCodecCapability capability = DeviceCodecCapability.av1,
     bool preferSpecialAudio = false,
+    List<VideoCodec>? preferredCodecs,
   }) {
     final dash = playUrl?.dash;
-    final video = selectBestVideo(dash?.video, maxQn: maxQn, capability: capability);
+    final video = selectBestVideo(
+      dash?.video,
+      maxQn: maxQn,
+      capability: capability,
+      preferredCodecs: preferredCodecs,
+    );
     final audio = selectBestAudio(
       dash?.audio,
       dolbyAudios: dash?.dolbyAudio,

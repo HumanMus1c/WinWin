@@ -9,6 +9,9 @@ abstract base class BaseDanmakuPainter extends CustomPainter {
   final bool running;
   final int batchThreshold;
   final int tick;
+  final ValueNotifier<int>? tickNotifier;
+
+  int get currentTick => tickNotifier?.value ?? tick;
 
   static final Paint _selfSendPaint = Paint()
     ..style = PaintingStyle.stroke
@@ -21,8 +24,10 @@ abstract base class BaseDanmakuPainter extends CustomPainter {
     required this.fontWeight,
     required this.strokeWidth,
     required this.running,
-    required this.tick,
+    this.tick = 0,
+    this.tickNotifier,
     this.batchThreshold = 10,
+    super.repaint,
   });
 
   static void paintItem(
@@ -36,8 +41,10 @@ abstract base class BaseDanmakuPainter extends CustomPainter {
       dx + (strokeWidth / 2.0) + (item.content.selfSend ? 2.0 : 0.0),
       dy + strokeWidth / 2.0,
     );
-    if (item.strokeParagraph case final strokeP?) {
-      canvas.drawParagraph(strokeP, offset);
+    if (strokeWidth > 0) {
+      if (item.strokeParagraph case final strokeP?) {
+        canvas.drawParagraph(strokeP, offset);
+      }
     }
     if (item.paragraph case final p?) {
       canvas.drawParagraph(p, offset);
@@ -53,10 +60,10 @@ abstract base class BaseDanmakuPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant BaseDanmakuPainter oldDelegate) {
-    return (running && length != 0) ||
-        oldDelegate.length != length ||
+    return oldDelegate.length != length ||
         oldDelegate.fontSize != fontSize ||
         oldDelegate.fontWeight != fontWeight ||
-        oldDelegate.strokeWidth != strokeWidth;
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.running != running;
   }
 }

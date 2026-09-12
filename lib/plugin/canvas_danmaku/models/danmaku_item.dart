@@ -65,18 +65,18 @@ class DanmakuItem<T> {
         fontSize: fontSize,
         fontWeight: fontWeight,
       );
-      if (strokeWidth > 0) {
-        strokeParagraph = DmUtils.generateStrokeParagraph(
-          content: content,
-          fontSize: fontSize,
-          fontWeight: fontWeight,
-          strokeWidth: strokeWidth,
-        );
-      }
       width = paragraph!.maxIntrinsicWidth +
           strokeWidth +
           (content.selfSend ? 4.0 : 0.0);
       height = paragraph!.height + strokeWidth;
+    }
+    if (strokeWidth > 0 && strokeParagraph == null) {
+      strokeParagraph = DmUtils.generateStrokeParagraph(
+        content: content,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        strokeWidth: strokeWidth,
+      );
     }
   }
 
