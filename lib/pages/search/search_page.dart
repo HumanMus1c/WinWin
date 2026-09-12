@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/search.dart';
 import 'package:winwin/models/search/result.dart';
 import 'package:winwin/models/search/suggest.dart';
+import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/search/search_result_page.dart';
+import 'package:winwin/pages/search/services/search_history_service.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 
@@ -29,6 +32,9 @@ class _SearchPageState extends State<SearchPage> {
   /// 搜索历史列表。
   List<String> _history = [];
 
+  /// 搜索后交互过的作者/用户列表。
+  List<SearchHistoryUser> get _visitedUsers => SearchHistoryService().users;
+
   /// 热搜列表。
   List<SearchTrendingItemModel> _trending = [];
   bool _trendingLoading = true;
@@ -46,6 +52,7 @@ class _SearchPageState extends State<SearchPage> {
     _loadHistory();
     _loadTrending();
     _controller.addListener(_onTextChanged);
+    SearchHistoryService().addListener(_onHistoryChanged);
   }
 
   @override
@@ -54,7 +61,12 @@ class _SearchPageState extends State<SearchPage> {
     _controller.dispose();
     _focusNode.dispose();
     _debounce?.cancel();
+    SearchHistoryService().removeListener(_onHistoryChanged);
     super.dispose();
+  }
+
+  void _onHistoryChanged() {
+    if (mounted) setState(() {});
   }
 
   // ─────────────────────────── 数据加载 ───────────────────────────
@@ -99,16 +111,20 @@ class _SearchPageState extends State<SearchPage> {
 
   // ─────────────────────────── 搜索操作 ───────────────────────────
 
-  void _submitSearch(String keyword) {
+  void _submitSearch(String keyword) async {
     keyword = keyword.trim();
     if (keyword.isEmpty) return;
     _saveHistory(keyword);
-    Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => SearchResultPage(keyword: keyword),
       ),
     );
+    if (mounted) {
+      _loadHistory();
+      setState(() {});
+    }
   }
 
   void _saveHistory(String keyword) {
@@ -139,6 +155,7 @@ class _SearchPageState extends State<SearchPage> {
             onPressed: () {
               _history.clear();
               GStorage.localCache.delete('searchHistory');
+              SearchHistoryService().clearVisitedUsers();
               Navigator.pop(ctx);
               setState(() {});
             },
@@ -174,6 +191,7 @@ class _SearchPageState extends State<SearchPage> {
         onSubmitted: _submitSearch,
         decoration: InputDecoration(
           hintText: '搜索视频、UP主...',
+          prefixIcon: const Icon(Icons.search, size: 20),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(100),
             borderSide: BorderSide.none,
@@ -206,10 +224,16 @@ class _SearchPageState extends State<SearchPage> {
     return ListView(
       padding: const EdgeInsets.all(Style.md),
       children: [
-        if (_history.isNotEmpty) ...[
+        if (_history.isNotEmpty || _visitedUsers.isNotEmpty) ...[
           _buildHistoryHeader(),
-          const SizedBox(height: Style.sm),
-          _buildHistoryChips(),
+          if (_history.isNotEmpty) ...[
+            const SizedBox(height: Style.sm),
+            _buildHistoryChips(),
+          ],
+          if (_visitedUsers.isNotEmpty) ...[
+            const SizedBox(height: Style.sm),
+            _buildVisitedUserChips(),
+          ],
           const SizedBox(height: Style.lg),
         ],
         _buildTrendingSection(),
@@ -249,6 +273,96 @@ class _SearchPageState extends State<SearchPage> {
           visualDensity: VisualDensity.compact,
         );
       }).toList(),
+    );
+  }
+
+  /// 第二行搜索历史：展示搜索后观看稿件对应的作者与直接访问过的用户空间用户。
+  Widget _buildVisitedUserChips() {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return SizedBox(
+      height: 34,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _visitedUsers.length,
+        separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
+        itemBuilder: (context, index) {
+          final user = _visitedUsers[index];
+          return InkWell(
+            borderRadius: BorderRadius.circular(100),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MemberSpacePage(mid: user.mid),
+                ),
+              );
+            },
+            onLongPress: () {
+              SearchHistoryService().removeVisitedUser(user.mid);
+            },
+            child: Container(
+              padding: const EdgeInsets.only(
+                left: 3,
+                right: 10,
+                top: 3,
+                bottom: 3,
+              ),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainer.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(
+                  color: cs.outlineVariant.withValues(alpha: 0.4),
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipOval(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: user.face.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: user.face,
+                              fit: BoxFit.cover,
+                              placeholder: (_, _) => Container(
+                                color: cs.surfaceContainerHigh,
+                              ),
+                              errorBuilder: (_, _, _) => Icon(
+                                Icons.person,
+                                size: 16,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            )
+                          : Icon(
+                              Icons.person,
+                              size: 16,
+                              color: cs.onSurfaceVariant,
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 120),
+                    child: Text(
+                      user.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 

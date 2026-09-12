@@ -98,8 +98,8 @@ class _MainLayoutState extends State<MainLayout> {
                         destinations: navDestinations
                             .map(
                               (d) => NavigationDestination(
-                                icon: Icon(d.outlinedIcon),
-                                selectedIcon: Icon(d.filledIcon),
+                                icon: NavDestinationIcon(destination: d, selected: false),
+                                selectedIcon: NavDestinationIcon(destination: d, selected: true),
                                 label: d.label,
                               ),
                             )
@@ -144,8 +144,8 @@ class _MainLayoutState extends State<MainLayout> {
       destinations: navDestinations
           .map(
             (d) => NavigationRailDestination(
-              icon: Icon(d.outlinedIcon),
-              selectedIcon: Icon(d.filledIcon),
+              icon: NavDestinationIcon(destination: d, selected: false),
+              selectedIcon: NavDestinationIcon(destination: d, selected: true),
               label: Text(d.label),
             ),
           )
@@ -218,9 +218,9 @@ class AppNavRail extends StatelessWidget {
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(chrome.pillRadius),
                           ),
-                          child: Icon(
-                            selected ? d.filledIcon : d.outlinedIcon,
-                            color: color,
+                          child: NavDestinationIcon(
+                            destination: d,
+                            selected: selected,
                             size: 24,
                           ),
                         ),

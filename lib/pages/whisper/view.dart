@@ -10,6 +10,7 @@ import 'package:winwin/pages/whisper/msg_feed/like_me_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/reply_me_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/sys_msg_page.dart';
 import 'package:winwin/pages/whisper/session/session_list_section.dart';
+import 'package:winwin/services/msg_unread_service.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
@@ -32,7 +33,6 @@ class _WhisperPageState extends State<WhisperPage>
   final GlobalKey<SessionListSectionState> _sessionListKey =
       GlobalKey<SessionListSectionState>();
   LoadingState<Map<String, dynamic>> _unreadState = LoadingState.loading();
-  LoadingState<Map<String, dynamic>> _feedUnreadState = LoadingState.loading();
   bool _loading = false;
 
   @override
@@ -58,7 +58,6 @@ class _WhisperPageState extends State<WhisperPage>
     } else {
       setState(() {
         _unreadState = LoadingState.loading();
-        _feedUnreadState = LoadingState.loading();
       });
     }
   }
@@ -67,7 +66,6 @@ class _WhisperPageState extends State<WhisperPage>
     if (!AccountService().isLogin) {
       setState(() {
         _unreadState = const Success({});
-        _feedUnreadState = const Success({});
       });
       return;
     }
@@ -75,31 +73,24 @@ class _WhisperPageState extends State<WhisperPage>
     _loading = true;
     setState(() {
       _unreadState = LoadingState.loading();
-      _feedUnreadState = LoadingState.loading();
     });
     await ensureBootstrap();
     final results = await Future.wait([
       MsgHttp.msgUnread(),
-      MsgHttp.msgFeedUnread(),
+      MsgUnreadService().fetchUnread(),
     ]);
     if (!mounted) return;
-    final unreadRes = results[0];
-    final feedRes = results[1];
+    final unreadRes = results[0] as LoadingState<Map<String, dynamic>>;
     setState(() {
       _unreadState = unreadRes;
-      _feedUnreadState = feedRes;
     });
     _loading = false;
   }
 
-  int get _replyUnread =>
-      (_feedUnreadState.dataOrNull?['reply'] as num?)?.toInt() ?? 0;
-  int get _atUnread =>
-      (_feedUnreadState.dataOrNull?['at'] as num?)?.toInt() ?? 0;
-  int get _likeUnread =>
-      (_feedUnreadState.dataOrNull?['like'] as num?)?.toInt() ?? 0;
-  int get _sysUnread =>
-      (_feedUnreadState.dataOrNull?['system'] as num?)?.toInt() ?? 0;
+  int get _replyUnread => MsgUnreadService().reply;
+  int get _atUnread => MsgUnreadService().at;
+  int get _likeUnread => MsgUnreadService().like;
+  int get _sysUnread => MsgUnreadService().system;
 
   @override
   Widget build(BuildContext context) {
@@ -146,59 +137,61 @@ class _WhisperPageState extends State<WhisperPage>
   }
 
   Widget _buildEntries(ThemeData theme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _EntryItem(
-          icon: Icons.reply_rounded,
-          label: '回复我的',
-          count: _replyUnread,
-          color: iosBlue,
-          onTap: () {
-            _clearFeedUnread('reply');
-            showReplyMePage(context);
-          },
-        ),
-        _EntryItem(
-          icon: Icons.alternate_email_rounded,
-          label: '艾特我的',
-          count: _atUnread,
-          color: iosOrange,
-          onTap: () {
-            _clearFeedUnread('at');
-            showAtMePage(context);
-          },
-        ),
-        _EntryItem(
-          icon: Icons.favorite_outline,
-          label: '点赞我的',
-          count: _likeUnread,
-          color: iosPink,
-          onTap: () {
-            _clearFeedUnread('like');
-            showLikeMePage(context);
-          },
-        ),
-        _EntryItem(
-          icon: Icons.campaign_outlined,
-          label: '系统消息',
-          count: _sysUnread,
-          color: iosTeal,
-          onTap: () {
-            _clearFeedUnread('system');
-            showSysMsgPage(context);
-          },
-        ),
-      ],
+    return ListenableBuilder(
+      listenable: MsgUnreadService(),
+      builder: (context, _) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _EntryItem(
+              icon: Icons.reply_rounded,
+              label: '回复我的',
+              count: _replyUnread,
+              color: iosBlue,
+              onTap: () {
+                _clearFeedUnread('reply');
+                showReplyMePage(context);
+              },
+            ),
+            _EntryItem(
+              icon: Icons.alternate_email_rounded,
+              label: '艾特我的',
+              count: _atUnread,
+              color: iosOrange,
+              onTap: () {
+                _clearFeedUnread('at');
+                showAtMePage(context);
+              },
+            ),
+            _EntryItem(
+              icon: Icons.favorite_outline,
+              label: '点赞我的',
+              count: _likeUnread,
+              color: iosPink,
+              onTap: () {
+                _clearFeedUnread('like');
+                showLikeMePage(context);
+              },
+            ),
+            _EntryItem(
+              icon: Icons.campaign_outlined,
+              label: '系统消息',
+              count: _sysUnread,
+              color: iosTeal,
+              onTap: () {
+                _clearFeedUnread('system');
+                showSysMsgPage(context);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
   /// 乐观清零某类消息流未读角标（实际未读数下次刷新恢复）。
   void _clearFeedUnread(String key) {
-    final data = _feedUnreadState.dataOrNull;
-    if (data != null && (data[key] as num? ?? 0) > 0) {
-      setState(() => data[key] = 0);
-    }
+    MsgUnreadService().clearKey(key);
   }
 
   /// 乐观清零私信未读角标。

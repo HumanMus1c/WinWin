@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/whisper/view.dart';
+import 'package:winwin/services/msg_unread_service.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'home/home_page.dart';
 import 'main_layout.dart';
@@ -27,6 +28,12 @@ class AppRoot extends StatefulWidget {
 
 class _AppRootState extends State<AppRoot> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    MsgUnreadService().fetchUnread();
+  }
 
   void _onSelect(int i) => setState(() => _currentIndex = i);
 

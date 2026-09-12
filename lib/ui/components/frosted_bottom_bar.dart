@@ -1,6 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import 'package:cached_network_image_ce/cached_network_image.dart';
+import 'package:winwin/core/account/account_service.dart';
+import 'package:winwin/services/msg_unread_service.dart';
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
@@ -37,6 +40,101 @@ const List<NavDestination> navDestinations = [
   NavDestination(AppPage.whisper, '消息', Icons.chat_bubble_outline, Icons.chat_bubble, iosPink),
   NavDestination(AppPage.profile, '我的', Icons.person_outlined, Icons.person, iosGreen),
 ];
+
+/// 导航项自适应图标：
+/// 1. 「我的」页面在登录状态下展示用户头像，未登录展示默认图标；
+/// 2. 「消息」页面在有四类互动未读消息时展示红底未读角标气泡。
+class NavDestinationIcon extends StatelessWidget {
+  final NavDestination destination;
+  final bool selected;
+  final double size;
+
+  const NavDestinationIcon({
+    super.key,
+    required this.destination,
+    required this.selected,
+    this.size = 24,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final color = selected ? destination.color : cs.onSurfaceVariant;
+
+    if (destination.page == AppPage.profile) {
+      return ListenableBuilder(
+        listenable: AccountService(),
+        builder: (context, _) {
+          final account = AccountService();
+          if (account.isLogin && account.face.isNotEmpty) {
+            return Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? destination.color : cs.outlineVariant.withValues(alpha: 0.5),
+                  width: selected ? 2 : 1,
+                ),
+              ),
+              child: ClipOval(
+                child: CachedNetworkImage(
+                  imageUrl: account.face,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => const ColoredBox(
+                    color: Colors.grey,
+                    child: SizedBox.expand(),
+                  ),
+                  errorBuilder: (_, _, _) => Icon(
+                    selected ? destination.filledIcon : destination.outlinedIcon,
+                    color: color,
+                    size: size - 4,
+                  ),
+                ),
+              ),
+            );
+          }
+          return Icon(
+            selected ? destination.filledIcon : destination.outlinedIcon,
+            color: color,
+            size: size,
+          );
+        },
+      );
+    }
+
+    final Widget baseIcon = Icon(
+      selected ? destination.filledIcon : destination.outlinedIcon,
+      color: color,
+      size: size,
+    );
+
+    if (destination.page == AppPage.whisper) {
+      return ListenableBuilder(
+        listenable: MsgUnreadService(),
+        builder: (context, _) {
+          final unreadCount = MsgUnreadService().totalInteractiveUnread;
+          return Badge(
+            isLabelVisible: unreadCount > 0,
+            label: Text(
+              unreadCount > 99 ? '99+' : unreadCount.toString(),
+              style: const TextStyle(
+                fontSize: 10,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            backgroundColor: cs.error,
+            child: baseIcon,
+          );
+        },
+      );
+    }
+
+    return baseIcon;
+  }
+}
 
 /// 浮动底部导航栏 — 毛玻璃胶囊 + 自适应圆角/阴影。
 ///
@@ -132,9 +230,9 @@ class _NavButton extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            selected ? destination.filledIcon : destination.outlinedIcon,
-            color: color,
+          NavDestinationIcon(
+            destination: destination,
+            selected: selected,
             size: 24,
           ),
           const SizedBox(height: 2),

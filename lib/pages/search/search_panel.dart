@@ -8,6 +8,7 @@ import 'package:winwin/models/search/result.dart';
 import 'package:winwin/models/search/search_type.dart';
 import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
+import 'package:winwin/pages/search/services/search_history_service.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
@@ -216,6 +217,13 @@ class _SearchPanelState extends State<SearchPanel>
       videoItem: item,
       coverWidth: 144,
       onTap: () {
+        if (item.mid != null && (item.author?.isNotEmpty ?? false)) {
+          SearchHistoryService().addVisitedUser(
+            mid: item.mid!,
+            name: item.author!,
+            face: item.face ?? '',
+          );
+        }
         if (item.bvid != null) {
           Navigator.push(
             context,
@@ -236,6 +244,13 @@ class _SearchPanelState extends State<SearchPanel>
       margin: EdgeInsets.zero,
       child: InkWell(
         onTap: () {
+          if (item.mid != null && (item.uname?.isNotEmpty ?? false)) {
+            SearchHistoryService().addVisitedUser(
+              mid: item.mid!,
+              name: item.uname!,
+              face: item.upic ?? '',
+            );
+          }
           if (item.mid != null) {
             Navigator.push(
               context,
