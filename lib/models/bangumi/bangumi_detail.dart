@@ -268,14 +268,14 @@ class BangumiDetail {
       return 0;
     }
 
-    // 4. 正片与预告交错排布（一集正集紧随一个预告）
+    // 4. 正片与预告交错排布（先是这集的预告，后面再紧跟这集的正集）
     final usedTrailerIds = <int>{};
     final interleaved = <BangumiEpisode>[];
     int maxRegularNum = 0;
 
     for (final reg in regulars) {
-      interleaved.add(reg);
-      final regNum = parseEpNumber(reg.title.trim());
+      final regNum = parseEpNumber(reg.title.trim()) ??
+          (reg.longTitle != null ? parseEpNumber(reg.longTitle!) : null);
       if (regNum != null && regNum > maxRegularNum) {
         maxRegularNum = regNum;
       }
@@ -292,6 +292,7 @@ class BangumiDetail {
         }
       }
 
+      // 先放入这集的预告
       if (bestTrailer != null && bestScore >= 80) {
         usedTrailerIds.add(bestTrailer.id);
         interleaved.add(
@@ -300,14 +301,17 @@ class BangumiDetail {
               : bestTrailer.copyWith(badge: '预告'),
         );
       }
+      // 再紧跟这集的正集
+      interleaved.add(reg);
     }
 
-    // 5. 将未来未开播集数的预告（例如第 191 集预告，其集数大于当前最大正片集数 190）追加在正片末尾
+    // 5. 将未来未开播集数的预告（例如下集预告或第 191 集预告，其集数大于当前最大正片集数 190）追加在正片末尾，作为最新的视频
     final futureTrailers = <BangumiEpisode>[];
     for (final tr in trailers) {
       if (!usedTrailerIds.contains(tr.id)) {
-        final trNum = parseEpNumber(tr.title.trim());
-        if (trNum != null && trNum > maxRegularNum) {
+        final trNum = parseEpNumber(tr.title.trim()) ??
+            (tr.longTitle != null ? parseEpNumber(tr.longTitle!) : null);
+        if (trNum == null || trNum > maxRegularNum) {
           futureTrailers.add(
             tr.badge == '预告' ? tr : tr.copyWith(badge: '预告'),
           );
@@ -315,9 +319,15 @@ class BangumiDetail {
       }
     }
     futureTrailers.sort((a, b) {
-      final aNum = parseEpNumber(a.title.trim()) ?? 0;
-      final bNum = parseEpNumber(b.title.trim()) ?? 0;
-      return aNum.compareTo(bNum);
+      final aNum = parseEpNumber(a.title.trim()) ??
+          (a.longTitle != null ? parseEpNumber(a.longTitle!) : null) ??
+          999999;
+      final bNum = parseEpNumber(b.title.trim()) ??
+          (b.longTitle != null ? parseEpNumber(b.longTitle!) : null) ??
+          999999;
+      final cmp = aNum.compareTo(bNum);
+      if (cmp != 0) return cmp;
+      return a.id.compareTo(b.id);
     });
     interleaved.addAll(futureTrailers);
 

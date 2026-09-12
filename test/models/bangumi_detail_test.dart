@@ -88,15 +88,15 @@ void main() {
       expect(normalized.sections.any((s) => s.title == '预告'), isFalse);
       expect(normalized.sections.map((s) => s.title), containsAll(['特别花絮', 'UP论道']));
 
-      // 2. 验证正片与预告按序号交错紧随
+      // 2. 验证预告与正片按序号交错紧随（先是这集的预告，后面紧跟这集的正集）
       // 期望顺序：
-      // - 第1集正片 (id: 1)
-      // - 第2集正片 (id: 2) -> 紧随 第2集预告 (id: 201)
-      // - 第77集正片 (id: 77) -> 紧随 第77集预告 (id: 101)
-      // - 第78集正片 (id: 78) -> 紧随 第78集预告 (id: 102)
-      // - 第191集预告 (id: 103, 未来未播出预告追加在末尾)
+      // - 第1集正片 (id: 1, 无预告)
+      // - 第2集预告 (id: 201) -> 紧跟 第2集正片 (id: 2)
+      // - 第77集预告 (id: 101) -> 紧跟 第77集正片 (id: 77)
+      // - 第78集预告 (id: 102) -> 紧跟 第78集正片 (id: 78)
+      // - 第191集预告 (id: 103, 未来未播出预告追加在末尾，最新的视频就是下集的预告)
       final epIds = normalized.episodes.map((e) => e.id).toList();
-      expect(epIds, equals([1, 2, 201, 77, 101, 78, 102, 103]));
+      expect(epIds, equals([1, 201, 2, 101, 77, 102, 78, 103]));
 
       // 3. 验证预告分集的 badge 均被统一设置为 '预告'
       final ep201 = normalized.episodes.firstWhere((e) => e.id == 201);
@@ -146,9 +146,9 @@ void main() {
       expect(detail.sections.length, equals(1));
       expect(detail.sections.first.title, equals('精彩花絮'));
       expect(detail.episodes.length, equals(3));
-      expect(detail.episodes[0].id, equals(1));
-      expect(detail.episodes[1].id, equals(101));
-      expect(detail.episodes[1].badge, equals('预告'));
+      expect(detail.episodes[0].id, equals(101));
+      expect(detail.episodes[0].badge, equals('预告'));
+      expect(detail.episodes[1].id, equals(1));
       expect(detail.episodes[2].id, equals(2));
     });
   });
