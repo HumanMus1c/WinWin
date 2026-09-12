@@ -1,6 +1,8 @@
 /// 播放地址（`/x/player/wbi/playurl`，fnval=4048 DASH）简化模型。
 library;
 
+import 'dart:math';
+
 /// 安全类型转换：B站 API 部分数值字段可能返回 String（如 "1920"），
 /// 直接 `as int?` 会抛 type cast 异常。此函数兼容 int / double / String。
 int? _asInt(dynamic v) {
@@ -12,6 +14,8 @@ int? _asInt(dynamic v) {
 }
 
 class PlayUrlModel {
+  /// B站音频响度实测数据（用于 loudnorm 智能均衡）
+  Volume? volume;
   /// 当前请求返回的清晰度代码（qn）
   int? quality;
   List<int>? acceptQuality;
@@ -46,6 +50,8 @@ class PlayUrlModel {
     durl = (json['durl'] as List?)
         ?.map((e) => Durl.fromJson(e as Map<String, dynamic>))
         .toList();
+    final volJson = json['volume'];
+    volume = volJson is Map ? Volume.fromJson(Map<String, dynamic>.from(volJson)) : null;
     supportFormats = (json['support_formats'] as List?)
         ?.map((e) => FormatItem.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -214,4 +220,77 @@ class FormatItem {
       format: json['format'] as String?,
     );
   }
+}
+
+/// B 站音频响度测量元数据（对标 PiliPlus Volume）。
+///
+/// 当 playurl 请求携带 voice_balance=1 时返回，包含视频音频的实测响度数据，
+/// 用于构造高精度单动线性 FFmpeg loudnorm 滤镜参数。
+class Volume {
+  final num measuredI;
+  final num measuredLra;
+  final num measuredTp;
+  final num measuredThreshold;
+  final num targetOffset;
+  final num targetI;
+  final num targetTp;
+
+  static const double minTpValue = -9.0;
+  static const double maxTpValue = 0.0;
+
+  Volume({
+    required this.measuredI,
+    required this.measuredLra,
+    required this.measuredTp,
+    required this.measuredThreshold,
+    required this.targetOffset,
+    required this.targetI,
+    required this.targetTp,
+  });
+
+  factory Volume.fromJson(Map<String, dynamic> json) {
+    num asNum(dynamic v) {
+      if (v is num) return v;
+      if (v is String) return num.tryParse(v) ?? 0;
+      return 0;
+    }
+
+    return Volume(
+      measuredI: asNum(json['measured_i']),
+      measuredLra: asNum(json['measured_lra']),
+      measuredTp: asNum(json['measured_tp']),
+      measuredThreshold: asNum(json['measured_threshold']),
+      targetOffset: asNum(json['target_offset']),
+      targetI: asNum(json['target_i']),
+      targetTp: asNum(json['target_tp']),
+    );
+  }
+
+  /// 构造单动线性 FFmpeg loudnorm 滤镜字符串（对齐 PiliPlus）。
+  String format(Map<String, num> config) {
+    final lra = max(config['lra'] ?? 11, measuredLra);
+    num i = config['i'] ?? (targetI != 0 ? targetI : -14);
+    final tp = min(
+      config['tp'] ?? (targetTp != 0 ? targetTp : -1.5),
+      measuredTp,
+    ).clamp(minTpValue, maxTpValue);
+    final offset = config['offset'] ?? targetOffset;
+    num measuredI = this.measuredI;
+    if (measuredI > 0) {
+      i -= measuredI;
+      measuredI = 0;
+    }
+    num measuredThreshold = this.measuredThreshold;
+    if (measuredThreshold > 0) {
+      measuredThreshold = 0;
+    }
+
+    return 'LRA=$lra:I=$i:TP=$tp:offset=$offset:linear=true:measured_I=$measuredI:measured_LRA=$measuredLra:measured_TP=$measuredTp:measured_thresh=$measuredThreshold';
+  }
+
+  bool get isNotEmpty =>
+      measuredI != 0 ||
+      measuredLra != 0 ||
+      measuredTp != 0 ||
+      measuredThreshold != 0;
 }

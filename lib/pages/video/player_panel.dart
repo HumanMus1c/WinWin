@@ -1288,7 +1288,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// BiliPai 风格音频编码标签：显示当前音轨编码（如 "AAC"），点击打开音轨菜单。
+  /// BiliPai 风格音频编码标签：显示当前音轨编码（如 "AAC"），点击打开音轨与音频增强菜单。
   Widget _buildAudioCodecLabel() {
     final c = widget.controller;
     return ValueListenableBuilder<bool>(
@@ -1298,26 +1298,18 @@ class _PlayerPanelState extends State<PlayerPanel> {
         final codec = c.audioCodecLabel;
         if (codec == null) return const SizedBox.shrink();
         final tracks = c.audioTracks;
-        // 单轨时仅显示标签，多轨时弹出菜单。
-        if (tracks.length <= 1) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Style.sm),
-            child: Text(
-              codec,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          );
-        }
         return PopupMenuButton<String>(
-          tooltip: '音轨',
+          tooltip: '音频设置',
           color: const Color(0xE61A1A1A),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(Style.radiusSm),
             side: const BorderSide(color: Colors.white12),
           ),
           onSelected: (value) {
-            if (value == '__normalize') {
-              c.setAudioNormalize(!c.audioNormalizeEnabled);
+            if (value.startsWith('__norm:')) {
+              final mode = value.substring('__norm:'.length);
+              c.setAudioNormalize(mode);
+              setState(() {});
             } else {
               final idx = int.tryParse(value);
               if (idx != null) c.switchAudioTrack(idx);
@@ -1326,50 +1318,111 @@ class _PlayerPanelState extends State<PlayerPanel> {
           itemBuilder: (context) {
             final active = c.activeAudioTrackIndices;
             final activeIndex = active.isNotEmpty ? active.first : -1;
+            final currentNorm = Pref.audioNormalization;
             return [
-              for (final t in tracks)
-                PopupMenuItem<String>(
-                  value: t.index.toString(),
-                  child: Row(
-                    children: [
-                      Icon(
-                        t.index == activeIndex
-                            ? Icons.check
-                            : Icons.radio_button_unchecked,
-                        size: 18,
-                        color: t.index == activeIndex ? biliBlue : null,
-                      ),
-                      const SizedBox(width: Style.xs),
-                      Flexible(
-                        child: Text(
-                          t.title,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color:
-                                t.index == activeIndex ? biliBlue : Colors.white70,
-                            fontWeight: t.index == activeIndex
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+              if (tracks.length > 1) ...[
+                for (final t in tracks)
+                  PopupMenuItem<String>(
+                    value: t.index.toString(),
+                    child: Row(
+                      children: [
+                        Icon(
+                          t.index == activeIndex
+                              ? Icons.check
+                              : Icons.radio_button_unchecked,
+                          size: 18,
+                          color: t.index == activeIndex ? biliBlue : null,
+                        ),
+                        const SizedBox(width: Style.xs),
+                        Flexible(
+                          child: Text(
+                            t.title,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color:
+                                  t.index == activeIndex ? biliBlue : Colors.white70,
+                              fontWeight: t.index == activeIndex
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                const PopupMenuDivider(),
+              ],
+              PopupMenuItem<String>(
+                enabled: false,
+                height: 28,
+                child: Text(
+                  '音频响度均衡',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.5),
                   ),
                 ),
-              const PopupMenuDivider(),
+              ),
               PopupMenuItem<String>(
-                value: '__normalize',
+                value: '__norm:2',
                 child: Row(
                   children: [
                     Icon(
-                      c.audioNormalizeEnabled
-                          ? Icons.check_box
-                          : Icons.check_box_outline_blank,
-                      size: 18,
-                      color: c.audioNormalizeEnabled ? biliBlue : null,
+                      currentNorm == '2'
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      size: 16,
+                      color: currentNorm == '2' ? biliBlue : null,
                     ),
                     const SizedBox(width: Style.xs),
-                    const Text('音频归一化'),
+                    Text(
+                      '智能响度均衡 (loudnorm)',
+                      style: TextStyle(
+                        color: currentNorm == '2' ? biliBlue : Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: '__norm:1',
+                child: Row(
+                  children: [
+                    Icon(
+                      currentNorm == '1'
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      size: 16,
+                      color: currentNorm == '1' ? biliBlue : null,
+                    ),
+                    const SizedBox(width: Style.xs),
+                    Text(
+                      '动态压缩 (dynaudnorm)',
+                      style: TextStyle(
+                        color: currentNorm == '1' ? biliBlue : Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: '__norm:0',
+                child: Row(
+                  children: [
+                    Icon(
+                      currentNorm == '0'
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      size: 16,
+                      color: currentNorm == '0' ? biliBlue : null,
+                    ),
+                    const SizedBox(width: Style.xs),
+                    Text(
+                      '禁用',
+                      style: TextStyle(
+                        color: currentNorm == '0' ? biliBlue : Colors.white70,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1379,9 +1432,28 @@ class _PlayerPanelState extends State<PlayerPanel> {
             borderRadius: 6.0,
             padding: const EdgeInsets.symmetric(horizontal: Style.sm, vertical: 4),
             hoverColor: Colors.white.withValues(alpha: 0.12),
-            child: Text(
-              codec,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  codec,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                if (c.audioNormalizeEnabled) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: biliPink.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: const Text(
+                      '均衡',
+                      style: TextStyle(color: biliPink, fontSize: 10),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         );
@@ -1834,18 +1906,29 @@ class _PlayerPanelState extends State<PlayerPanel> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.volume_up, color: Colors.white70, size: 18),
+              ValueListenableBuilder<double>(
+                valueListenable: c.volume,
+                builder: (context, vol, _) {
+                  return Icon(
+                    vol <= 0
+                        ? Icons.volume_off
+                        : (vol > 100 ? Icons.volume_up : Icons.volume_down),
+                    color: vol > 100 ? Colors.amberAccent : Colors.white70,
+                    size: 18,
+                  );
+                },
+              ),
               const SizedBox(width: Style.sm),
               SizedBox(
-                width: 140,
+                width: 150,
                 child: ValueListenableBuilder<double>(
                   valueListenable: c.volume,
                   builder: (context, vol, _) {
                     return Slider(
-                      value: vol.clamp(0.0, 100.0).toDouble(),
+                      value: vol.clamp(0.0, Pref.maxVolume).toDouble(),
                       min: 0,
-                      max: 100,
-                      activeColor: biliPink,
+                      max: Pref.maxVolume,
+                      activeColor: vol > 100 ? Colors.amberAccent : biliPink,
                       inactiveColor: Colors.white24,
                       onChanged: c.setVolume,
                     );
@@ -1856,9 +1939,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
               ValueListenableBuilder<double>(
                 valueListenable: c.volume,
                 builder: (context, vol, _) {
+                  final rounded = vol.round();
                   return Text(
-                    '${vol.round()}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    rounded > 100 ? '$rounded% (增益)' : '$rounded%',
+                    style: TextStyle(
+                      color: rounded > 100 ? Colors.amberAccent : Colors.white70,
+                      fontWeight: rounded > 100 ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 12,
+                    ),
                   );
                 },
               ),

@@ -14,13 +14,13 @@ import 'package:winwin/core/player/sponsorblock_usecase.dart';
 import 'package:winwin/core/policy/cdn_policy.dart';
 import 'package:winwin/core/policy/stream_selection_policy.dart';
 import 'package:winwin/core/policy/video_load_policy.dart';
-import 'package:winwin/core/storage/storage.dart';
-import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart' hide SubtitleItem;
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
 import 'package:winwin/http/video.dart';
+import 'package:winwin/models/common/audio_normalization.dart';
+import 'package:winwin/models/common/video_type.dart';
 import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/play_url.dart';
 import 'package:winwin/pages/danmaku/controller.dart';
@@ -47,7 +47,8 @@ class WinWinPlayerController {
     required this.cid,
     this.epId,
     this.seasonId,
-  }) {
+    this.seasonType,
+  }) : volume = ValueNotifier(Pref.desktopVolume) {
     _playerCount++;
     _sharedPlayer ??= _createPlayer();
     initDanmaku();
@@ -58,6 +59,13 @@ class WinWinPlayerController {
   final int cid;
   final int? epId;
   final int? seasonId;
+  final int? seasonType;
+
+  /// 是否为番剧 / 影视（PGC）播放。
+  bool get isBangumi => epId != null && epId! > 0;
+
+  /// 当前播放流的业务类型。
+  VideoType get videoType => isBangumi ? VideoType.pgc : VideoType.ugc;
 
   /// 稿件 avid（由详情页 load 完成后设置，供心跳上报使用）。
   int? aid;
@@ -80,7 +88,7 @@ class WinWinPlayerController {
   final ValueNotifier<bool> buffering = ValueNotifier(false);
   final ValueNotifier<String?> error = ValueNotifier(null);
   final ValueNotifier<bool> ready = ValueNotifier(false);
-  final ValueNotifier<double> volume = ValueNotifier(80);
+  final ValueNotifier<double> volume;
 
   /// 视频播放是否已自然结束（到达片尾）。
   final ValueNotifier<bool> completed = ValueNotifier(false);
@@ -211,15 +219,17 @@ class WinWinPlayerController {
   /// 当前生效的音频播放直链。
   String? _currentAudioUrl;
 
-  // ── 心跳上报（Phase 4.2）──
+  // ── 心跳上报（Phase 4.2 & PGC/番剧支持）──
   /// 心跳定时器：每 5 秒上报一次播放进度。
   Timer? _heartBeatTimer;
   /// 上次心跳上报时的播放状态，用于检测状态变化。
   /// null 表示尚未上报过任何心跳（首次状态变化报 play_type=0）。
   bool? _lastHeartBeatPlaying;
+  /// 上次上报心跳时的播放进度（秒），用于计算推进增量。
+  int _lastHeartBeatPosSec = -1;
   /// 累计播放时长（秒），用于满足 "playing ≥5s" 触发条件。
   int _playingAccumSec = 0;
-  /// 是否已上报过结束（play_type=-1），避免重复。
+  /// 是否已上报过结束（play_type=3/progressSec=-1），避免重复。
   bool _reportedEnd = false;
 
   /// 清晰度标签列表（PlayUrlModel.acceptDescription）。
@@ -288,6 +298,14 @@ class WinWinPlayerController {
     // 避免 3 分钟以上过大缓冲导致网络长时间静默而触发 CDN 60s 闲置断线）。
     final maxBufMs = (Pref.bufferSec * 1000).clamp(30000.0, 90000.0).toInt();
     player.setBufferRange(min: 2000, max: maxBufMs);
+
+    final initialFilter = AudioNormalization.parse(
+      null,
+      AudioNormalization.getParamFromConfig(Pref.audioNormalization),
+    );
+    if (initialFilter.isNotEmpty) {
+      player.setProperty('audio.avfilter', initialFilter);
+    }
 
     player.volume = volume.value / 100.0;
     return player;
@@ -513,95 +531,125 @@ class WinWinPlayerController {
     });
   }
 
+  /// 发送一次心跳（对标 PiliPlus makeHeartBeat，best-effort，失败静默）。
+  Future<void> makeHeartBeat(
+    int progressSec, {
+    int playType = 0,
+    bool isManual = false,
+  }) async {
+    if (!Accounts.history.isLogin || Pref.historyPause) return;
+    if (_disposed && !isManual) return;
+    if ((aid == null || aid! <= 0) && bvid.isEmpty && (epId == null || epId! <= 0)) {
+      return;
+    }
+
+    _lastHeartBeatPosSec = progressSec;
+    try {
+      final res = await VideoHttp.heartBeat(
+        aid: aid,
+        bvid: bvid,
+        cid: cid,
+        epId: epId,
+        seasonId: seasonId,
+        subType: seasonType,
+        videoType: videoType,
+        playType: playType,
+        progressSec: progressSec,
+      );
+      if (kDebugMode) {
+        if (res case Error(:final errMsg)) {
+          debugPrint('HeartBeat: report failed: $errMsg');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('HeartBeat: report exception: $e');
+      }
+    }
+  }
+
   /// 启动心跳定时器（每 5 秒上报一次进度）。
   /// 在 load 成功后调用，dispose / detachListeners 时停止。
   void _startHeartBeat() {
     _heartBeatTimer?.cancel();
     _playingAccumSec = 0;
     _lastHeartBeatPlaying = null;
+    _lastHeartBeatPosSec = -1;
     _reportedEnd = false;
     _heartBeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (_disposed) return;
       // 未登录或用户关闭历史记录时不报。
-      if (!Accounts.main.isLogin || Pref.historyPause) return;
-      final aid = this.aid;
-      if (aid == null || aid <= 0) return;
+      if (!Accounts.history.isLogin || Pref.historyPause) return;
       final isPlaying = playing.value;
-      // 播放中累计 ≥5s 才上报心跳。
+      final currentPosSec = position.value.inSeconds;
+
       if (isPlaying) {
         _playingAccumSec += 5;
       }
-      // 状态变化（playing↔paused）时上报：首次变化报 0（开始），
-      // 其后 1=暂停 / 2=继续（参照 PiliPlus 心跳语义）。
+
+      // 状态变化（playing↔paused）时上报：首次变化报 0（开始），其后 1=暂停 / 2=继续
       if (_lastHeartBeatPlaying != isPlaying) {
         final playType = _lastHeartBeatPlaying == null
             ? 0
             : (isPlaying ? 2 : 1);
         _lastHeartBeatPlaying = isPlaying;
-        _sendHeartBeat(playType: playType);
+        unawaited(makeHeartBeat(currentPosSec, playType: playType));
         return;
       }
+
       // 持续播放中且累计 ≥5s：上报心跳进度。
-      if (isPlaying && _playingAccumSec >= 5) {
-        _sendHeartBeat(playType: 0);
+      if (isPlaying &&
+          (_playingAccumSec >= 5 ||
+              (currentPosSec - _lastHeartBeatPosSec).abs() >= 5)) {
+        unawaited(makeHeartBeat(currentPosSec, playType: 0));
       }
     });
   }
 
-  /// 发送一次心跳（best-effort，失败静默）。
-  void _sendHeartBeat({required int playType}) {
-    final aid = this.aid;
-    if (aid == null || aid <= 0) return;
-    final progressSec = position.value.inSeconds;
-    unawaited(
-      VideoHttp.heartBeat(
-        aid: aid,
-        cid: cid,
-        playType: playType,
-        progressSec: progressSec,
-      ).then((res) {
-        if (!kDebugMode) return;
-        if (res case Error(:final errMsg)) {
-          debugPrint('HeartBeat: report failed: $errMsg');
-        }
-      }),
-    );
-  }
-
-  /// 播放结束上报：进度达到 duration 99% 时上报 play_type=-1（仅一次）。
+  /// 播放结束上报：进度达到 duration 99% 时上报 play_type=3/progressSec=-1（仅一次）。
   void _maybeReportPlaybackEnd() {
     if (_reportedEnd) return;
-    if (!Accounts.main.isLogin || Pref.historyPause) return;
-    final aid = this.aid;
-    if (aid == null || aid <= 0) return;
+    if (!Accounts.history.isLogin || Pref.historyPause) return;
     final dur = duration.value;
     if (dur.inSeconds <= 0) return;
     final pos = position.value;
-    // 进度达到 99% 视为播完。
-    if (pos.inMilliseconds >= dur.inMilliseconds * 0.99) {
+    // 进度达到 99% 或距离结尾 1.5 秒内视为播完。
+    if (pos.inMilliseconds >= dur.inMilliseconds * 0.99 ||
+        (dur.inMilliseconds - pos.inMilliseconds) <= 1500) {
       _reportedEnd = true;
-      unawaited(
-        VideoHttp.heartBeat(
-          aid: aid,
-          cid: cid,
-          playType: 3,
-          progressSec: -1,
-        ).then((_) async {
-          // 同时上报历史进度（progress = 0 表示已看完）。
-          await VideoHttp.reportHistory(aid: aid, cid: cid, progressSec: 0);
-        }),
-      );
+      unawaited(makeHeartBeat(-1, playType: 3, isManual: true));
+      final effectiveAid = aid;
+      if (effectiveAid != null && effectiveAid > 0) {
+        unawaited(VideoHttp.reportHistory(aid: effectiveAid, cid: cid, progressSec: 0));
+      }
     }
   }
 
-  /// 上报当前进度（页面退出/被覆盖时调用，Phase 4.2 didPushNext）。
+  /// 上报当前进度（页面退出/被覆盖/切集时调用）。
   Future<void> reportCurrentProgress() async {
-    if (!Accounts.main.isLogin || Pref.historyPause) return;
-    final aid = this.aid;
-    if (aid == null || aid <= 0) return;
-    final progressSec = position.value.inSeconds;
-    if (progressSec <= 0) return;
-    await VideoHttp.reportHistory(aid: aid, cid: cid, progressSec: progressSec);
+    if (!Accounts.history.isLogin || Pref.historyPause) return;
+    final posSec = position.value.inSeconds;
+    if (posSec <= 0 && !completed.value) return;
+    final targetProgress = completed.value ? -1 : posSec;
+
+    // 1. 发送心跳上报（包含 PGC/UGC 完整上下文）
+    await makeHeartBeat(
+      targetProgress,
+      playType: completed.value ? 3 : 1,
+      isManual: true,
+    );
+
+    // 2. 额外上报历史进度接口（若有有效 aid）
+    final effectiveAid = aid;
+    if (effectiveAid != null && effectiveAid > 0) {
+      try {
+        await VideoHttp.reportHistory(
+          aid: effectiveAid,
+          cid: cid,
+          progressSec: completed.value ? 0 : posSec,
+        );
+      } catch (_) {}
+    }
   }
 
   /// 拉取 DASH、选流（StreamSelectionPolicy）、挂载外部音轨打开。
@@ -754,10 +802,20 @@ class WinWinPlayerController {
           );
           // 若 PGC 接口失败且有 bvid，回退到普通视频接口
           if (result is Error && bvid.isNotEmpty) {
-            result = await VideoHttp.videoUrl(bvid: bvid, cid: cid, qn: qn);
+            result = await VideoHttp.videoUrl(
+              bvid: bvid,
+              cid: cid,
+              qn: qn,
+              voiceBalance: audioNormalizeEnabled,
+            );
           }
         } else {
-          result = await VideoHttp.videoUrl(bvid: bvid, cid: cid, qn: qn);
+          result = await VideoHttp.videoUrl(
+            bvid: bvid,
+            cid: cid,
+            qn: qn,
+            voiceBalance: audioNormalizeEnabled,
+          );
         }
         if (_disposed) return;
         playUrl = result.dataOrNull;
@@ -861,8 +919,14 @@ class WinWinPlayerController {
       player.setProperty('avio.headers', headers);
       // Phase 4.7：音频归一化滤镜作为 player 属性在 prepare 前下发，
       // 避免在 media 已打开/播放中切换 avfilter 触发音频轨重初始化干扰状态。
-      if (_audioNormalizeEnabled) {
-        player.setProperty('audio.avfilter', 'loudnorm');
+      final filter = AudioNormalization.parse(
+        playUrl.volume,
+        AudioNormalization.getParamFromConfig(Pref.audioNormalization),
+      );
+      if (filter.isNotEmpty) {
+        player.setProperty('audio.avfilter', filter);
+      } else {
+        player.setProperty('audio.avfilter', '');
       }
 
       // 1. 设置主视频 media。
@@ -1310,28 +1374,35 @@ class WinWinPlayerController {
     player.activeAudioTracks = [index];
   }
 
-  /// 是否启用音频归一化（loudnorm 滤镜）。
-  bool _audioNormalizeEnabled = Pref.enableAudioNormalize;
-  bool get audioNormalizeEnabled => _audioNormalizeEnabled;
+  /// 是否启用音频归一化。
+  bool get audioNormalizeEnabled => Pref.audioNormalization != '0';
 
-  /// 开关音频归一化（Phase 4.7）。
-  /// 使用 FFmpeg loudnorm 滤镜，播放时立即生效。持久化到 Pref。
-  void setAudioNormalize(bool enabled) {
-    _audioNormalizeEnabled = enabled;
-    GStorage.setting.put(SettingBoxKey.enableAudioNormalize, enabled);
-    final player = _player;
-    if (player == null || _disposed) return;
-    if (enabled) {
-      player.setProperty('audio.avfilter', 'loudnorm');
+  /// 开关/切换音频归一化模式（0=禁用, 1=动态压缩, 2=智能响度均衡，或自定义滤镜参数）。
+  void setAudioNormalize(String config) {
+    Pref.audioNormalization = config;
+    final filter = AudioNormalization.parse(
+      _playUrl?.volume,
+      AudioNormalization.getParamFromConfig(config),
+    );
+    _player?.setProperty('audio.avfilter', filter);
+  }
+
+  /// 快速切换音频归一化开/关。
+  void toggleAudioNormalize() {
+    if (audioNormalizeEnabled) {
+      setAudioNormalize('0');
     } else {
-      player.setProperty('audio.avfilter', '');
+      setAudioNormalize(
+        Pref.fallbackNormalization.isNotEmpty ? Pref.fallbackNormalization : '2',
+      );
     }
   }
 
-  /// 设置音量（0-100）。
+  /// 设置音量（0 ~ Pref.maxVolume，支持最大 200% 增益提升）。
   void setVolume(double v) {
-    final clamped = v.clamp(0.0, 100.0);
+    final clamped = v.clamp(0.0, Pref.maxVolume);
     volume.value = clamped;
+    Pref.desktopVolume = clamped;
     _player?.volume = clamped / 100.0;
   }
 

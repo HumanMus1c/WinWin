@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -435,9 +436,11 @@ abstract final class PgcHttp {
     int? seasonId,
     String? bvid,
     int qn = 80,
+    bool? voiceBalance,
   }) async {
     final dmImgStr = Utils.base64EncodeRandomString(16, 64);
     final dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
+    final isVoiceBalance = voiceBalance ?? Pref.enableAudioNormalize;
     final params = await WbiSign.makSign({
       'ep_id': ?epId,
       'season_id': ?seasonId,
@@ -447,7 +450,7 @@ abstract final class PgcHttp {
       'fnval': 4048,
       'fourk': 1,
       'fnver': 0,
-      'voice_balance': 0,
+      'voice_balance': isVoiceBalance ? 1 : 0,
       'gaia_source': 'pre-load',
       'isGaiaAvoided': true,
       'web_location': 1315873,

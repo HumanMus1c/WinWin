@@ -300,8 +300,39 @@ abstract final class Pref {
   static bool get enableSponsorBlock =>
       _setting.get(SettingBoxKey.enableSponsorBlock, defaultValue: true);
 
+  // ---------- audio / volume ----------
+  static double get desktopVolume =>
+      (_setting.get(SettingBoxKey.desktopVolume, defaultValue: 100.0) as num)
+          .toDouble();
+
+  static set desktopVolume(double val) =>
+      _setting.put(SettingBoxKey.desktopVolume, val);
+
+  static double get maxVolume =>
+      (_setting.get(SettingBoxKey.maxVolume, defaultValue: 200.0) as num)
+          .toDouble();
+
+  static set maxVolume(double val) =>
+      _setting.put(SettingBoxKey.maxVolume, val);
+
+  /// 音频归一化配置：'0'=禁用, '1'=dynaudnorm, '2'=loudnorm (默认)
+  static String get audioNormalization =>
+      _setting.get(SettingBoxKey.audioNormalization, defaultValue: '2');
+
+  static set audioNormalization(String val) =>
+      _setting.put(SettingBoxKey.audioNormalization, val);
+
+  static String get fallbackNormalization =>
+      _setting.get(SettingBoxKey.fallbackNormalization, defaultValue: '2');
+
+  static set fallbackNormalization(String val) =>
+      _setting.put(SettingBoxKey.fallbackNormalization, val);
+
   static bool get enableAudioNormalize =>
-      _setting.get(SettingBoxKey.enableAudioNormalize, defaultValue: false);
+      _setting.get(SettingBoxKey.enableAudioNormalize, defaultValue: true);
+
+  static set enableAudioNormalize(bool val) =>
+      _setting.put(SettingBoxKey.enableAudioNormalize, val);
 
   // ---------- essential / recommend ----------
   static String get banWordForRecommend =>

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/models/common/audio_normalization.dart';
 import 'package:winwin/models/common/cdn_type.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
@@ -60,6 +61,30 @@ List<SettingsModel> get videoSettings => [
           );
           if (res != null) {
             await GStorage.setting.put(SettingBoxKey.defaultAudioQa, res);
+            setState();
+          }
+        },
+      ),
+      NormalModel(
+        title: '音频响度均衡',
+        leading: const Icon(Icons.equalizer_outlined),
+        getSubtitle: () =>
+            '当前配置：${AudioNormalization.getTitleFromConfig(Pref.audioNormalization)}',
+        onTap: (context, setState) async {
+          final res = await showDialog<String>(
+            context: context,
+            builder: (context) => SelectDialog<String>(
+              title: '音频响度均衡',
+              value: Pref.audioNormalization,
+              values: const [
+                ('0', '禁用'),
+                ('2', '智能响度均衡 (loudnorm) - 推荐'),
+                ('1', '动态压缩 (dynaudnorm)'),
+              ],
+            ),
+          );
+          if (res != null) {
+            Pref.audioNormalization = res;
             setState();
           }
         },

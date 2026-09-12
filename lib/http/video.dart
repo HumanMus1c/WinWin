@@ -4,7 +4,9 @@ import 'package:dio/dio.dart';
 
 import 'package:winwin/common/constants.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/models/common/account_type.dart';
+import 'package:winwin/models/common/video_type.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/browser_ua.dart';
@@ -197,11 +199,13 @@ abstract final class VideoHttp {
     int? avid,
     required int cid,
     int qn = 80,
+    bool? voiceBalance,
   }) async {
     // 风控规避参数（对齐 PiliPlus）：缺少 dm_img_* / gaia 参数时，
     // playurl 会被风控拦截或降级，表现为无法切换到 480P 以上画质。
     final dmImgStr = Utils.base64EncodeRandomString(16, 64);
     final dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
+    final isVoiceBalance = voiceBalance ?? Pref.enableAudioNormalize;
     final params = await WbiSign.makSign({
       'avid': ?avid,
       'bvid': ?bvid,
@@ -211,7 +215,7 @@ abstract final class VideoHttp {
       'fnval': 4048,
       'fourk': 1,
       'fnver': 0,
-      'voice_balance': 0,
+      'voice_balance': isVoiceBalance ? 1 : 0,
       'gaia_source': 'pre-load',
       'isGaiaAvoided': true,
       'web_location': 1315873,
@@ -438,37 +442,47 @@ abstract final class VideoHttp {
 
   /// 播放心跳上报（`/x/click-interface/web/heartbeat`）。
   ///
-  /// 用于向 B 站上报播放进度，支持多端历史记录同步。
-  /// [aid] 稿件 avid，[cid] 分 P cid，[playType] 播放类型：
-  ///   0=开始播放/心跳，1=暂停，2=继续，3=结束
-  /// [progressSec] 当前播放位置（秒），经 `played_time`/`real_time`
-  /// 字段下发（参照 PiliPlus heartBeat，服务端仅识别 played_time）。
-  /// 未登录时不调用。
-  static Future<LoadingState> heartBeat({
-    required int aid,
+  /// 播放心跳上报（`/x/click-interface/web/heartbeat`）。
+  ///
+  /// 用于向 B 站上报播放进度，支持 UGC/PGC 多端历史记录即时同步。
+  /// [aid] 稿件 avid，[bvid] 稿件 bvid，[cid] 分 P cid，[epId] 番剧单集 id，[seasonId] 番剧季度 id，
+  /// [subType] PGC 类型代码（如 1=番剧），[playType] 播放类型：0=播放中/心跳，1=暂停，2=继续，3=结束。
+  /// [progressSec] 当前播放位置（秒），-1 表示已播完。
+  /// [videoType] 视频类型（默认 UGC，番剧为 PGC）。
+  static Future<LoadingState<void>> heartBeat({
+    int? aid,
+    String? bvid,
     required int cid,
     int playType = 0,
     int? progressSec,
+    int? epId,
+    int? seasonId,
+    int? subType,
+    VideoType videoType = VideoType.ugc,
   }) async {
-    final account = Accounts.main;
+    final account = Accounts.history;
     if (!account.isLogin) return const Error('未登录');
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final isPugv = videoType == VideoType.pugv;
     final res = await Request().post(
       Api.heartBeat,
       data: {
-        'aid': aid,
+        if (isPugv) 'aid': ?aid else 'bvid': ?bvid,
+        if (!isPugv && aid != null && aid > 0) 'aid': aid,
         'cid': cid,
-        'part': 1,
-        'did': LoginHttp.buvid,
-        's_locale': 'zh-CN',
-        'csrf': account.csrf,
+        if (epId != null && epId > 0) 'epid': epId,
+        if (seasonId != null && seasonId > 0) 'sid': seasonId,
+        if (subType != null && subType > 0) 'sub_type': subType,
+        'type': videoType.type,
         if (progressSec != null) ...{
           'played_time': progressSec,
-          'real_time': progressSec,
+          'real_time': progressSec < 0 ? 0 : progressSec,
         },
         'start_ts': now,
         'play_type': playType,
-        'type': 3,
+        'did': LoginHttp.buvid,
+        's_locale': 'zh-CN',
+        'csrf': account.csrf,
       },
       options: Options(
         contentType: Headers.formUrlEncodedContentType,

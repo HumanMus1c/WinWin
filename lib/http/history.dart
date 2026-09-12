@@ -4,6 +4,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/models/common/video_type.dart';
 import 'package:winwin/models/history/history_models.dart';
 
 /// 历史记录 HTTP（移植自 PiliPlus `lib/http/user.dart` 的 history 部分）。
@@ -103,19 +104,23 @@ abstract final class HistoryHttp {
     required int progress,
     int? epid,
     int? seasonId,
+    int? subType,
+    VideoType videoType = VideoType.ugc,
   }) async {
     try {
+      final isPugv = videoType == VideoType.pugv;
       await Request().post<dynamic>(
         Api.heartBeat,
         data: {
-          'aid': ?aid,
-          'bvid': ?bvid,
+          if (isPugv) 'aid': ?aid else 'bvid': ?bvid,
+          if (!isPugv && aid != null && aid > 0) 'aid': aid,
           'cid': cid,
           'epid': ?epid,
           'sid': ?seasonId,
-          'type': 3,
+          if (subType != null && subType > 0) 'sub_type': subType,
+          'type': videoType.type,
           'played_time': progress,
-          'csrf': Accounts.heartbeat.csrf,
+          'csrf': Accounts.history.csrf,
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );

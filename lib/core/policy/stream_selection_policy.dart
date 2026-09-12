@@ -190,7 +190,14 @@ class StreamSelectionPolicy {
     List<DashAudio>? dolbyAudios,
     bool preferSpecialAudio = false,
   }) {
-    // 杜比全景声优先（用户偏好且存在）。
+    // Hi-Res 无损（id 30251）优先（高保真立体声母带）。
+    if (preferSpecialAudio && audios != null && audios.isNotEmpty) {
+      for (final a in audios) {
+        if (a.id == 30251 && (a.baseUrl?.isNotEmpty ?? false)) return a;
+      }
+    }
+
+    // 杜比全景声（多声道下混容易衰减对白音量，仅在显式偏好时选取）。
     if (preferSpecialAudio &&
         dolbyAudios != null &&
         dolbyAudios.isNotEmpty) {
@@ -201,14 +208,7 @@ class StreamSelectionPolicy {
 
     if (audios == null || audios.isEmpty) return null;
 
-    // Hi-Res 无损（id 30251）次优先。
-    if (preferSpecialAudio) {
-      for (final a in audios) {
-        if (a.id == 30251 && (a.baseUrl?.isNotEmpty ?? false)) return a;
-      }
-    }
-
-    // 普通：bandwidth 最高的音轨。
+    // 普通：bandwidth 最高的立体声音轨（如 30280=192K）。
     return audios.reduce(
       (a, b) => (b.bandwidth ?? 0) > (a.bandwidth ?? 0) ? b : a,
     );

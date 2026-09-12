@@ -228,13 +228,17 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     }
 
     final oldCtrl = playerController;
-    oldCtrl?.dispose();
+    if (oldCtrl != null) {
+      unawaited(oldCtrl.reportCurrentProgress());
+      oldCtrl.dispose();
+    }
 
     final ctrl = WinWinPlayerController(
       bvid: bvid,
       cid: cid,
       epId: ep.id,
       seasonId: widget.detail.seasonId,
+      seasonType: widget.detail.seasonType,
     );
     ctrl.aid = ep.aid;
     playerController = ctrl;
@@ -650,9 +654,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         final d = ctrl.duration.value;
         ctrl.seek(p > d ? d : p);
       case LogicalKeyboardKey.arrowUp:
-        ctrl.setVolume((ctrl.volume.value + 5).clamp(0, 100));
+        ctrl.setVolume(ctrl.volume.value + 5);
       case LogicalKeyboardKey.arrowDown:
-        ctrl.setVolume((ctrl.volume.value - 5).clamp(0, 100));
+        ctrl.setVolume(ctrl.volume.value - 5);
       case LogicalKeyboardKey.keyF:
         _toggleFullscreen();
       case LogicalKeyboardKey.keyW:
