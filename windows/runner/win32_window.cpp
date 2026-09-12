@@ -15,12 +15,6 @@ namespace {
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
-#ifndef DWMWA_CAPTION_COLOR
-#define DWMWA_CAPTION_COLOR 35
-#endif
-#ifndef DWMWA_TEXT_COLOR
-#define DWMWA_TEXT_COLOR 36
-#endif
 
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 
@@ -141,7 +135,7 @@ bool Win32Window::Create(const std::wstring& title,
   double scale_factor = dpi / 96.0;
 
   HWND window = CreateWindow(
-      window_class, title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+      window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
       Scale(size.width, scale_factor), Scale(size.height, scale_factor),
       nullptr, nullptr, GetModuleHandle(nullptr), this);
@@ -185,6 +179,12 @@ Win32Window::MessageHandler(HWND hwnd,
                             WPARAM const wparam,
                             LPARAM const lparam) noexcept {
   switch (message) {
+    case WM_SYSCOMMAND:
+      if (wparam == SC_KEYMENU && (lparam >> 16) <= 0) {
+        return 0;
+      }
+      break;
+
     case WM_DESTROY:
       window_handle_ = nullptr;
       Destroy();
@@ -218,17 +218,6 @@ Win32Window::MessageHandler(HWND hwnd,
         SetFocus(child_content_);
       }
       return 0;
-
-    case WM_PAINT: {
-      PAINTSTRUCT ps;
-      BeginPaint(hwnd, &ps);
-      EndPaint(hwnd, &ps);
-      return 0;
-    }
-
-    case WM_ERASEBKGND:
-      // 阻止 GDI 擦除背景，避免硬件渲染表面（DirectComposition/Impeller）在调整大小时出现白屏闪烁
-      return 1;
 
     case WM_NCCALCSIZE: {
       if (is_fullscreen_) {
@@ -291,7 +280,6 @@ void Win32Window::SetChildContent(HWND content) {
   MoveWindow(content, frame.left, frame.top, frame.right - frame.left,
              frame.bottom - frame.top, true);
 
-  ShowWindow(content, SW_SHOW);
   SetFocus(child_content_);
 }
 
@@ -318,41 +306,32 @@ void Win32Window::OnDestroy() {
   // No-op; provided for subclasses.
 }
 
-void Win32Window::SetTitleBarColor(HWND const window, COLORREF caption_color,
-                                   COLORREF text_color, bool is_dark) {
+void Win32Window::SetTitleBarColor(HWND const window, bool is_dark) {
   if (window == nullptr) {
     return;
   }
   BOOL enable_dark_mode = is_dark ? TRUE : FALSE;
   DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE,
                         &enable_dark_mode, sizeof(enable_dark_mode));
-  DwmSetWindowAttribute(window, DWMWA_CAPTION_COLOR, &caption_color,
-                        sizeof(caption_color));
-  DwmSetWindowAttribute(window, DWMWA_TEXT_COLOR, &text_color,
-                        sizeof(text_color));
 }
 
-void Win32Window::SetTitleBarColor(COLORREF caption_color, COLORREF text_color,
-                                   bool is_dark) {
-  SetTitleBarColor(window_handle_, caption_color, text_color, is_dark);
+void Win32Window::SetTitleBarColor(bool is_dark) {
+  SetTitleBarColor(window_handle_, is_dark);
 }
 
 void Win32Window::UpdateTheme(HWND const window) {
-  DWORD light_mode = 1;
+  DWORD light_mode;
   DWORD light_mode_size = sizeof(light_mode);
-  RegGetValue(HKEY_CURRENT_USER, kGetPreferredBrightnessRegKey,
-              kGetPreferredBrightnessRegValue, RRF_RT_REG_DWORD, nullptr,
-              &light_mode, &light_mode_size);
+  LSTATUS result = RegGetValue(HKEY_CURRENT_USER, kGetPreferredBrightnessRegKey,
+                               kGetPreferredBrightnessRegValue,
+                               RRF_RT_REG_DWORD, nullptr, &light_mode,
+                               &light_mode_size);
 
-  bool is_dark = (light_mode == 0);
-  // Default WinWin background colors:
-  // Light: #F1F2F5 (RGB: 241, 242, 245), text: #18191C
-  // Dark:  #18191C (RGB: 24, 25, 28),   text: #E8E8E8
-  COLORREF caption_color =
-      is_dark ? RGB(0x18, 0x19, 0x1C) : RGB(0xF1, 0xF2, 0xF5);
-  COLORREF text_color =
-      is_dark ? RGB(0xE8, 0xE8, 0xE8) : RGB(0x18, 0x19, 0x1C);
-  SetTitleBarColor(window, caption_color, text_color, is_dark);
+  if (result == ERROR_SUCCESS) {
+    BOOL enable_dark_mode = light_mode == 0;
+    DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE,
+                          &enable_dark_mode, sizeof(enable_dark_mode));
+  }
 }
 
 void Win32Window::SetFullScreen(bool fullscreen) {
