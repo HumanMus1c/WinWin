@@ -67,6 +67,7 @@ class WinWinDanmakuController {
   static int calcSegment(int progress) => progress ~/ segmentLength;
 
   bool _disposed = false;
+  bool get isDisposed => _disposed;
 
   /// 更新过滤规则（屏蔽页修改后调用）。
   void setFilters(RuleFilter filters) {

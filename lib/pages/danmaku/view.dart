@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -41,21 +39,25 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
   /// 最近一次已上屏的本地回显，防止重复 add。
   DanmakuContentItem<DanmakuElem>? _lastLocal;
 
+  /// 当前 State 绑定的渲染引擎实例。
+  DanmakuController<DanmakuElem>? _engine;
+
+  /// 当前绑定的弹幕数据控制器缓存。
+  WinWinDanmakuController? _dm;
+
   @override
   void initState() {
     super.initState();
-    _initDanmaku();
-    widget.controller.danmakuReloadSignal.addListener(_onReload);
+    _bindController();
   }
 
-  /// 创建弹幕数据控制器并挂载监听。
-  /// 提取为独立方法供 initState 和 _onReload（路由返回重建）复用。
-  void _initDanmaku() {
+  /// 绑定数据控制器与播放器信号监听。
+  void _bindController() {
     final c = widget.controller;
-    final dm = WinWinDanmakuController(cid: c.cid);
-    c.danmaku = dm;
-    unawaited(dm.preload());
+    final dm = c.getOrCreateDanmaku();
+    _dm = dm;
 
+    c.danmakuReloadSignal.addListener(_onReload);
     c.position.addListener(_onPosition);
     c.playing.addListener(_onPlayingOrBuffering);
     c.buffering.addListener(_onPlayingOrBuffering);
@@ -67,55 +69,59 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     _onPlayingOrBuffering();
   }
 
-  /// didPopNext 返回本页时重建弹幕：dispose 旧 dm（清空缓存重新拉取）+
-  /// clear 引擎 + 重置去重标记。等效于 PiliPlus 重建 PlDanmaku，但不需要
-  /// 销毁 DanmakuScreen（避免引擎闪烁）。
-  void _onReload() {
+  /// 解除播放器信号与数据控制器的监听。
+  void _unbindController() {
     final c = widget.controller;
-    // 移除旧 dm 的监听并 dispose。
-    c.position.removeListener(_onPosition);
-    c.playing.removeListener(_onPlayingOrBuffering);
-    c.buffering.removeListener(_onPlayingOrBuffering);
-    c.seekCount.removeListener(_onSeek);
-    c.danmaku?.localEcho.removeListener(_onLocalEcho);
-    c.danmaku?.danmakuLoadedSignal.removeListener(_onDanmakuLoaded);
-    c.danmaku?.dispose();
-    // 清空引擎画面上的残留弹幕，重置去重标记。
-    c.danmakuEngine?.clear();
-    _lastProgressMs = -1;
-    _lastLocal = null;
-    // 重建 dm 并重新挂载监听。
-    _initDanmaku();
-  }
-
-  @override
-  void didUpdateWidget(WinWinDanmaku oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.fullscreen != widget.fullscreen) {
-      widget.controller.danmakuEngine?.updateOption(
-        DanmakuOptions.get(
-          fullscreen: widget.fullscreen,
-          speed: widget.controller.playbackSpeed.value,
-        ),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    final c = widget.controller;
-    // 总是移除监听器，即使 controller 已销毁
-    // 因为 ValueNotifier 仍然存在，只是不再变化
     c.danmakuReloadSignal.removeListener(_onReload);
     c.position.removeListener(_onPosition);
     c.playing.removeListener(_onPlayingOrBuffering);
     c.buffering.removeListener(_onPlayingOrBuffering);
     c.seekCount.removeListener(_onSeek);
-    c.danmaku?.localEcho.removeListener(_onLocalEcho);
-    c.danmaku?.danmakuLoadedSignal.removeListener(_onDanmakuLoaded);
-    c.danmaku?.dispose();
-    c.danmaku = null;
-    c.danmakuEngine = null;
+    _dm?.localEcho.removeListener(_onLocalEcho);
+    _dm?.danmakuLoadedSignal.removeListener(_onDanmakuLoaded);
+    _dm = null;
+  }
+
+  /// didPopNext 返回本页时重建弹幕：清空引擎画面与去重标记，重新对齐。
+  void _onReload() {
+    _unbindController();
+    _engine?.clear();
+    widget.controller.danmakuEngine?.clear();
+    _lastProgressMs = -1;
+    _lastLocal = null;
+    _bindController();
+  }
+
+  @override
+  void didUpdateWidget(WinWinDanmaku oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      _unbindController();
+      _lastProgressMs = -1;
+      _lastLocal = null;
+      _bindController();
+    }
+    if (oldWidget.fullscreen != widget.fullscreen) {
+      final opt = DanmakuOptions.get(
+        fullscreen: widget.fullscreen,
+        speed: widget.controller.playbackSpeed.value,
+      );
+      _engine?.updateOption(opt);
+      widget.controller.danmakuEngine?.updateOption(opt);
+    }
+  }
+
+  @override
+  void dispose() {
+    _unbindController();
+    // 仅当当前全局挂载的 engine 仍是本 State 创建的 engine 时才解挂，
+    // 避免新 State 已经挂载了新 engine 后被旧 State 的 dispose 覆盖置空！
+    if (identical(widget.controller.danmakuEngine, _engine)) {
+      widget.controller.danmakuEngine = null;
+    }
+    _engine = null;
+    // 严禁在此处调用 c.danmaku?.dispose() 或置空 c.danmaku！
+    // 弹幕数据控制器的生命周期完全属于 WinWinPlayerController（cid 会话维度）。
     super.dispose();
   }
 
@@ -124,8 +130,8 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
   /// 进度推进：按时间区间跨步提取应上屏的弹幕逐条交给引擎。
   void _onPosition() {
     final c = widget.controller;
-    final dm = c.danmaku;
-    final engine = c.danmakuEngine;
+    final dm = _dm ?? c.danmaku;
+    final engine = _engine ?? c.danmakuEngine;
     if (dm == null || engine == null || dm.danmakuClosed) return;
     final ms = c.position.value.inMilliseconds;
     if (_lastProgressMs < 0 || (ms - _lastProgressMs).abs() > 1500) {
@@ -140,19 +146,22 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
 
   /// 自己发送的弹幕：本地回显立即上屏。
   void _onLocalEcho() {
-    final item = widget.controller.danmaku?.localEcho.value;
+    final dm = _dm ?? widget.controller.danmaku;
+    final engine = _engine ?? widget.controller.danmakuEngine;
+    final item = dm?.localEcho.value;
     if (item == null || identical(item, _lastLocal)) return;
     _lastLocal = item;
-    widget.controller.danmakuEngine?.addDanmaku(item);
+    engine?.addDanmaku(item);
   }
 
   /// 播放/暂停与缓冲状态联动引擎动画：缓冲中或暂停时冻结，正常播放时恢复。
   void _onPlayingOrBuffering() {
     final c = widget.controller;
+    final engine = _engine ?? c.danmakuEngine;
     if (c.playing.value && !c.buffering.value) {
-      c.danmakuEngine?.resume();
+      engine?.resume();
     } else {
-      c.danmakuEngine?.pause();
+      engine?.pause();
     }
   }
 
@@ -165,6 +174,7 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
   void _onSeek() {
     _lastProgressMs = -1;
     _lastLocal = null;
+    _engine?.clear();
     widget.controller.danmakuEngine?.clear();
   }
 
@@ -195,6 +205,7 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
                   );
                   return DanmakuScreen<DanmakuElem>(
                     createdController: (engine) {
+                      _engine = engine;
                       c.danmakuEngine = engine;
                       _onPlayingOrBuffering();
                     },

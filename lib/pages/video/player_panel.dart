@@ -362,6 +362,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   // 弹幕层（IgnorePointer，不拦截鼠标/点击）。
                   Positioned.fill(
                     child: WinWinDanmaku(
+                      key: ValueKey('danmaku_${c.cid}'),
                       controller: c,
                       fullscreen: widget.fullscreen,
                     ),

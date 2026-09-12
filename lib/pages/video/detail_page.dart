@@ -167,6 +167,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     _rightTabCtrl.dispose();
     // 退出时如果处于 PiP 模式，恢复窗口。
     DesktopPipController.instance.exitPip();
+    if (_fullscreen) {
+      windowManager.setFullScreen(false);
+    }
     SyncTrace.log('DetailPage', 'dispose before playerController.dispose');
     playerController?.dispose();
     SyncTrace.log('DetailPage', 'dispose after playerController.dispose');
@@ -243,6 +246,20 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     final ctrl = playerController;
     if (ctrl == null || !ctrl.playing.value) return;
     DesktopPipController.instance.enterPip();
+  }
+
+  @override
+  void onWindowEnterFullScreen() {
+    if (mounted && !_fullscreen) {
+      setState(() => _fullscreen = true);
+    }
+  }
+
+  @override
+  void onWindowLeaveFullScreen() {
+    if (mounted && _fullscreen) {
+      setState(() => _fullscreen = false);
+    }
   }
 
   // ─────────────────────────── 数据加载 ───────────────────────────
@@ -737,9 +754,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     );
   }
 
-  void _toggleFullscreen() {
+  Future<void> _toggleFullscreen() async {
     if (playerController == null) return;
-    setState(() => _fullscreen = !_fullscreen);
+    final next = !_fullscreen;
+    setState(() => _fullscreen = next);
+    await windowManager.setFullScreen(next);
   }
 
   /// Esc 键固定语义：返回上一级。
@@ -748,6 +767,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     SyncTrace.log('DetailPage', 'escape pressed, fullscreen=$_fullscreen');
     if (_fullscreen) {
       setState(() => _fullscreen = false);
+      windowManager.setFullScreen(false);
     } else {
       playerController?.pause();
       playerController?.detachListeners();

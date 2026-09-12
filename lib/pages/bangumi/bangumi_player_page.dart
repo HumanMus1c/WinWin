@@ -167,6 +167,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     _wideTabCtrl.dispose();
     _narrowTabCtrl.dispose();
     DesktopPipController.instance.exitPip();
+    if (_fullscreen) {
+      windowManager.setFullScreen(false);
+    }
     playerController?.dispose();
     _scrollController.dispose();
     _commentCtrl.dispose();

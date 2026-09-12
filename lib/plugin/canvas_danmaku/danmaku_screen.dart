@@ -79,7 +79,7 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
     }
     DmUtils.updateSelfSendPaint(_option.strokeWidth);
 
-    _danmakuHeight = _textPainter.height;
+    _danmakuHeight = max(1.0, _textPainter.height);
 
     _ticker = createTicker(_tick);
     _notifier = ValueNotifier(0);
@@ -322,7 +322,7 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
     final lineHeightChanged = option.lineHeight != _option.lineHeight;
     if (lineHeightChanged) {
       _option = option;
-      _danmakuHeight = _textPainter.height;
+      _danmakuHeight = max(1.0, _textPainter.height);
       _calcTracks();
       return;
     }
@@ -386,7 +386,7 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
     final safeAreaChanged = option.safeArea != _option.safeArea;
     _option = option;
     if (fontSizeChanged) {
-      _danmakuHeight = _textPainter.height;
+      _danmakuHeight = max(1.0, _textPainter.height);
     }
     if (fontSizeChanged || areaChanged || safeAreaChanged) {
       _calcTracks();
@@ -474,12 +474,16 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
   }
 
   void _calcTracks() {
+    if (_danmakuHeight <= 0) return;
     final area = _viewHeight * _option.area;
     int newTrackCount = area ~/ _danmakuHeight;
 
     /// 为字幕留出余量
     if (_option.safeArea && _option.area == 1.0) {
       newTrackCount--;
+    }
+    if (newTrackCount < 0) {
+      newTrackCount = 0;
     }
     if (newTrackCount != _trackCount) {
       // 丢弃超出屏幕范围的弹幕
@@ -494,6 +498,9 @@ class _DanmakuScreenState<T> extends State<DanmakuScreen<T>>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.size != widget.size) {
       _init(widget.size);
+    }
+    if (oldWidget.option != widget.option) {
+      _updateOption(widget.option);
     }
   }
 
@@ -700,6 +707,7 @@ extension<E> on List<E> {
 extension<T> on List<List<T>> {
   @pragma("vm:prefer-inline")
   void changeLength(int length) {
+    if (length < 0) length = 0;
     if (length > this.length) {
       addAll(Iterable.generate(length - this.length, (_) => <T>[]));
     } else {

@@ -50,6 +50,7 @@ class WinWinPlayerController {
   }) {
     _playerCount++;
     _sharedPlayer ??= _createPlayer();
+    initDanmaku();
     attachListeners(); // 内部启动轮询（_startPolling）
   }
 
@@ -114,8 +115,26 @@ class WinWinPlayerController {
   /// 可选倍速列表（来自 Pref.speedList）。
   List<double> get speedList => Pref.speedList;
 
-  /// 弹幕数据控制器，由弹幕视图（WinWinDanmaku）创建并挂载。
+  /// 弹幕数据控制器，生命周期绑定当前 cid 会话。
   WinWinDanmakuController? danmaku;
+
+  /// 初始化或获取弹幕数据控制器（若已存在且未释放则直接返回，否则重新创建并预载）。
+  WinWinDanmakuController getOrCreateDanmaku() {
+    final dm = danmaku;
+    if (dm != null && !dm.isDisposed) {
+      return dm;
+    }
+    return initDanmaku();
+  }
+
+  /// 强制重新初始化弹幕数据控制器并异步预加载。
+  WinWinDanmakuController initDanmaku() {
+    danmaku?.dispose();
+    final dm = WinWinDanmakuController(cid: cid);
+    danmaku = dm;
+    unawaited(dm.preload());
+    return dm;
+  }
 
   /// 弹幕渲染引擎控制器，由 DanmakuScreen 的 createdController 回调赋值。
   DanmakuController<DanmakuElem>? danmakuEngine;
@@ -1152,7 +1171,11 @@ class WinWinPlayerController {
   }
 
   /// 触发弹幕重建（didPopNext 返回本页时调用）。
-  void reloadDanmaku() => danmakuReloadSignal.value++;
+  void reloadDanmaku() {
+    initDanmaku();
+    danmakuEngine?.clear();
+    danmakuReloadSignal.value++;
+  }
 
   /// Phase 4.4：设置可用字幕列表（来自 playInfo 接口）。
   /// 自动根据 AI 偏好选择默认字幕并加载。
