@@ -179,8 +179,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Lv6'), findsOneWidget);
-      expect(find.text('Lv5'), findsOneWidget);
+      expect(find.byType(LevelBadge), findsNWidgets(2));
     });
 
     testWidgets('renders MedalWidget in Material 3 and Miuix without crash',

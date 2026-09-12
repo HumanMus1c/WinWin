@@ -405,14 +405,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
             onPressed: () {
               final val = int.tryParse(ctrl.text.trim());
               if (val != null && val >= 1) {
-                // 优先寻找集数匹配的正片（非预告），未找到时降级查找
                 BangumiEpisode? targetEp = episodes.cast<BangumiEpisode?>().firstWhere(
-                      (e) =>
-                          e?.title.trim() == val.toString() &&
-                          e?.badge != '预告',
-                      orElse: () => null,
-                    );
-                targetEp ??= episodes.cast<BangumiEpisode?>().firstWhere(
                       (e) => e?.title.trim() == val.toString(),
                       orElse: () => null,
                     );
@@ -1360,12 +1353,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     );
   }
 
-  /// 衍生内容分区（花絮、PV、特典等，横向虚拟化加载，共享全局正倒序状态）
+  /// 衍生内容分区（花絮、PV、预告、特典等，横向虚拟化加载，共享全局正倒序状态）
   Widget _buildExtraSections(BangumiDetail detail, ColorScheme cs) {
-    // 过滤掉已融入主选集列表的独立预告板块
-    final visibleSections = detail.sections
-        .where((sec) => sec.title.trim() != '预告' && sec.title.trim() != '预告片')
-        .toList();
+    final visibleSections = detail.sections;
 
     if (visibleSections.isEmpty) return const SizedBox.shrink();
 
