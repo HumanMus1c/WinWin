@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -238,6 +239,64 @@ abstract final class LiveHttp {
       return Error('获取直播弹幕Token失败：$e');
     }
   }
+
+  /// 发送直播间实时弹幕（`Api.sendLiveMsg`）。
+  ///
+  /// 移植自 PiliPlus `LiveHttp.sendLiveMsg`。需要登录态（[Accounts.main.isLogin]）与 csrf。
+  static Future<LoadingState<void>> sendLiveMsg({
+    required int roomId,
+    required String msg,
+    int? dmType,
+    Object? emoticonOptions,
+    int replyMid = 0,
+    String replayDmid = '',
+  }) async {
+    final csrf = Accounts.main.csrf;
+    if (!Accounts.main.isLogin || csrf.isEmpty) {
+      return const Error('请先登录后再发送弹幕');
+    }
+    try {
+      final res = await Request().post<dynamic>(
+        Api.sendLiveMsg,
+        queryParameters: await WbiSign.makSign({
+          'web_location': 444.8,
+        }),
+        data: FormData.fromMap({
+          'bubble': 0,
+          'msg': msg,
+          'color': 16777215,
+          'mode': 1,
+          'dm_type': ?dmType,
+          if (emoticonOptions != null)
+            'emoticonOptions': emoticonOptions
+          else ...{
+            'room_type': 0,
+            'jumpfrom': 0,
+            'reply_mid': replyMid,
+            'reply_attr': 0,
+            'replay_dmid': replayDmid,
+            'statistics': '{"appId":100,"platform":5}',
+            'reply_type': 0,
+            'reply_uname': '',
+          },
+          'fontsize': 25,
+          'rnd': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'roomid': roomId,
+          'csrf': csrf,
+          'csrf_token': csrf,
+        }),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0) {
+        return const Success(null);
+      }
+      return Error(data['message']?.toString() ?? '发送弹幕失败');
+    } on DioException catch (e) {
+      return Error('发送弹幕网络错误：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('发送弹幕失败：$e');
+    }
+  }
 }
 
 /// 直播弹幕认证 Token 及服务器集群数据。
@@ -329,6 +388,72 @@ class LivePlayUrlData {
     return urls;
   }
 
+  /// 获取所有可用画质代码列表（降序去重）
+  List<int> get availableQnList {
+    final set = <int>{};
+    for (final s in streams) {
+      for (final f in s.formats) {
+        for (final c in f.codecs) {
+          set.addAll(c.acceptQn);
+          if (c.currentQn != null) set.add(c.currentQn!);
+        }
+      }
+    }
+    final list = set.toList()..sort((a, b) => b.compareTo(a));
+    return list;
+  }
+
+  /// 获取当前默认流的画质代码
+  int? get currentQn {
+    for (final s in streams) {
+      for (final f in s.formats) {
+        for (final c in f.codecs) {
+          if (c.currentQn != null) return c.currentQn;
+        }
+      }
+    }
+    return null;
+  }
+
+  /// 获取结构化候选推流线路列表
+  List<LiveStreamLine> get streamLines {
+    final list = <LiveStreamLine>[];
+    int flvIndex = 1;
+    int hlsIndex = 1;
+    for (final s in streams) {
+      final isFlv = s.protocolName == 'http_stream';
+      for (final f in s.formats) {
+        final fName = f.formatName ?? '';
+        for (final c in f.codecs) {
+          final cName = c.codecName ?? '';
+          if (c.baseUrl != null && c.urlInfo.isNotEmpty) {
+            for (int i = 0; i < c.urlInfo.length; i++) {
+              final u = c.urlInfo[i];
+              final host = u.host ?? '';
+              final extra = u.extra ?? '';
+              final full = '$host${c.baseUrl}$extra';
+              if (full.isEmpty) continue;
+              final String title;
+              if (isFlv) {
+                title = 'FLV 线路 ${flvIndex++}${cName.isNotEmpty ? ' ($cName)' : ''}';
+              } else {
+                title = 'HLS 线路 ${hlsIndex++} ($fName${cName.isNotEmpty ? ', $cName' : ''})';
+              }
+              list.add(LiveStreamLine(
+                title: title,
+                url: full,
+                protocol: s.protocolName ?? '',
+                format: fName,
+                codec: cName,
+              ));
+            }
+          }
+        }
+      }
+    }
+    return list;
+  }
+
   /// 提取最优播放地址（优先 FLV，其次 HLS）。
   String? get bestPlayUrl {
     if (streams.isEmpty) return null;
@@ -371,6 +496,54 @@ class LivePlayUrlData {
       streams: streams,
     );
   }
+}
+
+/// 直播清晰度等级枚举（对齐官方清晰度与 PiliPlus）。
+enum LiveQuality {
+  dolby(30000, '杜比'),
+  origin4K(25000, '4K 原画'),
+  super4K(20000, '4K'),
+  super2K(15000, '2K'),
+  origin(10000, '原画'),
+  bluRay(400, '蓝光'),
+  superHD(250, '超清'),
+  smooth(150, '高清'),
+  flunt(80, '流畅'),
+  ;
+
+  final int code;
+  final String desc;
+  const LiveQuality(this.code, this.desc);
+
+  static LiveQuality? fromCode(int? code) {
+    for (final e in LiveQuality.values) {
+      if (e.code == code) {
+        return e;
+      }
+    }
+    return null;
+  }
+
+  static String descFromCode(int? code) {
+    return fromCode(code)?.desc ?? (code != null ? '${code}P' : '自动');
+  }
+}
+
+/// 直播推流线路数据模型。
+class LiveStreamLine {
+  final String title;
+  final String url;
+  final String protocol;
+  final String format;
+  final String codec;
+
+  LiveStreamLine({
+    required this.title,
+    required this.url,
+    this.protocol = '',
+    this.format = '',
+    this.codec = '',
+  });
 }
 
 class LiveStreamItem {
@@ -672,6 +845,7 @@ class LiveRoomInfo {
   final int? uid;
   final String? title;
   final String? cover;
+  final String? appBackground;
   final String? uname;
   final String? face;
   final String? areaName;
@@ -686,6 +860,7 @@ class LiveRoomInfo {
     this.uid,
     this.title,
     this.cover,
+    this.appBackground,
     this.uname,
     this.face,
     this.areaName,
@@ -711,19 +886,26 @@ class LiveRoomInfo {
     final face = _http2https(baseInfo['face']?.toString() ?? roomInfo['face']?.toString());
     final online = _asInt(watchedShow['num'] ?? roomInfo['online']);
 
+    final rawAppBg = roomInfo['app_background']?.toString();
+    final rawBg = roomInfo['background']?.toString();
+    final effectiveAppBg = (rawAppBg != null && rawAppBg.isNotEmpty)
+        ? rawAppBg
+        : (rawBg != null && rawBg.isNotEmpty ? rawBg : null);
+
     return LiveRoomInfo(
       roomId: _asInt(roomInfo['room_id'] ?? json['room_id']),
       shortId: _asInt(roomInfo['short_id'] ?? json['short_id']),
       uid: _asInt(roomInfo['uid'] ?? json['uid']),
       title: roomInfo['title']?.toString(),
       cover: _http2https(roomInfo['cover']?.toString()),
+      appBackground: _http2https(effectiveAppBg),
       uname: uname,
       face: face,
       areaName: roomInfo['area_name']?.toString() ??
           roomInfo['parent_area_name']?.toString() ??
           roomInfo['area_v2_name']?.toString(),
       liveStatus: _asInt(roomInfo['live_status']),
-      liveStartTime: _asInt(roomInfo['live_start_time']),
+      liveStartTime: _asInt(roomInfo['live_start_time'] ?? roomInfo['live_time']),
       online: online,
       watchedShowText: watchedShow['text_large']?.toString() ??
           watchedShow['text_small']?.toString(),

@@ -346,6 +346,35 @@ void main() {
       expect(allUrls[0], 'https://flv1.bilivideo.com/live/stream_flv.flv?token=1');
       expect(allUrls[1], 'https://flv2.bilivideo.com/live/stream_flv.flv?token=2');
       expect(allUrls[2], 'https://hls1.bilivideo.com/live/stream_hls.m3u8?token=3');
+
+      // Test streamLines and quality
+      expect(playData.streamLines.length, 3);
+      expect(playData.streamLines[0].title, contains('FLV 线路 1'));
+      expect(playData.streamLines[2].title, contains('HLS 线路 1'));
+    });
+
+    test('LiveQuality and LiveRoomInfo app_background parse correctly', () {
+      expect(LiveQuality.descFromCode(10000), '原画');
+      expect(LiveQuality.descFromCode(400), '蓝光');
+      expect(LiveQuality.descFromCode(250), '超清');
+      expect(LiveQuality.descFromCode(150), '高清');
+      expect(LiveQuality.descFromCode(80), '流畅');
+      expect(LiveQuality.descFromCode(null), '自动');
+
+      final h5Json = {
+        'room_info': {
+          'room_id': 7734200,
+          'title': '2026 LPL',
+          'cover': 'http://i0.hdslb.com/cover.jpg',
+          'app_background': 'http://i0.hdslb.com/bg.jpg',
+          'live_start_time': 1788762159,
+          'live_status': 1,
+        }
+      };
+      final info = LiveRoomInfo.fromJson(h5Json);
+      expect(info.appBackground, 'https://i0.hdslb.com/bg.jpg');
+      expect(info.liveStartTime, 1788762159);
+      expect(info.isLiving, isTrue);
     });
   });
 }
