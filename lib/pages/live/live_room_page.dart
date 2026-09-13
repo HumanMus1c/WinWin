@@ -13,6 +13,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/tcp/live.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 
 /// 桌面原生直播间播放页面。
 ///
@@ -47,6 +48,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   LiveRoomInfo? _roomInfo;
   late int _realRoomId;
+  int _liveStatus = 0; // 0=未开播/已下播, 1=直播中, 2=轮播中
 
   bool _loading = true;
   String? _errorMessage;
@@ -106,36 +108,50 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
     await ensureBootstrap();
 
-    // 1. 直播间初始化：转换短号为长号，获取官方真实开播状态
-    final initRes = await LiveHttp.roomInit(roomId: widget.roomId);
+    final targetRoomId = widget.roomId;
+
+    // 1. 并发启动：短号转长号/开播状态、H5 详细信息、云端历史互动弹幕
+    final initFuture = LiveHttp.roomInit(roomId: targetRoomId);
+    final infoFuture = LiveHttp.roomInfo(roomId: targetRoomId);
+    final dmFuture = _prefetchDanmaku(targetRoomId);
+
+    // 等待核心房间信息返回（并发执行，消除瀑布流等待）
+    final results = await Future.wait([initFuture, infoFuture]);
+    final initRes = results[0] as LoadingState<LiveRoomInitData>;
+    final infoRes = results[1] as LoadingState<LiveRoomInfo>;
+
+    if (!mounted) return;
+
     if (initRes case Success(:final response)) {
       if (response.roomId > 0) {
         _realRoomId = response.roomId;
       }
+      _liveStatus = response.liveStatus;
+      _isLiving = response.isLiving;
     }
 
-    // 2. 获取直播间详细信息（主播昵称、头像、分区、真实人气值等）
-    final infoRes = await LiveHttp.roomInfo(roomId: _realRoomId);
     if (infoRes case Success(:final response)) {
       _roomInfo = response;
       if ((response.roomId ?? 0) > 0) {
         _realRoomId = response.roomId!;
       }
+      if (response.liveStatus != null) {
+        _liveStatus = response.liveStatus!;
+        _isLiving = response.liveStatus == 1;
+      }
     }
 
-    // 3. 权威判定直播状态（0=未开播/下播，1=直播中，2=轮播）
-    final canonicalStatus = _roomInfo?.liveStatus ??
-        (initRes is Success ? (initRes as Success).response.liveStatus : null);
-    final isLive = canonicalStatus == 1;
-    _isLiving = isLive;
+    // 立即刷新界面：更新主播昵称、头像、真实房间号、在线人气与直播状态胶囊徽章！
+    if (mounted) {
+      setState(() {});
+    }
 
-    // 4. 从云端预拉取历史弹幕记录（无论是否开播，均可显示最新互动记录）
-    await _prefetchDanmaku(_realRoomId);
-
+    // 确保弹幕预取完成
+    await dmFuture;
     if (!mounted) return;
 
-    // 5. 根据开播状态分别处理播放与弹幕
-    if (isLive) {
+    // 2. 根据权威开播状态解耦处理音视频播放与实时 WebSocket 弹幕
+    if (_isLiving) {
       _setupDanmaku(_realRoomId);
 
       final playRes = await LiveHttp.liveRoomPlayInfo(roomId: _realRoomId);
@@ -146,13 +162,23 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         if (playUrl != null && playUrl.isNotEmpty) {
           await _setupPlayer(playUrl);
         } else {
-          _errorMessage = '未获取到有效直播推流地址';
+          if (mounted) {
+            setState(() {
+              _errorMessage = '未获取到有效直播推流地址';
+              _loading = false;
+            });
+          }
         }
       } else if (playRes case Error(:final errMsg)) {
-        _errorMessage = errMsg ?? '获取直播流失败';
+        if (mounted) {
+          setState(() {
+            _errorMessage = errMsg ?? '获取直播流失败';
+            _loading = false;
+          });
+        }
       }
     } else {
-      // 未开播/下播：停止并清理播放器实例
+      // 未开播/已下播/轮播：立刻释放播放器并解除 loading 状态，展示下播封面与状态
       final player = _player;
       _player = null;
       _textureId = null;
@@ -160,10 +186,9 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         player.state = mdk.PlaybackState.stopped;
         player.dispose();
       }
-    }
-
-    if (mounted) {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -190,14 +215,50 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       final player = mdk.Player();
       _player = player;
 
+      if (Pref.enableHA) {
+        player.videoDecoders = const [
+          'MFT:d3d=11',
+          'D3D11',
+          'DXVA',
+          'CUDA',
+          'hap',
+          'FFmpeg',
+          'dav1d',
+        ];
+        player.setProperty('video.decoder', 'shader_resource=1');
+      } else {
+        player.videoDecoders = const ['FFmpeg', 'dav1d'];
+        player.setProperty('video.decoder', 'shader_resource=0');
+      }
+
       player.setProperty(
         'avio.headers',
         'Referer: https://live.bilibili.com\r\n'
         'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36\r\n',
       );
+      player.setProperty('avio.reconnect', '1');
+      player.setProperty('avio.reconnect_streamed', '1');
+      player.setProperty('avio.reconnect_on_network_error', '1');
+      player.setProperty('avio.reconnect_on_http_error', '4xx,5xx');
+      player.setProperty('avio.timeout', '10000000');
+      player.setProperty('demux.max_errors', '50');
+
       // 直播低延迟缓冲窗口
       player.setBufferRange(min: 800, max: 3000);
       player.volume = _volume;
+
+      // 监听播放器媒体状态：首帧/加载完成即可隐藏 loading 状态
+      player.onMediaStatus.listen((event) {
+        if (!mounted) return;
+        final status = event.newValue;
+        if (status.test(mdk.MediaStatus.loaded) ||
+            status.test(mdk.MediaStatus.buffering) ||
+            status.test(mdk.MediaStatus.buffered)) {
+          if (_loading) {
+            setState(() => _loading = false);
+          }
+        }
+      });
 
       player.media = url;
       final texId = await player.updateTexture();
@@ -206,8 +267,16 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       player.prepare();
       player.state = mdk.PlaybackState.playing;
       _isPlaying = true;
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     } catch (e) {
-      _errorMessage = '播放器初始化失败：$e';
+      if (mounted) {
+        setState(() {
+          _errorMessage = '播放器初始化失败：$e';
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -272,11 +341,19 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          displayTitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 16),
+        title: Row(
+          children: [
+            _buildStatusBadge(),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                displayTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -378,8 +455,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               else
                 _buildOfflineCover(),
 
-              // 加载指示器
-              if (_loading)
+              // 加载指示器（仅在开播拉取视频流时展示，下播直接显示离线封面与明确状态）
+              if (_loading && _isLiving)
                 Container(
                   color: Colors.black54,
                   child: const Center(
@@ -493,10 +570,58 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     );
   }
 
+  /// 直播状态胶囊徽章（直播中 / 轮播中 / 未开播）
+  Widget _buildStatusBadge() {
+    final Color badgeColor;
+    final String badgeText;
+    final IconData icon;
+
+    if (_isLiving) {
+      badgeColor = const Color(0xFF10B981);
+      badgeText = '直播中';
+      icon = Icons.fiber_manual_record;
+    } else if (_liveStatus == 2) {
+      badgeColor = Colors.orangeAccent;
+      badgeText = '轮播中';
+      icon = Icons.replay_rounded;
+    } else {
+      badgeColor = Colors.white54;
+      badgeText = '未开播';
+      icon = Icons.radio_button_unchecked;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: badgeColor.withValues(alpha: 0.4),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 8, color: badgeColor),
+          const SizedBox(width: 4),
+          Text(
+            badgeText,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: badgeColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 未开播/已下播占位封面
   Widget _buildOfflineCover() {
     final effectiveCover = _roomInfo?.cover ?? widget.cover;
-    final isRound = _roomInfo?.liveStatus == 2;
+    final isRound = _liveStatus == 2 || _roomInfo?.liveStatus == 2;
     final offlineText = isRound ? '主播当前正在轮播中' : '主播当前暂未开播或已下播';
     return Stack(
       fit: StackFit.expand,
@@ -517,7 +642,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 Icon(
                   isRound ? Icons.repeat : Icons.sensors_off_outlined,
                   size: 48,
-                  color: Colors.white60,
+                  color: isRound ? Colors.orangeAccent : Colors.white60,
                 ),
                 const SizedBox(height: 12),
                 Text(

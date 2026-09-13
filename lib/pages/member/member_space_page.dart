@@ -2048,7 +2048,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           child: GestureDetector(
             onTap: () {
               if (imageUrls.isNotEmpty) {
-                showImageGallery(context, imageUrls: imageUrls, initialIndex: 0);
+                showImageGallery(
+                  context,
+                  imageUrls: imageUrls,
+                  thumbnailUrls: imageUrls,
+                  initialIndex: 0,
+                );
               }
             },
             child: ClipRRect(
@@ -2084,7 +2089,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             return GestureDetector(
               onTap: () {
                 if (imageUrls.isNotEmpty) {
-                  showImageGallery(context, imageUrls: imageUrls, initialIndex: idx);
+                  showImageGallery(
+                    context,
+                    imageUrls: imageUrls,
+                    thumbnailUrls: imageUrls,
+                    initialIndex: idx,
+                  );
                 }
               },
               child: SizedBox(

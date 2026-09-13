@@ -526,7 +526,12 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       final aspect = (w > 0 && h > 0) ? (w / h).clamp(0.7, 2.0) : 16 / 9;
 
       return GestureDetector(
-        onTap: () => showImageGallery(context, imageUrls: imageUrls, initialIndex: 0),
+        onTap: () => showImageGallery(
+          context,
+          imageUrls: imageUrls,
+          thumbnailUrls: imageUrls,
+          initialIndex: 0,
+        ),
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: ConstrainedBox(
@@ -570,6 +575,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
               onTap: () => showImageGallery(
                 context,
                 imageUrls: imageUrls,
+                thumbnailUrls: imageUrls,
                 initialIndex: idx,
               ),
               child: MouseRegion(
@@ -884,19 +890,26 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       ),
       child: InkWell(
         onTap: () {
-          final roomId = live.roomId;
+          var roomId = live.roomId;
+          if ((roomId == null || roomId <= 0) &&
+              live.jumpUrl != null &&
+              live.jumpUrl!.isNotEmpty) {
+            roomId = BilibiliUrlParser.parse(live.jumpUrl!).roomId;
+          }
           if (roomId != null && roomId > 0) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => LiveRoomPage(
-                  roomId: roomId,
+                  roomId: roomId!,
                   title: live.title,
                   uname: live.uname,
                   cover: live.cover,
                 ),
               ),
             );
+          } else if (live.jumpUrl != null && live.jumpUrl!.isNotEmpty) {
+            _handleJumpUrl(context, live.jumpUrl!);
           }
         },
         borderRadius: BorderRadius.circular(Style.radiusMd),

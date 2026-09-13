@@ -9,9 +9,15 @@ import 'package:winwin/http/init.dart';
 ///
 /// [imageUrls] 为要浏览的图片 URL 列表。
 /// [initialIndex] 为初始展示的图片索引（从 0 开始）。
+/// 弹出多图画廊全屏浏览弹窗。
+///
+/// [imageUrls] 为要浏览的图片 URL 列表。
+/// [thumbnailUrls] 为对应的缩略图 URL 列表（可选，若提供则在原图未加载完成前以缩略图即时秒显，彻底消除开启动画掉帧与白屏）。
+/// [initialIndex] 为初始展示的图片索引（从 0 开始）。
 void showImageGallery(
   BuildContext context, {
   required List<String> imageUrls,
+  List<String>? thumbnailUrls,
   int initialIndex = 0,
 }) {
   if (imageUrls.isEmpty) return;
@@ -21,12 +27,18 @@ void showImageGallery(
       opaque: false,
       barrierDismissible: true,
       barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (context, _, _) => ImageGalleryViewer(
         imageUrls: imageUrls,
+        thumbnailUrls: thumbnailUrls,
         initialIndex: validIndex,
       ),
-      transitionsBuilder: (context, animation, _, child) {
-        return FadeTransition(opacity: animation, child: child);
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: animation.drive(CurveTween(curve: Curves.easeOutCubic)),
+          child: child,
+        );
       },
     ),
   );
@@ -45,10 +57,12 @@ class ImageGalleryViewer extends StatefulWidget {
   const ImageGalleryViewer({
     super.key,
     required this.imageUrls,
+    this.thumbnailUrls,
     this.initialIndex = 0,
   });
 
   final List<String> imageUrls;
+  final List<String>? thumbnailUrls;
   final int initialIndex;
 
   /// 剥除 B站 CDN 缩略图后缀，获取原始高清大图 URL。
@@ -56,6 +70,13 @@ class ImageGalleryViewer extends StatefulWidget {
 
   @override
   State<ImageGalleryViewer> createState() => _ImageGalleryViewerState();
+}
+
+class _GalleryDragState {
+  final Offset offset;
+  final double progress;
+  const _GalleryDragState(this.offset, this.progress);
+  static const zero = _GalleryDragState(Offset.zero, 0.0);
 }
 
 class _ImageGalleryViewerState extends State<ImageGalleryViewer>
@@ -67,9 +88,9 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
   bool _showControls = true;
   bool _isZoomed = false;
 
-  // 滑动关闭手势状态
-  Offset _dragOffset = Offset.zero;
-  double _dismissProgress = 0.0;
+  // 滑动关闭手势状态（基于 ValueNotifier，拖拽时无需触发 setState 导致整树高频重构）
+  final ValueNotifier<_GalleryDragState> _dragNotifier =
+      ValueNotifier<_GalleryDragState>(_GalleryDragState.zero);
   bool _isDismissDragging = false;
   late final AnimationController _resetAnimController;
   Animation<Offset>? _offsetResetAnimation;
@@ -84,14 +105,9 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
       vsync: this,
       duration: const Duration(milliseconds: 240),
     )..addListener(() {
-        setState(() {
-          if (_offsetResetAnimation != null) {
-            _dragOffset = _offsetResetAnimation!.value;
-          }
-          if (_progressResetAnimation != null) {
-            _dismissProgress = _progressResetAnimation!.value;
-          }
-        });
+        final offset = _offsetResetAnimation?.value ?? Offset.zero;
+        final progress = _progressResetAnimation?.value ?? 0.0;
+        _dragNotifier.value = _GalleryDragState(offset, progress);
       });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -103,6 +119,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
   void dispose() {
     _focusNode.dispose();
     _pageController.dispose();
+    _dragNotifier.dispose();
     _resetAnimController.dispose();
     super.dispose();
   }
@@ -163,10 +180,10 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
 
   void _onVerticalDragUpdate(DragUpdateDetails details, double screenHeight) {
     if (!_isDismissDragging || _isZoomed) return;
-    setState(() {
-      _dragOffset += details.delta;
-      _dismissProgress = (_dragOffset.dy.abs() / (screenHeight * 0.7)).clamp(0.0, 1.0);
-    });
+    final currentOffset = _dragNotifier.value.offset + details.delta;
+    final progress =
+        (currentOffset.dy.abs() / (screenHeight * 0.7)).clamp(0.0, 1.0);
+    _dragNotifier.value = _GalleryDragState(currentOffset, progress);
   }
 
   void _onVerticalDragEnd(DragEndDetails details, double screenHeight) {
@@ -174,21 +191,23 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
     _isDismissDragging = false;
 
     final velocity = details.primaryVelocity ?? 0.0;
-    final shouldDismiss = _dismissProgress > 0.18 || velocity.abs() > 500;
+    final currentOffset = _dragNotifier.value.offset;
+    final currentProgress = _dragNotifier.value.progress;
+    final shouldDismiss = currentProgress > 0.18 || velocity.abs() > 500;
 
     if (shouldDismiss) {
       Navigator.of(context).pop();
     } else {
       // 弹性复原动画
       _offsetResetAnimation = Tween<Offset>(
-        begin: _dragOffset,
+        begin: currentOffset,
         end: Offset.zero,
       ).animate(CurvedAnimation(
         parent: _resetAnimController,
         curve: Curves.easeOutCubic,
       ));
       _progressResetAnimation = Tween<double>(
-        begin: _dismissProgress,
+        begin: currentProgress,
         end: 0.0,
       ).animate(CurvedAnimation(
         parent: _resetAnimController,
@@ -312,8 +331,44 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
   Widget build(BuildContext context) {
     final total = widget.imageUrls.length;
     final screenSize = MediaQuery.sizeOf(context);
-    final bgAlpha = (0.92 * (1.0 - _dismissProgress)).clamp(0.0, 0.92);
-    final dismissScale = (1.0 - _dismissProgress * 0.35).clamp(0.5, 1.0);
+
+    // 核心 PageView 画廊组件，作为 child 透传给 ValueListenableBuilder，手势拖拽时不发生任何重建
+    final galleryPageView = PageView.builder(
+      controller: _pageController,
+      itemCount: total,
+      physics: _isZoomed
+          ? const NeverScrollableScrollPhysics()
+          : const BouncingScrollPhysics(),
+      onPageChanged: (index) {
+        setState(() {
+          _currentIndex = index;
+          _isZoomed = false;
+        });
+      },
+      itemBuilder: (context, index) {
+        final rawUrl = getRawUrl(widget.imageUrls[index]);
+        final thumbUrl = widget.thumbnailUrls != null &&
+                index < widget.thumbnailUrls!.length
+            ? widget.thumbnailUrls![index]
+            : widget.imageUrls[index];
+
+        return _GalleryItemView(
+          key: ValueKey(rawUrl),
+          rawUrl: rawUrl,
+          thumbnailUrl: thumbUrl,
+          onZoomChanged: (zoomed) {
+            if (_isZoomed != zoomed) {
+              setState(() => _isZoomed = zoomed);
+            }
+          },
+          onTapOutside: () => Navigator.of(context).pop(),
+          onToggleControls: () {
+            setState(() => _showControls = !_showControls);
+          },
+          onLongPress: () => _showActionMenu(context, rawUrl),
+        );
+      },
+    );
 
     return Focus(
       focusNode: _focusNode,
@@ -321,56 +376,36 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
       onKeyEvent: _handleKeyEvent,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: Container(
-          color: Colors.black.withValues(alpha: bgAlpha),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // 核心手势与图片画廊
-              GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onVerticalDragStart: _onVerticalDragStart,
-                onVerticalDragUpdate: (d) =>
-                    _onVerticalDragUpdate(d, screenSize.height),
-                onVerticalDragEnd: (d) =>
-                    _onVerticalDragEnd(d, screenSize.height),
-                child: Transform.translate(
-                  offset: _dragOffset,
-                  child: Transform.scale(
-                    scale: dismissScale,
-                    child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: total,
-                      physics: _isZoomed
-                          ? const NeverScrollableScrollPhysics()
-                          : const BouncingScrollPhysics(),
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentIndex = index;
-                          _isZoomed = false;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        final rawUrl = getRawUrl(widget.imageUrls[index]);
-                        return _GalleryItemView(
-                          key: ValueKey(rawUrl),
-                          rawUrl: rawUrl,
-                          onZoomChanged: (zoomed) {
-                            if (_isZoomed != zoomed) {
-                              setState(() => _isZoomed = zoomed);
-                            }
-                          },
-                          onTapOutside: () => Navigator.of(context).pop(),
-                          onToggleControls: () {
-                            setState(() => _showControls = !_showControls);
-                          },
-                          onLongPress: () => _showActionMenu(context, rawUrl),
-                        );
-                      },
+        body: ValueListenableBuilder<_GalleryDragState>(
+          valueListenable: _dragNotifier,
+          child: galleryPageView,
+          builder: (context, dragState, child) {
+            final bgAlpha =
+                (0.92 * (1.0 - dragState.progress)).clamp(0.0, 0.92);
+            final dismissScale =
+                (1.0 - dragState.progress * 0.35).clamp(0.5, 1.0);
+
+            return Container(
+              color: Colors.black.withValues(alpha: bgAlpha),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // 核心手势与图片画廊
+                  GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onVerticalDragStart: _onVerticalDragStart,
+                    onVerticalDragUpdate: (d) =>
+                        _onVerticalDragUpdate(d, screenSize.height),
+                    onVerticalDragEnd: (d) =>
+                        _onVerticalDragEnd(d, screenSize.height),
+                    child: Transform.translate(
+                      offset: dragState.offset,
+                      child: Transform.scale(
+                        scale: dismissScale,
+                        child: child,
+                      ),
                     ),
                   ),
-                ),
-              ),
 
               // 桌面端左翻页箭头
               if (_showControls && total > 1 && _currentIndex > 0)
@@ -517,8 +552,10 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                     ),
                   ),
                 ),
-            ],
-          ),
+              ],
+            ),
+          );
+          },
         ),
       ),
     );
@@ -532,6 +569,7 @@ class _GalleryItemView extends StatefulWidget {
   const _GalleryItemView({
     super.key,
     required this.rawUrl,
+    this.thumbnailUrl,
     required this.onZoomChanged,
     required this.onTapOutside,
     required this.onToggleControls,
@@ -539,6 +577,7 @@ class _GalleryItemView extends StatefulWidget {
   });
 
   final String rawUrl;
+  final String? thumbnailUrl;
   final ValueChanged<bool> onZoomChanged;
   final VoidCallback onTapOutside;
   final VoidCallback onToggleControls;
@@ -576,7 +615,13 @@ class _GalleryItemViewState extends State<_GalleryItemView>
   }
 
   void _resolveImageDimensions() {
-    final provider = CachedNetworkImageProvider(widget.rawUrl);
+    // 优先从已缓存的缩略图解析比例与尺寸，秒级完成并确保点击图片外退出逻辑精准无误
+    final resolveUrl =
+        (widget.thumbnailUrl != null && widget.thumbnailUrl!.isNotEmpty)
+            ? widget.thumbnailUrl!
+            : widget.rawUrl;
+
+    final provider = CachedNetworkImageProvider(resolveUrl);
     final stream = provider.resolve(ImageConfiguration.empty);
     late ImageStreamListener listener;
     listener = ImageStreamListener(
@@ -699,16 +744,41 @@ class _GalleryItemViewState extends State<_GalleryItemView>
               child: CachedNetworkImage(
                 imageUrl: widget.rawUrl,
                 fit: BoxFit.contain,
-                placeholder: (context, _) => const Center(
-                  child: SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Colors.white70,
+                fadeInDuration: const Duration(milliseconds: 180),
+                fadeOutDuration: Duration.zero,
+                placeholder: (context, _) {
+                  if (widget.thumbnailUrl != null &&
+                      widget.thumbnailUrl!.isNotEmpty &&
+                      widget.thumbnailUrl != widget.rawUrl) {
+                    return CachedNetworkImage(
+                      imageUrl: widget.thumbnailUrl!,
+                      fit: BoxFit.contain,
+                      fadeInDuration: Duration.zero,
+                      fadeOutDuration: Duration.zero,
+                      placeholder: (context, _) => const SizedBox.shrink(),
+                      errorBuilder: (context, _, _) => const Center(
+                        child: SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  return const Center(
+                    child: SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white54,
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
                 errorBuilder: (context, _, _) => Column(
                   mainAxisSize: MainAxisSize.min,
                   children: const [

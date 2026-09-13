@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
+import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/live.dart';
 import 'package:winwin/tcp/live.dart';
+import 'package:winwin/utils/bilibili_url_parser.dart';
 
 void main() {
   group('LiveItemModel Tests', () {
@@ -204,6 +207,72 @@ void main() {
         ImageGalleryViewer.getRawUrl(cdnUrl),
         'https://i0.hdslb.com/bfs/album/test.jpg',
       );
+    });
+
+    test('BilibiliUrlParser parses various live URL formats correctly', () {
+      expect(
+        BilibiliUrlParser.parse('https://live.bilibili.com/7734200').roomId,
+        7734200,
+      );
+      expect(
+        BilibiliUrlParser.parse('https://live.bilibili.com/h5/7734200?broadcast_type=0').roomId,
+        7734200,
+      );
+      expect(
+        BilibiliUrlParser.parse('https://live.bilibili.com/blanc/6').roomId,
+        6,
+      );
+      expect(
+        BilibiliUrlParser.parse('http://live.bilibili.com/21452505').roomId,
+        21452505,
+      );
+    });
+
+    test('DynLive.fromMajor extracts real room_id from jump_url and injects author info', () {
+      final major = {
+        'type': 'MAJOR_TYPE_LIVE_RCMD',
+        'live_rcmd': {
+          'content': jsonEncode({
+            'live_play_info': {
+              'room_id': 7734200,
+              'room_type': 1,
+              'title': '【直播】全球总决赛',
+              'cover': 'http://i0.hdslb.com/bfs/live/cover.jpg',
+              'live_status': 1,
+              'watched_show': {'text_large': '100万人气'},
+            }
+          })
+        }
+      };
+
+      final dynLiveFromRcmd = DynLive.fromMajor(major);
+      expect(dynLiveFromRcmd, isNotNull);
+      expect(dynLiveFromRcmd!.roomId, 7734200);
+      expect(dynLiveFromRcmd.liveStatus, 1);
+      expect(dynLiveFromRcmd.title, '【直播】全球总决赛');
+
+      final majorLive = {
+        'type': 'MAJOR_TYPE_LIVE',
+        'live': {
+          'id': '100099882233', // 场次ID，非房间号
+          'title': '日常直播中',
+          'jump_url': 'https://live.bilibili.com/21452505',
+          'badge': {'text': '直播中'},
+        }
+      };
+      final author = DynAuthor(
+        mid: 123456,
+        name: '测试UP主',
+        face: 'http://i0.hdslb.com/bfs/face/up.jpg',
+      );
+
+      final dynLive = DynLive.fromMajor(majorLive, author: author);
+      expect(dynLive, isNotNull);
+      expect(dynLive!.roomId, 21452505); // 成功解析出真实房间号
+      expect(dynLive.uname, '测试UP主');
+      expect(dynLive.cover, 'http://i0.hdslb.com/bfs/face/up.jpg');
+      expect(dynLive.badge, '直播中');
+      expect(dynLive.isLiving, isTrue);
     });
   });
 }

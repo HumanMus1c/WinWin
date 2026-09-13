@@ -7,6 +7,7 @@ import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/dynamics/dyn_type.dart';
+import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/id_utils.dart';
 
 /// 动态流 HTTP（移植自 PiliPlus `lib/http/dynamic.dart`，精简为桌面端所需）。
@@ -290,16 +291,18 @@ class DynItemModel {
 
     final majorTypeStr = major['type']?.toString();
 
+    final author = DynAuthor.fromJson(moduleAuthor);
+
     return DynItemModel(
       id: json['id_str']?.toString() ?? json['id']?.toString() ?? '',
       type: json['type']?.toString() ?? '',
       majorType: majorTypeStr,
-      author: DynAuthor.fromJson(moduleAuthor),
+      author: author,
       archive: DynArchive.fromMajor(major),
       draw: DynDraw.fromMajor(major),
       article: DynArticle.fromMajor(major),
       opus: DynOpus.fromMajor(major),
-      live: DynLive.fromMajor(major),
+      live: DynLive.fromMajor(major, author: author),
       pgc: DynPgc.fromMajor(major),
       none: DynNone.fromMajor(major),
       text: desc['text']?.toString(),
@@ -585,7 +588,9 @@ class DynLive {
     this.jumpUrl,
   });
 
-  static DynLive? fromMajor(Map<String, dynamic> major) {
+  bool get isLiving => liveStatus == 1 || badge == '直播中';
+
+  static DynLive? fromMajor(Map<String, dynamic> major, {DynAuthor? author}) {
     final type = major['type']?.toString();
 
     // 1. UP 主直接开播动态（MAJOR_TYPE_LIVE，数据挂在 major['live']）
@@ -600,14 +605,25 @@ class DynLive {
         badgeText = badgeObj;
       }
       final state = _asInt(live['live_state']);
+      final jumpUrl = live['jump_url']?.toString();
+
+      // 关键修复：B站 MAJOR_TYPE_LIVE 下 live['id'] 为开播场次记录 ID（非房间号）！
+      // 必须优先从 jump_url 提取真实房间号，其次取 room_id / roomid，最后兜底 id
+      int? resolvedRoomId;
+      if (jumpUrl != null && jumpUrl.isNotEmpty) {
+        resolvedRoomId = BilibiliUrlParser.parse(jumpUrl).roomId;
+      }
+      resolvedRoomId ??= _asInt(live['room_id'] ?? live['roomid'] ?? live['id']);
+
       return DynLive(
-        roomId: _asInt(live['id'] ?? live['room_id'] ?? live['roomid']),
+        roomId: resolvedRoomId,
         title: live['title']?.toString(),
-        cover: live['cover']?.toString(),
+        cover: live['cover']?.toString() ?? author?.face,
+        uname: author?.name,
         descFirst: live['desc_first']?.toString(),
         liveStatus: state,
         badge: badgeText ?? (state == 1 ? '直播中' : '已结束'),
-        jumpUrl: live['jump_url']?.toString(),
+        jumpUrl: jumpUrl,
       );
     }
 
@@ -635,18 +651,25 @@ class DynLive {
           : null;
 
       final liveStatus = _asInt(liveInfo['live_status']);
+      final jumpUrl = liveInfo['jump_url']?.toString();
+
+      int? resolvedRoomId;
+      if (jumpUrl != null && jumpUrl.isNotEmpty) {
+        resolvedRoomId = BilibiliUrlParser.parse(jumpUrl).roomId;
+      }
+      resolvedRoomId ??= _asInt(liveInfo['room_id'] ?? liveInfo['roomid'] ?? liveInfo['id']);
 
       return DynLive(
-        roomId: _asInt(liveInfo['room_id'] ?? liveInfo['roomid']),
+        roomId: resolvedRoomId,
         title: liveInfo['title']?.toString(),
-        cover: liveInfo['cover']?.toString(),
-        uname: liveInfo['uname']?.toString(),
+        cover: liveInfo['cover']?.toString() ?? author?.face,
+        uname: liveInfo['uname']?.toString() ?? author?.name,
         watchedShow: watched?['text_large']?.toString() ??
             watched?['text_small']?.toString() ??
             liveInfo['watched_show']?.toString(),
         liveStatus: liveStatus,
         badge: liveStatus == 1 ? '直播中' : null,
-        jumpUrl: liveInfo['jump_url']?.toString(),
+        jumpUrl: jumpUrl,
       );
     }
 

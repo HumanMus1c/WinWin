@@ -73,7 +73,7 @@ abstract final class BilibiliUrlParser {
   static final _tBilibiliDynamicRegex =
       RegExp(r't\.bilibili\.com/(\d+)', caseSensitive: false);
   static final _liveRegex = RegExp(
-    r'(?:live\.bilibili\.com/(?:h5/)?|bilibili://live/)(\d+)',
+    r'(?:live\.bilibili\.com/(?:h5/|blanc/)?|bilibili://live/)(\d+)',
     caseSensitive: false,
   );
   static final _cvRegex = RegExp(

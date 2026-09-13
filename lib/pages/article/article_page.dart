@@ -301,6 +301,7 @@ class _ArticlePageState extends State<ArticlePage> {
                                 showImageGallery(
                                   context,
                                   imageUrls: allImages,
+                                  thumbnailUrls: allImages,
                                   initialIndex: initialIdx >= 0 ? initialIdx : 0,
                                 );
                               },

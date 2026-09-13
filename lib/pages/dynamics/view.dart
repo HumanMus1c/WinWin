@@ -1164,7 +1164,12 @@ class _DynCard extends StatelessWidget {
           child: GestureDetector(
             onTap: () {
               if (imageUrls.isNotEmpty) {
-                showImageGallery(context, imageUrls: imageUrls, initialIndex: 0);
+                showImageGallery(
+                  context,
+                  imageUrls: imageUrls,
+                  thumbnailUrls: imageUrls,
+                  initialIndex: 0,
+                );
               }
             },
             child: ClipRRect(
@@ -1200,7 +1205,12 @@ class _DynCard extends StatelessWidget {
             return GestureDetector(
               onTap: () {
                 if (imageUrls.isNotEmpty) {
-                  showImageGallery(context, imageUrls: imageUrls, initialIndex: idx);
+                  showImageGallery(
+                    context,
+                    imageUrls: imageUrls,
+                    thumbnailUrls: imageUrls,
+                    initialIndex: idx,
+                  );
                 }
               },
               child: SizedBox(
@@ -1367,13 +1377,18 @@ class _DynCard extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
-          final roomId = live.roomId;
+          var roomId = live.roomId;
+          if ((roomId == null || roomId <= 0) &&
+              live.jumpUrl != null &&
+              live.jumpUrl!.isNotEmpty) {
+            roomId = BilibiliUrlParser.parse(live.jumpUrl!).roomId;
+          }
           if (roomId != null && roomId > 0) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => LiveRoomPage(
-                  roomId: roomId,
+                  roomId: roomId!,
                   title: live.title,
                   uname: live.uname,
                   cover: live.cover,
