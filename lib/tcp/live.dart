@@ -64,14 +64,23 @@ abstract final class LiveDanmakuProtocol {
   static const int heartbeatIntervalSec = 30;
 }
 
-/// 直播弹幕消息体（一条 normal 消息解析后）。
+/// 直播弹幕消息体（一条 normal 消息或预拉取历史消息解析后）。
 class LiveDanmakuMessage {
   /// 消息类型（cmd 字段值，如 'DANMU_MSG'、'SEND_GIFT'、'INTERACT_WORD'）。
   final String cmd;
+  /// 发送者昵称（若显式指定）。
+  final String? userName;
+  /// 弹幕正文（若显式指定）。
+  final String? customText;
   /// 原始 JSON 数据。
   final Map<String, dynamic> raw;
 
-  LiveDanmakuMessage({required this.cmd, required this.raw});
+  LiveDanmakuMessage({
+    required this.cmd,
+    this.userName,
+    this.customText,
+    required this.raw,
+  });
 
   factory LiveDanmakuMessage.fromJson(Map<String, dynamic> json) {
     return LiveDanmakuMessage(
@@ -80,13 +89,46 @@ class LiveDanmakuMessage {
     );
   }
 
+  /// 从云端历史弹幕条目（/xlive/web-room/v1/dM/gethistory data.room 节点）构造。
+  factory LiveDanmakuMessage.fromPrefetch(Map<String, dynamic> json) {
+    final user = json['user'] as Map<String, dynamic>?;
+    final base = user?['base'] as Map<String, dynamic>?;
+    final uname = base?['name']?.toString() ??
+        user?['name']?.toString() ??
+        '观众';
+    final text = json['text']?.toString() ?? '';
+    return LiveDanmakuMessage(
+      cmd: 'DANMU_MSG',
+      userName: uname,
+      customText: text,
+      raw: json,
+    );
+  }
+
   /// 是否为弹幕消息（DANMU_MSG）。
   bool get isDanmaku => cmd == 'DANMU_MSG';
 
+  /// 弹幕发送者昵称。
+  String get senderName {
+    if (userName != null && userName!.isNotEmpty) return userName!;
+    final info = raw['info'] as List?;
+    if (info != null &&
+        info.length > 2 &&
+        info[2] is List &&
+        (info[2] as List).length > 1) {
+      final name = info[2][1]?.toString();
+      if (name != null && name.isNotEmpty) return name;
+    }
+    return '观众';
+  }
+
   /// 弹幕文本（仅 isDanmaku 时有效）。
-  String? get danmakuText => raw['info'] is List && raw['info'].length > 1
-      ? raw['info'][1]?.toString()
-      : null;
+  String? get danmakuText {
+    if (customText != null) return customText;
+    return raw['info'] is List && raw['info'].length > 1
+        ? raw['info'][1]?.toString()
+        : null;
+  }
 
   /// 弹幕颜色（仅 isDanmaku 时有效，十进制 RGB）。
   int? get danmakuColor => raw['info'] is List && raw['info'].length > 3

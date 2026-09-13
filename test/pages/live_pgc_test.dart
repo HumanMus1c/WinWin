@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/http/live.dart';
-import 'package:winwin/pages/pgc/view.dart';
+import 'package:winwin/tcp/live.dart';
 
 void main() {
   group('LiveItemModel Tests', () {
@@ -120,11 +121,89 @@ void main() {
     });
   });
 
-  group('PgcSubTab Tests', () {
-    test('contains expected secondary classifiers', () {
-      expect(PgcSubTab.values.length, 2);
-      expect(PgcSubTab.myFollow.label, '我的追番');
-      expect(PgcSubTab.hot.label, '热门追番');
+  group('Live Room Extended Tests', () {
+    test('LiveRoomInitData parses realRoomId and liveStatus correctly', () {
+      final json = <String, dynamic>{
+        'room_id': 7734200,
+        'short_id': 6,
+        'uid': 50329118,
+        'live_status': 1,
+        'live_time': 1788762159,
+        'is_portrait': false,
+      };
+
+      final initData = LiveRoomInitData.fromJson(json);
+      expect(initData.roomId, 7734200);
+      expect(initData.shortId, 6);
+      expect(initData.uid, 50329118);
+      expect(initData.liveStatus, 1);
+      expect(initData.isLiving, isTrue);
+      expect(initData.liveTime, 1788762159);
+    });
+
+    test('LiveRoomInfo parses full H5 payload with anchor_info and watched_show', () {
+      final json = <String, dynamic>{
+        'room_info': {
+          'room_id': 7734200,
+          'short_id': 6,
+          'uid': 50329118,
+          'title': '英雄联盟赛事',
+          'cover': 'http://i0.hdslb.com/bfs/live/cover.jpg',
+          'area_name': '游戏赛事',
+          'live_status': 1,
+          'live_start_time': 1788762159,
+        },
+        'anchor_info': {
+          'base_info': {
+            'uname': '哔哩哔哩英雄联盟赛事',
+            'face': 'http://i2.hdslb.com/bfs/face/face.jpg',
+          },
+        },
+        'watched_show': {
+          'num': 36490000,
+          'text_large': '3649万人气',
+        },
+      };
+
+      final info = LiveRoomInfo.fromJson(json);
+      expect(info.roomId, 7734200);
+      expect(info.shortId, 6);
+      expect(info.uid, 50329118);
+      expect(info.title, '英雄联盟赛事');
+      expect(info.cover, 'https://i0.hdslb.com/bfs/live/cover.jpg');
+      expect(info.uname, '哔哩哔哩英雄联盟赛事');
+      expect(info.face, 'https://i2.hdslb.com/bfs/face/face.jpg');
+      expect(info.areaName, '游戏赛事');
+      expect(info.liveStatus, 1);
+      expect(info.isLiving, isTrue);
+      expect(info.online, 36490000);
+      expect(info.watchedShowText, '3649万人气');
+    });
+
+    test('LiveDanmakuMessage.fromPrefetch extracts user and text correctly', () {
+      final prefetchItem = <String, dynamic>{
+        'text': '主播太强了！666',
+        'user': {
+          'uid': 12345678,
+          'base': {
+            'name': '热心观众',
+            'face': 'http://i0.hdslb.com/bfs/face/u.jpg',
+          },
+        },
+      };
+
+      final msg = LiveDanmakuMessage.fromPrefetch(prefetchItem);
+      expect(msg.isDanmaku, isTrue);
+      expect(msg.senderName, '热心观众');
+      expect(msg.danmakuText, '主播太强了！666');
+    });
+
+    test('ImageGalleryViewer.getRawUrl strips thumbnail query suffixes', () {
+      const cdnUrl = 'http://i0.hdslb.com/bfs/album/test.jpg@518w_1e_1c.webp';
+      expect(
+        ImageGalleryViewer.getRawUrl(cdnUrl),
+        'https://i0.hdslb.com/bfs/album/test.jpg',
+      );
     });
   });
 }

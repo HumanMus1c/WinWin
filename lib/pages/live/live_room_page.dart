@@ -46,6 +46,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   StreamSubscription<LiveDanmakuMessage>? _danmakuSub;
 
   LiveRoomInfo? _roomInfo;
+  late int _realRoomId;
 
   bool _loading = true;
   String? _errorMessage;
@@ -61,6 +62,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   @override
   void initState() {
     super.initState();
+    _realRoomId = widget.roomId;
     _startHideControlsTimer();
     _initLive();
   }
@@ -104,35 +106,80 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
     await ensureBootstrap();
 
-    // 1. 获取直播间详细信息
-    final infoRes = await LiveHttp.roomInfo(roomId: widget.roomId);
-    if (infoRes case Success(:final response)) {
-      _roomInfo = response;
+    // 1. 直播间初始化：转换短号为长号，获取官方真实开播状态
+    final initRes = await LiveHttp.roomInit(roomId: widget.roomId);
+    if (initRes case Success(:final response)) {
+      if (response.roomId > 0) {
+        _realRoomId = response.roomId;
+      }
     }
 
-    // 2. 获取直播推流地址
-    final playRes = await LiveHttp.liveRoomPlayInfo(roomId: widget.roomId);
+    // 2. 获取直播间详细信息（主播昵称、头像、分区、真实人气值等）
+    final infoRes = await LiveHttp.roomInfo(roomId: _realRoomId);
+    if (infoRes case Success(:final response)) {
+      _roomInfo = response;
+      if ((response.roomId ?? 0) > 0) {
+        _realRoomId = response.roomId!;
+      }
+    }
+
+    // 3. 权威判定直播状态（0=未开播/下播，1=直播中，2=轮播）
+    final canonicalStatus = _roomInfo?.liveStatus ??
+        (initRes is Success ? (initRes as Success).response.liveStatus : null);
+    final isLive = canonicalStatus == 1;
+    _isLiving = isLive;
+
+    // 4. 从云端预拉取历史弹幕记录（无论是否开播，均可显示最新互动记录）
+    await _prefetchDanmaku(_realRoomId);
+
     if (!mounted) return;
 
-    if (playRes case Success(:final response)) {
-      final playUrl = response.bestPlayUrl;
-      final isLive = response.isLiving && playUrl != null && playUrl.isNotEmpty;
-      _isLiving = isLive;
+    // 5. 根据开播状态分别处理播放与弹幕
+    if (isLive) {
+      _setupDanmaku(_realRoomId);
 
-      if (isLive) {
-        await _setupPlayer(playUrl);
-        _setupDanmaku();
+      final playRes = await LiveHttp.liveRoomPlayInfo(roomId: _realRoomId);
+      if (!mounted) return;
+
+      if (playRes case Success(:final response)) {
+        final playUrl = response.bestPlayUrl;
+        if (playUrl != null && playUrl.isNotEmpty) {
+          await _setupPlayer(playUrl);
+        } else {
+          _errorMessage = '未获取到有效直播推流地址';
+        }
+      } else if (playRes case Error(:final errMsg)) {
+        _errorMessage = errMsg ?? '获取直播流失败';
       }
+    } else {
+      // 未开播/下播：停止并清理播放器实例
+      final player = _player;
+      _player = null;
+      _textureId = null;
+      if (player != null) {
+        player.state = mdk.PlaybackState.stopped;
+        player.dispose();
+      }
+    }
+
+    if (mounted) {
       setState(() => _loading = false);
-    } else if (playRes case Error(:final errMsg)) {
-      // 若无法拉取推流，检测 roomInfo 的状态兜底
-      if (_roomInfo != null && !_roomInfo!.isLiving) {
-        _isLiving = false;
-        setState(() => _loading = false);
-      } else {
+    }
+  }
+
+  Future<void> _prefetchDanmaku(int roomId) async {
+    final prefetchRes = await LiveHttp.liveRoomDmPrefetch(roomId: roomId);
+    if (!mounted) return;
+    if (prefetchRes case Success(:final response)) {
+      if (response.isNotEmpty) {
         setState(() {
-          _errorMessage = errMsg ?? '获取直播流失败';
-          _loading = false;
+          _danmakuList.clear();
+          _danmakuList.addAll(response);
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_chatScrollCtrl.hasClients) {
+            _chatScrollCtrl.jumpTo(_chatScrollCtrl.position.maxScrollExtent);
+          }
         });
       }
     }
@@ -164,12 +211,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     }
   }
 
-  void _setupDanmaku() {
+  void _setupDanmaku(int roomId) {
     _danmakuSub?.cancel();
     _danmakuClient?.dispose();
 
     final client = LiveDanmakuClient(
-      roomId: widget.roomId,
+      roomId: roomId,
       uid: AccountService().userInfo?.mid ?? 0,
     );
     _danmakuClient = client;
@@ -219,7 +266,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final displayTitle = _roomInfo?.title ?? widget.title ?? '直播间 ${widget.roomId}';
+    final displayTitle = _roomInfo?.title ?? widget.title ?? '直播间 $_realRoomId';
     final hostName = _roomInfo?.uname ?? widget.uname ?? 'UP 主';
     final hostAvatar = _roomInfo?.face;
 
@@ -242,7 +289,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             tooltip: '复制直播间链接',
             onPressed: () {
               Clipboard.setData(
-                ClipboardData(text: 'https://live.bilibili.com/${widget.roomId}'),
+                ClipboardData(text: 'https://live.bilibili.com/$_realRoomId'),
               );
               ScaffoldMessenger.maybeOf(context)?.showSnackBar(
                 const SnackBar(
@@ -449,6 +496,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   /// 未开播/已下播占位封面
   Widget _buildOfflineCover() {
     final effectiveCover = _roomInfo?.cover ?? widget.cover;
+    final isRound = _roomInfo?.liveStatus == 2;
+    final offlineText = isRound ? '主播当前正在轮播中' : '主播当前暂未开播或已下播';
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -460,19 +509,19 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             borderRadius: BorderRadius.zero,
           ),
         Container(
-          color: Colors.black.withValues(alpha: 0.7),
+          color: Colors.black.withValues(alpha: 0.75),
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.sensors_off_outlined,
+                Icon(
+                  isRound ? Icons.repeat : Icons.sensors_off_outlined,
                   size: 48,
                   color: Colors.white60,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  _errorMessage ?? '主播当前暂未开播或已下播',
+                  _errorMessage ?? offlineText,
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
@@ -497,6 +546,13 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   ) {
     final areaName = _roomInfo?.areaName;
     final online = _roomInfo?.online;
+    final heatText = _roomInfo?.watchedShowText ??
+        (online != null && online > 0 ? NumUtils.formatNum(online) : null);
+    final shortId = _roomInfo?.shortId;
+    final roomIdText =
+        (shortId != null && shortId > 0 && shortId != _realRoomId)
+            ? '房间号: $shortId ($_realRoomId)'
+            : '房间号: $_realRoomId';
 
     return Row(
       children: [
@@ -532,7 +588,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               Row(
                 children: [
                   Text(
-                    '房间号: ${widget.roomId}',
+                    roomIdText,
                     style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
                   ),
                   if (areaName != null && areaName.isNotEmpty) ...[
@@ -555,15 +611,16 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       ),
                     ),
                   ],
-                  if (online != null && online > 0) ...[
+                  if (heatText != null && heatText.isNotEmpty) ...[
                     const SizedBox(width: 8),
                     Icon(
                       Icons.local_fire_department,
                       size: 13,
                       color: Colors.orange.shade700,
                     ),
+                    const SizedBox(width: 2),
                     Text(
-                      NumUtils.formatNum(online),
+                      heatText,
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.orange.shade700,
@@ -630,13 +687,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   itemCount: _danmakuList.length,
                   itemBuilder: (context, index) {
                     final item = _danmakuList[index];
-                    final rawInfo = item.raw['info'] as List?;
-                    final uname = rawInfo != null &&
-                            rawInfo.length > 2 &&
-                            rawInfo[2] is List &&
-                            (rawInfo[2] as List).length > 1
-                        ? rawInfo[2][1]?.toString() ?? '用户'
-                        : '观众';
+                    final uname = item.senderName;
                     final text = item.danmakuText ?? '';
 
                     return Padding(

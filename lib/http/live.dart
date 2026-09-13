@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/tcp/live.dart';
 import 'package:winwin/utils/wbi_sign.dart';
 
 /// 直播 HTTP（移植自 PiliPlus `lib/http/live.dart`，精简为桌面端所需）。
@@ -99,9 +100,31 @@ abstract final class LiveHttp {
     }
   }
 
-  /// 直播间信息（`/xlive/web-room/v1/index/getH5InfoByRoom`）。
+  /// 直播间初始化信息（`/room/v1/Room/room_init`）。
   ///
-  /// [roomId] 为直播间号。返回 [LiveRoomInfo]，含标题、主播、直播状态等。
+  /// [roomId] 可为短号或真实长号。返回真实房间号、直播状态 [live_status] 及开播时间。
+  static Future<LoadingState<LiveRoomInitData>> roomInit({required int roomId}) async {
+    try {
+      final res = await Request().get<dynamic>(
+        Api.liveRoomInit,
+        queryParameters: {'id': roomId},
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0) {
+        final rawData = data['data'] as Map<String, dynamic>? ?? {};
+        return Success(LiveRoomInitData.fromJson(rawData));
+      }
+      return Error(data['message']?.toString() ?? '获取直播间初始化信息失败');
+    } on DioException catch (e) {
+      return Error('获取直播间初始化信息失败：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('获取直播间初始化信息失败：$e');
+    }
+  }
+
+  /// 直播间详细信息（`/xlive/web-room/v1/index/getH5InfoByRoom`）。
+  ///
+  /// [roomId] 为直播间号。返回 [LiveRoomInfo]，含标题、主播头像/昵称、直播状态、人气等。
   static Future<LoadingState<LiveRoomInfo>> roomInfo({required int roomId}) async {
     try {
       final res = await Request().get<dynamic>(
@@ -110,17 +133,47 @@ abstract final class LiveHttp {
       );
       final data = res.data as Map<String, dynamic>;
       if (data['code'] == 0) {
-        return Success(
-          LiveRoomInfo.fromJson(
-            data['data']?['room_info'] as Map<String, dynamic>? ?? {},
-          ),
-        );
+        final rawData = data['data'] as Map<String, dynamic>? ?? {};
+        return Success(LiveRoomInfo.fromJson(rawData));
       }
       return Error(data['message']?.toString() ?? '获取直播间信息失败');
     } on DioException catch (e) {
       return Error('获取直播间信息失败：${e.message ?? e.type.name}');
     } catch (e) {
       return Error('获取直播间信息失败：$e');
+    }
+  }
+
+  /// 直播间云端历史互动弹幕预拉取（`/xlive/web-room/v1/dM/gethistory`）。
+  ///
+  /// [roomId] 为直播间号。返回进入直播间前云端已记录的最新历史发言列表。
+  static Future<LoadingState<List<LiveDanmakuMessage>>> liveRoomDmPrefetch({
+    required int roomId,
+  }) async {
+    try {
+      final res = await Request().get<dynamic>(
+        Api.liveRoomDmPrefetch,
+        queryParameters: {'roomid': roomId},
+        options: Options(
+          headers: {
+            'referer': 'https://live.bilibili.com/$roomId',
+          },
+        ),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0) {
+        final rawRoom = data['data']?['room'] as List<dynamic>? ?? const [];
+        final messages = rawRoom
+            .whereType<Map<String, dynamic>>()
+            .map((e) => LiveDanmakuMessage.fromPrefetch(e))
+            .toList();
+        return Success(messages);
+      }
+      return Error(data['message']?.toString() ?? '获取历史弹幕失败');
+    } on DioException catch (e) {
+      return Error('获取历史弹幕失败：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('获取历史弹幕失败：$e');
     }
   }
 
@@ -463,9 +516,43 @@ class LiveItemModel {
   }
 }
 
-/// 直播间信息（room_info 节点）。
+/// 直播间初始化数据（来自 /room/v1/Room/room_init）。
+class LiveRoomInitData {
+  final int roomId;
+  final int shortId;
+  final int uid;
+  final int liveStatus;
+  final int liveTime;
+  final bool isPortrait;
+
+  LiveRoomInitData({
+    required this.roomId,
+    this.shortId = 0,
+    this.uid = 0,
+    this.liveStatus = 0,
+    this.liveTime = 0,
+    this.isPortrait = false,
+  });
+
+  /// 是否正在直播中（1 为直播中，0 为未开播/下播，2 为轮播）。
+  bool get isLiving => liveStatus == 1;
+
+  factory LiveRoomInitData.fromJson(Map<String, dynamic> json) {
+    return LiveRoomInitData(
+      roomId: _asInt(json['room_id']) ?? 0,
+      shortId: _asInt(json['short_id']) ?? 0,
+      uid: _asInt(json['uid']) ?? 0,
+      liveStatus: _asInt(json['live_status']) ?? 0,
+      liveTime: _asInt(json['live_time']) ?? 0,
+      isPortrait: json['is_portrait'] as bool? ?? false,
+    );
+  }
+}
+
+/// 直播间详细信息（兼容 H5 根节点与 room_info 节点）。
 class LiveRoomInfo {
   final int? roomId;
+  final int? shortId;
   final int? uid;
   final String? title;
   final String? cover;
@@ -473,10 +560,13 @@ class LiveRoomInfo {
   final String? face;
   final String? areaName;
   final int? liveStatus;
+  final int? liveStartTime;
   final int? online;
+  final String? watchedShowText;
 
   LiveRoomInfo({
     this.roomId,
+    this.shortId,
     this.uid,
     this.title,
     this.cover,
@@ -484,24 +574,43 @@ class LiveRoomInfo {
     this.face,
     this.areaName,
     this.liveStatus,
+    this.liveStartTime,
     this.online,
+    this.watchedShowText,
   });
 
   /// 是否正在直播（live_status==1）。
   bool get isLiving => liveStatus == 1;
 
   factory LiveRoomInfo.fromJson(Map<String, dynamic> json) {
+    // 兼容传入整个 data 节点（含 room_info, anchor_info, watched_show）或仅 room_info
+    final roomInfo = json['room_info'] is Map<String, dynamic>
+        ? json['room_info'] as Map<String, dynamic>
+        : json;
+    final anchorInfo = json['anchor_info'] as Map<String, dynamic>? ?? {};
+    final baseInfo = anchorInfo['base_info'] as Map<String, dynamic>? ?? {};
+    final watchedShow = json['watched_show'] as Map<String, dynamic>? ?? {};
+
+    final uname = baseInfo['uname']?.toString() ?? roomInfo['uname']?.toString();
+    final face = _http2https(baseInfo['face']?.toString() ?? roomInfo['face']?.toString());
+    final online = _asInt(watchedShow['num'] ?? roomInfo['online']);
+
     return LiveRoomInfo(
-      roomId: _asInt(json['room_id']),
-      uid: _asInt(json['uid']),
-      title: json['title']?.toString(),
-      cover: _http2https(json['cover']?.toString()),
-      uname: json['uname']?.toString(),
-      face: _http2https(json['face']?.toString()),
-      areaName: json['area_name']?.toString() ??
-          json['area_v2_name']?.toString(),
-      liveStatus: _asInt(json['live_status']),
-      online: _asInt(json['online']),
+      roomId: _asInt(roomInfo['room_id'] ?? json['room_id']),
+      shortId: _asInt(roomInfo['short_id'] ?? json['short_id']),
+      uid: _asInt(roomInfo['uid'] ?? json['uid']),
+      title: roomInfo['title']?.toString(),
+      cover: _http2https(roomInfo['cover']?.toString()),
+      uname: uname,
+      face: face,
+      areaName: roomInfo['area_name']?.toString() ??
+          roomInfo['parent_area_name']?.toString() ??
+          roomInfo['area_v2_name']?.toString(),
+      liveStatus: _asInt(roomInfo['live_status']),
+      liveStartTime: _asInt(roomInfo['live_start_time']),
+      online: online,
+      watchedShowText: watchedShow['text_large']?.toString() ??
+          watchedShow['text_small']?.toString(),
     );
   }
 }

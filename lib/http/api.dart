@@ -323,6 +323,10 @@ abstract final class Api {
   static const String liveRoomInfo =
       '${HttpString.liveBaseUrl}/xlive/web-room/v2/index/getRoomPlayInfo';
 
+  // 直播间初始化信息（真实房间号、直播状态、短号等）
+  static const String liveRoomInit =
+      '${HttpString.liveBaseUrl}/room/v1/Room/room_init';
+
   static const String sendLiveMsg = '${HttpString.liveBaseUrl}/msg/send';
 
   // 直播间详情 H5
