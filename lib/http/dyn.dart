@@ -7,6 +7,7 @@ import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/dynamics/dyn_type.dart';
+import 'package:winwin/utils/id_utils.dart';
 
 /// 动态流 HTTP（移植自 PiliPlus `lib/http/dynamic.dart`，精简为桌面端所需）。
 ///
@@ -151,10 +152,12 @@ class DynItemModel {
   final DynArticle? article;
   /// Opus 新版图文/文章信息。
   final DynOpus? opus;
-  /// 直播推荐信息。
-  final DynLiveRcmd? liveRcmd;
+  /// 直播信息（含开播与推荐）。
+  final DynLive? live;
   /// 剧集/追番信息（仅 DYNAMIC_TYPE_PGC 或 MAJOR_TYPE_PGC 存在）。
   final DynPgc? pgc;
+  /// 失效/空动态提示信息。
+  final DynNone? none;
   /// 文本描述（动态正文）。
   final String? text;
   /// 富文本节点（@、表情、网页链接、商品链接、BV 链接等）。
@@ -170,6 +173,9 @@ class DynItemModel {
   /// Major 类型。
   final String? majorType;
 
+  /// 兼容旧代码 liveRcmd 命名。
+  DynLive? get liveRcmd => live;
+
   DynItemModel({
     required this.id,
     required this.type,
@@ -178,8 +184,10 @@ class DynItemModel {
     this.draw,
     this.article,
     this.opus,
-    this.liveRcmd,
+    DynLive? live,
+    DynLive? liveRcmd,
     this.pgc,
+    this.none,
     this.text,
     this.richTextNodes = const [],
     this.additional,
@@ -187,32 +195,41 @@ class DynItemModel {
     this.pubTs,
     this.orig,
     this.majorType,
-  });
+  }) : live = live ?? liveRcmd;
 
-  /// 是否为视频动态。
+  /// 是否为视频动态（包含投稿视频与合集更新）。
   bool get isVideo =>
       type == DynType.av ||
-      (majorType == DynMajorType.archive && archive?.bvid != null);
+      type == DynType.ugcSeason ||
+      majorType == DynMajorType.archive ||
+      majorType == DynMajorType.ugcSeason ||
+      (archive != null && (archive!.bvid != null || archive!.title != null));
 
   /// 是否为转发动态。
   bool get isForward => type == DynType.forward || orig != null;
 
   /// 是否为图文动态（旧版图文）。
   bool get isDraw =>
-      type == DynType.draw || majorType == DynMajorType.draw;
+      (type == DynType.draw || majorType == DynMajorType.draw) &&
+      draw != null &&
+      draw!.items.isNotEmpty;
 
   /// 是否为专栏（旧版专栏）。
   bool get isArticle =>
-      type == DynType.article || majorType == DynMajorType.article;
+      (type == DynType.article || majorType == DynMajorType.article) &&
+      article != null;
 
   /// 是否为 Opus（新版图文/文章）。
-  bool get isOpus => majorType == DynMajorType.opus || opus != null;
+  bool get isOpus =>
+      (majorType == DynMajorType.opus || opus != null) && opus != null;
 
-  /// 是否为直播推荐。
+  /// 是否为直播动态（UP主直播或推荐）。
   bool get isLive =>
+      type == DynType.live ||
       type == DynType.liveRcmd ||
+      majorType == DynMajorType.live ||
       majorType == DynMajorType.liveRcmd ||
-      liveRcmd != null;
+      live != null;
 
   /// 是否为追番/剧集动态。
   bool get isPgc =>
@@ -221,6 +238,12 @@ class DynItemModel {
       majorType == DynMajorType.pgc ||
       majorType == DynMajorType.pgcUnion ||
       (pgc != null && (pgc!.title != null || pgc!.cover != null));
+
+  /// 是否为已失效动态。
+  bool get isNone =>
+      type == DynType.none ||
+      majorType == DynMajorType.none ||
+      none != null;
 
   factory DynItemModel.fromJson(Map<String, dynamic> json) {
     final modules = json['modules'] is Map
@@ -276,8 +299,9 @@ class DynItemModel {
       draw: DynDraw.fromMajor(major),
       article: DynArticle.fromMajor(major),
       opus: DynOpus.fromMajor(major),
-      liveRcmd: DynLiveRcmd.fromMajor(major),
+      live: DynLive.fromMajor(major),
       pgc: DynPgc.fromMajor(major),
+      none: DynNone.fromMajor(major),
       text: desc['text']?.toString(),
       richTextNodes: richNodes,
       additional:
@@ -308,7 +332,7 @@ class DynAuthor {
   }
 }
 
-/// 动态内嵌的视频稿件信息（MAJOR_TYPE_ARCHIVE）。
+/// 动态内嵌的视频/合集稿件信息（MAJOR_TYPE_ARCHIVE / MAJOR_TYPE_UGC_SEASON）。
 class DynArchive {
   final String? bvid;
   final String? title;
@@ -316,6 +340,7 @@ class DynArchive {
   final String? durationText;
   final int? play;
   final int? danmaku;
+  final String? badge;
 
   DynArchive({
     this.bvid,
@@ -324,16 +349,44 @@ class DynArchive {
     this.durationText,
     this.play,
     this.danmaku,
+    this.badge,
   });
 
-  /// 从 major 节点解析：major.archive 为视频稿件。
-  factory DynArchive.fromMajor(Map<String, dynamic> major) {
-    if (major['type'] != DynMajorType.archive) return DynArchive();
-    final archive = major['archive'] as Map<String, dynamic>? ?? {};
-    return DynArchive.fromVideoMap(archive);
+  /// 从 major 节点解析：支持 major.archive 为视频稿件，或 major.ugc_season 为合集。
+  static DynArchive? fromMajor(Map<String, dynamic> major) {
+    final type = major['type']?.toString();
+    if (type == DynMajorType.archive && major['archive'] is Map) {
+      return DynArchive.fromVideoMap(
+        Map<String, dynamic>.from(major['archive'] as Map),
+      );
+    }
+    if (type == DynMajorType.ugcSeason && major['ugc_season'] is Map) {
+      return DynArchive.fromUgcSeasonMap(
+        Map<String, dynamic>.from(major['ugc_season'] as Map),
+      );
+    }
+    // 容错：有些合集或者视频没有显式写 type，但包含 ugc_season 或 archive 字典
+    if (major['ugc_season'] is Map) {
+      return DynArchive.fromUgcSeasonMap(
+        Map<String, dynamic>.from(major['ugc_season'] as Map),
+      );
+    }
+    if (major['archive'] is Map) {
+      return DynArchive.fromVideoMap(
+        Map<String, dynamic>.from(major['archive'] as Map),
+      );
+    }
+    return null;
   }
 
   factory DynArchive.fromVideoMap(Map<String, dynamic> map) {
+    final badgeObj = map['badge'];
+    String? badgeText;
+    if (badgeObj is Map) {
+      badgeText = badgeObj['text']?.toString();
+    } else if (badgeObj is String) {
+      badgeText = badgeObj;
+    }
     return DynArchive(
       bvid: map['bvid']?.toString(),
       title: map['title']?.toString(),
@@ -341,6 +394,47 @@ class DynArchive {
       durationText: map['duration_text']?.toString(),
       play: _asInt(map['play']),
       danmaku: _asInt(map['danmaku']),
+      badge: badgeText,
+    );
+  }
+
+  factory DynArchive.fromUgcSeasonMap(Map<String, dynamic> map) {
+    final subArchive = map['archive'] is Map
+        ? Map<String, dynamic>.from(map['archive'] as Map)
+        : null;
+    final stat = map['stat'] is Map
+        ? Map<String, dynamic>.from(map['stat'] as Map)
+        : null;
+
+    String? bvid = map['bvid']?.toString() ?? subArchive?['bvid']?.toString();
+    final aid = _asInt(map['aid'] ?? subArchive?['aid']);
+    if ((bvid == null || bvid.isEmpty) && aid != null && aid > 0) {
+      bvid = IdUtils.av2bv(aid);
+    }
+
+    final title = map['title']?.toString() ?? subArchive?['title']?.toString();
+    final cover = map['cover']?.toString() ?? subArchive?['cover']?.toString();
+    final durationText = map['duration_text']?.toString() ??
+        subArchive?['duration_text']?.toString();
+    final play = _asInt(stat?['play'] ?? map['play'] ?? subArchive?['play']);
+    final danmaku = _asInt(stat?['danmaku'] ?? map['danmaku'] ?? subArchive?['danmaku']);
+
+    final badgeObj = map['badge'];
+    String? badgeText;
+    if (badgeObj is Map) {
+      badgeText = badgeObj['text']?.toString();
+    } else if (badgeObj is String) {
+      badgeText = badgeObj;
+    }
+
+    return DynArchive(
+      bvid: bvid,
+      title: title,
+      cover: cover,
+      durationText: durationText,
+      play: play,
+      danmaku: danmaku,
+      badge: badgeText ?? '合集',
     );
   }
 }
@@ -370,16 +464,16 @@ class DynDraw {
 
   DynDraw({this.items = const []});
 
-  factory DynDraw.fromMajor(Map<String, dynamic> major) {
-    if (major['type'] != DynMajorType.draw) return DynDraw();
+  static DynDraw? fromMajor(Map<String, dynamic> major) {
+    if (major['type'] != DynMajorType.draw && major['draw'] == null) return null;
     final draw = major['draw'] as Map<String, dynamic>? ?? {};
     final rawItems = draw['items'] as List?;
-    return DynDraw(
-      items: rawItems
-              ?.map((e) => DynDrawItem.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const [],
-    );
+    final items = rawItems
+            ?.map((e) => DynDrawItem.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const [];
+    if (items.isEmpty) return null;
+    return DynDraw(items: items);
   }
 }
 
@@ -399,15 +493,18 @@ class DynArticle {
     this.label,
   });
 
-  factory DynArticle.fromMajor(Map<String, dynamic> major) {
-    if (major['type'] != DynMajorType.article) return DynArticle();
+  static DynArticle? fromMajor(Map<String, dynamic> major) {
+    if (major['type'] != DynMajorType.article && major['article'] == null) return null;
     final article = major['article'] as Map<String, dynamic>? ?? {};
     final rawCovers = article['covers'] as List?;
+    final title = article['title']?.toString();
+    final covers = rawCovers?.map((e) => e.toString()).toList() ?? const [];
+    if (title == null && covers.isEmpty) return null;
     return DynArticle(
       id: _asInt(article['id']),
-      title: article['title']?.toString(),
+      title: title,
       desc: article['desc']?.toString(),
-      covers: rawCovers?.map((e) => e.toString()).toList() ?? const [],
+      covers: covers,
       label: article['label']?.toString(),
     );
   }
@@ -429,78 +526,133 @@ class DynOpus {
     this.video,
   });
 
-  factory DynOpus.fromMajor(Map<String, dynamic> major) {
-    if (major['type'] != DynMajorType.opus) return DynOpus();
+  static DynOpus? fromMajor(Map<String, dynamic> major) {
+    if (major['type'] != DynMajorType.opus && major['opus'] == null) return null;
     final opus = major['opus'] as Map<String, dynamic>? ?? {};
     final summary = opus['summary'] as Map<String, dynamic>? ?? {};
     final rawPics = opus['pics'] as List?;
     final video = opus['video'] as Map<String, dynamic>?;
 
+    final pics = rawPics
+            ?.map((e) => DynDrawItem.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const [];
+    final title = opus['title']?.toString();
+    final summaryText = summary['text']?.toString();
+    final dynVideo = video != null ? DynArchive.fromVideoMap(video) : null;
+
+    if (pics.isEmpty &&
+        (title == null || title.isEmpty) &&
+        (summaryText == null || summaryText.isEmpty) &&
+        dynVideo == null) {
+      return null;
+    }
+
     return DynOpus(
       jumpUrl: opus['jump_url']?.toString(),
-      title: opus['title']?.toString(),
-      summaryText: summary['text']?.toString(),
-      pics: rawPics
-              ?.map((e) => DynDrawItem.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const [],
-      video: video != null ? DynArchive.fromVideoMap(video) : null,
+      title: title,
+      summaryText: summaryText,
+      pics: pics,
+      video: dynVideo,
     );
   }
 }
 
-/// 直播推荐（MAJOR_TYPE_LIVE_RCMD）。
-class DynLiveRcmd {
+/// 直播信息（兼容 MAJOR_TYPE_LIVE_RCMD 与 MAJOR_TYPE_LIVE）。
+class DynLive {
   final int? roomId;
   final String? title;
   final String? cover;
   final String? uname;
   final String? watchedShow;
+  final String? descFirst;
   final int? liveStatus;
+  final String? badge;
+  final String? jumpUrl;
 
-  DynLiveRcmd({
+  DynLive({
     this.roomId,
     this.title,
     this.cover,
     this.uname,
     this.watchedShow,
+    this.descFirst,
     this.liveStatus,
+    this.badge,
+    this.jumpUrl,
   });
 
-  factory DynLiveRcmd.fromMajor(Map<String, dynamic> major) {
-    if (major['type'] != DynMajorType.liveRcmd) return DynLiveRcmd();
-    final liveRcmd = major['live_rcmd'] as Map<String, dynamic>? ?? {};
-    Map<String, dynamic> liveInfo = {};
-    if (liveRcmd['content'] is String) {
-      try {
-        final decoded = jsonDecode(liveRcmd['content'] as String);
-        if (decoded is Map<String, dynamic>) {
-          liveInfo =
-              decoded['live_play_info'] as Map<String, dynamic>? ?? decoded;
-        }
-      } catch (_) {}
-    } else if (liveRcmd['live_play_info'] is Map<String, dynamic>) {
-      liveInfo = liveRcmd['live_play_info'] as Map<String, dynamic>;
-    } else {
-      liveInfo = liveRcmd;
+  static DynLive? fromMajor(Map<String, dynamic> major) {
+    final type = major['type']?.toString();
+
+    // 1. UP 主直接开播动态（MAJOR_TYPE_LIVE，数据挂在 major['live']）
+    if ((type == DynMajorType.live || major['live'] is Map) &&
+        major['live'] is Map) {
+      final live = Map<String, dynamic>.from(major['live'] as Map);
+      final badgeObj = live['badge'];
+      String? badgeText;
+      if (badgeObj is Map) {
+        badgeText = badgeObj['text']?.toString();
+      } else if (badgeObj is String) {
+        badgeText = badgeObj;
+      }
+      final state = _asInt(live['live_state']);
+      return DynLive(
+        roomId: _asInt(live['id'] ?? live['room_id'] ?? live['roomid']),
+        title: live['title']?.toString(),
+        cover: live['cover']?.toString(),
+        descFirst: live['desc_first']?.toString(),
+        liveStatus: state,
+        badge: badgeText ?? (state == 1 ? '直播中' : '已结束'),
+        jumpUrl: live['jump_url']?.toString(),
+      );
     }
 
-    final watched = liveInfo['watched_show'] is Map<String, dynamic>
-        ? liveInfo['watched_show'] as Map<String, dynamic>
-        : null;
+    // 2. 直播推荐动态（MAJOR_TYPE_LIVE_RCMD，数据挂在 major['live_rcmd']）
+    if ((type == DynMajorType.liveRcmd || major['live_rcmd'] is Map) &&
+        major['live_rcmd'] is Map) {
+      final liveRcmd = Map<String, dynamic>.from(major['live_rcmd'] as Map);
+      Map<String, dynamic> liveInfo = {};
+      if (liveRcmd['content'] is String) {
+        try {
+          final decoded = jsonDecode(liveRcmd['content'] as String);
+          if (decoded is Map<String, dynamic>) {
+            liveInfo =
+                decoded['live_play_info'] as Map<String, dynamic>? ?? decoded;
+          }
+        } catch (_) {}
+      } else if (liveRcmd['live_play_info'] is Map<String, dynamic>) {
+        liveInfo = liveRcmd['live_play_info'] as Map<String, dynamic>;
+      } else {
+        liveInfo = liveRcmd;
+      }
 
-    return DynLiveRcmd(
-      roomId: _asInt(liveInfo['room_id'] ?? liveInfo['roomid']),
-      title: liveInfo['title']?.toString(),
-      cover: liveInfo['cover']?.toString(),
-      uname: liveInfo['uname']?.toString(),
-      watchedShow: watched?['text_large']?.toString() ??
-          watched?['text_small']?.toString() ??
-          liveInfo['watched_show']?.toString(),
-      liveStatus: _asInt(liveInfo['live_status']),
-    );
+      final watched = liveInfo['watched_show'] is Map<String, dynamic>
+          ? liveInfo['watched_show'] as Map<String, dynamic>
+          : null;
+
+      final liveStatus = _asInt(liveInfo['live_status']);
+
+      return DynLive(
+        roomId: _asInt(liveInfo['room_id'] ?? liveInfo['roomid']),
+        title: liveInfo['title']?.toString(),
+        cover: liveInfo['cover']?.toString(),
+        uname: liveInfo['uname']?.toString(),
+        watchedShow: watched?['text_large']?.toString() ??
+            watched?['text_small']?.toString() ??
+            liveInfo['watched_show']?.toString(),
+        liveStatus: liveStatus,
+        badge: liveStatus == 1 ? '直播中' : null,
+        jumpUrl: liveInfo['jump_url']?.toString(),
+      );
+    }
+
+    return null;
   }
 }
+
+/// 兼容旧别名
+typedef DynLiveRcmd = DynLive;
 
 /// 剧集/追番动态（MAJOR_TYPE_PGC）。
 class DynPgc {
@@ -526,10 +678,11 @@ class DynPgc {
     this.danmaku,
   });
 
-  factory DynPgc.fromMajor(Map<String, dynamic> major) {
+  static DynPgc? fromMajor(Map<String, dynamic> major) {
     if (major['type'] != DynMajorType.pgc &&
-        major['type'] != DynMajorType.pgcUnion) {
-      return DynPgc();
+        major['type'] != DynMajorType.pgcUnion &&
+        major['pgc'] == null) {
+      return null;
     }
     final pgc = major['pgc'] as Map<String, dynamic>? ?? {};
     final stat = pgc['stat'] as Map<String, dynamic>? ?? {};
@@ -540,17 +693,37 @@ class DynPgc {
     } else if (badgeObj is String) {
       badgeText = badgeObj;
     }
+    final title = pgc['title']?.toString();
+    final cover = pgc['cover']?.toString();
+    if (title == null && cover == null) return null;
+
     return DynPgc(
       seasonId: _asInt(pgc['season_id']),
       epId: _asInt(pgc['epid'] ?? pgc['ep_id']),
-      title: pgc['title']?.toString(),
-      cover: pgc['cover']?.toString(),
+      title: title,
+      cover: cover,
       badge: badgeText ?? pgc['sub_type_name']?.toString(),
       jumpUrl: pgc['jump_url']?.toString(),
       subType: pgc['sub_type']?.toString(),
       play: _asInt(stat['play']),
       danmaku: _asInt(stat['danmaku']),
     );
+  }
+}
+
+/// 失效/空动态信息（MAJOR_TYPE_NONE）。
+class DynNone {
+  final String? tips;
+
+  DynNone({this.tips});
+
+  static DynNone? fromMajor(Map<String, dynamic> major) {
+    if (major['type'] != DynMajorType.none && major['none'] == null) {
+      return null;
+    }
+    final none = major['none'] as Map<String, dynamic>? ?? {};
+    final tips = none['tips']?.toString();
+    return DynNone(tips: tips ?? '内容已失效');
   }
 }
 

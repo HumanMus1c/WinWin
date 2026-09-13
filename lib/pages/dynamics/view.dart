@@ -480,6 +480,7 @@ class _DynVideoCard extends StatelessWidget {
     final durationText = archive?.durationText;
     final play = archive?.play;
     final danmaku = archive?.danmaku;
+    final badge = archive?.badge;
 
     return RepaintBoundary(
       child: Card(
@@ -527,6 +528,15 @@ class _DynVideoCard extends StatelessWidget {
                           child: PBadge(
                             text: durationText,
                             type: PBadgeType.duration,
+                          ),
+                        ),
+                      if (badge != null && badge.isNotEmpty)
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: PBadge(
+                            text: badge,
+                            type: PBadgeType.badge,
                           ),
                         ),
                     ],
@@ -875,7 +885,7 @@ class _DynCard extends StatelessWidget {
             if (item.isForward && item.orig != null) ...[
               const SizedBox(height: Style.sm),
               _buildForwardContent(context, item.orig!),
-            ] else if (item.isVideo && item.archive != null && item.archive!.bvid != null) ...[
+            ] else if (item.isVideo && item.archive != null && (item.archive!.bvid != null || item.archive!.title != null)) ...[
               const SizedBox(height: Style.sm),
               _buildVideoPreview(context, item.archive!),
             ] else if (item.isPgc && item.pgc != null) ...[
@@ -890,9 +900,12 @@ class _DynCard extends StatelessWidget {
             ] else if (item.article != null) ...[
               const SizedBox(height: Style.sm),
               _buildArticleCard(context, item.article!),
-            ] else if (item.liveRcmd != null) ...[
+            ] else if (item.live != null) ...[
               const SizedBox(height: Style.sm),
-              _buildLiveCard(context, item.liveRcmd!),
+              _buildLiveCard(context, item.live!),
+            ] else if (item.none != null) ...[
+              const SizedBox(height: Style.sm),
+              _buildNoneCard(context, item.none!),
             ],
             // 附加商品卡模块
             if (item.additional != null && item.additional!.goodsItems.isNotEmpty) ...[
@@ -960,7 +973,7 @@ class _DynCard extends StatelessWidget {
                 style: theme.textTheme.bodyMedium,
               ),
           ],
-          if (orig.isVideo && orig.archive != null && orig.archive?.bvid != null) ...[
+          if (orig.isVideo && orig.archive != null && (orig.archive!.bvid != null || orig.archive!.title != null)) ...[
             const SizedBox(height: Style.sm),
             _buildVideoPreview(context, orig.archive!),
           ] else if (orig.isPgc && orig.pgc != null) ...[
@@ -975,9 +988,12 @@ class _DynCard extends StatelessWidget {
           ] else if (orig.article != null) ...[
             const SizedBox(height: Style.sm),
             _buildArticleCard(context, orig.article!),
-          ] else if (orig.liveRcmd != null) ...[
+          ] else if (orig.live != null) ...[
             const SizedBox(height: Style.sm),
-            _buildLiveCard(context, orig.liveRcmd!),
+            _buildLiveCard(context, orig.live!),
+          ] else if (orig.none != null) ...[
+            const SizedBox(height: Style.sm),
+            _buildNoneCard(context, orig.none!),
           ],
         ],
       ),
@@ -1240,10 +1256,11 @@ class _DynCard extends StatelessWidget {
     );
   }
 
-  /// 直播推荐卡片渲染。
-  Widget _buildLiveCard(BuildContext context, DynLiveRcmd live) {
+  /// 直播卡片渲染（UP主开播或直播推荐）。
+  Widget _buildLiveCard(BuildContext context, DynLive live) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final isLiving = live.liveStatus == 1 || live.badge == '直播中';
 
     return Card(
       elevation: 0,
@@ -1252,93 +1269,150 @@ class _DynCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(Style.md),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (live.cover != null && live.cover!.isNotEmpty) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: Stack(
-                  children: [
-                    SizedBox(
-                      width: 120,
-                      height: 75,
-                      child: NetworkImgLayer(
-                        src: live.cover,
+      child: InkWell(
+        onTap: () {
+          final roomId = live.roomId;
+          if (live.jumpUrl != null && live.jumpUrl!.isNotEmpty) {
+            _handleJumpUrl(context, live.jumpUrl!);
+          } else if (roomId != null && roomId > 0) {
+            _handleJumpUrl(context, 'https://live.bilibili.com/$roomId');
+          }
+        },
+        borderRadius: BorderRadius.circular(Style.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.all(Style.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (live.cover != null && live.cover!.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(Style.radiusSm),
+                  child: Stack(
+                    children: [
+                      SizedBox(
                         width: 120,
                         height: 75,
-                        borderRadius: BorderRadius.circular(Style.radiusSm),
+                        child: NetworkImgLayer(
+                          src: live.cover,
+                          width: 120,
+                          height: 75,
+                          borderRadius: BorderRadius.circular(Style.radiusSm),
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        left: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isLiving ? Colors.redAccent : Colors.grey.shade600,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isLiving ? Icons.sensors : Icons.sensors_off,
+                                color: Colors.white,
+                                size: 10,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                isLiving ? (live.badge ?? 'LIVE') : '已结束',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: Style.md),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      live.title ?? (isLiving ? '正在直播' : '直播已结束'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Positioned(
-                      top: 4,
-                      left: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.sensors, color: Colors.white, size: 10),
-                            SizedBox(width: 2),
-                            Text(
-                              'LIVE',
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        if (live.descFirst != null && live.descFirst!.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: cs.secondaryContainer,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              live.descFirst!,
                               style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                                color: cs.onSecondaryContainer,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
+                          )
+                        else if (live.uname != null && live.uname!.isNotEmpty)
+                          Text(
+                            live.uname!,
+                            style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+                          ),
+                        if (live.watchedShow != null && live.watchedShow!.isNotEmpty) ...[
+                          const Spacer(),
+                          Icon(Icons.remove_red_eye_outlined, size: 12, color: cs.outline),
+                          const SizedBox(width: 3),
+                          Text(
+                            live.watchedShow!,
+                            style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: Style.md),
             ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    live.title ?? '直播推荐',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      if (live.uname != null && live.uname!.isNotEmpty)
-                        Text(
-                          live.uname!,
-                          style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
-                        ),
-                      if (live.watchedShow != null && live.watchedShow!.isNotEmpty) ...[
-                        const Spacer(),
-                        Icon(Icons.remove_red_eye_outlined, size: 12, color: cs.outline),
-                        const SizedBox(width: 3),
-                        Text(
-                          live.watchedShow!,
-                          style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+
+  /// 失效/空动态卡片渲染。
+  Widget _buildNoneCard(BuildContext context, DynNone none) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(Style.radiusSm),
+      ),
+      child: Row(
+        spacing: 6,
+        children: [
+          Icon(Icons.info_outline, size: 16, color: cs.outline),
+          Expanded(
+            child: Text(
+              none.tips ?? '动态内容已失效',
+              style: TextStyle(fontSize: 12, color: cs.outline),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1432,6 +1506,15 @@ class _DynCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(Style.radiusSm),
               ),
             ),
+            if (archive.badge != null && archive.badge!.isNotEmpty)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: PBadge(
+                  text: archive.badge!,
+                  type: PBadgeType.badge,
+                ),
+              ),
             Positioned.fill(
               child: Container(
                 alignment: Alignment.bottomLeft,
