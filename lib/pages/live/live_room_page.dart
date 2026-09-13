@@ -2092,8 +2092,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     return spans;
   }
 
-  /// 底部互动发送条（输入框与发送按钮统一为 36px 严格高度对齐）
+  /// 底部互动发送条（表情选择器、输入框与发送按钮统一为严格等高的 40px 胶囊设计）
   Widget _buildChatInputBar(ColorScheme cs, ThemeData theme) {
+    const double barItemHeight = 40.0;
+    const double barItemRadius = 20.0;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
@@ -2105,100 +2108,109 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           ),
         ),
       ),
-      child: SizedBox(
-        height: 36,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 哔哩哔哩官方表情快捷选择器
-            _buildEmotePickerButton(cs),
-            const SizedBox(width: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // 1. 哔哩哔哩官方表情快捷选择器（严格 40x40 圆形图标，消除外层边距偏差）
+          _buildEmotePickerButton(cs, barItemHeight),
+          const SizedBox(width: 8),
 
-            // 弹幕输入框（高度严格限定为 36px，文字垂直居中）
-            Expanded(
-              child: TextField(
-                controller: _danmakuInputCtrl,
-                focusNode: _danmakuInputFocusNode,
-                enabled: !_isSendingDanmaku,
-                textInputAction: TextInputAction.send,
-                textAlignVertical: TextAlignVertical.center,
-                onSubmitted: (_) => _sendDanmaku(),
-                style: const TextStyle(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: _isLiving ? '发个弹幕和主播互动吧~' : '未开播，无法发送弹幕',
-                  hintStyle: TextStyle(color: cs.outline, fontSize: 13),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: cs.surface.withValues(alpha: 0.75),
-                  suffixIcon: _danmakuInputCtrl.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 16),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                          onPressed: () {
-                            _danmakuInputCtrl.clear();
-                            setState(() {});
-                          },
-                        )
-                      : null,
-                ),
-                onChanged: (_) => setState(() {}),
+          // 2. 弹幕输入框（外层 Container 严格限定为 40px 胶囊容器，保证与发送按钮完全等高且绝不缩瘪）
+          Expanded(
+            child: Container(
+              height: barItemHeight,
+              decoration: BoxDecoration(
+                color: cs.surface.withValues(alpha: 0.75),
+                borderRadius: BorderRadius.circular(barItemRadius),
               ),
-            ),
-            const SizedBox(width: 8),
-
-            // 发送按钮（高度严格 36px，同款 18px 圆角与垂直居中对齐）
-            SizedBox(
-              height: 36,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-                onPressed: (_isLiving &&
-                        _danmakuInputCtrl.text.trim().isNotEmpty &&
-                        !_isSendingDanmaku)
-                    ? _sendDanmaku
-                    : null,
-                child: _isSendingDanmaku
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('发送', style: TextStyle(fontSize: 13)),
-                          SizedBox(width: 4),
-                          Icon(Icons.send_rounded, size: 14),
-                        ],
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              alignment: Alignment.center,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _danmakuInputCtrl,
+                      focusNode: _danmakuInputFocusNode,
+                      enabled: !_isSendingDanmaku,
+                      textInputAction: TextInputAction.send,
+                      textAlignVertical: TextAlignVertical.center,
+                      onSubmitted: (_) => _sendDanmaku(),
+                      style: const TextStyle(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: _isLiving ? '发个弹幕和主播互动吧~' : '未开播，无法发送弹幕',
+                        hintStyle: TextStyle(color: cs.outline, fontSize: 13),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  if (_danmakuInputCtrl.text.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                      onPressed: () {
+                        _danmakuInputCtrl.clear();
+                        setState(() {});
+                      },
+                    ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+
+          // 3. 发送按钮（严格 40px 高度，与输入框和表情按钮完全等高且拥有同款 20px 圆角）
+          SizedBox(
+            height: barItemHeight,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(68, barItemHeight),
+                maximumSize: const Size(double.infinity, barItemHeight),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(barItemRadius),
+                ),
+              ),
+              onPressed: (_isLiving &&
+                      _danmakuInputCtrl.text.trim().isNotEmpty &&
+                      !_isSendingDanmaku)
+                  ? _sendDanmaku
+                  : null,
+              child: _isSendingDanmaku
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('发送', style: TextStyle(fontSize: 13)),
+                        SizedBox(width: 4),
+                        Icon(Icons.send_rounded, size: 14),
+                      ],
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// 官方表情弹层选择器按钮
-  Widget _buildEmotePickerButton(ColorScheme cs) {
+  /// 官方表情弹层选择器按钮（严格限定 size 宽高）
+  Widget _buildEmotePickerButton(ColorScheme cs, [double size = 40.0]) {
     return PopupMenuButton<String>(
       tooltip: '选择官方表情',
+      padding: EdgeInsets.zero,
       color: const Color(0xF01E1E1E),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -2274,12 +2286,13 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         ];
       },
       child: Container(
-        width: 36,
-        height: 36,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: cs.surface.withValues(alpha: 0.75),
           shape: BoxShape.circle,
         ),
+        alignment: Alignment.center,
         child: Icon(
           Icons.sentiment_satisfied_alt_outlined,
           color: cs.outline,
