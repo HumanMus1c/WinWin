@@ -3,6 +3,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
+import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
@@ -10,7 +11,10 @@ import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/pages/article/article_page.dart';
 import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
+import 'package:winwin/pages/dynamics/detail_page.dart';
+import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
@@ -780,6 +784,33 @@ class _DynPgcCard extends StatelessWidget {
       );
       return;
     }
+    if (result.isLive || result.roomId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LiveRoomPage(roomId: result.roomId!),
+        ),
+      );
+      return;
+    }
+    if (result.isArticle || result.articleId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ArticlePage(id: result.articleId!.toString()),
+        ),
+      );
+      return;
+    }
+    if (result.dynamicId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DynamicDetailPage(dynamicId: result.dynamicId),
+        ),
+      );
+      return;
+    }
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(content: Text('链接：$url')),
     );
@@ -800,126 +831,137 @@ class _DynCard extends StatelessWidget {
 
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(Style.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 作者行
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () => _gotoMember(context, author?.mid),
-                  child: NetworkImgLayer(
-                    src: author?.face,
-                    width: 40,
-                    height: 40,
-                    type: 'avatar',
-                  ),
-                ),
-                const SizedBox(width: Style.sm),
-                Expanded(
-                  child: GestureDetector(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DynamicDetailPage(item: item),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(Style.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 作者行
+              Row(
+                children: [
+                  GestureDetector(
                     onTap: () => _gotoMember(context, author?.mid),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                author?.name ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            if (author?.pubAction != null && author!.pubAction!.isNotEmpty) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                author.pubAction!,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: cs.outline,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        if (item.pubTs != null)
-                          Text(
-                            _formatTime(item.pubTs!),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: cs.outline,
-                            ),
-                          ),
-                      ],
+                    child: NetworkImgLayer(
+                      src: author?.face,
+                      width: 40,
+                      height: 40,
+                      type: 'avatar',
                     ),
                   ),
-                ),
-              ],
-            ),
-            // 正文（富文本解析，防超长溢出设置最大行数）
-            if (item.text != null && item.text!.isNotEmpty) ...[
-              const SizedBox(height: Style.sm),
-              if (item.richTextNodes.isNotEmpty)
-                Text.rich(
-                  TextSpan(
-                    children: _buildRichSpans(context, item.richTextNodes, cs.primary),
+                  const SizedBox(width: Style.sm),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _gotoMember(context, author?.mid),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  author?.name ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              if (author?.pubAction != null && author!.pubAction!.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  author.pubAction!,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: cs.outline,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (item.pubTs != null)
+                            Text(
+                              _formatTime(item.pubTs!),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: cs.outline,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                  maxLines: 6,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium,
-                )
-              else
-                Text(
-                  item.text!,
-                  maxLines: 6,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium,
-                ),
+                ],
+              ),
+              // 正文（富文本解析，防超长溢出设置最大行数）
+              if (item.text != null && item.text!.isNotEmpty) ...[
+                const SizedBox(height: Style.sm),
+                if (item.richTextNodes.isNotEmpty)
+                  Text.rich(
+                    TextSpan(
+                      children: _buildRichSpans(context, item.richTextNodes, cs.primary),
+                    ),
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium,
+                  )
+                else
+                  Text(
+                    item.text!,
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+              ],
+              // 动态主体内容（按类型分发）
+              if (item.isForward && item.orig != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildForwardContent(context, item.orig!),
+              ] else if (item.isVideo && item.archive != null && (item.archive!.bvid != null || item.archive!.title != null)) ...[
+                const SizedBox(height: Style.sm),
+                _buildVideoPreview(context, item.archive!),
+              ] else if (item.isPgc && item.pgc != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildPgcPreview(context, item.pgc!),
+              ] else if (item.draw != null && item.draw!.items.isNotEmpty) ...[
+                const SizedBox(height: Style.sm),
+                _buildDrawGrid(context, item.draw!.items),
+              ] else if (item.opus != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildOpusCard(context, item.opus!),
+              ] else if (item.article != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildArticleCard(context, item.article!),
+              ] else if (item.live != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildLiveCard(context, item.live!),
+              ] else if (item.none != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildNoneCard(context, item.none!),
+              ],
+              // 附加商品卡模块
+              if (item.additional != null && item.additional!.goodsItems.isNotEmpty) ...[
+                const SizedBox(height: Style.sm),
+                _buildGoodsCard(context, item.additional!),
+              ],
+              // 底部互动行
+              if (item.stat != null) ...[
+                const SizedBox(height: Style.sm),
+                const Divider(height: 1, thickness: 0.5),
+                const SizedBox(height: Style.xs),
+                _buildStatRow(context, item.stat!),
+              ],
             ],
-            // 动态主体内容（按类型分发）
-            if (item.isForward && item.orig != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildForwardContent(context, item.orig!),
-            ] else if (item.isVideo && item.archive != null && (item.archive!.bvid != null || item.archive!.title != null)) ...[
-              const SizedBox(height: Style.sm),
-              _buildVideoPreview(context, item.archive!),
-            ] else if (item.isPgc && item.pgc != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildPgcPreview(context, item.pgc!),
-            ] else if (item.draw != null && item.draw!.items.isNotEmpty) ...[
-              const SizedBox(height: Style.sm),
-              _buildDrawGrid(context, item.draw!.items),
-            ] else if (item.opus != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildOpusCard(context, item.opus!),
-            ] else if (item.article != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildArticleCard(context, item.article!),
-            ] else if (item.live != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildLiveCard(context, item.live!),
-            ] else if (item.none != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildNoneCard(context, item.none!),
-            ],
-            // 附加商品卡模块
-            if (item.additional != null && item.additional!.goodsItems.isNotEmpty) ...[
-              const SizedBox(height: Style.sm),
-              _buildGoodsCard(context, item.additional!),
-            ],
-            // 底部互动行
-            if (item.stat != null) ...[
-              const SizedBox(height: Style.sm),
-              const Divider(height: 1, thickness: 0.5),
-              const SizedBox(height: Style.xs),
-              _buildStatRow(context, item.stat!),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -931,71 +973,82 @@ class _DynCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final origAuthor = orig.author;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(Style.md),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(Style.radiusMd),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (origAuthor != null && origAuthor.name != null)
-            GestureDetector(
-              onTap: () => _gotoMember(context, origAuthor.mid),
-              child: Text(
-                '@${origAuthor.name}',
-                style: TextStyle(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DynamicDetailPage(item: orig),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(Style.radiusMd),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(Style.md),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (origAuthor != null && origAuthor.name != null)
+              GestureDetector(
+                onTap: () => _gotoMember(context, origAuthor.mid),
+                child: Text(
+                  '@${origAuthor.name}',
+                  style: TextStyle(
+                    color: cs.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 ),
               ),
-            ),
-          if (orig.text != null && orig.text!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            if (orig.richTextNodes.isNotEmpty)
-              Text.rich(
-                TextSpan(
-                  children: _buildRichSpans(context, orig.richTextNodes, cs.primary),
+            if (orig.text != null && orig.text!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              if (orig.richTextNodes.isNotEmpty)
+                Text.rich(
+                  TextSpan(
+                    children: _buildRichSpans(context, orig.richTextNodes, cs.primary),
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium,
+                )
+              else
+                Text(
+                  orig.text!,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium,
                 ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium,
-              )
-            else
-              Text(
-                orig.text!,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium,
-              ),
+            ],
+            if (orig.isVideo && orig.archive != null && (orig.archive!.bvid != null || orig.archive!.title != null)) ...[
+              const SizedBox(height: Style.sm),
+              _buildVideoPreview(context, orig.archive!),
+            ] else if (orig.isPgc && orig.pgc != null) ...[
+              const SizedBox(height: Style.sm),
+              _buildPgcPreview(context, orig.pgc!),
+            ] else if (orig.draw != null && orig.draw!.items.isNotEmpty) ...[
+              const SizedBox(height: Style.sm),
+              _buildDrawGrid(context, orig.draw!.items),
+            ] else if (orig.opus != null) ...[
+              const SizedBox(height: Style.sm),
+              _buildOpusCard(context, orig.opus!),
+            ] else if (orig.article != null) ...[
+              const SizedBox(height: Style.sm),
+              _buildArticleCard(context, orig.article!),
+            ] else if (orig.live != null) ...[
+              const SizedBox(height: Style.sm),
+              _buildLiveCard(context, orig.live!),
+            ] else if (orig.none != null) ...[
+              const SizedBox(height: Style.sm),
+              _buildNoneCard(context, orig.none!),
+            ],
           ],
-          if (orig.isVideo && orig.archive != null && (orig.archive!.bvid != null || orig.archive!.title != null)) ...[
-            const SizedBox(height: Style.sm),
-            _buildVideoPreview(context, orig.archive!),
-          ] else if (orig.isPgc && orig.pgc != null) ...[
-            const SizedBox(height: Style.sm),
-            _buildPgcPreview(context, orig.pgc!),
-          ] else if (orig.draw != null && orig.draw!.items.isNotEmpty) ...[
-            const SizedBox(height: Style.sm),
-            _buildDrawGrid(context, orig.draw!.items),
-          ] else if (orig.opus != null) ...[
-            const SizedBox(height: Style.sm),
-            _buildOpusCard(context, orig.opus!),
-          ] else if (orig.article != null) ...[
-            const SizedBox(height: Style.sm),
-            _buildArticleCard(context, orig.article!),
-          ] else if (orig.live != null) ...[
-            const SizedBox(height: Style.sm),
-            _buildLiveCard(context, orig.live!),
-          ] else if (orig.none != null) ...[
-            const SizedBox(height: Style.sm),
-            _buildNoneCard(context, orig.none!),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -1094,6 +1147,11 @@ class _DynCard extends StatelessWidget {
   /// 图文九宫格图片渲染（1 图自然比例/单大图，2-4 图 2x2，5-9 图 3x3）。
   Widget _buildDrawGrid(BuildContext context, List<DynDrawItem> pics) {
     if (pics.isEmpty) return const SizedBox.shrink();
+    final imageUrls = [
+      for (final p in pics)
+        if (p.src != null && p.src!.isNotEmpty) p.src!,
+    ];
+
     if (pics.length == 1) {
       final item = pics.first;
       final w = item.width ?? 16;
@@ -1103,13 +1161,20 @@ class _DynCard extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 380, maxHeight: 240),
         child: AspectRatio(
           aspectRatio: aspect,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(Style.radiusSm),
-            child: NetworkImgLayer(
-              src: item.src,
-              width: double.infinity,
-              height: double.infinity,
+          child: GestureDetector(
+            onTap: () {
+              if (imageUrls.isNotEmpty) {
+                showImageGallery(context, imageUrls: imageUrls, initialIndex: 0);
+              }
+            },
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(Style.radiusSm),
+              child: NetworkImgLayer(
+                src: item.src,
+                width: double.infinity,
+                height: double.infinity,
+                borderRadius: BorderRadius.circular(Style.radiusSm),
+              ),
             ),
           ),
         ),
@@ -1129,17 +1194,26 @@ class _DynCard extends StatelessWidget {
         return Wrap(
           spacing: spacing,
           runSpacing: spacing,
-          children: displayPics.map((pic) {
-            return SizedBox(
-              width: itemWidth,
-              height: itemWidth,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: NetworkImgLayer(
-                  src: pic.src,
-                  width: double.infinity,
-                  height: double.infinity,
+          children: displayPics.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final pic = entry.value;
+            return GestureDetector(
+              onTap: () {
+                if (imageUrls.isNotEmpty) {
+                  showImageGallery(context, imageUrls: imageUrls, initialIndex: idx);
+                }
+              },
+              child: SizedBox(
+                width: itemWidth,
+                height: itemWidth,
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(Style.radiusSm),
+                  child: NetworkImgLayer(
+                    src: pic.src,
+                    width: double.infinity,
+                    height: double.infinity,
+                    borderRadius: BorderRadius.circular(Style.radiusSm),
+                  ),
                 ),
               ),
             );
@@ -1193,64 +1267,85 @@ class _DynCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(Style.md),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (cover != null && cover.isNotEmpty) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: SizedBox(
-                  width: 110,
-                  height: 75,
-                  child: NetworkImgLayer(
-                    src: cover,
-                    width: 110,
-                    height: 75,
-                    borderRadius: BorderRadius.circular(Style.radiusSm),
-                  ),
+      child: InkWell(
+        onTap: () {
+          final id = article.id;
+          if (id != null && id > 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ArticlePage(
+                  id: id.toString(),
+                  title: article.title,
+                  cover: cover,
+                  desc: article.desc,
                 ),
               ),
-              const SizedBox(width: Style.md),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (article.label != null && article.label!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: PBadge(text: article.label!, type: PBadgeType.badge),
-                    ),
-                  Text(
-                    article.title ?? '专栏文章',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
+            );
+          } else if (article.jumpUrl != null && article.jumpUrl!.isNotEmpty) {
+            _handleJumpUrl(context, article.jumpUrl!);
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(Style.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (cover != null && cover.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(Style.radiusSm),
+                  child: SizedBox(
+                    width: 110,
+                    height: 75,
+                    child: NetworkImgLayer(
+                      src: cover,
+                      width: 110,
+                      height: 75,
+                      borderRadius: BorderRadius.circular(Style.radiusSm),
                     ),
                   ),
-                  if (article.desc != null && article.desc!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                ),
+                const SizedBox(width: Style.md),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (article.label != null && article.label!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: PBadge(text: article.label!, type: PBadgeType.badge),
+                      ),
                     Text(
-                      article.desc!,
+                      article.title ?? '专栏文章',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: cs.outline,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (article.desc != null && article.desc!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        article.desc!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.outline,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1264,6 +1359,7 @@ class _DynCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Style.radiusMd),
@@ -1272,10 +1368,20 @@ class _DynCard extends StatelessWidget {
       child: InkWell(
         onTap: () {
           final roomId = live.roomId;
-          if (live.jumpUrl != null && live.jumpUrl!.isNotEmpty) {
+          if (roomId != null && roomId > 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => LiveRoomPage(
+                  roomId: roomId,
+                  title: live.title,
+                  uname: live.uname,
+                  cover: live.cover,
+                ),
+              ),
+            );
+          } else if (live.jumpUrl != null && live.jumpUrl!.isNotEmpty) {
             _handleJumpUrl(context, live.jumpUrl!);
-          } else if (roomId != null && roomId > 0) {
-            _handleJumpUrl(context, 'https://live.bilibili.com/$roomId');
           }
         },
         borderRadius: BorderRadius.circular(Style.radiusMd),
@@ -1732,6 +1838,33 @@ class _DynCard extends StatelessWidget {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: IdUtils.av2bv(result.aid!))),
+      );
+      return;
+    }
+    if (result.isLive || result.roomId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LiveRoomPage(roomId: result.roomId!),
+        ),
+      );
+      return;
+    }
+    if (result.isArticle || result.articleId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ArticlePage(id: result.articleId!.toString()),
+        ),
+      );
+      return;
+    }
+    if (result.dynamicId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DynamicDetailPage(dynamicId: result.dynamicId),
+        ),
       );
       return;
     }

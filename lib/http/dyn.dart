@@ -484,6 +484,7 @@ class DynArticle {
   final String? desc;
   final List<String> covers;
   final String? label;
+  final String? jumpUrl;
 
   DynArticle({
     this.id,
@@ -491,6 +492,7 @@ class DynArticle {
     this.desc,
     this.covers = const [],
     this.label,
+    this.jumpUrl,
   });
 
   static DynArticle? fromMajor(Map<String, dynamic> major) {
@@ -506,6 +508,7 @@ class DynArticle {
       desc: article['desc']?.toString(),
       covers: covers,
       label: article['label']?.toString(),
+      jumpUrl: article['jump_url']?.toString(),
     );
   }
 }

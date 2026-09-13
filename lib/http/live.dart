@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/utils/wbi_sign.dart';
 
 /// 直播 HTTP（移植自 PiliPlus `lib/http/live.dart`，精简为桌面端所需）。
 ///
@@ -121,6 +122,199 @@ abstract final class LiveHttp {
     } catch (e) {
       return Error('获取直播间信息失败：$e');
     }
+  }
+
+  /// 获取直播间播放推流地址（`/xlive/web-room/v2/index/getRoomPlayInfo`）。
+  ///
+  /// 返回 [LivePlayUrlData]，包含协议流列表与推流 URL 解析逻辑。
+  static Future<LoadingState<LivePlayUrlData>> liveRoomPlayInfo({
+    required int roomId,
+    int? qn,
+  }) async {
+    try {
+      final res = await Request().get<dynamic>(
+        Api.liveRoomInfo,
+        queryParameters: await WbiSign.makSign({
+          'room_id': roomId,
+          'protocol': '0,1',
+          'format': '0,1,2',
+          'codec': '0,1',
+          'qn': ?qn,
+          'platform': 'web',
+          'ptype': 8,
+          'dolby': 5,
+          'panorama': 1,
+          'web_location': 444.8,
+        }),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0) {
+        final rawData = data['data'] as Map<String, dynamic>? ?? {};
+        return Success(LivePlayUrlData.fromJson(rawData));
+      }
+      return Error(data['message']?.toString() ?? '获取直播播放流失败');
+    } on DioException catch (e) {
+      return Error('获取直播播放流失败：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('获取直播播放流失败：$e');
+    }
+  }
+}
+
+/// 直播推流播放地址数据。
+class LivePlayUrlData {
+  final int? roomId;
+  final int? liveStatus;
+  final int? liveTime;
+  final bool? isPortrait;
+  final List<LiveStreamItem> streams;
+
+  LivePlayUrlData({
+    this.roomId,
+    this.liveStatus,
+    this.liveTime,
+    this.isPortrait,
+    this.streams = const [],
+  });
+
+  /// 是否开播中（liveStatus == 1）。
+  bool get isLiving => liveStatus == 1;
+
+  /// 提取最优播放地址（优先 FLV，其次 HLS）。
+  String? get bestPlayUrl {
+    if (streams.isEmpty) return null;
+    // 1. 优先查找 http_stream (FLV)
+    for (final s in streams) {
+      if (s.protocolName == 'http_stream') {
+        final url = s.firstUrl;
+        if (url != null && url.isNotEmpty) return url;
+      }
+    }
+    // 2. 其次查找 http_hls
+    for (final s in streams) {
+      if (s.protocolName == 'http_hls') {
+        final url = s.firstUrl;
+        if (url != null && url.isNotEmpty) return url;
+      }
+    }
+    // 3. 兜底返回任意有效流
+    for (final s in streams) {
+      final url = s.firstUrl;
+      if (url != null && url.isNotEmpty) return url;
+    }
+    return null;
+  }
+
+  factory LivePlayUrlData.fromJson(Map<String, dynamic> json) {
+    final playurlInfo =
+        json['playurl_info']?['playurl'] as Map<String, dynamic>?;
+    final rawStream = playurlInfo?['stream'] as List?;
+    final streams = rawStream
+            ?.map((e) => LiveStreamItem.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const [];
+
+    return LivePlayUrlData(
+      roomId: _asInt(json['room_id']),
+      liveStatus: _asInt(json['live_status']),
+      liveTime: _asInt(json['live_time']),
+      isPortrait: json['is_portrait'] as bool?,
+      streams: streams,
+    );
+  }
+}
+
+class LiveStreamItem {
+  final String? protocolName;
+  final List<LiveFormatItem> formats;
+
+  LiveStreamItem({this.protocolName, this.formats = const []});
+
+  String? get firstUrl {
+    for (final f in formats) {
+      for (final c in f.codecs) {
+        if (c.baseUrl != null && c.urlInfo.isNotEmpty) {
+          final host = c.urlInfo.first.host ?? '';
+          final extra = c.urlInfo.first.extra ?? '';
+          return '$host${c.baseUrl}$extra';
+        }
+      }
+    }
+    return null;
+  }
+
+  factory LiveStreamItem.fromJson(Map<String, dynamic> json) {
+    final rawFormats = json['format'] as List?;
+    return LiveStreamItem(
+      protocolName: json['protocol_name']?.toString(),
+      formats: rawFormats
+              ?.map((e) => LiveFormatItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+  }
+}
+
+class LiveFormatItem {
+  final String? formatName;
+  final List<LiveCodecItem> codecs;
+
+  LiveFormatItem({this.formatName, this.codecs = const []});
+
+  factory LiveFormatItem.fromJson(Map<String, dynamic> json) {
+    final rawCodecs = json['codec'] as List?;
+    return LiveFormatItem(
+      formatName: json['format_name']?.toString(),
+      codecs: rawCodecs
+              ?.map((e) => LiveCodecItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+  }
+}
+
+class LiveCodecItem {
+  final String? codecName;
+  final int? currentQn;
+  final List<int> acceptQn;
+  final String? baseUrl;
+  final List<LiveUrlInfoItem> urlInfo;
+
+  LiveCodecItem({
+    this.codecName,
+    this.currentQn,
+    this.acceptQn = const [],
+    this.baseUrl,
+    this.urlInfo = const [],
+  });
+
+  factory LiveCodecItem.fromJson(Map<String, dynamic> json) {
+    final rawAcceptQn = json['accept_qn'] as List?;
+    final rawUrlInfo = json['url_info'] as List?;
+    return LiveCodecItem(
+      codecName: json['codec_name']?.toString(),
+      currentQn: _asInt(json['current_qn']),
+      acceptQn: rawAcceptQn?.map((e) => _asInt(e) ?? 0).toList() ?? const [],
+      baseUrl: json['base_url']?.toString(),
+      urlInfo: rawUrlInfo
+              ?.map((e) => LiveUrlInfoItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+  }
+}
+
+class LiveUrlInfoItem {
+  final String? host;
+  final String? extra;
+
+  LiveUrlInfoItem({this.host, this.extra});
+
+  factory LiveUrlInfoItem.fromJson(Map<String, dynamic> json) {
+    return LiveUrlInfoItem(
+      host: json['host']?.toString(),
+      extra: json['extra']?.toString(),
+    );
   }
 }
 

@@ -13,6 +13,8 @@ class BilibiliUrlParseResult {
   final int? seasonId;
   final int? epId;
   final int? mediaId;
+  final int? roomId;
+  final int? articleId;
 
   const BilibiliUrlParseResult({
     this.bvid,
@@ -21,12 +23,21 @@ class BilibiliUrlParseResult {
     this.seasonId,
     this.epId,
     this.mediaId,
+    this.roomId,
+    this.articleId,
   });
 
   bool get isBangumi => seasonId != null || epId != null || mediaId != null;
+  bool get isLive => roomId != null;
+  bool get isArticle => articleId != null;
 
   bool get isValid =>
-      bvid != null || aid != null || dynamicId != null || isBangumi;
+      bvid != null ||
+      aid != null ||
+      dynamicId != null ||
+      isBangumi ||
+      isLive ||
+      isArticle;
 
   /// 返回视频标识（优先 BV，其次 AV）。
   String? get videoId {
@@ -40,7 +51,7 @@ class BilibiliUrlParseResult {
 
   @override
   String toString() =>
-      'BilibiliUrlParseResult(bvid: $bvid, aid: $aid, dynamicId: $dynamicId, seasonId: $seasonId, epId: $epId, mediaId: $mediaId)';
+      'BilibiliUrlParseResult(bvid: $bvid, aid: $aid, dynamicId: $dynamicId, seasonId: $seasonId, epId: $epId, mediaId: $mediaId, roomId: $roomId, articleId: $articleId)';
 }
 
 abstract final class BilibiliUrlParser {
@@ -61,12 +72,38 @@ abstract final class BilibiliUrlParser {
       RegExp(r'/(opus|dynamic)/(\d+)', caseSensitive: false);
   static final _tBilibiliDynamicRegex =
       RegExp(r't\.bilibili\.com/(\d+)', caseSensitive: false);
+  static final _liveRegex = RegExp(
+    r'(?:live\.bilibili\.com/(?:h5/)?|bilibili://live/)(\d+)',
+    caseSensitive: false,
+  );
+  static final _cvRegex = RegExp(
+    r'(?:/read/(?:cv)?)(\d+)',
+    caseSensitive: false,
+  );
 
-  /// 从任意文本中提取 B 站视频/动态标识。
+  /// 从任意文本中提取 B 站视频/动态/直播/专栏标识。
   ///
-  /// 优先级：BV 号 → AV 号 → /video/{aid} 路径 → opus/t.bilibili 动态 ID。
+  /// 优先级：BV 号 → AV 号 → /video/{aid} 路径 → opus/t.bilibili 动态 ID → 直播间 → 专栏。
   static BilibiliUrlParseResult parse(String input) {
     if (input.isEmpty) return const BilibiliUrlParseResult();
+
+    // 直播间
+    final liveMatch = _liveRegex.firstMatch(input);
+    if (liveMatch != null) {
+      final roomId = int.tryParse(liveMatch.group(1)!);
+      if (roomId != null) {
+        return BilibiliUrlParseResult(roomId: roomId);
+      }
+    }
+
+    // 专栏文章 cv
+    final cvMatch = _cvRegex.firstMatch(input);
+    if (cvMatch != null) {
+      final articleId = int.tryParse(cvMatch.group(1)!);
+      if (articleId != null) {
+        return BilibiliUrlParseResult(articleId: articleId);
+      }
+    }
 
     // BV 号
     final bvMatch = _bvRegex.firstMatch(input);
@@ -241,6 +278,38 @@ abstract final class BilibiliUrlParser {
     if (host == 'opus' || host == 'dynamic') {
       if (uri.pathSegments.isNotEmpty) {
         return BilibiliUrlParseResult(dynamicId: uri.pathSegments.first);
+      }
+      return const BilibiliUrlParseResult();
+    }
+
+    // bilibili://live/{roomId}
+    if (host == 'live') {
+      if (uri.pathSegments.isNotEmpty) {
+        final roomId = int.tryParse(uri.pathSegments.first);
+        if (roomId != null) return BilibiliUrlParseResult(roomId: roomId);
+      }
+      final roomIdStr = uri.queryParameters['room_id'] ??
+          uri.queryParameters['roomId'];
+      if (roomIdStr != null) {
+        final roomId = int.tryParse(roomIdStr);
+        if (roomId != null) return BilibiliUrlParseResult(roomId: roomId);
+      }
+      return const BilibiliUrlParseResult();
+    }
+
+    // bilibili://article/{id} 或 bilibili://read/{id}
+    if (host == 'article' || host == 'read') {
+      if (uri.pathSegments.isNotEmpty) {
+        final cvStr = uri.pathSegments.first
+            .replaceAll(RegExp(r'^cv', caseSensitive: false), '');
+        final articleId = int.tryParse(cvStr);
+        if (articleId != null) return BilibiliUrlParseResult(articleId: articleId);
+      }
+      final idStr = uri.queryParameters['id'] ??
+          uri.queryParameters['article_id'];
+      if (idStr != null) {
+        final id = int.tryParse(idStr);
+        if (id != null) return BilibiliUrlParseResult(articleId: id);
       }
       return const BilibiliUrlParseResult();
     }

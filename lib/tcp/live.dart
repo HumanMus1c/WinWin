@@ -117,7 +117,7 @@ class LiveDanmakuClient {
     this.port = LiveDanmakuProtocol.defaultPort,
     this.uid = 0,
     required this.roomId,
-    required this.token,
+    this.token = '',
     this.buvid3 = '',
     this.platform = 'web',
     this.version = '0.6.5',

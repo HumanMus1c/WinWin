@@ -304,6 +304,7 @@ abstract final class VideoHttp {
   // [mode]：排序模式（对标 BiliPai CommentSortHeader）：3=最热，2=最新。
   static Future<LoadingState<ReplyMainData>> replyMain({
     required int oid,
+    int type = 1,
     String? nextOffset,
     int mode = 3,
   }) async {
@@ -312,7 +313,7 @@ abstract final class VideoHttp {
       Api.replyMain,
       queryParameters: {
         'mode': mode,
-        'type': 1,
+        'type': type,
         'oid': oid,
         'ps': 20,
         'pagination_str': jsonEncode({'offset': nextOffset ?? ''}),

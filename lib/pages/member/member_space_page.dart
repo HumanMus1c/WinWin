@@ -20,8 +20,12 @@ import 'package:winwin/http/fav.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
 import 'package:winwin/models/fav/fav_models.dart';
+import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
+import 'package:winwin/pages/article/article_page.dart';
 import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
+import 'package:winwin/pages/dynamics/detail_page.dart';
 import 'package:winwin/pages/fav/fav_page.dart';
+import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/season_series_detail_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
@@ -1740,118 +1744,129 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(Style.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 头部作者与时间
-            Row(
-              children: [
-                NetworkImgLayer(
-                  src: author?.face,
-                  width: 38,
-                  height: 38,
-                  type: 'avatar',
-                ),
-                const SizedBox(width: Style.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              author?.name ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DynamicDetailPage(item: item),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(Style.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 头部作者与时间
+              Row(
+                children: [
+                  NetworkImgLayer(
+                    src: author?.face,
+                    width: 38,
+                    height: 38,
+                    type: 'avatar',
+                  ),
+                  const SizedBox(width: Style.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                author?.name ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
-                          if (author?.pubAction?.isNotEmpty ?? false) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              author!.pubAction!,
-                              style: TextStyle(fontSize: 11, color: cs.outline),
-                            ),
+                            if (author?.pubAction?.isNotEmpty ?? false) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                author!.pubAction!,
+                                style: TextStyle(fontSize: 11, color: cs.outline),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                      if (item.pubTs != null)
-                        Text(
-                          DateFormatUtils.dateFormat(item.pubTs!),
-                          style: TextStyle(fontSize: 11, color: cs.outline),
                         ),
-                    ],
+                        if (item.pubTs != null)
+                          Text(
+                            DateFormatUtils.dateFormat(item.pubTs!),
+                            style: TextStyle(fontSize: 11, color: cs.outline),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            // 正文富文本
-            if (item.text?.isNotEmpty ?? false) ...[
-              const SizedBox(height: Style.sm),
-              if (item.richTextNodes.isNotEmpty)
-                Text.rich(
-                  TextSpan(children: _buildRichSpans(context, item.richTextNodes, cs.primary)),
-                  maxLines: 6,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium,
-                )
-              else
-                Text(
-                  item.text!,
-                  maxLines: 6,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium,
-                ),
-            ],
-            // 动态主体：视频 / 追番 / 图文 / 专栏 / 直播 / 转发
-            if (item.isForward && item.orig != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildForwardContent(context, item.orig!),
-            ] else if (item.isVideo && item.archive?.bvid != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildVideoPreview(context, item.archive!),
-            ] else if (item.isPgc && item.pgc != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildPgcPreview(context, item.pgc!),
-            ] else if (item.draw != null && item.draw!.items.isNotEmpty) ...[
-              const SizedBox(height: Style.sm),
-              _buildDrawGrid(context, item.draw!.items),
-            ] else if (item.opus != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildOpusCard(context, item.opus!),
-            ] else if (item.article != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildArticleCard(context, item.article!),
-            ] else if (item.liveRcmd != null) ...[
-              const SizedBox(height: Style.sm),
-              _buildLiveCard(context, item.liveRcmd!),
-            ],
-            // 附加商品卡
-            if (item.additional?.goodsItems.isNotEmpty ?? false) ...[
-              const SizedBox(height: Style.sm),
-              _buildGoodsCard(context, item.additional!),
-            ],
-            // 底部互动行
-            if (item.stat != null) ...[
-              const SizedBox(height: Style.sm),
-              const Divider(height: 1, thickness: 0.5),
-              const SizedBox(height: Style.xs),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _statActionItem(Icons.reply_outlined, item.stat!.repost ?? 0, cs.outline),
-                  _statActionItem(Icons.chat_bubble_outline, item.stat!.comment ?? 0, cs.outline),
-                  _statActionItem(Icons.thumb_up_outlined, item.stat!.like ?? 0, cs.outline),
                 ],
               ),
+              // 正文富文本
+              if (item.text?.isNotEmpty ?? false) ...[
+                const SizedBox(height: Style.sm),
+                if (item.richTextNodes.isNotEmpty)
+                  Text.rich(
+                    TextSpan(children: _buildRichSpans(context, item.richTextNodes, cs.primary)),
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium,
+                  )
+                else
+                  Text(
+                    item.text!,
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+              ],
+              // 动态主体：视频 / 追番 / 图文 / 专栏 / 直播 / 转发
+              if (item.isForward && item.orig != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildForwardContent(context, item.orig!),
+              ] else if (item.isVideo && item.archive?.bvid != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildVideoPreview(context, item.archive!),
+              ] else if (item.isPgc && item.pgc != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildPgcPreview(context, item.pgc!),
+              ] else if (item.draw != null && item.draw!.items.isNotEmpty) ...[
+                const SizedBox(height: Style.sm),
+                _buildDrawGrid(context, item.draw!.items),
+              ] else if (item.opus != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildOpusCard(context, item.opus!),
+              ] else if (item.article != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildArticleCard(context, item.article!),
+              ] else if (item.liveRcmd != null) ...[
+                const SizedBox(height: Style.sm),
+                _buildLiveCard(context, item.liveRcmd!),
+              ],
+              // 附加商品卡
+              if (item.additional?.goodsItems.isNotEmpty ?? false) ...[
+                const SizedBox(height: Style.sm),
+                _buildGoodsCard(context, item.additional!),
+              ],
+              // 底部互动行
+              if (item.stat != null) ...[
+                const SizedBox(height: Style.sm),
+                const Divider(height: 1, thickness: 0.5),
+                const SizedBox(height: Style.xs),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _statActionItem(Icons.reply_outlined, item.stat!.repost ?? 0, cs.outline),
+                    _statActionItem(Icons.chat_bubble_outline, item.stat!.comment ?? 0, cs.outline),
+                    _statActionItem(Icons.thumb_up_outlined, item.stat!.like ?? 0, cs.outline),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -1876,53 +1891,64 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final cs = theme.colorScheme;
     final origAuthor = orig.author;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(Style.md),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(Style.radiusMd),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (origAuthor?.name != null)
-            GestureDetector(
-              onTap: () {
-                final authorMid = origAuthor?.mid;
-                if (authorMid != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => MemberSpacePage(mid: authorMid)),
-                  );
-                }
-              },
-              child: Text(
-                '@${origAuthor?.name}',
-                style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600, fontSize: 13),
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DynamicDetailPage(item: orig),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(Style.radiusMd),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(Style.md),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (origAuthor?.name != null)
+              GestureDetector(
+                onTap: () {
+                  final authorMid = origAuthor?.mid;
+                  if (authorMid != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => MemberSpacePage(mid: authorMid)),
+                    );
+                  }
+                },
+                child: Text(
+                  '@${origAuthor?.name}',
+                  style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600, fontSize: 13),
+                ),
               ),
-            ),
-          if (orig.text?.isNotEmpty ?? false) ...[
-            const SizedBox(height: 4),
-            Text(
-              orig.text!,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium,
-            ),
+            if (orig.text?.isNotEmpty ?? false) ...[
+              const SizedBox(height: 4),
+              Text(
+                orig.text!,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+            if (orig.isVideo && orig.archive?.bvid != null) ...[
+              const SizedBox(height: Style.sm),
+              _buildVideoPreview(context, orig.archive!),
+            ] else if (orig.draw != null && orig.draw!.items.isNotEmpty) ...[
+              const SizedBox(height: Style.sm),
+              _buildDrawGrid(context, orig.draw!.items),
+            ] else if (orig.opus != null) ...[
+              const SizedBox(height: Style.sm),
+              _buildOpusCard(context, orig.opus!),
+            ],
           ],
-          if (orig.isVideo && orig.archive?.bvid != null) ...[
-            const SizedBox(height: Style.sm),
-            _buildVideoPreview(context, orig.archive!),
-          ] else if (orig.draw != null && orig.draw!.items.isNotEmpty) ...[
-            const SizedBox(height: Style.sm),
-            _buildDrawGrid(context, orig.draw!.items),
-          ] else if (orig.opus != null) ...[
-            const SizedBox(height: Style.sm),
-            _buildOpusCard(context, orig.opus!),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -2005,6 +2031,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Widget _buildDrawGrid(BuildContext context, List<DynDrawItem> pics) {
     if (pics.isEmpty) return const SizedBox.shrink();
+    final imageUrls = [
+      for (final p in pics)
+        if (p.src != null && p.src!.isNotEmpty) p.src!,
+    ];
+
     if (pics.length == 1) {
       final item = pics.first;
       final w = item.width ?? 16;
@@ -2014,13 +2045,20 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         constraints: const BoxConstraints(maxWidth: 380, maxHeight: 240),
         child: AspectRatio(
           aspectRatio: aspect,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(Style.radiusSm),
-            child: NetworkImgLayer(
-              src: item.src,
-              width: double.infinity,
-              height: double.infinity,
+          child: GestureDetector(
+            onTap: () {
+              if (imageUrls.isNotEmpty) {
+                showImageGallery(context, imageUrls: imageUrls, initialIndex: 0);
+              }
+            },
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(Style.radiusSm),
+              child: NetworkImgLayer(
+                src: item.src,
+                width: double.infinity,
+                height: double.infinity,
+                borderRadius: BorderRadius.circular(Style.radiusSm),
+              ),
             ),
           ),
         ),
@@ -2040,17 +2078,26 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         return Wrap(
           spacing: spacing,
           runSpacing: spacing,
-          children: displayPics.map((pic) {
-            return SizedBox(
-              width: itemWidth,
-              height: itemWidth,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: NetworkImgLayer(
-                  src: pic.src,
-                  width: double.infinity,
-                  height: double.infinity,
+          children: displayPics.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final pic = entry.value;
+            return GestureDetector(
+              onTap: () {
+                if (imageUrls.isNotEmpty) {
+                  showImageGallery(context, imageUrls: imageUrls, initialIndex: idx);
+                }
+              },
+              child: SizedBox(
+                width: itemWidth,
+                height: itemWidth,
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(Style.radiusSm),
+                  child: NetworkImgLayer(
+                    src: pic.src,
+                    width: double.infinity,
+                    height: double.infinity,
+                    borderRadius: BorderRadius.circular(Style.radiusSm),
+                  ),
                 ),
               ),
             );
@@ -2099,45 +2146,64 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return Card(
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(Style.md),
-        child: Row(
-          children: [
-            if (cover?.isNotEmpty ?? false) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: SizedBox(
-                  width: 100,
-                  height: 70,
-                  child: NetworkImgLayer(src: cover, width: 100, height: 70),
+      child: InkWell(
+        onTap: () {
+          final id = article.id;
+          if (id != null && id > 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ArticlePage(
+                  id: id.toString(),
+                  title: article.title,
+                  cover: cover,
+                  desc: article.desc,
                 ),
               ),
-              const SizedBox(width: Style.md),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (article.label?.isNotEmpty ?? false)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: PBadge(text: article.label!, type: PBadgeType.badge),
-                    ),
-                  Text(
-                    article.title ?? '专栏文章',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            );
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(Style.md),
+          child: Row(
+            children: [
+              if (cover?.isNotEmpty ?? false) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(Style.radiusSm),
+                  child: SizedBox(
+                    width: 100,
+                    height: 70,
+                    child: NetworkImgLayer(src: cover, width: 100, height: 70),
                   ),
-                ],
+                ),
+                const SizedBox(width: Style.md),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (article.label?.isNotEmpty ?? false)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: PBadge(text: article.label!, type: PBadgeType.badge),
+                      ),
+                    Text(
+                      article.title ?? '专栏文章',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -2149,65 +2215,84 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return Card(
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(Style.md),
-        child: Row(
-          children: [
-            if (live.cover?.isNotEmpty ?? false) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-                child: Stack(
-                  children: [
-                    SizedBox(
-                      width: 110,
-                      height: 70,
-                      child: NetworkImgLayer(src: live.cover, width: 110, height: 70),
-                    ),
-                    Positioned(
-                      top: 4,
-                      left: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: const Text(
-                          'LIVE',
-                          style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+      child: InkWell(
+        onTap: () {
+          final roomId = live.roomId;
+          if (roomId != null && roomId > 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => LiveRoomPage(
+                  roomId: roomId,
+                  title: live.title,
+                  uname: live.uname,
+                  cover: live.cover,
+                ),
+              ),
+            );
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(Style.md),
+          child: Row(
+            children: [
+              if (live.cover?.isNotEmpty ?? false) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(Style.radiusSm),
+                  child: Stack(
+                    children: [
+                      SizedBox(
+                        width: 110,
+                        height: 70,
+                        child: NetworkImgLayer(src: live.cover, width: 110, height: 70),
+                      ),
+                      Positioned(
+                        top: 4,
+                        left: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: const Text(
+                            'LIVE',
+                            style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: Style.md),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      live.title ?? '正在直播',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                     ),
+                    const SizedBox(height: 4),
+                    if (live.watchedShow?.isNotEmpty ?? false)
+                      Text(
+                        live.watchedShow!,
+                        style: TextStyle(fontSize: 11, color: cs.outline),
+                      ),
                   ],
                 ),
               ),
-              const SizedBox(width: Style.md),
             ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    live.title ?? '正在直播',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  if (live.watchedShow?.isNotEmpty ?? false)
-                    Text(
-                      live.watchedShow!,
-                      style: TextStyle(fontSize: 11, color: cs.outline),
-                    ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -6,6 +6,7 @@ import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/live.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
@@ -647,11 +648,17 @@ class _LiveCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          // TODO: Phase 4 直播播放器集成后跳转直播间
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            SnackBar(
-              content: Text('直播间 ${item.roomId} · 直播播放待集成'),
-              duration: const Duration(seconds: 1),
+          final roomId = item.roomId;
+          if (roomId == null || roomId <= 0) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => LiveRoomPage(
+                roomId: roomId,
+                title: item.title,
+                uname: item.uname,
+                cover: item.cover,
+              ),
             ),
           );
         },
