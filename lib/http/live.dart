@@ -212,6 +212,74 @@ abstract final class LiveHttp {
       return Error('获取直播播放流失败：$e');
     }
   }
+
+  /// 获取直播间弹幕 Token 与官方 Comet 服务器集群（`/xlive/web-room/v1/index/getDanmuInfo`）。
+  static Future<LoadingState<LiveDanmakuTokenData>> liveRoomGetDanmakuToken({
+    required int roomId,
+  }) async {
+    try {
+      final res = await Request().get<dynamic>(
+        Api.liveRoomDmToken,
+        queryParameters: await WbiSign.makSign({
+          'id': roomId,
+          'type': 0,
+          'web_location': 444.8,
+        }),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0) {
+        final rawData = data['data'] as Map<String, dynamic>? ?? {};
+        return Success(LiveDanmakuTokenData.fromJson(rawData));
+      }
+      return Error(data['message']?.toString() ?? '获取直播弹幕Token失败');
+    } on DioException catch (e) {
+      return Error('获取直播弹幕Token失败：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('获取直播弹幕Token失败：$e');
+    }
+  }
+}
+
+/// 直播弹幕认证 Token 及服务器集群数据。
+class LiveDanmakuTokenData {
+  final String token;
+  final List<LiveDanmakuHost> hostList;
+
+  LiveDanmakuTokenData({required this.token, required this.hostList});
+
+  factory LiveDanmakuTokenData.fromJson(Map<String, dynamic> json) {
+    final rawHosts = json['host_list'] as List? ?? const [];
+    return LiveDanmakuTokenData(
+      token: json['token']?.toString() ?? '',
+      hostList: rawHosts
+          .whereType<Map<String, dynamic>>()
+          .map((e) => LiveDanmakuHost.fromJson(e))
+          .toList(),
+    );
+  }
+}
+
+class LiveDanmakuHost {
+  final String host;
+  final int port;
+  final int wssPort;
+  final int wsPort;
+
+  LiveDanmakuHost({
+    required this.host,
+    this.port = 2243,
+    this.wssPort = 2245,
+    this.wsPort = 2244,
+  });
+
+  factory LiveDanmakuHost.fromJson(Map<String, dynamic> json) {
+    return LiveDanmakuHost(
+      host: json['host']?.toString() ?? '',
+      port: (json['port'] as num?)?.toInt() ?? 2243,
+      wssPort: (json['wss_port'] as num?)?.toInt() ?? 2245,
+      wsPort: (json['ws_port'] as num?)?.toInt() ?? 2244,
+    );
+  }
 }
 
 /// 直播推流播放地址数据。
@@ -232,6 +300,34 @@ class LivePlayUrlData {
 
   /// 是否开播中（liveStatus == 1）。
   bool get isLiving => liveStatus == 1;
+
+  /// 获取所有候选推流地址（按 FLV -> HLS fmp4 -> HLS ts 排序），供播放器容灾与自动回退。
+  List<String> get allPlayUrls {
+    final urls = <String>[];
+    // 1. FLV 流 (http_stream)
+    for (final s in streams) {
+      if (s.protocolName == 'http_stream') {
+        for (final u in s.allUrls) {
+          if (u.isNotEmpty && !urls.contains(u)) urls.add(u);
+        }
+      }
+    }
+    // 2. HLS 流 (http_hls)
+    for (final s in streams) {
+      if (s.protocolName == 'http_hls') {
+        for (final u in s.allUrls) {
+          if (u.isNotEmpty && !urls.contains(u)) urls.add(u);
+        }
+      }
+    }
+    // 3. 其它兜底
+    for (final s in streams) {
+      for (final u in s.allUrls) {
+        if (u.isNotEmpty && !urls.contains(u)) urls.add(u);
+      }
+    }
+    return urls;
+  }
 
   /// 提取最优播放地址（优先 FLV，其次 HLS）。
   String? get bestPlayUrl {
@@ -294,6 +390,26 @@ class LiveStreamItem {
       }
     }
     return null;
+  }
+
+  /// 提取该协议下所有编码与 CDN 节点的完整直链列表。
+  List<String> get allUrls {
+    final list = <String>[];
+    for (final f in formats) {
+      for (final c in f.codecs) {
+        if (c.baseUrl != null && c.urlInfo.isNotEmpty) {
+          for (final u in c.urlInfo) {
+            final host = u.host ?? '';
+            final extra = u.extra ?? '';
+            final full = '$host${c.baseUrl}$extra';
+            if (full.isNotEmpty && !list.contains(full)) {
+              list.add(full);
+            }
+          }
+        }
+      }
+    }
+    return list;
   }
 
   factory LiveStreamItem.fromJson(Map<String, dynamic> json) {

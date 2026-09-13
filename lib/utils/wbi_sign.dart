@@ -25,7 +25,7 @@ abstract final class WbiSign {
     8,
     23,
     32,
-    28,
+    15,
     50,
     10,
     31,
@@ -49,15 +49,13 @@ abstract final class WbiSign {
     38,
     41,
     13,
-    52,
   ];
 
   static Future<String>? _future;
 
   // 对 imgKey 和 subKey 进行字符顺序打乱编码
   static String getMixinKey(String orig) {
-    final codeUnits = orig.codeUnits;
-    return String.fromCharCodes(_mixinKeyEncTab.map((i) => codeUnits[i]));
+    return String.fromCharCodes(_mixinKeyEncTab.map(orig.codeUnitAt));
   }
 
   // 为请求参数进行 wbi 签名

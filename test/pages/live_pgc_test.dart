@@ -274,6 +274,79 @@ void main() {
       expect(dynLive.badge, '直播中');
       expect(dynLive.isLiving, isTrue);
     });
+
+    test('LiveDanmakuTokenData & LiveDanmakuHost parse correctly', () {
+      final json = {
+        'token': 'test_token_123456',
+        'host_list': [
+          {'host': 'zj-cn-live-comet.chat.bilibili.com', 'port': 2243, 'wss_port': 2245, 'ws_port': 2244},
+          {'host': 'broadcastlv.chat.bilibili.com', 'port': 2243, 'wss_port': 443, 'ws_port': 80},
+        ],
+      };
+      final data = LiveDanmakuTokenData.fromJson(json);
+      expect(data.token, 'test_token_123456');
+      expect(data.hostList.length, 2);
+      expect(data.hostList[0].host, 'zj-cn-live-comet.chat.bilibili.com');
+      expect(data.hostList[0].wssPort, 2245);
+      expect(data.hostList[1].wssPort, 443);
+    });
+
+    test('LivePlayUrlData.allPlayUrls extracts all candidate streams across FLV and HLS', () {
+      final json = {
+        'room_id': 7734200,
+        'live_status': 1,
+        'playurl_info': {
+          'playurl': {
+            'stream': [
+              {
+                'protocol_name': 'http_stream',
+                'format': [
+                  {
+                    'format_name': 'flv',
+                    'codec': [
+                      {
+                        'codec_name': 'avc',
+                        'base_url': '/live/stream_flv.flv',
+                        'url_info': [
+                          {'host': 'https://flv1.bilivideo.com', 'extra': '?token=1'},
+                          {'host': 'https://flv2.bilivideo.com', 'extra': '?token=2'},
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                'protocol_name': 'http_hls',
+                'format': [
+                  {
+                    'format_name': 'fmp4',
+                    'codec': [
+                      {
+                        'codec_name': 'avc',
+                        'base_url': '/live/stream_hls.m3u8',
+                        'url_info': [
+                          {'host': 'https://hls1.bilivideo.com', 'extra': '?token=3'},
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      };
+
+      final playData = LivePlayUrlData.fromJson(json);
+      expect(playData.isLiving, isTrue);
+      expect(playData.bestPlayUrl, 'https://flv1.bilivideo.com/live/stream_flv.flv?token=1');
+      final allUrls = playData.allPlayUrls;
+      expect(allUrls.length, 3);
+      expect(allUrls[0], 'https://flv1.bilivideo.com/live/stream_flv.flv?token=1');
+      expect(allUrls[1], 'https://flv2.bilivideo.com/live/stream_flv.flv?token=2');
+      expect(allUrls[2], 'https://hls1.bilivideo.com/live/stream_hls.m3u8?token=3');
+    });
   });
 }
 

@@ -57,6 +57,9 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   double _volume = 1.0;
   bool _showControls = true;
   Timer? _controlsTimer;
+  Timer? _watchdogTimer;
+  List<String> _streamCandidates = [];
+  int _currentStreamIndex = 0;
 
   final List<LiveDanmakuMessage> _danmakuList = [];
   final ScrollController _chatScrollCtrl = ScrollController();
@@ -72,6 +75,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   @override
   void dispose() {
     _controlsTimer?.cancel();
+    _watchdogTimer?.cancel();
     _danmakuSub?.cancel();
     _danmakuClient?.dispose();
     _chatScrollCtrl.dispose();
@@ -152,21 +156,26 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
     // 2. 根据权威开播状态解耦处理音视频播放与实时 WebSocket 弹幕
     if (_isLiving) {
-      _setupDanmaku(_realRoomId);
+      unawaited(_setupDanmaku(_realRoomId));
 
       final playRes = await LiveHttp.liveRoomPlayInfo(roomId: _realRoomId);
       if (!mounted) return;
 
       if (playRes case Success(:final response)) {
-        final playUrl = response.bestPlayUrl;
-        if (playUrl != null && playUrl.isNotEmpty) {
-          await _setupPlayer(playUrl);
+        final urls = response.allPlayUrls;
+        if (urls.isNotEmpty) {
+          await _setupPlayerWithCandidates(urls);
         } else {
-          if (mounted) {
-            setState(() {
-              _errorMessage = '未获取到有效直播推流地址';
-              _loading = false;
-            });
+          final singleUrl = response.bestPlayUrl;
+          if (singleUrl != null && singleUrl.isNotEmpty) {
+            await _setupPlayerWithCandidates([singleUrl]);
+          } else {
+            if (mounted) {
+              setState(() {
+                _errorMessage = '未获取到有效直播推流地址';
+                _loading = false;
+              });
+            }
           }
         }
       } else if (playRes case Error(:final errMsg)) {
@@ -178,6 +187,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         }
       }
     } else {
+      _watchdogTimer?.cancel();
       // 未开播/已下播/轮播：立刻释放播放器并解除 loading 状态，展示下播封面与状态
       final player = _player;
       _player = null;
@@ -210,8 +220,50 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     }
   }
 
-  Future<void> _setupPlayer(String url) async {
+  Future<void> _setupPlayerWithCandidates(List<String> candidates) async {
+    _streamCandidates = candidates;
+    _currentStreamIndex = 0;
+    await _tryPlayCurrentCandidate();
+  }
+
+  Future<void> _tryPlayCurrentCandidate() async {
+    if (_currentStreamIndex >= _streamCandidates.length) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = '所有直播推流均播放失败，请点击重试';
+          _loading = false;
+        });
+      }
+      return;
+    }
+    final url = _streamCandidates[_currentStreamIndex];
+    await _startPlayer(url);
+  }
+
+  Future<void> _startPlayer(String url) async {
+    _watchdogTimer?.cancel();
+
+    // 启动 6 秒看门狗：避免加载菊花无限卡住
+    _watchdogTimer = Timer(const Duration(seconds: 6), () {
+      if (!mounted) return;
+      if (_loading) {
+        if (_currentStreamIndex + 1 < _streamCandidates.length) {
+          _currentStreamIndex++;
+          unawaited(_tryPlayCurrentCandidate());
+        } else {
+          setState(() => _loading = false);
+        }
+      }
+    });
+
     try {
+      final oldPlayer = _player;
+      _player = null;
+      if (oldPlayer != null) {
+        oldPlayer.state = mdk.PlaybackState.stopped;
+        oldPlayer.dispose();
+      }
+
       final player = mdk.Player();
       _player = player;
 
@@ -231,6 +283,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         player.setProperty('video.decoder', 'shader_resource=0');
       }
 
+      player.setProperty('avformat.strict', 'experimental');
+      player.setProperty('avformat.safe', '0');
       player.setProperty(
         'avio.headers',
         'Referer: https://live.bilibili.com\r\n'
@@ -244,34 +298,78 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       player.setProperty('demux.max_errors', '50');
 
       // 直播低延迟缓冲窗口
-      player.setBufferRange(min: 800, max: 3000);
+      player.setBufferRange(min: 800, max: 3000, drop: true);
       player.volume = _volume;
 
       // 监听播放器媒体状态：首帧/加载完成即可隐藏 loading 状态
       player.onMediaStatus.listen((event) {
-        if (!mounted) return;
+        if (!mounted || _player != player) return;
         final status = event.newValue;
         if (status.test(mdk.MediaStatus.loaded) ||
             status.test(mdk.MediaStatus.buffering) ||
             status.test(mdk.MediaStatus.buffered)) {
+          _watchdogTimer?.cancel();
           if (_loading) {
             setState(() => _loading = false);
           }
         }
       });
 
-      player.media = url;
-      final texId = await player.updateTexture();
-      _textureId = texId;
+      // 监听播放器底层错误事件：遇到硬错误自动尝试候选备用流
+      player.onEvent.listen((ev) {
+        if (!mounted || _player != player) return;
+        if (ev.error < -1) {
+          _watchdogTimer?.cancel();
+          if (_currentStreamIndex + 1 < _streamCandidates.length) {
+            _currentStreamIndex++;
+            unawaited(_tryPlayCurrentCandidate());
+          } else {
+            if (mounted) {
+              setState(() {
+                _errorMessage = '播放错误：${ev.detail} (${ev.error})';
+                _loading = false;
+              });
+            }
+          }
+        }
+      });
 
-      player.prepare();
+      player.media = url;
+
+      // 关键时序：先异步 await prepare() 探测解复用与视频属性
+      final ret = await player.prepare();
+      if (!mounted || _player != player) return;
+      if (ret < 0 && ret != -1) {
+        if (_currentStreamIndex + 1 < _streamCandidates.length) {
+          _currentStreamIndex++;
+          await _tryPlayCurrentCandidate();
+          return;
+        }
+      }
+
+      // 探测后异步创建并更新渲染纹理
+      final texId = await player.updateTexture();
+      if (!mounted || _player != player) return;
+      if (texId < 0) {
+        if (_currentStreamIndex + 1 < _streamCandidates.length) {
+          _currentStreamIndex++;
+          await _tryPlayCurrentCandidate();
+          return;
+        }
+      }
+
+      _textureId = texId;
       player.state = mdk.PlaybackState.playing;
       _isPlaying = true;
       if (mounted) {
         setState(() => _loading = false);
       }
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      if (_currentStreamIndex + 1 < _streamCandidates.length) {
+        _currentStreamIndex++;
+        await _tryPlayCurrentCandidate();
+      } else {
         setState(() {
           _errorMessage = '播放器初始化失败：$e';
           _loading = false;
@@ -280,13 +378,28 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     }
   }
 
-  void _setupDanmaku(int roomId) {
+  Future<void> _setupDanmaku(int roomId) async {
     _danmakuSub?.cancel();
     _danmakuClient?.dispose();
+
+    // 1. 获取官方动态 Token 与候选彗星服务器集群
+    String token = '';
+    List<String> servers = [];
+    final tokenRes = await LiveHttp.liveRoomGetDanmakuToken(roomId: roomId);
+    if (!mounted) return;
+    if (tokenRes case Success(:final response)) {
+      token = response.token;
+      servers = response.hostList.map((h) {
+        final port = h.wssPort > 0 ? h.wssPort : 443;
+        return 'wss://${h.host}:$port/sub';
+      }).toList();
+    }
 
     final client = LiveDanmakuClient(
       roomId: roomId,
       uid: AccountService().userInfo?.mid ?? 0,
+      token: token,
+      servers: servers,
     );
     _danmakuClient = client;
 
@@ -311,7 +424,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       }
     });
 
-    client.connect();
+    unawaited(client.connect());
   }
 
   void _togglePlay() {
@@ -450,13 +563,13 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             fit: StackFit.expand,
             children: [
               // 视频画面
-              if (_isLiving && _textureId != null)
+              if (_isLiving && _textureId != null && _errorMessage == null)
                 Texture(textureId: _textureId!)
               else
                 _buildOfflineCover(),
 
-              // 加载指示器（仅在开播拉取视频流时展示，下播直接显示离线封面与明确状态）
-              if (_loading && _isLiving)
+              // 加载指示器（仅在开播拉取视频流且无错误时展示，下播或报错直接展示对应提示与重试）
+              if (_loading && _isLiving && _errorMessage == null)
                 Container(
                   color: Colors.black54,
                   child: const Center(
@@ -468,7 +581,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 ),
 
               // 控制覆层
-              if (_showControls && !_loading && _isLiving)
+              if (_showControls && !_loading && _isLiving && _errorMessage == null)
                 _buildControlsOverlay(),
             ],
           ),

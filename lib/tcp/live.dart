@@ -163,6 +163,7 @@ class LiveDanmakuClient {
     this.buvid3 = '',
     this.platform = 'web',
     this.version = '0.6.5',
+    this.servers = const [],
   });
 
   final String host;
@@ -173,6 +174,7 @@ class LiveDanmakuClient {
   final String buvid3;
   final String platform;
   final String version;
+  final List<String> servers;
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
@@ -204,18 +206,46 @@ class LiveDanmakuClient {
 
   /// 连接直播弹幕服务器。
   ///
+  /// 优先轮询 [servers] 彗星集群，失败兜底至默认服务器。
   /// 成功后 [statusStream] 推送 connected，失败推送 error/authFailed。
   Future<LoadingState<void>> connect() async {
     if (_disposed) return const Error('client disposed');
     _setStatus(LiveDanmakuStatus.connecting);
     try {
-      final uri = Uri.parse(
-        'wss://$host:$port${LiveDanmakuProtocol.subPath}',
-      );
-      _channel = IOWebSocketChannel.connect(
-        uri,
-        pingInterval: const Duration(seconds: 60),
-      );
+      final candidateUris = <Uri>[];
+      for (final s in servers) {
+        final parsed = Uri.tryParse(s);
+        if (parsed != null && parsed.host.isNotEmpty) {
+          candidateUris.add(parsed);
+        }
+      }
+      if (candidateUris.isEmpty) {
+        candidateUris.add(
+          Uri.parse('wss://$host:$port${LiveDanmakuProtocol.subPath}'),
+        );
+      }
+
+      WebSocketChannel? connectedChannel;
+      for (final uri in candidateUris) {
+        try {
+          final ch = IOWebSocketChannel.connect(
+            uri,
+            pingInterval: const Duration(seconds: 30),
+          );
+          await ch.ready;
+          connectedChannel = ch;
+          break;
+        } catch (_) {
+          // 连接当前节点失败，尝试候选列表中的下一个节点
+        }
+      }
+
+      if (connectedChannel == null) {
+        _setStatus(LiveDanmakuStatus.error);
+        return const Error('连接直播弹幕服务器集群全部失败');
+      }
+
+      _channel = connectedChannel;
       _setStatus(LiveDanmakuStatus.authing);
       _subscription = _channel!.stream.listen(
         _onData,
@@ -259,14 +289,13 @@ class LiveDanmakuClient {
   /// 发送 auth 包（op=7）。
   void _sendAuth() {
     final authBody = jsonEncode({
-      'uid': uid,
       'roomid': roomId,
-      'protover': LiveDanmakuProtocol.protocolVersion,
-      'buvid': buvid3,
+      'uid': uid,
+      'protover': 3,
       'platform': platform,
       'type': 2,
       'key': token,
-      'version': version,
+      if (buvid3.isNotEmpty) 'buvid': buvid3,
     });
     final frame = _buildFrame(
       operation: LiveDanmakuProtocol.opAuthReq,
