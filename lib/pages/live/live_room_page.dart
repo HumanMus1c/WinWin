@@ -16,6 +16,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/tcp/live.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -645,12 +646,16 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     switch (res) {
       case Success():
         _danmakuInputCtrl.clear();
-        // 乐观追加到实时互动列表中
-        final myUname = AccountService().userInfo?.name ?? '我';
+        final userInfo = AccountService().userInfo;
+        final myUname = userInfo?.name ?? '我';
+        final myAvatar = userInfo?.face;
+        final myLevel = userInfo?.level;
         final optimisticMsg = LiveDanmakuMessage(
           cmd: 'DANMU_MSG',
           userName: myUname,
           customText: text,
+          userAvatar: myAvatar,
+          userLevel: myLevel,
           raw: const {},
         );
         setState(() {
@@ -887,26 +892,39 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                                 ),
                               ),
                             ),
-                            VerticalDivider(
-                              width: 1,
-                              thickness: 0.5,
-                              color: cs.outlineVariant.withValues(alpha: 0.3),
-                            ),
-                            // 右侧实时互动面板
+                            // 右侧实时互动面板（同等 Style.md 边距与全圆角容器）
                             Expanded(
                               flex: 3,
-                              child: _buildChatPanel(cs, theme),
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  0,
+                                  Style.md,
+                                  Style.md,
+                                  Style.md,
+                                ),
+                                child: _buildChatPanel(cs, theme),
+                              ),
                             ),
                           ],
                         );
                       } else {
                         return Column(
                           children: [
-                            _buildPlayerBox(),
                             Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: Style.md,
-                                vertical: Style.sm,
+                              padding: const EdgeInsets.fromLTRB(
+                                Style.md,
+                                Style.md,
+                                Style.md,
+                                0,
+                              ),
+                              child: _buildPlayerBox(),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                Style.md,
+                                Style.md,
+                                Style.md,
+                                0,
                               ),
                               child: _buildHostInfo(
                                 hostName,
@@ -915,8 +933,18 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                                 theme,
                               ),
                             ),
-                            const Divider(height: 1, thickness: 0.5),
-                            Expanded(child: _buildChatPanel(cs, theme)),
+                            const SizedBox(height: Style.md),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  Style.md,
+                                  0,
+                                  Style.md,
+                                  Style.md,
+                                ),
+                                child: _buildChatPanel(cs, theme),
+                              ),
+                            ),
                           ],
                         );
                       }
@@ -1173,6 +1201,27 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: recent.map((dm) {
+            final spans = <InlineSpan>[
+              TextSpan(
+                text: '${dm.senderName}: ',
+                style: const TextStyle(
+                  color: Color(0xFF67E8F9),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  shadows: [Shadow(blurRadius: 2, color: Colors.black)],
+                ),
+              ),
+              ..._buildDanmakuContentSpans(
+                dm.danmakuText ?? '',
+                dm.emots,
+                const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  shadows: [Shadow(blurRadius: 2, color: Colors.black)],
+                ),
+              ),
+            ];
+
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 2.5),
               child: Container(
@@ -1182,27 +1231,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '${dm.senderName}: ',
-                        style: const TextStyle(
-                          color: Color(0xFF67E8F9),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          shadows: [Shadow(blurRadius: 2, color: Colors.black)],
-                        ),
-                      ),
-                      TextSpan(
-                        text: dm.danmakuText ?? '',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          shadows: [Shadow(blurRadius: 2, color: Colors.black)],
-                        ),
-                      ),
-                    ],
-                  ),
+                  TextSpan(children: spans),
                 ),
               ),
             );
@@ -1770,12 +1799,18 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   Widget _buildChatPanel(ColorScheme cs, ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.40),
+        color: cs.surface.withValues(alpha: 0.50),
+        borderRadius: BorderRadius.circular(Style.radiusMd),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.2),
+          width: 0.5,
+        ),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 头部
+          // 头部：标题与状态指示
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
@@ -1811,7 +1846,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             color: cs.outlineVariant.withValues(alpha: 0.3),
           ),
 
-          // 弹幕列表
+          // 弹幕列表（富文本支持头像、粉丝牌、UL等级铭牌与官方Emoji图文混排）
           Expanded(
             child: _danmakuList.isEmpty
                 ? Center(
@@ -1822,109 +1857,434 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   )
                 : ListView.builder(
                     controller: _chatScrollCtrl,
-                    padding: const EdgeInsets.all(Style.sm),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Style.sm,
+                      vertical: 6,
+                    ),
                     itemCount: _danmakuList.length,
                     itemBuilder: (context, index) {
                       final item = _danmakuList[index];
-                      final uname = item.senderName;
-                      final text = item.danmakuText ?? '';
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '$uname: ',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: cs.primary,
-                                ),
-                              ),
-                              TextSpan(
-                                text: text,
-                                style: theme.textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
+                      return _buildDanmakuItem(item, cs, theme);
                     },
                   ),
           ),
 
-          // 底部互动发送条
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          // 底部互动发送条（输入框与发送按钮高度严格对齐）
+          _buildChatInputBar(cs, theme),
+        ],
+      ),
+    );
+  }
+
+  /// 单条弹幕渲染（含头像、粉丝牌、UL等级、用户名及官方表情图文混排）
+  Widget _buildDanmakuItem(
+    LiveDanmakuMessage item,
+    ColorScheme cs,
+    ThemeData theme,
+  ) {
+    final avatar = item.userAvatar;
+    final medalName = item.medalName;
+    final userLevel = item.userLevel;
+    final uname = item.senderName;
+    final text = item.danmakuText ?? '';
+
+    final inlineSpans = <InlineSpan>[];
+
+    // 1. 粉丝勋章牌（根据官方配色渲染彩色胶囊徽章）
+    if (medalName != null && medalName.isNotEmpty) {
+      final medalColorInt = item.medalColor ?? 0;
+      final Color medalColor = (medalColorInt > 0)
+          ? Color(medalColorInt | 0xFF000000)
+          : const Color(0xFF5896DE);
+      inlineSpans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Container(
+            margin: const EdgeInsets.only(right: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-              border: Border(
-                top: BorderSide(
-                  color: cs.outlineVariant.withValues(alpha: 0.3),
-                  width: 0.5,
-                ),
+              color: medalColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(
+                color: medalColor.withValues(alpha: 0.7),
+                width: 0.8,
               ),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _danmakuInputCtrl,
-                    focusNode: _danmakuInputFocusNode,
-                    enabled: !_isSendingDanmaku,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendDanmaku(),
-                    style: const TextStyle(fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: _isLiving ? '发个弹幕和主播互动吧~' : '未开播，无法发送弹幕',
-                      hintStyle: TextStyle(color: cs.outline, fontSize: 13),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: cs.surface.withValues(alpha: 0.75),
-                      suffixIcon: _danmakuInputCtrl.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 16),
-                              onPressed: () {
-                                _danmakuInputCtrl.clear();
-                                setState(() {});
-                              },
-                            )
-                          : null,
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _isSendingDanmaku
-                    ? const SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: Padding(
-                          padding: EdgeInsets.all(8),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : IconButton.filled(
-                        icon: const Icon(Icons.send_rounded, size: 18),
-                        tooltip: '发送弹幕 (Enter)',
-                        onPressed:
-                            (_isLiving && _danmakuInputCtrl.text.trim().isNotEmpty)
-                                ? _sendDanmaku
-                                : null,
-                      ),
-              ],
+            child: Text(
+              '$medalName ${item.medalLevel ?? 1}',
+              style: TextStyle(
+                fontSize: 9.5,
+                color: medalColor,
+                fontWeight: FontWeight.w600,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 2. UL 用户等级铭牌
+    if (userLevel != null && userLevel > 0) {
+      inlineSpans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Container(
+            margin: const EdgeInsets.only(right: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 3.5, vertical: 1),
+            decoration: BoxDecoration(
+              color: cs.secondaryContainer.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(alpha: 0.5),
+                width: 0.6,
+              ),
+            ),
+            child: Text(
+              'UL $userLevel',
+              style: TextStyle(
+                fontSize: 9.5,
+                color: cs.onSecondaryContainer,
+                fontWeight: FontWeight.w600,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 3. 用户名
+    inlineSpans.add(
+      TextSpan(
+        text: '$uname: ',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: cs.primary,
+        ),
+      ),
+    );
+
+    // 4. 正文文本与官方表情解析图文混排
+    inlineSpans.addAll(
+      _buildDanmakuContentSpans(text, item.emots, theme.textTheme.bodySmall),
+    );
+
+    // 5. 大表情 / 贴纸
+    if (item.emoteUrl != null && item.emoteUrl!.isNotEmpty) {
+      inlineSpans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 4, top: 2, bottom: 2),
+            child: Image.network(
+              item.emoteUrl!,
+              height: 44,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 用户头像（22x22 圆形）
+          if (avatar != null && avatar.isNotEmpty)
+            ClipOval(
+              child: NetworkImgLayer(
+                src: avatar,
+                width: 22,
+                height: 22,
+                type: 'avatar',
+              ),
+            )
+          else
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+              ),
+              child: Icon(Icons.person, size: 14, color: cs.outline),
+            ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text.rich(
+              TextSpan(children: inlineSpans),
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 将弹幕文本中的 `[xxx]` 官方表情解析为真实图片 Span 进行图文混排渲染
+  List<InlineSpan> _buildDanmakuContentSpans(
+    String text,
+    Map<String, dynamic>? customEmotes,
+    TextStyle? defaultStyle,
+  ) {
+    if (text.isEmpty) return const [];
+    final spans = <InlineSpan>[];
+    int lastEnd = 0;
+
+    for (final match in BilibiliEmotes.emotePattern.allMatches(text)) {
+      if (match.start > lastEnd) {
+        spans.add(
+          TextSpan(
+            text: text.substring(lastEnd, match.start),
+            style: defaultStyle,
+          ),
+        );
+      }
+      final emoteCode = match.group(0)!;
+      String? emoteUrl;
+      if (customEmotes != null && customEmotes.containsKey(emoteCode)) {
+        final val = customEmotes[emoteCode];
+        if (val is Map && val['url'] != null) {
+          emoteUrl = val['url']?.toString();
+        } else if (val is String) {
+          emoteUrl = val;
+        }
+      }
+      emoteUrl ??= BilibiliEmotes.defaultEmotes[emoteCode];
+
+      if (emoteUrl != null && emoteUrl.isNotEmpty) {
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Image.network(
+                emoteUrl,
+                width: 20,
+                height: 20,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) =>
+                    Text(emoteCode, style: defaultStyle),
+              ),
+            ),
+          ),
+        );
+      } else {
+        spans.add(TextSpan(text: emoteCode, style: defaultStyle));
+      }
+      lastEnd = match.end;
+    }
+
+    if (lastEnd < text.length) {
+      spans.add(
+        TextSpan(
+          text: text.substring(lastEnd),
+          style: defaultStyle,
+        ),
+      );
+    }
+
+    return spans;
+  }
+
+  /// 底部互动发送条（输入框与发送按钮统一为 36px 严格高度对齐）
+  Widget _buildChatInputBar(ColorScheme cs, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+        border: Border(
+          top: BorderSide(
+            color: cs.outlineVariant.withValues(alpha: 0.3),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: SizedBox(
+        height: 36,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 哔哩哔哩官方表情快捷选择器
+            _buildEmotePickerButton(cs),
+            const SizedBox(width: 6),
+
+            // 弹幕输入框（高度严格限定为 36px，文字垂直居中）
+            Expanded(
+              child: TextField(
+                controller: _danmakuInputCtrl,
+                focusNode: _danmakuInputFocusNode,
+                enabled: !_isSendingDanmaku,
+                textInputAction: TextInputAction.send,
+                textAlignVertical: TextAlignVertical.center,
+                onSubmitted: (_) => _sendDanmaku(),
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: _isLiving ? '发个弹幕和主播互动吧~' : '未开播，无法发送弹幕',
+                  hintStyle: TextStyle(color: cs.outline, fontSize: 13),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: cs.surface.withValues(alpha: 0.75),
+                  suffixIcon: _danmakuInputCtrl.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 16),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                          onPressed: () {
+                            _danmakuInputCtrl.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // 发送按钮（高度严格 36px，同款 18px 圆角与垂直居中对齐）
+            SizedBox(
+              height: 36,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                onPressed: (_isLiving &&
+                        _danmakuInputCtrl.text.trim().isNotEmpty &&
+                        !_isSendingDanmaku)
+                    ? _sendDanmaku
+                    : null,
+                child: _isSendingDanmaku
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('发送', style: TextStyle(fontSize: 13)),
+                          SizedBox(width: 4),
+                          Icon(Icons.send_rounded, size: 14),
+                        ],
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 官方表情弹层选择器按钮
+  Widget _buildEmotePickerButton(ColorScheme cs) {
+    return PopupMenuButton<String>(
+      tooltip: '选择官方表情',
+      color: const Color(0xF01E1E1E),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Colors.white12),
+      ),
+      offset: const Offset(0, -220),
+      onSelected: (code) {
+        final currentText = _danmakuInputCtrl.text;
+        final selection = _danmakuInputCtrl.selection;
+        final newText = (selection.start >= 0 && selection.end >= 0)
+            ? currentText.replaceRange(selection.start, selection.end, code)
+            : '$currentText$code';
+        _danmakuInputCtrl.text = newText;
+        _danmakuInputCtrl.selection = TextSelection.collapsed(
+          offset: selection.start >= 0
+              ? selection.start + code.length
+              : newText.length,
+        );
+        setState(() {});
+        _danmakuInputFocusNode.requestFocus();
+      },
+      itemBuilder: (context) {
+        return [
+          PopupMenuItem<String>(
+            enabled: false,
+            padding: const EdgeInsets.all(8),
+            child: SizedBox(
+              width: 260,
+              height: 200,
+              child: GridView.builder(
+                shrinkWrap: true,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 6,
+                  mainAxisSpacing: 6,
+                  crossAxisSpacing: 6,
+                ),
+                itemCount: BilibiliEmotes.popularEmotes.length,
+                itemBuilder: (context, i) {
+                  final code = BilibiliEmotes.popularEmotes[i];
+                  final url = BilibiliEmotes.defaultEmotes[code];
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () {
+                      Navigator.pop(context, code);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: url != null
+                          ? Image.network(
+                              url,
+                              width: 28,
+                              height: 28,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, _, _) => Center(
+                                child: Text(
+                                  code,
+                                  style: const TextStyle(fontSize: 10),
+                                ),
+                              ),
+                            )
+                          : Center(
+                              child: Text(
+                                code,
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ];
+      },
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: cs.surface.withValues(alpha: 0.75),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.sentiment_satisfied_alt_outlined,
+          color: cs.outline,
+          size: 20,
+        ),
       ),
     );
   }

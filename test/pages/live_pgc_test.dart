@@ -4,6 +4,7 @@ import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/live.dart';
 import 'package:winwin/tcp/live.dart';
+import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/image_utils.dart';
 
@@ -184,7 +185,7 @@ void main() {
       expect(info.watchedShowText, '3649万人气');
     });
 
-    test('LiveDanmakuMessage.fromPrefetch extracts user and text correctly', () {
+    test('LiveDanmakuMessage.fromPrefetch extracts user, avatar, medal, and text correctly', () {
       final prefetchItem = <String, dynamic>{
         'text': '主播太强了！666',
         'user': {
@@ -193,6 +194,14 @@ void main() {
             'name': '热心观众',
             'face': 'http://i0.hdslb.com/bfs/face/u.jpg',
           },
+          'medal': {
+            'name': '猫娘',
+            'level': 16,
+            'color': 16752445,
+          },
+          'level': {
+            'level': 28,
+          },
         },
       };
 
@@ -200,6 +209,105 @@ void main() {
       expect(msg.isDanmaku, isTrue);
       expect(msg.senderName, '热心观众');
       expect(msg.danmakuText, '主播太强了！666');
+      expect(msg.userAvatar, 'http://i0.hdslb.com/bfs/face/u.jpg');
+      expect(msg.medalName, '猫娘');
+      expect(msg.medalLevel, 16);
+      expect(msg.medalColor, 16752445);
+      expect(msg.userLevel, 28);
+    });
+
+    test('LiveDanmakuMessage.fromJson parses modern DANMU_MSG info[0][15] and info[0][13]', () {
+      final json = <String, dynamic>{
+        'cmd': 'DANMU_MSG',
+        'info': [
+          [
+            0,
+            1,
+            25,
+            16777215,
+            0,
+            0,
+            0,
+            '',
+            0,
+            0,
+            0,
+            0,
+            0,
+            {'url': 'https://i0.hdslb.com/bfs/live/sticker.png'},
+            {},
+            {
+              'user': {
+                'base': {
+                  'name': '超级粉丝',
+                  'face': 'https://i1.hdslb.com/bfs/face/super.jpg',
+                },
+                'medal': {
+                  'name': '呆米',
+                  'level': 22,
+                  'color': 613009,
+                },
+                'level': {
+                  'level': 35,
+                },
+              },
+              'extra': jsonEncode({
+                'emots': {
+                  '[doge]': {'url': 'https://i0.hdslb.com/bfs/emote/doge.png'},
+                },
+              }),
+            },
+          ],
+          '测试弹幕内容 [doge]',
+          [10086, '超级粉丝'],
+        ],
+      };
+
+      final msg = LiveDanmakuMessage.fromJson(json);
+      expect(msg.isDanmaku, isTrue);
+      expect(msg.senderName, '超级粉丝');
+      expect(msg.danmakuText, '测试弹幕内容 [doge]');
+      expect(msg.userAvatar, 'https://i1.hdslb.com/bfs/face/super.jpg');
+      expect(msg.medalName, '呆米');
+      expect(msg.medalLevel, 22);
+      expect(msg.medalColor, 613009);
+      expect(msg.userLevel, 35);
+      expect(msg.emoteUrl, 'https://i0.hdslb.com/bfs/live/sticker.png');
+      expect(msg.emots?['[doge]']?['url'], 'https://i0.hdslb.com/bfs/emote/doge.png');
+    });
+
+    test('LiveDanmakuMessage.fromJson parses legacy info[3] and info[4] fallbacks', () {
+      final json = <String, dynamic>{
+        'cmd': 'DANMU_MSG',
+        'info': [
+          [0, 1, 25, 16777215],
+          '老版协议弹幕',
+          [20001, '老观众'],
+          [12, '老粉牌', '主播名', 12345, 15764048],
+          [20],
+        ],
+      };
+
+      final msg = LiveDanmakuMessage.fromJson(json);
+      expect(msg.isDanmaku, isTrue);
+      expect(msg.senderName, '老观众');
+      expect(msg.danmakuText, '老版协议弹幕');
+      expect(msg.medalName, '老粉牌');
+      expect(msg.medalLevel, 12);
+      expect(msg.medalColor, 15764048);
+      expect(msg.userLevel, 20);
+    });
+
+    test('BilibiliEmotes matches official codes and extracts CDN URLs correctly', () {
+      expect(BilibiliEmotes.getEmoteUrl('[doge]'), isNotNull);
+      expect(BilibiliEmotes.getEmoteUrl('[妙啊]'), isNotNull);
+      expect(BilibiliEmotes.getEmoteUrl('[点赞]'), isNotNull);
+      expect(BilibiliEmotes.popularEmotes.contains('[doge]'), isTrue);
+
+      // 正则识别
+      const text = '你好[doge]谢谢[妙啊]再见！';
+      final matches = BilibiliEmotes.emotePattern.allMatches(text).map((m) => m.group(0)).toList();
+      expect(matches, ['[doge]', '[妙啊]']);
     });
 
     test('ImageGalleryViewer.getRawUrl strips thumbnail query suffixes', () {

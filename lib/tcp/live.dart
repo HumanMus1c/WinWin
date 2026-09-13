@@ -72,6 +72,20 @@ class LiveDanmakuMessage {
   final String? userName;
   /// 弹幕正文（若显式指定）。
   final String? customText;
+  /// 发送者头像 URL。
+  final String? userAvatar;
+  /// 粉丝勋章名称。
+  final String? medalName;
+  /// 粉丝勋章等级。
+  final int? medalLevel;
+  /// 粉丝勋章颜色（十进制 RGB）。
+  final int? medalColor;
+  /// 用户等级（UL 等级）。
+  final int? userLevel;
+  /// 消息携带的动态表情字典。
+  final Map<String, dynamic>? emots;
+  /// 大表情/贴纸 URL。
+  final String? emoteUrl;
   /// 原始 JSON 数据。
   final Map<String, dynamic> raw;
 
@@ -79,12 +93,100 @@ class LiveDanmakuMessage {
     required this.cmd,
     this.userName,
     this.customText,
+    this.userAvatar,
+    this.medalName,
+    this.medalLevel,
+    this.medalColor,
+    this.userLevel,
+    this.emots,
+    this.emoteUrl,
     required this.raw,
   });
 
   factory LiveDanmakuMessage.fromJson(Map<String, dynamic> json) {
+    String? avatar;
+    String? mName;
+    int? mLevel;
+    int? mColor;
+    int? uLevel;
+    Map<String, dynamic>? emotsMap;
+    String? eUrl;
+
+    final info = json['info'] as List?;
+    if (info != null) {
+      // 1. 提取 info[0][13] (大表情/贴纸)
+      if (info.isNotEmpty && info[0] is List && (info[0] as List).length > 13) {
+        final em = (info[0] as List)[13];
+        if (em is Map && em['url'] != null) {
+          eUrl = em['url']?.toString();
+        }
+      }
+
+      // 2. 提取 info[0][15] (B 站新版丰富用户信息，含头像、粉丝牌、UL与自定义表情表)
+      if (info.isNotEmpty && info[0] is List && (info[0] as List).length > 15) {
+        final extra15 = (info[0] as List)[15];
+        if (extra15 is Map) {
+          final user = extra15['user'];
+          if (user is Map) {
+            final base = user['base'];
+            if (base is Map) {
+              avatar = base['face']?.toString();
+            }
+            final medal = user['medal'];
+            if (medal is Map) {
+              mName = medal['name']?.toString();
+              mLevel = _asInt(medal['level']);
+              mColor = _asInt(medal['color']);
+            }
+            final level = user['level'];
+            if (level is Map) {
+              uLevel = _asInt(level['level']);
+            }
+          }
+          final extraStr = extra15['extra'];
+          if (extraStr is String && extraStr.isNotEmpty) {
+            try {
+              final decodedExtra = jsonDecode(extraStr);
+              if (decodedExtra is Map && decodedExtra['emots'] is Map) {
+                emotsMap = Map<String, dynamic>.from(decodedExtra['emots'] as Map);
+              }
+            } catch (_) {}
+          } else if (extraStr is Map && extraStr['emots'] is Map) {
+            emotsMap = Map<String, dynamic>.from(extraStr['emots'] as Map);
+          }
+        }
+      }
+
+      // 3. Fallback: info[3] 经典粉丝勋章 [level, name, up_name, room_id, color, ...]
+      if (info.length > 3 && info[3] is List && (info[3] as List).isNotEmpty) {
+        final medalList = info[3] as List;
+        if (mLevel == null && medalList.isNotEmpty) {
+          mLevel = _asInt(medalList[0]);
+        }
+        if (mName == null && medalList.length > 1) {
+          final n = medalList[1]?.toString();
+          if (n != null && n.isNotEmpty) mName = n;
+        }
+        if (mColor == null && medalList.length > 4) {
+          mColor = _asInt(medalList[4]);
+        }
+      }
+
+      // 4. Fallback: info[4] 经典用户等级 [level, ...]
+      if (uLevel == null && info.length > 4 && info[4] is List && (info[4] as List).isNotEmpty) {
+        uLevel = _asInt(info[4][0]);
+      }
+    }
+
     return LiveDanmakuMessage(
       cmd: json['cmd']?.toString() ?? '',
+      userAvatar: avatar,
+      medalName: mName,
+      medalLevel: mLevel,
+      medalColor: mColor,
+      userLevel: uLevel,
+      emots: emotsMap,
+      emoteUrl: eUrl,
       raw: json,
     );
   }
@@ -97,10 +199,44 @@ class LiveDanmakuMessage {
         user?['name']?.toString() ??
         '观众';
     final text = json['text']?.toString() ?? '';
+    final avatar = base?['face']?.toString() ??
+        user?['face']?.toString() ??
+        user?['avatar']?.toString();
+
+    // 粉丝牌
+    final medal = (user?['medal'] is Map)
+        ? (user!['medal'] as Map<String, dynamic>)
+        : ((json['medal'] is Map) ? (json['medal'] as Map<String, dynamic>) : null);
+    final mName = medal?['medal_name']?.toString() ?? medal?['name']?.toString();
+    final mLevel = _asInt(medal?['level']);
+    final mColor = _asInt(medal?['color']);
+
+    // 用户等级
+    final uLevel = _asInt(user?['level']?['level']) ??
+        _asInt(user?['user_level']) ??
+        _asInt(json['user_level']);
+
+    // emots 字典
+    Map<String, dynamic>? emotsMap;
+    if (json['emots'] is Map) {
+      emotsMap = Map<String, dynamic>.from(json['emots'] as Map);
+    }
+    String? eUrl;
+    if (json['emote'] is Map && json['emote']['url'] != null) {
+      eUrl = json['emote']['url']?.toString();
+    }
+
     return LiveDanmakuMessage(
       cmd: 'DANMU_MSG',
       userName: uname,
       customText: text,
+      userAvatar: avatar,
+      medalName: mName,
+      medalLevel: mLevel,
+      medalColor: mColor,
+      userLevel: uLevel,
+      emots: emotsMap,
+      emoteUrl: eUrl,
       raw: json,
     );
   }
