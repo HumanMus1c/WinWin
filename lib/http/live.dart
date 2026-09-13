@@ -846,6 +846,8 @@ class LiveRoomInfo {
   final String? title;
   final String? cover;
   final String? appBackground;
+  final String? background;
+  final String? keyframe;
   final String? uname;
   final String? face;
   final String? areaName;
@@ -861,6 +863,8 @@ class LiveRoomInfo {
     this.title,
     this.cover,
     this.appBackground,
+    this.background,
+    this.keyframe,
     this.uname,
     this.face,
     this.areaName,
@@ -872,6 +876,23 @@ class LiveRoomInfo {
 
   /// 是否正在直播（live_status==1）。
   bool get isLiving => liveStatus == 1;
+
+  /// 直播间最优背景图（优先级：主播专属 App 背景 -> Web 端专属背景 -> 实时直播关键帧截图 -> 直播间封面）。
+  String? get effectiveBackground {
+    if (appBackground != null && appBackground!.isNotEmpty) {
+      return appBackground;
+    }
+    if (background != null && background!.isNotEmpty) {
+      return background;
+    }
+    if (keyframe != null && keyframe!.isNotEmpty) {
+      return keyframe;
+    }
+    if (cover != null && cover!.isNotEmpty) {
+      return cover;
+    }
+    return null;
+  }
 
   factory LiveRoomInfo.fromJson(Map<String, dynamic> json) {
     // 兼容传入整个 data 节点（含 room_info, anchor_info, watched_show）或仅 room_info
@@ -888,6 +909,7 @@ class LiveRoomInfo {
 
     final rawAppBg = roomInfo['app_background']?.toString();
     final rawBg = roomInfo['background']?.toString();
+    final rawKeyframe = roomInfo['keyframe']?.toString();
     final effectiveAppBg = (rawAppBg != null && rawAppBg.isNotEmpty)
         ? rawAppBg
         : (rawBg != null && rawBg.isNotEmpty ? rawBg : null);
@@ -899,6 +921,8 @@ class LiveRoomInfo {
       title: roomInfo['title']?.toString(),
       cover: _http2https(roomInfo['cover']?.toString()),
       appBackground: _http2https(effectiveAppBg),
+      background: _http2https(rawBg),
+      keyframe: _http2https(rawKeyframe),
       uname: uname,
       face: face,
       areaName: roomInfo['area_name']?.toString() ??

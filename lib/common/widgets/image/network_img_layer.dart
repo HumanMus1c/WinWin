@@ -82,6 +82,8 @@ class NetworkImgLayer extends StatelessWidget {
       } else if (type == 'emote') {
         memCacheWidth = 64;
         memCacheHeight = 64;
+      } else if (type == 'background') {
+        memCacheWidth = 1280;
       } else {
         memCacheWidth = 480;
       }

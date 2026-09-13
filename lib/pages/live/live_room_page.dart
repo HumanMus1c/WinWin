@@ -756,7 +756,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
     // 主播自定义背景图，若未设置则优雅回退至封面
     final customBgUrl =
-        _roomInfo?.appBackground ?? _roomInfo?.cover ?? widget.cover;
+        _roomInfo?.effectiveBackground ?? widget.cover;
 
     return Focus(
       focusNode: _keyboardFocusNode,
@@ -765,36 +765,50 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. 底层：主播自定义全屏背景 + 高斯模糊 + 微暗透明磨砂蒙版
-          if (!isFillWindow && customBgUrl != null && customBgUrl.isNotEmpty)
-            Positioned.fill(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetworkImgLayer(
-                    src: customBgUrl,
-                    width: double.infinity,
-                    height: double.infinity,
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                    child: Container(
-                      color: (theme.brightness == Brightness.dark
-                              ? Colors.black
-                              : cs.surface)
-                          .withValues(alpha: 0.82),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            Positioned.fill(
-              child: Container(
-                color: isFillWindow ? Colors.black : theme.scaffoldBackgroundColor,
-              ),
+          // 1. 底层：主播自定义全屏背景 + 高性能降低分辨率 WebP 缩略图 + 轻量柔和模糊与半透明蒙版
+          Positioned.fill(
+            child: Container(
+              color: isFillWindow ? Colors.black : theme.scaffoldBackgroundColor,
+              child: (!isFillWindow && customBgUrl != null && customBgUrl.isNotEmpty)
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        NetworkImgLayer(
+                          src: customBgUrl,
+                          width: double.infinity,
+                          height: double.infinity,
+                          type: 'background',
+                          borderRadius: BorderRadius.zero,
+                          fit: BoxFit.cover,
+                          fadeInDuration: const Duration(milliseconds: 300),
+                        ),
+                        // 柔和微模糊 (sigma: 6) 与半透明暗色渐变蒙版，保留背景图主体艺术感与轮廓，杜绝退化为纯色
+                        BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  (theme.brightness == Brightness.dark
+                                          ? Colors.black
+                                          : cs.surface)
+                                      .withValues(alpha: 0.40),
+                                  (theme.brightness == Brightness.dark
+                                          ? Colors.black
+                                          : cs.surface)
+                                      .withValues(alpha: 0.60),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : null,
             ),
+          ),
 
           // 2. 主页面骨架
           Scaffold(
@@ -1660,7 +1674,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.7),
+        color: cs.surface.withValues(alpha: 0.50),
         borderRadius: BorderRadius.circular(Style.radiusMd),
         border: Border.all(
           color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -1756,7 +1770,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   Widget _buildChatPanel(ColorScheme cs, ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.65),
+        color: cs.surface.withValues(alpha: 0.40),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

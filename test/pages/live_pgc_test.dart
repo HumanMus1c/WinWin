@@ -5,6 +5,7 @@ import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/live.dart';
 import 'package:winwin/tcp/live.dart';
 import 'package:winwin/utils/bilibili_url_parser.dart';
+import 'package:winwin/utils/image_utils.dart';
 
 void main() {
   group('LiveItemModel Tests', () {
@@ -367,14 +368,60 @@ void main() {
           'title': '2026 LPL',
           'cover': 'http://i0.hdslb.com/cover.jpg',
           'app_background': 'http://i0.hdslb.com/bg.jpg',
+          'background': 'http://i0.hdslb.com/web_bg.jpg',
+          'keyframe': 'http://i0.hdslb.com/keyframe.jpg',
           'live_start_time': 1788762159,
           'live_status': 1,
         }
       };
       final info = LiveRoomInfo.fromJson(h5Json);
       expect(info.appBackground, 'https://i0.hdslb.com/bg.jpg');
+      expect(info.background, 'https://i0.hdslb.com/web_bg.jpg');
+      expect(info.keyframe, 'https://i0.hdslb.com/keyframe.jpg');
+      expect(info.effectiveBackground, 'https://i0.hdslb.com/bg.jpg');
       expect(info.liveStartTime, 1788762159);
       expect(info.isLiving, isTrue);
+
+      // Fallback 1: background when app_background is empty
+      final fallback1 = LiveRoomInfo.fromJson({
+        'room_info': {
+          'room_id': 1,
+          'background': 'http://i0.hdslb.com/web_bg.jpg',
+          'keyframe': 'http://i0.hdslb.com/keyframe.jpg',
+          'cover': 'http://i0.hdslb.com/cover.jpg',
+        }
+      });
+      expect(fallback1.effectiveBackground, 'https://i0.hdslb.com/web_bg.jpg');
+
+      // Fallback 2: keyframe when backgrounds are empty
+      final fallback2 = LiveRoomInfo.fromJson({
+        'room_info': {
+          'room_id': 2,
+          'keyframe': 'http://i0.hdslb.com/keyframe.jpg',
+          'cover': 'http://i0.hdslb.com/cover.jpg',
+        }
+      });
+      expect(fallback2.effectiveBackground, 'https://i0.hdslb.com/keyframe.jpg');
+
+      // Fallback 3: cover when everything else is empty
+      final fallback3 = LiveRoomInfo.fromJson({
+        'room_info': {
+          'room_id': 3,
+          'cover': 'http://i0.hdslb.com/cover.jpg',
+        }
+      });
+      expect(fallback3.effectiveBackground, 'https://i0.hdslb.com/cover.jpg');
+    });
+
+    test('ImageUtils.thumbnailUrl downscales background to 1280w webp', () {
+      final bgUrl = ImageUtils.thumbnailUrl(
+        'http://i0.hdslb.com/bfs/live/7e345cf1412cde6545c812122d1bc52f8c542347.jpg',
+        type: 'background',
+      );
+      expect(
+        bgUrl,
+        'https://i0.hdslb.com/bfs/live/7e345cf1412cde6545c812122d1bc52f8c542347.jpg@1280w.webp',
+      );
     });
   });
 }

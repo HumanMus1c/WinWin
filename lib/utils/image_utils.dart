@@ -33,7 +33,12 @@ abstract final class ImageUtils {
       return '$url@64w_64h_1c.webp';
     }
 
-    // 3. 明确指定了宽高（如 16:9/16:10 卡片封面）
+    // 3. 背景大图类型（降低分辨率至 1280w WebP，兼顾网络加载速度、低内存与大屏视觉质感）
+    if (type == 'background') {
+      return '$url@1280w.webp';
+    }
+
+    // 4. 明确指定了宽高（如 16:9/16:10 卡片封面）
     if (width != null && height != null && width > 0 && height > 0) {
       return '$url@${width}w_${height}h_1c.webp';
     } else if (width != null && width > 0) {
