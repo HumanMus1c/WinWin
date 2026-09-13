@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
 
+import 'package:winwin/core/window/title_bar_controller.dart';
 import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/whisper/view.dart';
@@ -28,11 +32,25 @@ class AppRoot extends StatefulWidget {
 
 class _AppRootState extends State<AppRoot> {
   int _currentIndex = 0;
+  Brightness? _brightness;
 
   @override
   void initState() {
     super.initState();
     MsgUnreadService().fetchUnread();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final brightness = Theme.of(context).brightness;
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      if (_brightness != brightness) {
+        _brightness = brightness;
+        windowManager.setBrightness(brightness);
+        TitleBarController.instance.syncWithTheme(brightness);
+      }
+    }
   }
 
   void _onSelect(int i) => setState(() => _currentIndex = i);

@@ -135,7 +135,7 @@ bool Win32Window::Create(const std::wstring& title,
   double scale_factor = dpi / 96.0;
 
   HWND window = CreateWindow(
-      window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
+      window_class, title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
       Scale(size.width, scale_factor), Scale(size.height, scale_factor),
       nullptr, nullptr, GetModuleHandle(nullptr), this);
@@ -219,6 +219,17 @@ Win32Window::MessageHandler(HWND hwnd,
       }
       return 0;
 
+    case WM_PAINT: {
+      PAINTSTRUCT ps;
+      BeginPaint(hwnd, &ps);
+      EndPaint(hwnd, &ps);
+      return 0;
+    }
+
+    case WM_ERASEBKGND:
+      // 阻止 GDI 擦除背景，避免在最大化/调整大小时触发系统默认白底闪烁
+      return 1;
+
     case WM_NCCALCSIZE: {
       if (is_fullscreen_) {
         // 全屏模式下无边框无标题栏，客户区铺满整个物理窗口
@@ -247,9 +258,10 @@ Win32Window::MessageHandler(HWND hwnd,
       break;
     }
 
-//    case WM_DWMCOLORIZATIONCOLORCHANGED:
-//      UpdateTheme(hwnd);
-//      return 0;
+    case WM_DWMCOLORIZATIONCOLORCHANGED:
+    case WM_SETTINGCHANGE:
+      UpdateTheme(hwnd);
+      return 0;
   }
 
   return DefWindowProc(window_handle_, message, wparam, lparam);
@@ -313,6 +325,9 @@ void Win32Window::SetTitleBarColor(HWND const window, bool is_dark) {
   BOOL enable_dark_mode = is_dark ? TRUE : FALSE;
   DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE,
                         &enable_dark_mode, sizeof(enable_dark_mode));
+  SetWindowPos(window, nullptr, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER |
+                   SWP_FRAMECHANGED);
 }
 
 void Win32Window::SetTitleBarColor(bool is_dark) {
@@ -331,6 +346,9 @@ void Win32Window::UpdateTheme(HWND const window) {
     BOOL enable_dark_mode = light_mode == 0;
     DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE,
                           &enable_dark_mode, sizeof(enable_dark_mode));
+    SetWindowPos(window, nullptr, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER |
+                     SWP_FRAMECHANGED);
   }
 }
 

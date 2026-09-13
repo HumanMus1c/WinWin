@@ -2,13 +2,15 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:winwin/pages/setting/theme_notifier.dart';
 import 'package:winwin/theme/ui_style_notifier.dart';
 
 /// Windows 平台标题栏沉浸模式控制器（对标 PiliPlus）。
 ///
 /// 通过原生 MethodChannel (`winwin/window_title_bar`) 动态调用 Windows 11 DWM API
-/// (`DWMWA_USE_IMMERSIVE_DARK_MODE`)，让原生窗口标题栏与应用深浅色模式严格保持一致，
+/// (`DWMWA_USE_IMMERSIVE_DARK_MODE`)，并联动 `windowManager.setBrightness`，
+/// 让原生窗口标题栏与应用深浅色模式严格保持一致，
 /// 规避设置 `DWMWA_CAPTION_COLOR` 导致的 DWM 最大化白色硬直角边框与缩放僵硬问题，
 /// 完美保留原生窗口标题栏的完整手势、Snap Layouts、Mica 材质以及流畅硬件动效。
 class TitleBarController with WidgetsBindingObserver {
@@ -30,8 +32,10 @@ class TitleBarController with WidgetsBindingObserver {
     ThemeNotifier.instance.addListener(_onThemeChanged);
     UiStyleNotifier.instance.addListener(_onThemeChanged);
 
-    // 初始应用当前主题色彩
-    update();
+    // 仅在明确检测到暗色环境时主动下发，避免在配置尚未载入时将原生默认暗色误置为浅色
+    if (_isCurrentDark()) {
+      update(customDark: true);
+    }
   }
 
   /// 移除监听与清理资源。
@@ -54,6 +58,11 @@ class TitleBarController with WidgetsBindingObserver {
     update();
   }
 
+  /// 与 Flutter 渲染树的主题亮度进行直接对齐（如在 didChangeDependencies 中调用）。
+  Future<void> syncWithTheme(Brightness brightness) {
+    return update(customDark: brightness == Brightness.dark);
+  }
+
   /// 更新标题栏为当前主题对应的深色或浅色原生沉浸模式（对标 PiliPlus）。
   ///
   /// 仅通过 `DWMWA_USE_IMMERSIVE_DARK_MODE` 切换深浅色，杜绝注入 `DWMWA_CAPTION_COLOR`，
@@ -68,9 +77,12 @@ class TitleBarController with WidgetsBindingObserver {
     final isDark = customDark ?? _isCurrentDark();
 
     try {
-      await _channel.invokeMethod('setTitleBarColor', {
-        'dark': isDark,
-      });
+      await Future.wait([
+        _channel.invokeMethod('setTitleBarColor', {
+          'dark': isDark,
+        }),
+        windowManager.setBrightness(isDark ? Brightness.dark : Brightness.light),
+      ]);
     } catch (_) {
       // 忽略不支持平台版本或通道未就绪异常
     }

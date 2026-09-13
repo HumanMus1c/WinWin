@@ -451,4 +451,8 @@ abstract final class Pref {
     }
     _setting.put(SettingBoxKey.bangumiEpisodesDescending, value);
   }
+
+  // ---------- desktop ----------
+  static bool get showWindowTitleBar =>
+      _setting.get(SettingBoxKey.showWindowTitleBar, defaultValue: true) as bool;
 }

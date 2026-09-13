@@ -90,6 +90,7 @@ void main() async {
     ThemeNotifier.instance.refresh();
     UiStyleNotifier.instance.refresh();
     AppFontNotifier.instance.refresh();
+    TitleBarController.instance.update();
   } catch (error, stackTrace) {
     bootstrapError = error;
     SyncTrace.log('main', 'ensureBootstrap failed: $error');
@@ -99,10 +100,12 @@ void main() async {
 
   if ((Platform.isWindows || Platform.isMacOS || Platform.isLinux) &&
       bootstrapError == null) {
-    const windowOptions = WindowOptions(
-      minimumSize: Size(640, 400),
+    final windowOptions = WindowOptions(
+      minimumSize: const Size(640, 400),
       skipTaskbar: false,
-      titleBarStyle: TitleBarStyle.normal,
+      titleBarStyle: Pref.showWindowTitleBar
+          ? TitleBarStyle.normal
+          : TitleBarStyle.hidden,
       title: 'WinWin',
     );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
