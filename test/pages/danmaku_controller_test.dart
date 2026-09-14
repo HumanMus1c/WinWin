@@ -12,6 +12,9 @@ void main() {
       expect(dm.isDisposed, isFalse);
       expect(dm.cid, 123456);
 
+      // startMs > endMs 应当立即返回空列表，避免 .clamp() 倒流造成重复拉取
+      expect(dm.getDanmakuRange(200, 100), isEmpty);
+
       dm.dispose();
       expect(dm.isDisposed, isTrue);
       expect(dm.getDanmakuRange(0, 1000), isEmpty);

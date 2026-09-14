@@ -391,6 +391,9 @@ class WinWinPlayerController {
           if (!completed.value) {
             buffering.value = true;
           }
+        } else if (!isBufferingOrStalled) {
+          buffering.value = false;
+          _bufferingStallMs = 0;
         }
         if (!oldValue.test(mdk.MediaStatus.buffered) &&
             newValue.test(mdk.MediaStatus.buffered)) {
@@ -494,11 +497,14 @@ class WinWinPlayerController {
       if (position.value != newPos) {
         position.value = newPos;
       }
-      // 进度推进检测：若播放进度在前进，清零卡顿计时。
+      // 进度推进检测：若播放进度在前进，清零卡顿计时并解除缓冲态。
       final isPosAdvancing = posMs > _lastPolledPosMs;
       if (isPosAdvancing) {
         _lastPolledPosMs = posMs;
         _bufferingStallMs = 0;
+        if (buffering.value) {
+          buffering.value = false;
+        }
       }
 
       // 自然播放结束检测（对标 PiliPlus duration - position <= 50）：
@@ -519,17 +525,23 @@ class WinWinPlayerController {
 
       // 卡死看门狗（Watchdog，参照 BiliPai resolvePlaybackStallRecoveryDecision）：
       // 1. 用户意图播放（_userIntentPlaying，非手动暂停，且未播放完毕）；
-      // 2. 处于缓冲中（buffering.value）或底层报告 stalled，且进度未推进；
+      // 2. 底层报告 stalled/buffering，或者播放中进度连续停滞超过 1 秒（避免 100ms 采样抖动误判）；
       // 3. 达到 4.5 秒门限（早于 CDN 60s 闲置与长缓冲超时，及时自愈无感续播）。
-      if (_userIntentPlaying && !buffering.value && !isPosAdvancing && playing.value) {
+      if (_userIntentPlaying && playing.value) {
         final status = player.mediaStatus;
-        if (status.test(mdk.MediaStatus.stalled | mdk.MediaStatus.buffering) || player.buffered() <= 0) {
-          buffering.value = true;
+        final isUnderlyingBuffering =
+            status.test(mdk.MediaStatus.stalled | mdk.MediaStatus.buffering);
+        if (isUnderlyingBuffering) {
+          if (!buffering.value) buffering.value = true;
+        } else if (!isPosAdvancing) {
+          _bufferingStallMs += 100;
+          if (_bufferingStallMs >= 1000 && !buffering.value) {
+            buffering.value = true;
+          }
         }
       }
 
       if (_userIntentPlaying && buffering.value && !_isRecovering) {
-        _bufferingStallMs += 100;
         if (_bufferingStallMs >= 4500) {
           _bufferingStallMs = 0;
           AppLogger.w(

@@ -43,9 +43,6 @@ class WinWinDanmakuController {
   /// 已请求的段号集合（0-based），防重复拉取。
   final Set<int> _requestedSeg = HashSet<int>();
 
-  /// 合并去重缓存：content → 已存在的弹幕（仅非自己的弹幕参与合并）。
-  final Map<String, DanmakuElem> _uniques = HashMap<String, DanmakuElem>();
-
   /// 服务端是否关闭了该视频的弹幕（UP 关闭）。
   bool _closed = false;
   bool get danmakuClosed => _closed;
@@ -120,12 +117,13 @@ class WinWinDanmakuController {
     }
   }
 
-  /// 处理弹幕列表：标记自己、合并去重、规则过滤、入桶。
+  /// 处理弹幕列表：标记自己、合并去重、规则过滤、入桶（对标 PiliPlus handleDanmaku）。
   void handleDanmaku(List<DanmakuElem> elems) {
     if (_disposed || elems.isEmpty) return;
     final selfHash = _selfMidHash;
     final shouldMerge = DanmakuOptions.mergeDanmaku;
     final shouldFilter = _filters.count > 0;
+    final uniques = HashMap<String, DanmakuElem>();
     for (final e in elems) {
       // 标记自己的弹幕（仅登录时）。
       if (selfHash != null) {
@@ -134,13 +132,13 @@ class WinWinDanmakuController {
       // 非自己的弹幕才参与合并 / 过滤。
       if (!e.isSelf) {
         if (shouldMerge) {
-          final existing = _uniques[e.content];
+          final existing = uniques[e.content];
           if (existing != null) {
             // 合并：累加 count，不入桶。
             existing.count = existing.count + 1;
             continue;
           }
-          _uniques[e.content] = e;
+          uniques[e.content] = e;
         }
         if (shouldFilter && _filters.remove(e)) {
           continue;
@@ -155,7 +153,7 @@ class WinWinDanmakuController {
   /// 取 [startMs] 到 [endMs] 区间内所有 100ms 分桶应上屏的弹幕。
   /// 避免因播放器轮询间隔（如 100ms~250ms）造成中间 100ms 桶被漏投。
   List<DanmakuContentItem<DanmakuElem>> getDanmakuRange(int startMs, int endMs) {
-    if (_disposed || _closed || endMs < 0) return const [];
+    if (_disposed || _closed || endMs < 0 || startMs > endMs) return const [];
     final seg = calcSegment(endMs);
     if (!_requestedSeg.contains(seg)) {
       queryDanmaku(seg);
@@ -239,7 +237,6 @@ class WinWinDanmakuController {
     _disposed = true;
     _dmSegMap.clear();
     _requestedSeg.clear();
-    _uniques.clear();
     localEcho.dispose();
     danmakuLoadedSignal.dispose();
   }

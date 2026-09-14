@@ -127,18 +127,27 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
 
   // ── 监听 ──
 
-  /// 进度推进：按时间区间跨步提取应上屏的弹幕逐条交给引擎。
+  /// 进度推进：按时间区间跨步提取应上屏的弹幕逐条交给引擎（对标 PiliPlus videoPositionListen）。
   void _onPosition() {
     final c = widget.controller;
     final dm = _dm ?? c.danmaku;
     final engine = _engine ?? c.danmakuEngine;
     if (dm == null || engine == null || dm.danmakuClosed) return;
-    final ms = c.position.value.inMilliseconds;
-    if (_lastProgressMs < 0 || (ms - _lastProgressMs).abs() > 1500) {
-      _lastProgressMs = ms - 100;
+    final int rawMs = c.position.value.inMilliseconds;
+    final int currentBucket = rawMs - (rawMs % 100);
+    if (currentBucket == _lastProgressMs) return;
+
+    final List<DanmakuContentItem<DanmakuElem>> items;
+    if (_lastProgressMs < 0 || (currentBucket - _lastProgressMs).abs() > 1500) {
+      _lastProgressMs = currentBucket;
+      items = dm.getCurrentDanmaku(currentBucket);
+    } else {
+      items = dm.getDanmakuRange(_lastProgressMs + 100, currentBucket);
+      _lastProgressMs = currentBucket;
     }
-    final items = dm.getDanmakuRange(_lastProgressMs + 100, ms);
-    _lastProgressMs = ms;
+
+    if (items.isEmpty) return;
+
     // 突发高密弹幕削峰保护：单周期（100ms）限制最多投递 30 条弹幕，
     // 避免网络回包或瞬态时间跳跃时数十条弹幕扎堆同步布局排版引发 UI 线程掉帧。
     final toAdd = items.length > 30 ? items.sublist(items.length - 30) : items;
@@ -168,8 +177,9 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
     }
   }
 
-  /// 弹幕段（6分钟）数据加载到达：若当前时间位于段内，立即触发一次范围补投。
+  /// 弹幕段（6分钟）数据加载到达：重置上次分桶标记，立即按当前进度补投。
   void _onDanmakuLoaded() {
+    _lastProgressMs = -1;
     _onPosition();
   }
 
@@ -212,6 +222,7 @@ class _WinWinDanmakuState extends State<WinWinDanmaku> {
                       _engine = engine;
                       c.danmakuEngine = engine;
                       _onPlayingOrBuffering();
+                      _onPosition();
                     },
                     option: DanmakuOptions.get(
                       fullscreen: widget.fullscreen,
