@@ -981,11 +981,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
         if (!_controlsVisible.value && !_draggingProgress) {
           return const SizedBox(height: 18);
         }
-        final durSec = c.duration.value.inSeconds.toDouble();
-        final maxSec = durSec > 0 ? durSec : 1.0;
+        final durMs = c.duration.value.inMilliseconds;
+        final maxSec = durMs > 0 ? durMs / 1000.0 : 1.0;
         final posSec = _draggingProgress
             ? _dragSeconds
-            : c.position.value.inSeconds.toDouble();
+            : (c.position.value.inMilliseconds / 1000.0);
         final value = posSec.clamp(0.0, maxSec).toDouble();
         final chapters = c.viewPoints;
         final previewSec = _draggingProgress
@@ -993,7 +993,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
             : _hoverSliderSeconds;
         final previewChapter =
             previewSec != null ? c.currentChapter(previewSec) : null;
-        final showTooltip = previewSec != null && durSec > 0;
+        final showTooltip = previewSec != null && durMs > 0;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -1114,14 +1114,17 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         setState(() => _dragSeconds = v);
                       },
                       onChangeEnd: (v) {
-                        setState(() => _draggingProgress = false);
-                        c.seek(Duration(seconds: v.round()));
+                        setState(() {
+                          _draggingProgress = false;
+                          _dragSeconds = v;
+                        });
+                        c.seek(Duration(milliseconds: (v * 1000).round()));
                       },
                     ),
                   ),
                 ),
                 // Phase 4.5：章节标记（view_points）— 在进度条上显示竖线标记。
-                if (chapters.isNotEmpty && durSec > 0)
+                if (chapters.isNotEmpty && durMs > 0)
                   Positioned.fill(
                     child: IgnorePointer(
                       child: Padding(
@@ -1129,7 +1132,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         child: CustomPaint(
                           painter: _ChapterMarkerPainter(
                             chapters: chapters,
-                            durationSec: durSec,
+                            durationSec: maxSec,
                             color: Colors.white70,
                           ),
                         ),

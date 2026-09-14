@@ -113,6 +113,12 @@ class WinWinPlayerController {
   /// seek 计数器：弹幕层监听后清空画面上的弹幕。
   final ValueNotifier<int> seekCount = ValueNotifier(0);
 
+  /// seek 执行状态：用于在底层 seek 期间抑制轮询覆盖进度，杜绝进度条跳变回弹。
+  int _seekSeq = 0;
+  bool _isSeeking = false;
+  DateTime? _seekStartTime;
+  bool get isSeeking => _isSeeking;
+
   /// 弹幕重建信号：didPopNext 返回本页时 ++，WinWinDanmaku 监听后重建
   /// dm（清空旧缓存重新拉取）+ clear 引擎 + 重置去重标记。等效于 PiliPlus
   /// 的 videoState 卸载-重建 PlDanmaku，但不需要销毁 DanmakuScreen（避免
@@ -449,6 +455,8 @@ class WinWinPlayerController {
     _heartBeatTimer?.cancel();
     _heartBeatTimer = null;
     _bufferingStallMs = 0;
+    _isSeeking = false;
+    _seekStartTime = null;
   }
 
   void _syncTextureId() {
@@ -467,6 +475,20 @@ class WinWinPlayerController {
     _pollTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       final player = _player;
       if (_disposed || player == null || !ready.value) return;
+
+      // 若正在 seek 过程中且未超时（3s 安全兜底），底层 player.position 仍可能返回旧 PTS，
+      // 保持当前 target 进度，避免进度条来回跳变抖动；同时屏蔽卡顿看门狗误判。
+      if (_isSeeking) {
+        if (_seekStartTime != null &&
+            DateTime.now().difference(_seekStartTime!) >
+                const Duration(seconds: 3)) {
+          _isSeeking = false;
+          _seekStartTime = null;
+        } else {
+          return;
+        }
+      }
+
       final posMs = player.position;
       final newPos = Duration(milliseconds: posMs);
       if (position.value != newPos) {
@@ -523,7 +545,7 @@ class WinWinPlayerController {
       if (sponsorBlockEnabled) {
         final target = sponsorBlock?.computeSkipTarget(posMs / 1000.0);
         if (target != null) {
-          unawaited(player.seek(position: (target * 1000).toInt()));
+          seek(Duration(milliseconds: (target * 1000).toInt()));
         }
       }
       // 播放结束检测：进度达到 duration 的 99% 视为播完，上报 -1。
@@ -1235,13 +1257,42 @@ class WinWinPlayerController {
     final player = _player;
     if (player == null || _disposed) return;
     final durMs = duration.value.inMilliseconds;
-    if (durMs > 0 && to.inMilliseconds < durMs - 500) {
+    final clampedMs = durMs > 0
+        ? to.inMilliseconds.clamp(0, durMs)
+        : (to.inMilliseconds < 0 ? 0 : to.inMilliseconds);
+    final clampedTo = Duration(milliseconds: clampedMs);
+
+    if (durMs > 0 && clampedMs < durMs - 500) {
       completed.value = false;
     }
     _bufferingStallMs = 0;
-    _lastPolledPosMs = to.inMilliseconds;
-    unawaited(player.seek(position: to.inMilliseconds));
+    _lastPolledPosMs = clampedMs;
+
+    // 立即更新对外暴露的 position，避免 UI 进度条与时间文本产生回弹跳变。
+    position.value = clampedTo;
+
+    final seq = ++_seekSeq;
+    _isSeeking = true;
+    _seekStartTime = DateTime.now();
     seekCount.value++;
+
+    unawaited(() async {
+      try {
+        final res = await player.seek(position: clampedMs);
+        if (_disposed || seq != _seekSeq) return;
+        if (res >= 0) {
+          position.value = Duration(milliseconds: res);
+          _lastPolledPosMs = res;
+        }
+      } catch (e) {
+        AppLogger.w('PlayerController', 'player.seek error: $e');
+      } finally {
+        if (seq == _seekSeq) {
+          _isSeeking = false;
+          _seekStartTime = null;
+        }
+      }
+    }());
   }
 
   /// 触发弹幕重建（didPopNext 返回本页时调用）。
