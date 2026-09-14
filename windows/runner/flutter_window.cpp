@@ -78,30 +78,6 @@ bool FlutterWindow::OnCreate() {
         result->NotImplemented();
       });
 
-  mediakit_video_channel_ =
-      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-          flutter_controller_->engine()->messenger(),
-          "com.alexmercerind/media_kit_video",
-          &flutter::StandardMethodCodec::GetInstance());
-
-  mediakit_video_channel_->SetMethodCallHandler(
-      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
-             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-        if (call.method_name() == "Utils.EnterNativeFullscreen") {
-          this->SetFullScreen(true);
-          result->Success();
-          return;
-        } else if (call.method_name() == "Utils.ExitNativeFullscreen") {
-          this->SetFullScreen(false);
-          result->Success();
-          return;
-        } else if (call.method_name() == "Utils.IsNativeFullscreen") {
-          result->Success(flutter::EncodableValue(this->IsFullScreen()));
-          return;
-        }
-        result->NotImplemented();
-      });
-
   // flutter_controller_->engine()->SetNextFrameCallback([&]() {
   //   this->Show();
   // });
@@ -120,9 +96,6 @@ void FlutterWindow::OnDestroy() {
   }
   if (fullscreen_channel_) {
     fullscreen_channel_ = nullptr;
-  }
-  if (mediakit_video_channel_) {
-    mediakit_video_channel_ = nullptr;
   }
   if (flutter_controller_) {
     flutter_controller_ = nullptr;

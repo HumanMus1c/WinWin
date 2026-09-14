@@ -36,11 +36,9 @@ class FlutterWindow : public Win32Window {
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       title_bar_channel_;
 
-  // MethodChannels for native display fullscreen
+  // MethodChannel for native display fullscreen
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       fullscreen_channel_;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
-      mediakit_video_channel_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

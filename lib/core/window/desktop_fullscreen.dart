@@ -22,13 +22,7 @@ class DesktopFullscreen {
     _isFullScreen = true;
     try {
       await _channel.invokeMethod('enterFullScreen');
-    } catch (_) {
-      // 兼容 PiliPlus 原版协议
-      try {
-        await const MethodChannel('com.alexmercerind/media_kit_video')
-            .invokeMethod('Utils.EnterNativeFullscreen');
-      } catch (_) {}
-    }
+    } catch (_) {}
   }
 
   /// 退出显示器原生全屏模式。
@@ -38,12 +32,7 @@ class DesktopFullscreen {
     _isFullScreen = false;
     try {
       await _channel.invokeMethod('exitFullScreen');
-    } catch (_) {
-      try {
-        await const MethodChannel('com.alexmercerind/media_kit_video')
-            .invokeMethod('Utils.ExitNativeFullscreen');
-      } catch (_) {}
-    }
+    } catch (_) {}
   }
 
   /// 切换显示器原生全屏状态。
