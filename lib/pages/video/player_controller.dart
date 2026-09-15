@@ -85,6 +85,8 @@ class WinWinPlayerController {
   final ValueNotifier<bool> playing = ValueNotifier(false);
   final ValueNotifier<Duration> position = ValueNotifier(Duration.zero);
   final ValueNotifier<Duration> duration = ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> buffered = ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> seekPosition = ValueNotifier(Duration.zero);
   final ValueNotifier<bool> buffering = ValueNotifier(false);
   final ValueNotifier<String?> error = ValueNotifier(null);
   final ValueNotifier<bool> ready = ValueNotifier(false);
@@ -93,6 +95,9 @@ class WinWinPlayerController {
   /// 视频播放是否已自然结束（到达片尾）。
   final ValueNotifier<bool> completed = ValueNotifier(false);
   bool get isCompleted => completed.value;
+
+  /// 当前显示/交互进度：若正在 seek 或拖动，返回 seekPosition，否则返回 position。
+  Duration get currentProgress => _isSeeking ? seekPosition.value : position.value;
 
   /// mdk 注册的 Flutter Texture id，供面板 `Texture(textureId:)` 渲染。
   /// 首帧就绪前 / 画质切换重建纹理期间为 null。
@@ -116,8 +121,26 @@ class WinWinPlayerController {
   /// seek 执行状态：用于在底层 seek 期间抑制轮询覆盖进度，杜绝进度条跳变回弹。
   int _seekSeq = 0;
   bool _isSeeking = false;
+  int? _seekTargetMs;
   DateTime? _seekStartTime;
   bool get isSeeking => _isSeeking;
+
+  /// 外部拖动开始（对标 PiliPlus onSeekStart）
+  void onSeekStart(int seekFromMs) {
+    _isSeeking = true;
+    _seekTargetMs = seekFromMs;
+    seekPosition.value = Duration(milliseconds: seekFromMs);
+  }
+
+  /// 外部拖动更新（对标 PiliPlus onDragUpdate）
+  void onSeekUpdate(int seekToMs) {
+    seekPosition.value = Duration(milliseconds: seekToMs);
+  }
+
+  /// 外部拖动结束（对标 PiliPlus onSeekEnd）
+  void onSeekEnd() {
+    // 保持锁定，由轮询 PTS 收敛或超时看门狗解除
+  }
 
   /// 弹幕重建信号：didPopNext 返回本页时 ++，WinWinDanmaku 监听后重建
   /// dm（清空旧缓存重新拉取）+ clear 引擎 + 重置去重标记。等效于 PiliPlus
@@ -458,6 +481,7 @@ class WinWinPlayerController {
     _heartBeatTimer = null;
     _bufferingStallMs = 0;
     _isSeeking = false;
+    _seekTargetMs = null;
     _seekStartTime = null;
   }
 
@@ -478,15 +502,25 @@ class WinWinPlayerController {
       final player = _player;
       if (_disposed || player == null || !ready.value) return;
 
-      // 若正在 seek 过程中且未超时（3s 安全兜底），底层 player.position 仍可能返回旧 PTS，
+      // 若正在 seek 过程中，底层 player.position 仍可能返回旧 PTS，
       // 保持当前 target 进度，避免进度条来回跳变抖动；同时屏蔽卡顿看门狗误判。
       if (_isSeeking) {
-        if (_seekStartTime != null &&
+        final curPosMs = player.position;
+        final targetMs = _seekTargetMs ?? position.value.inMilliseconds;
+        final diff = (curPosMs - targetMs).abs();
+        final isTimeout = _seekStartTime != null &&
             DateTime.now().difference(_seekStartTime!) >
-                const Duration(seconds: 3)) {
+                const Duration(milliseconds: 1500);
+
+        // 当 mdk PTS 已收敛至目标位置（误差 <= 1000ms 或已前进超过目标）或超时兜底：
+        if (diff <= 1000 || curPosMs >= targetMs || isTimeout) {
           _isSeeking = false;
+          _seekTargetMs = null;
           _seekStartTime = null;
+          position.value = Duration(milliseconds: curPosMs);
+          _lastPolledPosMs = curPosMs;
         } else {
+          // mdk 底层解码器尚未推进至目标时间戳，维持目标进度，屏蔽旧 PTS 覆盖导致的回跳
           return;
         }
       }
@@ -506,9 +540,16 @@ class WinWinPlayerController {
         }
       }
 
-      // 自然播放结束检测（对标 PiliPlus duration - position <= 50）：
-      // 某些流由于格式原因末帧与容器时长有几十毫秒差，在非播放中且进度停止时收敛。
       final durMs = duration.value.inMilliseconds;
+      // 实时更新已缓冲时长（对标 PiliPlus 进度条缓冲显示）
+      final bufMs = player.buffered();
+      if (durMs > 0 && bufMs > 0) {
+        final bufDuration =
+            Duration(milliseconds: (posMs + bufMs).clamp(0, durMs));
+        if (buffered.value != bufDuration) {
+          buffered.value = bufDuration;
+        }
+      }
       final isNearEnd = durMs > 0 && posMs >= durMs - 200;
       if (isNearEnd && !isPosAdvancing && !playing.value) {
         _handlePlaybackEnded();
@@ -1294,11 +1335,13 @@ class WinWinPlayerController {
     _bufferingStallMs = 0;
     _lastPolledPosMs = clampedMs;
 
-    // 立即更新对外暴露的 position，避免 UI 进度条与时间文本产生回弹跳变。
+    // 立即更新对外暴露的 position 与 seekPosition，使 UI 进度条瞬时稳定在目标位置，杜绝回弹
     position.value = clampedTo;
+    seekPosition.value = clampedTo;
 
     final seq = ++_seekSeq;
     _isSeeking = true;
+    _seekTargetMs = clampedMs;
     _seekStartTime = DateTime.now();
     seekCount.value++;
 
@@ -1310,10 +1353,12 @@ class WinWinPlayerController {
           _reportedEnd = false;
           player.state = mdk.PlaybackState.playing;
         }
-        final res = await player.seek(position: clampedMs);
+        // 精确帧 Seek（fromStart | inCache，不带 keyFrame），直接对准目标帧立即起播，杜绝跳跃至几秒前的关键帧
+        const flags =
+            mdk.SeekFlag(mdk.SeekFlag.fromStart | mdk.SeekFlag.inCache);
+        final res = await player.seek(position: clampedMs, flags: flags);
         if (_disposed || seq != _seekSeq) return;
         if (res >= 0) {
-          position.value = Duration(milliseconds: res);
           _lastPolledPosMs = res;
         }
         if (wasCompleted ||
@@ -1322,9 +1367,9 @@ class WinWinPlayerController {
         }
       } catch (e) {
         AppLogger.w('PlayerController', 'player.seek error: $e');
-      } finally {
         if (seq == _seekSeq) {
           _isSeeking = false;
+          _seekTargetMs = null;
           _seekStartTime = null;
         }
       }

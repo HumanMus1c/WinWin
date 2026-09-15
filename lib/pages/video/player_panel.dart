@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -258,8 +259,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
     final width = renderBox?.size.width ?? 1;
     final isRight = pos.dx > width / 2;
     final delta = isRight ? 10 : -10;
+    final basePos = c.isSeeking ? c.seekPosition.value : c.position.value;
     final target = _clampDuration(
-      c.position.value + Duration(seconds: delta),
+      basePos + Duration(seconds: delta),
       Duration.zero,
       c.duration.value,
     );
@@ -284,7 +286,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
   }
 
   void _onHorizontalDragStart(DragStartDetails details) {
-    _hDragStart = widget.controller.position.value;
+    _hDragStart = widget.controller.isSeeking
+        ? widget.controller.seekPosition.value
+        : widget.controller.position.value;
     _hDragDelta = 0;
     _dragFeedbackTimer?.cancel();
   }
@@ -979,6 +983,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
       listenable: Listenable.merge([
         c.position,
         c.duration,
+        c.buffered,
+        c.seekPosition,
         c.viewPointsNotifier,
         _controlsVisible,
       ]),
@@ -987,11 +993,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
           return const SizedBox(height: 18);
         }
         final durMs = c.duration.value.inMilliseconds;
+        final posMs = c.currentProgress.inMilliseconds;
+        final bufMs = c.buffered.value.inMilliseconds;
         final maxSec = durMs > 0 ? durMs / 1000.0 : 1.0;
-        final posSec = _draggingProgress
-            ? _dragSeconds
-            : (c.position.value.inMilliseconds / 1000.0);
-        final value = posSec.clamp(0.0, maxSec).toDouble();
         final chapters = c.viewPoints;
         final previewSec = _draggingProgress
             ? _dragSeconds
@@ -1004,8 +1008,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
           builder: (context, constraints) {
             final sliderWidth = constraints.maxWidth;
             final targetFraction = _draggingProgress
-                ? (value / maxSec)
-                : (_hoverSliderFraction ?? (value / maxSec));
+                ? (_dragSeconds / maxSec).clamp(0.0, 1.0)
+                : (_hoverSliderFraction ??
+                    (durMs > 0 ? (posMs / durMs).clamp(0.0, 1.0) : 0.0));
             final tooltipLeft = (targetFraction * (sliderWidth - 24)).clamp(
               8.0,
               (sliderWidth - 180).clamp(8.0, double.infinity),
@@ -1075,6 +1080,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     ),
                   ),
                 MouseRegion(
+                  cursor: SystemMouseCursors.click,
                   onHover: (e) {
                     final localX =
                         (e.localPosition.dx - 12).clamp(0.0, sliderWidth - 24);
@@ -1093,37 +1099,48 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       _hoverSliderFraction = null;
                     });
                   },
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      trackHeight: 3,
-                      thumbShape:
-                          const RoundSliderThumbShape(enabledThumbRadius: 6),
-                      overlayShape:
-                          const RoundSliderOverlayShape(overlayRadius: 12),
-                      activeTrackColor: biliBlue,
-                      inactiveTrackColor: Colors.white24,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: ProgressBar(
+                      progress: _draggingProgress
+                          ? (_dragSeconds * 1000).round()
+                          : posMs,
+                      buffered: bufMs,
+                      total: durMs,
+                      barHeight: 3.5,
+                      thumbRadius: 6.0,
+                      thumbGlowRadius: 16.0,
+                      baseBarColor: Colors.white24,
+                      bufferedBarColor: Colors.white38,
+                      progressBarColor: biliBlue,
                       thumbColor: biliBlue,
-                      overlayColor: const Color(0x3300AEEC),
-                    ),
-                    child: Slider(
-                      value: value,
-                      min: 0,
-                      max: maxSec,
-                      onChangeStart: (v) {
+                      thumbGlowColor: const Color(0x3300AEEC),
+                      onDragStart: (details) {
                         setState(() {
                           _draggingProgress = true;
-                          _dragSeconds = v;
+                          _dragSeconds = details.seconds.toDouble();
                         });
+                        c.onSeekStart(details.milliseconds);
+                        _onPointerActivity();
                       },
-                      onChanged: (v) {
-                        setState(() => _dragSeconds = v);
+                      onDragUpdate: (details) {
+                        setState(() {
+                          _dragSeconds = details.seconds.toDouble();
+                        });
+                        c.onSeekUpdate(details.milliseconds);
+                        _onPointerActivity();
                       },
-                      onChangeEnd: (v) {
+                      onDragEnd: () {
+                        _onPointerActivity();
+                      },
+                      onSeek: (targetMs) {
                         setState(() {
                           _draggingProgress = false;
-                          _dragSeconds = v;
+                          _dragSeconds = targetMs / 1000.0;
                         });
-                        c.seek(Duration(milliseconds: (v * 1000).round()));
+                        c.seek(Duration(milliseconds: targetMs));
+                        c.onSeekEnd();
+                        _onPointerActivity();
                       },
                     ),
                   ),

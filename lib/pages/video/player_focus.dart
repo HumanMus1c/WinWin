@@ -175,7 +175,8 @@ class _PlayerFocusState extends State<PlayerFocus> {
   }
 
   void _seekRelative(WinWinPlayerController c, int deltaSec) {
-    final target = c.position.value + Duration(seconds: deltaSec);
+    final basePos = c.isSeeking ? c.seekPosition.value : c.position.value;
+    final target = basePos + Duration(seconds: deltaSec);
     final clamped = _clampDuration(target, Duration.zero, c.duration.value);
     c.seek(clamped);
   }
@@ -285,7 +286,8 @@ class _DoubleTapSeekDetectorState extends State<DoubleTapSeekDetector> {
   void _handleDoubleTap(bool isRight) {
     final c = widget.controller;
     final delta = isRight ? widget.forwardStep : -widget.backwardStep;
-    final target = c.position.value + Duration(seconds: delta);
+    final basePos = c.isSeeking ? c.seekPosition.value : c.position.value;
+    final target = basePos + Duration(seconds: delta);
     final clamped = _clampDuration(target, Duration.zero, c.duration.value);
     c.seek(clamped);
     widget.onFeedback?.call(isRight, delta.abs());
@@ -384,7 +386,9 @@ class _HorizontalSeekDetectorState extends State<HorizontalSeekDetector> {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onHorizontalDragStart: (details) {
-        _dragStart = widget.controller.position.value;
+        _dragStart = widget.controller.isSeeking
+            ? widget.controller.seekPosition.value
+            : widget.controller.position.value;
         _dragDelta = 0;
       },
       onHorizontalDragUpdate: (details) {
