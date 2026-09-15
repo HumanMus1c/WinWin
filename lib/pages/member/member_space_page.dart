@@ -28,6 +28,7 @@ import 'package:winwin/pages/fav/fav_page.dart';
 import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/season_series_detail_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
@@ -605,7 +606,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     color: Colors.black.withValues(alpha: 0.35),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                  child: Icon(AppIcons.back(context), color: Colors.white, size: 20),
                 ),
                 onPressed: () => Navigator.maybePop(context),
               ),
@@ -618,7 +619,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                         color: Colors.black.withValues(alpha: 0.35),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.share_outlined, color: Colors.white, size: 20),
+                      child: Icon(AppIcons.share(context), color: Colors.white, size: 20),
                     ),
                     onPressed: () => _copyToClipboard('https://space.bilibili.com/${widget.mid}', '主页链接已复制'),
                   ),
@@ -629,7 +630,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       color: Colors.black.withValues(alpha: 0.35),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.more_vert, color: Colors.white, size: 20),
+                    child: Icon(AppIcons.more(context), color: Colors.white, size: 20),
                   ),
                   onSelected: (val) {
                     if (val == 'copy_uid') {

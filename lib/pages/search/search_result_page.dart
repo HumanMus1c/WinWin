@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/models/search/search_type.dart';
 import 'package:winwin/pages/search/search_panel.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 搜索结果页 — TabBar 分类 + TabBarView 结果列表。
 ///
@@ -38,10 +39,7 @@ class _SearchResultPageState extends State<SearchResultPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: const AppBackButton(),
         title: Text(
           widget.keyword,
           overflow: TextOverflow.ellipsis,

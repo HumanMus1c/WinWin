@@ -15,6 +15,7 @@ import 'package:winwin/http/live.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/tcp/live.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/duration_utils.dart';
@@ -821,6 +822,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             appBar: isFillWindow
                 ? null
                 : AppBar(
+                    leading: const AppBackButton(),
                     backgroundColor: Colors.transparent,
                     elevation: 0,
                     title: Row(
@@ -839,7 +841,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     ),
                     actions: [
                       IconButton(
-                        icon: const Icon(Icons.refresh),
+                        icon: Icon(AppIcons.refresh(context)),
                         tooltip: '刷新直播流',
                         onPressed: _initLive,
                       ),
@@ -1062,7 +1064,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: Icon(AppIcons.back(context), color: Colors.white),
               tooltip: '退出全屏 (Esc)',
               onPressed: _handleEscape,
             ),

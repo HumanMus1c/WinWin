@@ -5,6 +5,8 @@ import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/ui_style.dart';
 
+export 'package:winwin/theme/app_icons.dart' show AppBackButton, AppIcons;
+
 /// 轻量脚手架（Phase 7.5.1）。
 ///
 /// 参照 PiliPlus 的 `SimpleScaffold`：避开 Flutter `Scaffold` 的限制

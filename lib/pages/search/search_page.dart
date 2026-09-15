@@ -11,6 +11,7 @@ import 'package:winwin/models/search/suggest.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/search/search_result_page.dart';
 import 'package:winwin/pages/search/services/search_history_service.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 
@@ -178,10 +179,7 @@ class _SearchPageState extends State<SearchPage> {
 
   PreferredSizeWidget _buildSearchAppBar() {
     return AppBar(
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => Navigator.pop(context),
-      ),
+      leading: const AppBackButton(),
       titleSpacing: 0,
       title: TextField(
         controller: _controller,
@@ -191,7 +189,7 @@ class _SearchPageState extends State<SearchPage> {
         onSubmitted: _submitSearch,
         decoration: InputDecoration(
           hintText: '搜索视频、UP主...',
-          prefixIcon: const Icon(Icons.search, size: 20),
+          prefixIcon: Icon(AppIcons.search(context), size: 20),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(100),
             borderSide: BorderSide.none,
@@ -201,7 +199,7 @@ class _SearchPageState extends State<SearchPage> {
           contentPadding: const EdgeInsets.symmetric(horizontal: Style.md),
           suffixIcon: _controller.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.close, size: 18),
+                  icon: Icon(AppIcons.clear(context), size: 18),
                   onPressed: () {
                     _controller.clear();
                     setState(() => _suggests = []);
@@ -253,7 +251,7 @@ class _SearchPageState extends State<SearchPage> {
         ),
         GestureDetector(
           onTap: _clearHistory,
-          child: Icon(Icons.delete_outline,
+          child: Icon(AppIcons.delete(context),
               size: 18, color: Theme.of(context).colorScheme.outline),
         ),
       ],
@@ -268,7 +266,7 @@ class _SearchPageState extends State<SearchPage> {
         return InputChip(
           label: Text(word),
           onSelected: (_) => _submitSearch(word),
-          deleteIcon: const Icon(Icons.close, size: 14),
+          deleteIcon: Icon(AppIcons.clear(context), size: 14),
           onDeleted: () => _removeHistory(word),
           visualDensity: VisualDensity.compact,
         );
@@ -425,7 +423,7 @@ class _SearchPageState extends State<SearchPage> {
       itemBuilder: (context, index) {
         final item = _suggests[index];
         return ListTile(
-          leading: const Icon(Icons.search, size: 18),
+          leading: Icon(AppIcons.search(context), size: 18),
           title: Text(item.name ?? ''),
           dense: true,
           onTap: () => _submitSearch(item.term ?? item.name ?? ''),

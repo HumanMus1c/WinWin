@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:winwin/models/video/video_detail.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -129,9 +130,7 @@ class _VideoActionRowState extends State<VideoActionRow>
             onLongPressEnd: (_) => _cancelTriplePress(),
             onLongPressCancel: _cancelTriplePress,
             child: _ActionButton(
-              icon: widget.hasLike
-                  ? Icons.thumb_up
-                  : Icons.thumb_up_outlined,
+              icon: AppIcons.like(context, active: widget.hasLike),
               text: NumUtils.formatNum(stat?.like),
               isActive: widget.hasLike,
               tooltip: '点赞（长按一键三连）',
@@ -143,9 +142,7 @@ class _VideoActionRowState extends State<VideoActionRow>
         // 投币
         Expanded(
           child: _ActionButton(
-            icon: widget.coinNum > 0
-                ? Icons.monetization_on
-                : Icons.monetization_on_outlined,
+            icon: AppIcons.coin(context, active: widget.coinNum > 0),
             text: NumUtils.formatNum(stat?.coin),
             isActive: widget.coinNum > 0,
             tooltip: '投币',
@@ -155,7 +152,7 @@ class _VideoActionRowState extends State<VideoActionRow>
         // 收藏
         Expanded(
           child: _ActionButton(
-            icon: widget.hasFav ? Icons.star : Icons.star_border,
+            icon: AppIcons.favorite(context, active: widget.hasFav),
             text: NumUtils.formatNum(stat?.favorite),
             isActive: widget.hasFav,
             tooltip: '收藏',
@@ -165,9 +162,7 @@ class _VideoActionRowState extends State<VideoActionRow>
         // 点踩
         Expanded(
           child: _ActionButton(
-            icon: widget.hasDislike
-                ? Icons.thumb_down
-                : Icons.thumb_down_outlined,
+            icon: AppIcons.dislike(context, active: widget.hasDislike),
             text: widget.hasDislike ? '已点踩' : '点踩',
             isActive: widget.hasDislike,
             tooltip: '点踩',
@@ -178,7 +173,7 @@ class _VideoActionRowState extends State<VideoActionRow>
         // 有计数显示计数，否则显示「分享」）
         Expanded(
           child: _ActionButton(
-            icon: Icons.share_outlined,
+            icon: AppIcons.share(context),
             text: (stat?.share ?? 0) > 0
                 ? NumUtils.formatNum(stat?.share)
                 : '分享',
@@ -190,7 +185,7 @@ class _VideoActionRowState extends State<VideoActionRow>
         // 稍后再看
         Expanded(
           child: _ActionButton(
-            icon: inWatchLater ? Icons.watch_later : Icons.watch_later_outlined,
+            icon: AppIcons.watchLater(context, active: inWatchLater),
             text: inWatchLater ? '已添加' : '稍后看',
             isActive: inWatchLater,
             tooltip: inWatchLater ? '移除稍后再看' : '添加稍后再看',

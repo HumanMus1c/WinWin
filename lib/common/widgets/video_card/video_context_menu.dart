@@ -14,6 +14,7 @@ import 'package:winwin/http/toview.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/utils.dart';
 
@@ -367,7 +368,7 @@ class VideoPopupMenu extends StatelessWidget {
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
         icon: Icon(
-          Icons.more_vert,
+          AppIcons.more(context),
           size: iconSize,
           color: cs.outline.withValues(alpha: 0.8),
         ),

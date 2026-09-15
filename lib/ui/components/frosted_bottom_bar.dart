@@ -10,6 +10,8 @@ import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
 
+import 'package:winwin/theme/app_icons.dart';
+
 /// 顶层导航页面枚举。
 enum AppPage { home, dynamic, history, whisper, profile }
 
@@ -19,26 +21,34 @@ enum AppPage { home, dynamic, history, whisper, profile }
 class NavDestination {
   final AppPage page;
   final String label;
-  final IconData outlinedIcon;
-  final IconData filledIcon;
   final Color color;
 
   const NavDestination(
     this.page,
     this.label,
-    this.outlinedIcon,
-    this.filledIcon,
     this.color,
   );
+
+  /// 依据 [UiStyle] 动态分发 M3 与 Miuix 图标
+  IconData icon(UiStyle style, {bool selected = false}) => switch (page) {
+        AppPage.home => AppIcons.homeOf(style, selected: selected),
+        AppPage.dynamic => AppIcons.dynamicOf(style, selected: selected),
+        AppPage.history => AppIcons.historyOf(style, selected: selected),
+        AppPage.whisper => AppIcons.whisperOf(style, selected: selected),
+        AppPage.profile => AppIcons.profileOf(style, selected: selected),
+      };
+
+  IconData get outlinedIcon => icon(UiStyle.material3, selected: false);
+  IconData get filledIcon => icon(UiStyle.material3, selected: true);
 }
 
 /// 默认导航项顺序（可后续接入 [SettingBoxKey.navBarSort] 用户重排）。
 const List<NavDestination> navDestinations = [
-  NavDestination(AppPage.home, '首页', Icons.home_outlined, Icons.home, iosBlue),
-  NavDestination(AppPage.dynamic, '动态', Icons.notifications_outlined, Icons.notifications, iosOrange),
-  NavDestination(AppPage.history, '历史', Icons.history_outlined, Icons.history, iosTeal),
-  NavDestination(AppPage.whisper, '消息', Icons.chat_bubble_outline, Icons.chat_bubble, iosPink),
-  NavDestination(AppPage.profile, '我的', Icons.person_outlined, Icons.person, iosGreen),
+  NavDestination(AppPage.home, '首页', iosBlue),
+  NavDestination(AppPage.dynamic, '动态', iosOrange),
+  NavDestination(AppPage.history, '历史', iosTeal),
+  NavDestination(AppPage.whisper, '消息', iosPink),
+  NavDestination(AppPage.profile, '我的', iosGreen),
 ];
 
 /// 导航项自适应图标：
@@ -60,7 +70,9 @@ class NavDestinationIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final style = InheritedUiStyle.of(context);
     final color = selected ? destination.color : cs.onSurfaceVariant;
+    final iconData = destination.icon(style, selected: selected);
 
     if (destination.page == AppPage.profile) {
       return ListenableBuilder(
@@ -87,7 +99,7 @@ class NavDestinationIcon extends StatelessWidget {
                     child: SizedBox.expand(),
                   ),
                   errorBuilder: (_, _, _) => Icon(
-                    selected ? destination.filledIcon : destination.outlinedIcon,
+                    iconData,
                     color: color,
                     size: size - 4,
                   ),
@@ -96,7 +108,7 @@ class NavDestinationIcon extends StatelessWidget {
             );
           }
           return Icon(
-            selected ? destination.filledIcon : destination.outlinedIcon,
+            iconData,
             color: color,
             size: size,
           );
@@ -105,7 +117,7 @@ class NavDestinationIcon extends StatelessWidget {
     }
 
     final Widget baseIcon = Icon(
-      selected ? destination.filledIcon : destination.outlinedIcon,
+      iconData,
       color: color,
       size: size,
     );

@@ -14,6 +14,7 @@ import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/id_utils.dart';
@@ -109,10 +110,11 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: const Text('动态详情', style: TextStyle(fontSize: 16)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(AppIcons.refresh(context)),
             tooltip: '重新加载',
             onPressed: _loadDetail,
           ),
@@ -343,17 +345,17 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           _buildStatItem(
-                            Icons.reply_outlined,
+                            AppIcons.reply(context),
                             item.stat!.repost ?? 0,
                             cs.outline,
                           ),
                           _buildStatItem(
-                            Icons.chat_bubble_outline,
+                            AppIcons.whisper(context),
                             item.stat!.comment ?? 0,
                             cs.outline,
                           ),
                           _buildStatItem(
-                            Icons.thumb_up_outlined,
+                            AppIcons.like(context),
                             item.stat!.like ?? 0,
                             cs.outline,
                           ),
@@ -477,7 +479,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                         if (reply.like != null &&
                                             reply.like! > 0) ...[
                                           Icon(
-                                            Icons.thumb_up_outlined,
+                                            AppIcons.like(context),
                                             size: 12,
                                             color: cs.outline,
                                           ),

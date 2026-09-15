@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_chrome.dart';
+import 'app_icons.dart';
 import 'app_shapes.dart';
 import 'app_typography.dart';
 import 'colors.dart';
@@ -59,6 +60,15 @@ class AppTheme {
         AppTypography.forStyle(style),
         AppChrome.forStyle(style),
       ];
+
+  /// 全局操作图标主题：按 [UiStyle] 自动注入系统 BackButton 与 CloseButton 图标
+  static ActionIconThemeData _actionIconThemeFor(UiStyle style) =>
+      ActionIconThemeData(
+        backButtonIconBuilder: (BuildContext context) =>
+            Icon(AppIcons.backOf(style)),
+        closeButtonIconBuilder: (BuildContext context) =>
+            Icon(AppIcons.clearOf(style)),
+      );
 
 
   // ─────────────────────────── Material 3 ───────────────────────────
@@ -144,6 +154,7 @@ class AppTheme {
           indicatorColor: md3LightSecondaryContainer,
           indicatorShape: const StadiumBorder(),
         ),
+        actionIconTheme: _actionIconThemeFor(UiStyle.material3),
         extensions: _extensionsFor(UiStyle.material3),
       );
 
@@ -220,6 +231,7 @@ class AppTheme {
           indicatorColor: md3DarkSecondaryContainer,
           indicatorShape: const StadiumBorder(),
         ),
+        actionIconTheme: _actionIconThemeFor(UiStyle.material3),
         extensions: _extensionsFor(UiStyle.material3),
       );
 
@@ -279,6 +291,7 @@ class AppTheme {
             borderRadius: BorderRadius.all(_miuixRadiusSmall),
           ),
         ),
+        actionIconTheme: _actionIconThemeFor(UiStyle.miuix),
         extensions: _extensionsFor(UiStyle.miuix),
       );
 
@@ -328,6 +341,7 @@ class AppTheme {
             borderRadius: BorderRadius.all(_miuixRadiusSmall),
           ),
         ),
+        actionIconTheme: _actionIconThemeFor(UiStyle.miuix),
         extensions: _extensionsFor(UiStyle.miuix),
       );
 

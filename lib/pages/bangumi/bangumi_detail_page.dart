@@ -12,6 +12,7 @@ import 'package:winwin/http/pgc.dart';
 import 'package:winwin/models/bangumi/bangumi_detail.dart';
 import 'package:winwin/pages/bangumi/bangumi_player_page.dart';
 import 'package:winwin/pages/video/detail_page.dart' show kDetailNarrowBreakpoint;
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -453,18 +454,15 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        leading: const AppBackButton(),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(AppIcons.refresh(context)),
             tooltip: '刷新',
             onPressed: () => _loadDetail(),
           ),
           IconButton(
-            icon: const Icon(Icons.share_outlined),
+            icon: Icon(AppIcons.share(context)),
             tooltip: '分享',
             onPressed: () {
               final sid = _detail?.seasonId ?? widget.seasonId;

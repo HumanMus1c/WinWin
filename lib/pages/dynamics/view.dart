@@ -17,6 +17,7 @@ import 'package:winwin/pages/dynamics/detail_page.dart';
 import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
@@ -1725,9 +1726,9 @@ class _DynCard extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _buildStatItem(Icons.reply_outlined, stat.repost ?? 0, cs.outline),
-        _buildStatItem(Icons.chat_bubble_outline, stat.comment ?? 0, cs.outline),
-        _buildStatItem(Icons.thumb_up_outlined, stat.like ?? 0, cs.outline),
+        _buildStatItem(AppIcons.reply(context), stat.repost ?? 0, cs.outline),
+        _buildStatItem(AppIcons.whisper(context), stat.comment ?? 0, cs.outline),
+        _buildStatItem(AppIcons.like(context), stat.like ?? 0, cs.outline),
       ],
     );
   }
