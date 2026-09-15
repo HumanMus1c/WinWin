@@ -382,16 +382,15 @@ class WinWinPlayerController {
         final oldValue = event.oldValue;
         final newValue = event.newValue;
 
-        // 缓冲中 / 缓冲完成（同时监听 buffering 与 stalled 位，映射同 fvp 的 bufferingStart / bufferingEnd）。
-        final wasBufferingOrStalled =
-            oldValue.test(mdk.MediaStatus.buffering | mdk.MediaStatus.stalled);
-        final isBufferingOrStalled =
-            newValue.test(mdk.MediaStatus.buffering | mdk.MediaStatus.stalled);
-        if (!wasBufferingOrStalled && isBufferingOrStalled) {
+        // 缓冲中 / 缓冲完成（监听 stalled 标志，对标 mdk stalled 解码空仓状态与 buffered 就绪状态）。
+        // 注意：buffering 仅为 I/O reader 后台拉流填充，不能作为播放器卡死依据。
+        final wasStalled = oldValue.test(mdk.MediaStatus.stalled);
+        final isStalled = newValue.test(mdk.MediaStatus.stalled);
+        if (!wasStalled && isStalled) {
           if (!completed.value) {
             buffering.value = true;
           }
-        } else if (!isBufferingOrStalled) {
+        } else if (!isStalled && wasStalled) {
           buffering.value = false;
           _bufferingStallMs = 0;
         }
@@ -525,18 +524,26 @@ class WinWinPlayerController {
 
       // 卡死看门狗（Watchdog，参照 BiliPai resolvePlaybackStallRecoveryDecision）：
       // 1. 用户意图播放（_userIntentPlaying，非手动暂停，且未播放完毕）；
-      // 2. 底层报告 stalled/buffering，或者播放中进度连续停滞超过 1 秒（避免 100ms 采样抖动误判）；
-      // 3. 达到 4.5 秒门限（早于 CDN 60s 闲置与长缓冲超时，及时自愈无感续播）。
+      // 2. 若播放进度正常推进（isPosAdvancing），坚决维持非缓冲态；
+      // 3. 仅在播放停滞（!isPosAdvancing）时检测底层 stalled（解码空仓）或累计停滞达 1 秒；
+      // 4. 达到 4.5 秒门限（早于 CDN 60s 闲置与长缓冲超时，及时自愈无感续播）。
       if (_userIntentPlaying && playing.value) {
-        final status = player.mediaStatus;
-        final isUnderlyingBuffering =
-            status.test(mdk.MediaStatus.stalled | mdk.MediaStatus.buffering);
-        if (isUnderlyingBuffering) {
-          if (!buffering.value) buffering.value = true;
-        } else if (!isPosAdvancing) {
-          _bufferingStallMs += 100;
-          if (_bufferingStallMs >= 1000 && !buffering.value) {
-            buffering.value = true;
+        if (isPosAdvancing) {
+          _bufferingStallMs = 0;
+          if (buffering.value) {
+            buffering.value = false;
+          }
+        } else {
+          final status = player.mediaStatus;
+          final isStalled = status.test(mdk.MediaStatus.stalled);
+          if (isStalled) {
+            _bufferingStallMs += 100;
+            if (!buffering.value) buffering.value = true;
+          } else {
+            _bufferingStallMs += 100;
+            if (_bufferingStallMs >= 1000 && !buffering.value) {
+              buffering.value = true;
+            }
           }
         }
       }
@@ -1274,8 +1281,15 @@ class WinWinPlayerController {
         : (to.inMilliseconds < 0 ? 0 : to.inMilliseconds);
     final clampedTo = Duration(milliseconds: clampedMs);
 
-    if (durMs > 0 && clampedMs < durMs - 500) {
+    final wasCompleted =
+        completed.value || player.state == mdk.PlaybackState.stopped;
+
+    if (wasCompleted || (durMs > 0 && clampedMs < durMs - 500)) {
       completed.value = false;
+      _reportedEnd = false;
+    }
+    if (wasCompleted) {
+      _userIntentPlaying = true;
     }
     _bufferingStallMs = 0;
     _lastPolledPosMs = clampedMs;
@@ -1290,11 +1304,21 @@ class WinWinPlayerController {
 
     unawaited(() async {
       try {
+        if (wasCompleted || player.state == mdk.PlaybackState.stopped) {
+          completed.value = false;
+          _userIntentPlaying = true;
+          _reportedEnd = false;
+          player.state = mdk.PlaybackState.playing;
+        }
         final res = await player.seek(position: clampedMs);
         if (_disposed || seq != _seekSeq) return;
         if (res >= 0) {
           position.value = Duration(milliseconds: res);
           _lastPolledPosMs = res;
+        }
+        if (wasCompleted ||
+            (player.state != mdk.PlaybackState.playing && _userIntentPlaying)) {
+          player.state = mdk.PlaybackState.playing;
         }
       } catch (e) {
         AppLogger.w('PlayerController', 'player.seek error: $e');

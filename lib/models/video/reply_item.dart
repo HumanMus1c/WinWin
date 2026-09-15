@@ -127,8 +127,18 @@ class ReplyCursor {
   String? nextOffset;
 
   ReplyCursor.fromJson(Map<String, dynamic> json) {
-    isEnd = (json['is_end'] ?? json['isEnd']) as bool?;
-    nextOffset = json['next_offset']?.toString();
+    final rawEnd = json['is_end'] ?? json['isEnd'];
+    if (rawEnd is bool) {
+      isEnd = rawEnd;
+    } else if (rawEnd is num) {
+      isEnd = rawEnd != 0;
+    }
+    final pagination = json['pagination_reply'];
+    if (pagination is Map<String, dynamic>) {
+      nextOffset = pagination['next_offset']?.toString();
+    } else {
+      nextOffset = json['next_offset']?.toString();
+    }
   }
 }
 

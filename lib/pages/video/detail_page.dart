@@ -411,7 +411,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       case Success(:final response):
         final cursor = response.cursor;
         _nextOffset = cursor?.nextOffset;
-        _replyEnd = cursor?.isEnd ?? response.replies.isEmpty;
+        _replyEnd = (cursor?.isEnd == true) ||
+            response.replies.isEmpty ||
+            (_nextOffset == null || _nextOffset!.isEmpty);
         _replyFailed = false;
         setState(() => _replies.addAll(response.replies));
       case Error():
@@ -2102,14 +2104,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       );
     }
     if (_replyEnd) {
+      final theme = Theme.of(context);
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: Style.lg),
         child: Center(
           child: Text(
-            '没有更多评论了',
+            '没有更多评论',
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: theme.colorScheme.outline,
             ),
           ),
         ),

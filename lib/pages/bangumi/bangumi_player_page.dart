@@ -414,14 +414,14 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     if (!mounted) return;
     if (res case Success(:final response)) {
       final newItems = response.replies;
-      if (newItems.isEmpty) {
+      _nextOffset = response.cursor?.nextOffset;
+      if (newItems.isEmpty ||
+          response.cursor?.isEnd == true ||
+          (_nextOffset == null || _nextOffset!.isEmpty)) {
         _replyEnd = true;
-      } else {
+      }
+      if (newItems.isNotEmpty) {
         _replies.addAll(newItems);
-        _nextOffset = response.cursor?.nextOffset;
-        if (response.cursor?.isEnd == true) {
-          _replyEnd = true;
-        }
       }
     } else {
       _replyFailed = true;
@@ -1780,10 +1780,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         padding: const EdgeInsets.symmetric(vertical: Style.lg),
         child: Center(
           child: Text(
-            '没有更多评论了',
+            '没有更多评论',
             style: TextStyle(
               fontSize: 12,
-              color: theme.colorScheme.onSurfaceVariant,
+              color: theme.colorScheme.outline,
             ),
           ),
         ),
