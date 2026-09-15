@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import 'package:winwin/common/constants.dart';
+import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/models/common/account_type.dart';
@@ -300,7 +301,7 @@ abstract final class VideoHttp {
     }
   }
 
-  // 评论列表 web端（pagination_str 无需 wbi 签名）
+  // 评论列表 web端（pagination_str 无需 wbi 签名，对标 BiliPai/PiliPlus 多级容灾回退）
   // [mode]：排序模式（对标 BiliPai CommentSortHeader）：3=最热，2=最新。
   static Future<LoadingState<ReplyMainData>> replyMain({
     required int oid,
@@ -308,32 +309,121 @@ abstract final class VideoHttp {
     String? nextOffset,
     int mode = 3,
   }) async {
-    final account = Accounts.main;
-    final res = await Request().get(
-      Api.replyMain,
-      queryParameters: {
-        'mode': mode,
-        'type': type,
-        'oid': oid,
-        'ps': 20,
-        'pagination_str': jsonEncode({'offset': nextOffset ?? ''}),
-        'web_location': '1315873',
-      },
-      options: Options(
-        headers: {
-          'origin': 'https://www.bilibili.com',
-          'referer': 'https://www.bilibili.com',
-          'user-agent': BrowserUa.pc,
-        },
-        extra: {'account': account},
-      ),
-    );
-    if (res.data['code'] == 0) {
-      return Success(
-        ReplyMainData.fromJson(res.data['data'] ?? <String, dynamic>{}),
-      );
-    } else {
-      return Error(res.data['message']);
+    try {
+      final account = Accounts.main;
+      final paginationParam = jsonEncode({'offset': nextOffset ?? ''});
+
+      // 1. 首选请求：携带当前账号凭证的 replyMain
+      Response? res;
+      try {
+        res = await Request().get(
+          Api.replyMain,
+          queryParameters: {
+            'mode': mode,
+            'type': type,
+            'oid': oid,
+            'ps': 20,
+            'pagination_str': paginationParam,
+            'web_location': '1315873',
+          },
+          options: Options(
+            headers: {
+              'origin': 'https://www.bilibili.com',
+              'referer': 'https://www.bilibili.com',
+              'user-agent': BrowserUa.pc,
+            },
+            extra: {'account': account},
+          ),
+        );
+      } catch (e) {
+        AppLogger.w('VideoHttp', 'replyMain (auth) request error: $e');
+      }
+
+      if (res != null && res.data is Map && res.data['code'] == 0) {
+        final data = res.data['data'];
+        if (data is Map) {
+          return Success(
+            ReplyMainData.fromJson(data.cast<String, dynamic>()),
+          );
+        }
+      }
+
+      // 2. 容灾回退链路（对标 BiliPai guestApi.getReplyListMain / PiliPlus NoAccount）：
+      // 携带登录凭据时若被 B 站风控拦截，使用纯净游客态重试
+      try {
+        res = await Request().get(
+          Api.replyMain,
+          queryParameters: {
+            'mode': mode,
+            'type': type,
+            'oid': oid,
+            'ps': 20,
+            'pagination_str': paginationParam,
+            'web_location': '1315873',
+          },
+          options: Options(
+            headers: {
+              'origin': 'https://www.bilibili.com',
+              'referer': 'https://www.bilibili.com',
+              'user-agent': BrowserUa.pc,
+              'cookie': '',
+            },
+            extra: {'account': const NoAccount()},
+          ),
+        );
+      } catch (e) {
+        AppLogger.w('VideoHttp', 'replyMain (guest) fallback error: $e');
+      }
+
+      if (res != null && res.data is Map && res.data['code'] == 0) {
+        final data = res.data['data'];
+        if (data is Map) {
+          return Success(
+            ReplyMainData.fromJson(data.cast<String, dynamic>()),
+          );
+        }
+      }
+
+      // 3. 第三级兜底（对标 BiliPai fetchLegacyHotCommentsCompat / PiliPlus Api.replyList）：
+      // 请求免 WBI 且无需复杂 pagination_str 的经典接口 /x/v2/reply
+      try {
+        final legacySort = mode == 2 ? 0 : 2; // 0=时间, 2=热度
+        res = await Request().get(
+          Api.replyList,
+          queryParameters: {
+            'oid': oid,
+            'type': type,
+            'sort': legacySort,
+            'pn': 1,
+            'ps': 20,
+          },
+          options: Options(
+            headers: {
+              'origin': 'https://www.bilibili.com',
+              'referer': 'https://www.bilibili.com',
+              'user-agent': BrowserUa.pc,
+            },
+            extra: {'account': account},
+          ),
+        );
+        if (res.data is Map && res.data['code'] == 0) {
+          final data = res.data['data'];
+          if (data is Map) {
+            return Success(
+              ReplyMainData.fromJson(data.cast<String, dynamic>()),
+            );
+          }
+        }
+      } catch (e) {
+        AppLogger.w('VideoHttp', 'replyList (legacy) fallback error: $e');
+      }
+
+      final errMsg =
+          (res?.data is Map ? res!.data['message'] : null) ?? '获取评论失败';
+      return Error(errMsg.toString());
+    } catch (e) {
+      AppLogger.w('VideoHttp', 'replyMain fatal catch: $e');
+      return Error(e.toString());
     }
   }
 
@@ -345,32 +435,40 @@ abstract final class VideoHttp {
     required int root,
     String? nextOffset,
   }) async {
-    final account = Accounts.main;
-    final res = await Request().get(
-      Api.replyReplyList,
-      queryParameters: {
-        'type': 1,
-        'oid': oid,
-        'root': root,
-        'ps': 20,
-        'pagination_str': jsonEncode({'offset': nextOffset ?? ''}),
-        'web_location': '1315873',
-      },
-      options: Options(
-        headers: {
-          'origin': 'https://www.bilibili.com',
-          'referer': 'https://www.bilibili.com',
-          'user-agent': BrowserUa.pc,
+    try {
+      final account = Accounts.main;
+      final res = await Request().get(
+        Api.replyReplyList,
+        queryParameters: {
+          'type': 1,
+          'oid': oid,
+          'root': root,
+          'ps': 20,
+          'pagination_str': jsonEncode({'offset': nextOffset ?? ''}),
+          'web_location': '1315873',
         },
-        extra: {'account': account},
-      ),
-    );
-    if (res.data['code'] == 0) {
-      return Success(
-        ReplyMainData.fromJson(res.data['data'] ?? <String, dynamic>{}),
+        options: Options(
+          headers: {
+            'origin': 'https://www.bilibili.com',
+            'referer': 'https://www.bilibili.com',
+            'user-agent': BrowserUa.pc,
+          },
+          extra: {'account': account},
+        ),
       );
-    } else {
-      return Error(res.data['message']);
+      if (res.data is Map && res.data['code'] == 0) {
+        final data = res.data['data'];
+        if (data is Map) {
+          return Success(
+            ReplyMainData.fromJson(data.cast<String, dynamic>()),
+          );
+        }
+      }
+      final msg = (res.data is Map ? res.data['message'] : null) ?? '获取回复失败';
+      return Error(msg.toString());
+    } catch (e) {
+      AppLogger.w('VideoHttp', 'replyReplyList error: $e');
+      return Error(e.toString());
     }
   }
 

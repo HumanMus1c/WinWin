@@ -404,30 +404,37 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       _replyEnd = false;
       _replyFailed = false;
     }
+    if (mounted) setState(() {});
 
-    final res = await VideoHttp.replyMain(
-      oid: oid,
-      mode: _replyMode,
-      nextOffset: _nextOffset,
-    );
+    try {
+      final res = await VideoHttp.replyMain(
+        oid: oid,
+        mode: _replyMode,
+        nextOffset: _nextOffset,
+      );
 
-    if (!mounted) return;
-    if (res case Success(:final response)) {
-      final newItems = response.replies;
-      _nextOffset = response.cursor?.nextOffset;
-      if (newItems.isEmpty ||
-          response.cursor?.isEnd == true ||
-          (_nextOffset == null || _nextOffset!.isEmpty)) {
-        _replyEnd = true;
+      if (!mounted) return;
+      if (res case Success(:final response)) {
+        final newItems = response.replies;
+        _nextOffset = response.cursor?.nextOffset;
+        if (newItems.isEmpty ||
+            response.cursor?.isEnd == true ||
+            (_nextOffset == null || _nextOffset!.isEmpty)) {
+          _replyEnd = true;
+        }
+        if (newItems.isNotEmpty) {
+          _replies.addAll(newItems);
+        }
+      } else {
+        _replyFailed = true;
       }
-      if (newItems.isNotEmpty) {
-        _replies.addAll(newItems);
-      }
-    } else {
+    } catch (e) {
+      AppLogger.w('BangumiPlayer', '_loadReplies error: $e');
       _replyFailed = true;
+    } finally {
+      _loadingReplies = false;
+      if (mounted) setState(() {});
     }
-    _loadingReplies = false;
-    setState(() {});
   }
 
   void _gotoMemberSpace(int? mid) {
@@ -1253,7 +1260,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   void _maybeLoadMoreReplies() {
     if (_loadingReplies || _replyEnd || _replyFailed) return;
-    _loadReplies(refresh: false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _loadingReplies || _replyEnd || _replyFailed) return;
+      _loadReplies(refresh: false);
+    });
   }
 
   void _retryReplies() {

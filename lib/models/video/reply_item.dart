@@ -37,17 +37,21 @@ class ReplyItemModel {
       : this(
           rpid: _asInt(json['rpid']),
           mid: _asInt(json['mid']),
-          member: json['member'] is Map<String, dynamic>
-              ? ReplyMember.fromJson(json['member'])
+          member: json['member'] is Map
+              ? ReplyMember.fromJson((json['member'] as Map).cast<String, dynamic>())
               : null,
-          content: json['content'] is Map<String, dynamic>
-              ? ReplyContent.fromJson(json['content'])
+          content: json['content'] is Map
+              ? ReplyContent.fromJson((json['content'] as Map).cast<String, dynamic>())
               : null,
           like: _asInt(json['like']),
           ctime: _asInt(json['ctime']),
           rcount: _asInt(json['rcount']),
-          action: _asInt(json['action'] ?? json['reply_control']?['action']) ?? 0,
-          upAction: json['up_action'] is Map<String, dynamic>
+          action: _asInt(json['action'] ??
+                  (json['reply_control'] is Map
+                      ? (json['reply_control'] as Map)['action']
+                      : null)) ??
+              0,
+          upAction: json['up_action'] is Map
               ? ReplyUpAction.fromJson(
                   (json['up_action'] as Map).cast<String, dynamic>(),
                 )
@@ -108,7 +112,9 @@ class ReplyMember {
     uname = json['uname'] as String?;
     avatar = json['avatar'] as String?;
     sex = json['sex'] as String?;
-    level = _asInt(json['level_info']?['current_level'] ?? json['level']);
+    level = _asInt(json['level_info'] is Map
+        ? (json['level_info'] as Map)['current_level']
+        : json['level']);
   }
 }
 
@@ -116,7 +122,7 @@ class ReplyContent {
   String? message;
 
   ReplyContent.fromJson(Map<String, dynamic> json) {
-    message = json['message'] as String?;
+    message = json['message']?.toString();
   }
 }
 
@@ -134,7 +140,7 @@ class ReplyCursor {
       isEnd = rawEnd != 0;
     }
     final pagination = json['pagination_reply'];
-    if (pagination is Map<String, dynamic>) {
+    if (pagination is Map) {
       nextOffset = pagination['next_offset']?.toString();
     } else {
       nextOffset = json['next_offset']?.toString();
@@ -148,12 +154,13 @@ class ReplyMainData {
 
   ReplyMainData.fromJson(Map<String, dynamic> json)
       : replies = (json['replies'] as List?)
-            ?.map((e) => ReplyItemModel.fromJson(e as Map<String, dynamic>))
+            ?.whereType<Map>()
+            .map((e) => ReplyItemModel.fromJson(e.cast<String, dynamic>()))
             .toList() ??
             <ReplyItemModel>[] {
     final cursorJson = json['cursor'];
-    cursor = cursorJson is Map<String, dynamic>
-        ? ReplyCursor.fromJson(cursorJson)
+    cursor = cursorJson is Map
+        ? ReplyCursor.fromJson(cursorJson.cast<String, dynamic>())
         : null;
   }
 }

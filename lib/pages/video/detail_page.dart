@@ -397,39 +397,45 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       _subReplies.clear();
     }
     _loadingReplies = true;
-    if (_replies.isNotEmpty) {
-      setState(() {}); // 让尾部 spinner 立即出现
-    }
-    final res = await VideoHttp.replyMain(
-      oid: oid,
-      nextOffset: nextOffset,
-      mode: _replyMode,
-    );
-    if (!mounted) return;
-    _loadingReplies = false;
-    switch (res) {
-      case Success(:final response):
-        final cursor = response.cursor;
-        _nextOffset = cursor?.nextOffset;
-        _replyEnd = (cursor?.isEnd == true) ||
-            response.replies.isEmpty ||
-            (_nextOffset == null || _nextOffset!.isEmpty);
-        _replyFailed = false;
-        setState(() => _replies.addAll(response.replies));
-      case Error():
-        _replyFailed = true;
-        setState(() {});
-      case Loading():
-        break;
+    if (mounted) setState(() {});
+    try {
+      final res = await VideoHttp.replyMain(
+        oid: oid,
+        nextOffset: nextOffset,
+        mode: _replyMode,
+      );
+      if (!mounted) return;
+      switch (res) {
+        case Success(:final response):
+          final cursor = response.cursor;
+          _nextOffset = cursor?.nextOffset;
+          _replyEnd = (cursor?.isEnd == true) ||
+              response.replies.isEmpty ||
+              (_nextOffset == null || _nextOffset!.isEmpty);
+          _replyFailed = false;
+          _replies.addAll(response.replies);
+        case Error():
+          _replyFailed = true;
+        case Loading():
+          break;
+      }
+    } catch (e) {
+      AppLogger.w('Detail', '_loadReplies error: $e');
+      _replyFailed = true;
+    } finally {
+      _loadingReplies = false;
+      if (mounted) setState(() {});
     }
   }
 
-  /// 滚动到列表尾部时触发（在 itemBuilder 中调用，
-  /// 参考 RcmdPage 的 onLoadMore 模式）。
+  /// 滚动到列表尾部时触发（通过 addPostFrameCallback 避免 build 阶段重入）。
   void _maybeLoadMoreReplies() {
     final aid = _detailState.dataOrNull?.aid;
     if (aid == null || _loadingReplies || _replyEnd || _replyFailed) return;
-    _loadReplies(oid: aid, nextOffset: _nextOffset);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _loadingReplies || _replyEnd || _replyFailed) return;
+      _loadReplies(oid: aid, nextOffset: _nextOffset);
+    });
   }
 
   void _retryReplies() {
@@ -2088,9 +2094,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       );
     }
     if (_replies.isEmpty) {
-      // 首页评论为空时也尝试触发一次加载（首次加载由 _loadDetail 发起，
-      // 这里兜底处理 aid 晚到的情况）。
-      _maybeLoadMoreReplies();
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: Style.lg),
         child: Center(
@@ -2118,7 +2121,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         ),
       );
     }
-    // 尚未到底且未在加载：兜底触发下一页。
     _maybeLoadMoreReplies();
     return const SizedBox.shrink();
   }

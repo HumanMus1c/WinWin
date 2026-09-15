@@ -124,22 +124,25 @@ class WinWinPlayerController {
   int? _seekTargetMs;
   DateTime? _seekStartTime;
   bool get isSeeking => _isSeeking;
+  int? get seekTargetMs => _seekTargetMs;
 
   /// 外部拖动开始（对标 PiliPlus onSeekStart）
   void onSeekStart(int seekFromMs) {
     _isSeeking = true;
     _seekTargetMs = seekFromMs;
+    _seekStartTime = DateTime.now();
     seekPosition.value = Duration(milliseconds: seekFromMs);
   }
 
   /// 外部拖动更新（对标 PiliPlus onDragUpdate）
   void onSeekUpdate(int seekToMs) {
+    _seekTargetMs = seekToMs;
     seekPosition.value = Duration(milliseconds: seekToMs);
   }
 
   /// 外部拖动结束（对标 PiliPlus onSeekEnd）
   void onSeekEnd() {
-    // 保持锁定，由轮询 PTS 收敛或超时看门狗解除
+    // 保持锁定，由底层 seek 完成回调或超时看门狗解除
   }
 
   /// 弹幕重建信号：didPopNext 返回本页时 ++，WinWinDanmaku 监听后重建
@@ -505,22 +508,17 @@ class WinWinPlayerController {
       // 若正在 seek 过程中，底层 player.position 仍可能返回旧 PTS，
       // 保持当前 target 进度，避免进度条来回跳变抖动；同时屏蔽卡顿看门狗误判。
       if (_isSeeking) {
-        final curPosMs = player.position;
-        final targetMs = _seekTargetMs ?? position.value.inMilliseconds;
-        final diff = (curPosMs - targetMs).abs();
         final isTimeout = _seekStartTime != null &&
             DateTime.now().difference(_seekStartTime!) >
-                const Duration(milliseconds: 1500);
+                const Duration(milliseconds: 2500);
 
-        // 当 mdk PTS 已收敛至目标位置（误差 <= 1000ms 或已前进超过目标）或超时兜底：
-        if (diff <= 1000 || curPosMs >= targetMs || isTimeout) {
+        if (isTimeout) {
+          AppLogger.w('PlayerController', 'Seek timeout for target $_seekTargetMs ms, releasing seek lock');
           _isSeeking = false;
           _seekTargetMs = null;
           _seekStartTime = null;
-          position.value = Duration(milliseconds: curPosMs);
-          _lastPolledPosMs = curPosMs;
         } else {
-          // mdk 底层解码器尚未推进至目标时间戳，维持目标进度，屏蔽旧 PTS 覆盖导致的回跳
+          // 底层 seek 执行中，维持目标进度，屏蔽旧 PTS 覆盖导致的回跳
           return;
         }
       }
@@ -1358,9 +1356,14 @@ class WinWinPlayerController {
             mdk.SeekFlag(mdk.SeekFlag.fromStart | mdk.SeekFlag.inCache);
         final res = await player.seek(position: clampedMs, flags: flags);
         if (_disposed || seq != _seekSeq) return;
-        if (res >= 0) {
-          _lastPolledPosMs = res;
-        }
+        final landedMs = res >= 0 ? res : clampedMs;
+        _lastPolledPosMs = landedMs;
+        position.value = Duration(milliseconds: landedMs);
+        seekPosition.value = Duration(milliseconds: landedMs);
+        _isSeeking = false;
+        _seekTargetMs = null;
+        _seekStartTime = null;
+
         if (wasCompleted ||
             (player.state != mdk.PlaybackState.playing && _userIntentPlaying)) {
           player.state = mdk.PlaybackState.playing;
