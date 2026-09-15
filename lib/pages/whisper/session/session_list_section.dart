@@ -10,6 +10,7 @@ import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart'
 import 'package:winwin/pages/whisper/session/chat_detail_page.dart';
 import 'package:winwin/pages/whisper/session/message_preview_parser.dart';
 import 'package:winwin/pages/whisper/session/session_account_resolver.dart';
+import 'package:winwin/pages/whisper/session/session_more_menu_button.dart';
 import 'package:winwin/pages/whisper/session/session_pagination_policy.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
@@ -481,33 +482,12 @@ class _SessionTile extends StatelessWidget {
                 color: theme.colorScheme.outline,
               ),
             ),
-          PopupMenuButton<String>(
-            icon: Icon(
-              Icons.more_vert,
-              size: 20,
-              color: theme.colorScheme.outline,
-            ),
-            onSelected: (v) {
-              switch (v) {
-                case 'top':
-                  onToggleTop(index);
-                case 'dnd':
-                  onToggleDnd(index);
-                case 'remove':
-                  _confirmRemove(context);
-              }
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'top',
-                child: Text(isPinned ? '取消置顶' : '置顶'),
-              ),
-              PopupMenuItem(
-                value: 'dnd',
-                child: Text(isDnd ? '关闭免打扰' : '开启免打扰'),
-              ),
-              const PopupMenuItem(value: 'remove', child: Text('删除会话')),
-            ],
+          SessionMoreMenuButton(
+            isPinned: isPinned,
+            isDnd: isDnd,
+            onToggleTop: () => onToggleTop(index),
+            onToggleDnd: () => onToggleDnd(index),
+            onRemove: () => _confirmRemove(context),
           ),
         ],
       ),

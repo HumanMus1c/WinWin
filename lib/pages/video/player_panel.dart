@@ -17,6 +17,7 @@ import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_focus.dart';
 import 'package:winwin/pages/video/send_danmaku_panel.dart';
 import 'package:winwin/pages/video/subtitle_settings_panel.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/hover_container.dart';
@@ -473,8 +474,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   children: [
                     Icon(
                       feedback.isForward
-                          ? Icons.fast_forward
-                          : Icons.fast_rewind,
+                          ? AppIcons.fastForward(context)
+                          : AppIcons.fastRewind(context),
                       color: Colors.white,
                       size: 28,
                     ),
@@ -503,15 +504,15 @@ class _PlayerPanelState extends State<PlayerPanel> {
       valueListenable: _longPressSpeedFeedback,
       builder: (context, speed, _) {
         if (speed == null) return const SizedBox.shrink();
-        return const Positioned.fill(
+        return Positioned.fill(
           child: IgnorePointer(
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.fast_forward, color: biliPink, size: 40),
-                  SizedBox(height: Style.xs),
-                  Text(
+                  Icon(AppIcons.fastForward(context), color: biliPink, size: 40),
+                  const SizedBox(height: Style.xs),
+                  const Text(
                     '倍速播放中',
                     style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
@@ -551,8 +552,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       children: [
                         Icon(
                           isForward
-                              ? Icons.fast_forward
-                              : Icons.fast_rewind,
+                              ? AppIcons.fastForward(context)
+                              : AppIcons.fastRewind(context),
                           color: biliPink,
                           size: 20,
                         ),
@@ -589,7 +590,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
   Widget _buildLockIndicator() {
     return Center(
       child: IconButton(
-        icon: const Icon(Icons.lock, color: Colors.white70, size: 32),
+        icon: Icon(AppIcons.lock(context), color: Colors.white70, size: 32),
         onPressed: _toggleLock,
         tooltip: '解锁控制条',
       ),
@@ -687,7 +688,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.error_outline, color: Colors.white70, size: 40),
+          Icon(AppIcons.error(context), color: Colors.white70, size: 40),
           const SizedBox(height: Style.sm),
           Text(
             message,
@@ -729,8 +730,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   padding: const EdgeInsets.all(Style.md),
                   child: Icon(
                     isCompleted
-                        ? Icons.replay_rounded
-                        : Icons.play_arrow_rounded,
+                        ? AppIcons.replay(context)
+                        : AppIcons.play(context, active: true),
                     color: Colors.white,
                     size: 44,
                   ),
@@ -785,12 +786,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
               _buildSubtitleChip(),
               const SizedBox(width: Style.sm),
               _iconButton(
-                icon: Icons.comment_outlined,
+                icon: AppIcons.sendDanmaku(context),
                 tooltip: '发弹幕',
                 onPressed: () => showSendDanmakuPanel(context, controller: c),
               ),
               _iconButton(
-                icon: Icons.tune,
+                icon: AppIcons.danmakuTune(context),
                 tooltip: '弹幕设置',
                 onPressed: () => showDanmakuSettingsPanel(
                   context,
@@ -799,34 +800,36 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ),
               ),
               _iconButton(
-                icon: Icons.volume_up,
+                icon: AppIcons.volumeUp(context),
                 tooltip: '音量',
                 onPressed: _toggleVolumePopup,
               ),
               _iconButton(
-                icon: Icons.lock_outline,
+                icon: AppIcons.lockOutline(context),
                 tooltip: '锁定控制条',
                 onPressed: _toggleLock,
               ),
               if (!widget.fullscreen)
                 _iconButton(
-                  icon: Icons.picture_in_picture_alt,
+                  icon: AppIcons.pip(context),
                   tooltip: '画中画',
                   onPressed: () => DesktopPipController.instance.togglePip(),
                 ),
               if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
                 _iconButton(
-                  icon: widget.inAppFullscreen
-                      ? Icons.crop_square
-                      : Icons.crop_square_outlined,
+                  icon: AppIcons.inAppFullscreen(
+                    context,
+                    active: widget.inAppFullscreen,
+                  ),
                   tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
                   onPressed: widget.onToggleInAppFullscreen!,
                 ),
               if (widget.onToggleFullscreen != null)
                 _iconButton(
-                  icon: widget.fullscreen
-                      ? Icons.fullscreen_exit
-                      : Icons.fullscreen,
+                  icon: AppIcons.fullscreen(
+                    context,
+                    active: widget.fullscreen,
+                  ),
                   tooltip: widget.fullscreen ? '退出全屏' : '全屏',
                   onPressed: widget.onToggleFullscreen!,
                 ),
@@ -854,8 +857,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
             message: isCompleted ? '重新播放' : (isPlaying ? '暂停' : '播放'),
             child: Icon(
               isPlaying
-                  ? Icons.pause
-                  : (isCompleted ? Icons.replay : Icons.play_arrow),
+                  ? AppIcons.pause(context, active: true)
+                  : (isCompleted
+                      ? AppIcons.replay(context)
+                      : AppIcons.play(context, active: true)),
               color: Colors.white,
               size: 24,
             ),
@@ -1219,7 +1224,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              enabled ? Icons.chat_bubble : Icons.chat_bubble_outline,
+              AppIcons.danmaku(context, active: enabled),
               size: 14,
               color: enabled ? biliBlue : Colors.white70,
             ),
@@ -1270,7 +1275,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  isActive ? Icons.closed_caption : Icons.closed_caption_outlined,
+                  AppIcons.subtitle(context, active: isActive),
                   size: 14,
                   color: isActive ? biliBlue : Colors.white70,
                 ),
@@ -1331,8 +1336,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       children: [
                         Icon(
                           t.index == activeIndex
-                              ? Icons.check
-                              : Icons.radio_button_unchecked,
+                              ? AppIcons.check(context)
+                              : AppIcons.radio(context, selected: false),
                           size: 18,
                           color: t.index == activeIndex ? biliBlue : null,
                         ),
@@ -1371,9 +1376,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 child: Row(
                   children: [
                     Icon(
-                      currentNorm == '2'
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
+                      AppIcons.radio(context, selected: currentNorm == '2'),
                       size: 16,
                       color: currentNorm == '2' ? biliBlue : null,
                     ),
@@ -1392,9 +1395,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 child: Row(
                   children: [
                     Icon(
-                      currentNorm == '1'
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
+                      AppIcons.radio(context, selected: currentNorm == '1'),
                       size: 16,
                       color: currentNorm == '1' ? biliBlue : null,
                     ),
@@ -1413,9 +1414,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 child: Row(
                   children: [
                     Icon(
-                      currentNorm == '0'
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
+                      AppIcons.radio(context, selected: currentNorm == '0'),
                       size: 16,
                       color: currentNorm == '0' ? biliBlue : null,
                     ),
@@ -1579,7 +1578,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  isOpen ? Icons.bookmarks : Icons.bookmarks_outlined,
+                  AppIcons.chapter(context, active: isOpen),
                   size: 14,
                   color: isOpen ? biliBlue : Colors.white70,
                 ),
@@ -1625,7 +1624,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   decoration: BoxDecoration(
                     color: const Color(0xE6141414), // 黑色半透明
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(Style.radiusMd),
+                       topLeft: Radius.circular(Style.radiusMd),
                       bottomLeft: Radius.circular(Style.radiusMd),
                     ),
                     border: Border(
@@ -1660,8 +1659,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(
-                              Icons.bookmarks_outlined,
+                            Icon(
+                              AppIcons.chapter(context),
                               color: Colors.white,
                               size: 18,
                             ),
@@ -1682,8 +1681,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                               borderRadius: 6.0,
                               padding: const EdgeInsets.all(4),
                               hoverColor: Colors.white.withValues(alpha: 0.12),
-                              child: const Icon(
-                                Icons.close,
+                              child: Icon(
+                                AppIcons.clear(context),
                                 color: Colors.white70,
                                 size: 18,
                               ),
@@ -1740,8 +1739,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                         SizedBox(
                                           width: 22,
                                           child: isCurrent
-                                              ? const Icon(
-                                                  Icons.play_arrow_rounded,
+                                              ? Icon(
+                                                  AppIcons.play(context, active: true),
                                                   color: biliBlue,
                                                   size: 18,
                                                 )
@@ -1914,8 +1913,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 builder: (context, vol, _) {
                   return Icon(
                     vol <= 0
-                        ? Icons.volume_off
-                        : (vol > 100 ? Icons.volume_up : Icons.volume_down),
+                        ? AppIcons.volumeOff(context)
+                        : (vol > 100
+                            ? AppIcons.volumeUp(context)
+                            : AppIcons.volumeDown(context)),
                     color: vol > 100 ? Colors.amberAccent : Colors.white70,
                     size: 18,
                   );
@@ -2068,7 +2069,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(AppIcons.clear(context)),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -2111,7 +2112,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.download, size: 18),
+                        : Icon(AppIcons.download(context), size: 18),
                     label: Text(_savedPath != null ? '已保存' : '保存'),
                   ),
                 ],

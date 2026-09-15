@@ -828,7 +828,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               ),
               IconButton(
                 icon: Icon(
-                  Icons.picture_in_picture_alt_outlined,
+                  AppIcons.pip(context),
                   color: overVideo ? Colors.white : barContrast.contentColor,
                 ),
                 tooltip: '画中画',
@@ -1067,7 +1067,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   Pref.setBangumiEpisodesDescending(!_episodesDescending);
                 },
                 icon: Icon(
-                  _episodesDescending ? Icons.arrow_downward : Icons.arrow_upward,
+                  _episodesDescending
+                      ? AppIcons.chevronDown(context)
+                      : AppIcons.chevronUp(context),
                   size: 16,
                 ),
                 label: Text(_episodesDescending ? '倒序' : '正序'),
@@ -1142,8 +1144,12 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                 if (isCurrent)
                                   Container(
                                     color: Colors.black.withValues(alpha: 0.45),
-                                    child: const Center(
-                                      child: Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                                    child: Center(
+                                      child: Icon(
+                                        AppIcons.play(context, active: true),
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -1953,7 +1959,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              _isFollowed ? Icons.favorite : Icons.favorite_border,
+              AppIcons.favorite(context, active: _isFollowed),
               size: 16,
               color: _isFollowed ? Colors.pink : null,
             ),
@@ -1996,22 +2002,22 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           // 数据行（播放量、弹幕、时长、开播时间）
           Row(
             children: [
-              Icon(Icons.play_circle_outline, size: 15, color: cs.onSurfaceVariant),
+              Icon(AppIcons.viewCount(context), size: 15, color: cs.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(NumUtils.formatNum(stat?.views), style: grayStyle),
               const SizedBox(width: Style.md),
-              Icon(Icons.subtitles_outlined, size: 14, color: cs.onSurfaceVariant),
+              Icon(AppIcons.danmakuCount(context), size: 14, color: cs.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(NumUtils.formatNum(stat?.danmakus), style: grayStyle),
               if (_currentEpisode.duration != null && _currentEpisode.duration! > 0) ...[
                 const SizedBox(width: Style.md),
-                Icon(Icons.schedule_outlined, size: 14, color: cs.onSurfaceVariant),
+                Icon(AppIcons.duration(context), size: 14, color: cs.onSurfaceVariant),
                 const SizedBox(width: 4),
                 Text(_currentEpisode.formattedDuration, style: grayStyle),
               ],
               if (_currentEpisode.pubTime != null || widget.detail.publish?.releaseDateShow != null) ...[
                 const SizedBox(width: Style.md),
-                Icon(Icons.calendar_today_outlined, size: 13, color: cs.onSurfaceVariant),
+                Icon(AppIcons.calendar(context), size: 13, color: cs.onSurfaceVariant),
                 const SizedBox(width: 4),
                 Text(
                   _currentEpisode.pubTime != null

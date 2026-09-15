@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winwin/pages/whisper/session/session_more_menu_button.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/ui_style.dart';
@@ -272,6 +273,108 @@ void main() {
       );
       expect(AppIcons.deleteOf(UiStyle.miuix), equals(CupertinoIcons.delete));
     });
+
+    test('播放器控制及音画相关图标分发', () {
+      // 播放 / 暂停 / 重播
+      expect(AppIcons.playOf(UiStyle.material3), equals(Icons.play_arrow_outlined));
+      expect(AppIcons.playOf(UiStyle.material3, active: true), equals(Icons.play_arrow));
+      expect(AppIcons.playOf(UiStyle.miuix), equals(CupertinoIcons.play));
+      expect(AppIcons.playOf(UiStyle.miuix, active: true), equals(CupertinoIcons.play_fill));
+
+      expect(AppIcons.pauseOf(UiStyle.material3), equals(Icons.pause_circle_outline));
+      expect(AppIcons.pauseOf(UiStyle.material3, active: true), equals(Icons.pause));
+      expect(AppIcons.pauseOf(UiStyle.miuix), equals(CupertinoIcons.pause));
+      expect(AppIcons.pauseOf(UiStyle.miuix, active: true), equals(CupertinoIcons.pause_fill));
+
+      expect(AppIcons.replayOf(UiStyle.material3), equals(Icons.replay));
+      expect(AppIcons.replayOf(UiStyle.miuix), equals(CupertinoIcons.restart));
+
+      // 快进 / 快退
+      expect(AppIcons.fastForwardOf(UiStyle.material3), equals(Icons.fast_forward));
+      expect(AppIcons.fastForwardOf(UiStyle.miuix), equals(CupertinoIcons.forward_fill));
+      expect(AppIcons.fastRewindOf(UiStyle.material3), equals(Icons.fast_rewind));
+      expect(AppIcons.fastRewindOf(UiStyle.miuix), equals(CupertinoIcons.backward_fill));
+
+      // 锁定
+      expect(AppIcons.lockOf(UiStyle.material3), equals(Icons.lock));
+      expect(AppIcons.lockOf(UiStyle.miuix), equals(CupertinoIcons.lock_fill));
+      expect(AppIcons.lockOutlineOf(UiStyle.material3), equals(Icons.lock_outline));
+      expect(AppIcons.lockOutlineOf(UiStyle.miuix), equals(CupertinoIcons.lock));
+
+      // 音量
+      expect(AppIcons.volumeUpOf(UiStyle.material3), equals(Icons.volume_up));
+      expect(AppIcons.volumeUpOf(UiStyle.miuix), equals(CupertinoIcons.speaker_3_fill));
+      expect(AppIcons.volumeDownOf(UiStyle.material3), equals(Icons.volume_down));
+      expect(AppIcons.volumeDownOf(UiStyle.miuix), equals(CupertinoIcons.speaker_1_fill));
+      expect(AppIcons.volumeOffOf(UiStyle.material3), equals(Icons.volume_off));
+      expect(AppIcons.volumeOffOf(UiStyle.miuix), equals(CupertinoIcons.speaker_slash_fill));
+
+      // 全屏 / 网页全屏 / 画中画
+      expect(AppIcons.fullscreenOf(UiStyle.material3, active: false), equals(Icons.fullscreen));
+      expect(AppIcons.fullscreenOf(UiStyle.material3, active: true), equals(Icons.fullscreen_exit));
+      expect(AppIcons.fullscreenOf(UiStyle.miuix, active: false), equals(CupertinoIcons.fullscreen));
+      expect(AppIcons.fullscreenOf(UiStyle.miuix, active: true), equals(CupertinoIcons.fullscreen_exit));
+
+      expect(AppIcons.inAppFullscreenOf(UiStyle.material3, active: false), equals(Icons.crop_square_outlined));
+      expect(AppIcons.inAppFullscreenOf(UiStyle.material3, active: true), equals(Icons.crop_square));
+      expect(AppIcons.inAppFullscreenOf(UiStyle.miuix, active: false), equals(CupertinoIcons.square));
+      expect(AppIcons.inAppFullscreenOf(UiStyle.miuix, active: true), equals(CupertinoIcons.square_fill));
+
+      expect(AppIcons.pipOf(UiStyle.material3), equals(Icons.picture_in_picture_alt));
+      expect(AppIcons.pipOf(UiStyle.miuix), equals(CupertinoIcons.tv));
+
+      // 弹幕 / 字幕 / 章节
+      expect(AppIcons.danmakuOf(UiStyle.material3, active: true), equals(Icons.chat_bubble));
+      expect(AppIcons.danmakuOf(UiStyle.miuix, active: true), equals(CupertinoIcons.chat_bubble_fill));
+      expect(AppIcons.sendDanmakuOf(UiStyle.material3), equals(Icons.comment_outlined));
+      expect(AppIcons.sendDanmakuOf(UiStyle.miuix), equals(CupertinoIcons.bubble_left));
+      expect(AppIcons.danmakuTuneOf(UiStyle.material3), equals(Icons.tune));
+      expect(AppIcons.danmakuTuneOf(UiStyle.miuix), equals(CupertinoIcons.slider_horizontal_3));
+
+      expect(AppIcons.subtitleOf(UiStyle.material3, active: true), equals(Icons.closed_caption));
+      expect(AppIcons.subtitleOf(UiStyle.miuix, active: true), equals(CupertinoIcons.captions_bubble_fill));
+
+      expect(AppIcons.chapterOf(UiStyle.material3, active: true), equals(Icons.bookmarks));
+      expect(AppIcons.chapterOf(UiStyle.miuix, active: true), equals(CupertinoIcons.bookmark_fill));
+    });
+
+    test('消息对话与设置面板相关图标分发', () {
+      // 更多选项
+      expect(AppIcons.moreOptionsOf(UiStyle.material3), equals(Icons.more_vert));
+      expect(AppIcons.moreOptionsOf(UiStyle.miuix), equals(CupertinoIcons.ellipsis));
+
+      // 置顶 / 免打扰
+      expect(AppIcons.pinOf(UiStyle.material3, active: false), equals(Icons.vertical_align_top));
+      expect(AppIcons.pinOf(UiStyle.material3, active: true), equals(Icons.vertical_align_bottom));
+      expect(AppIcons.pinOf(UiStyle.miuix, active: false), equals(CupertinoIcons.pin_fill));
+      expect(AppIcons.pinOf(UiStyle.miuix, active: true), equals(CupertinoIcons.pin_slash_fill));
+
+      expect(AppIcons.notificationsOffOf(UiStyle.material3, active: false), equals(Icons.notifications_off_outlined));
+      expect(AppIcons.notificationsOffOf(UiStyle.material3, active: true), equals(Icons.notifications_active_outlined));
+      expect(AppIcons.notificationsOffOf(UiStyle.miuix, active: false), equals(CupertinoIcons.bell_slash));
+      expect(AppIcons.notificationsOffOf(UiStyle.miuix, active: true), equals(CupertinoIcons.bell_fill));
+
+      // 单选 / 屏蔽 / 错误 / 视频元数据
+      expect(AppIcons.radioOf(UiStyle.material3, selected: true), equals(Icons.radio_button_checked));
+      expect(AppIcons.radioOf(UiStyle.material3, selected: false), equals(Icons.radio_button_unchecked));
+      expect(AppIcons.radioOf(UiStyle.miuix, selected: true), equals(CupertinoIcons.check_mark_circled_solid));
+      expect(AppIcons.radioOf(UiStyle.miuix, selected: false), equals(CupertinoIcons.circle));
+
+      expect(AppIcons.blockOf(UiStyle.material3), equals(Icons.block));
+      expect(AppIcons.blockOf(UiStyle.miuix), equals(CupertinoIcons.slash_circle));
+
+      expect(AppIcons.errorOf(UiStyle.material3), equals(Icons.error_outline));
+      expect(AppIcons.errorOf(UiStyle.miuix), equals(CupertinoIcons.exclamationmark_circle));
+
+      expect(AppIcons.viewCountOf(UiStyle.material3), equals(Icons.play_circle_outline));
+      expect(AppIcons.viewCountOf(UiStyle.miuix), equals(CupertinoIcons.play_circle));
+      expect(AppIcons.danmakuCountOf(UiStyle.material3), equals(Icons.subtitles_outlined));
+      expect(AppIcons.danmakuCountOf(UiStyle.miuix), equals(CupertinoIcons.captions_bubble));
+      expect(AppIcons.durationOf(UiStyle.material3), equals(Icons.schedule_outlined));
+      expect(AppIcons.durationOf(UiStyle.miuix), equals(CupertinoIcons.clock));
+      expect(AppIcons.calendarOf(UiStyle.material3), equals(Icons.calendar_today_outlined));
+      expect(AppIcons.calendarOf(UiStyle.miuix), equals(CupertinoIcons.calendar));
+    });
   });
 
   group('AppBackButton 组件测试', () {
@@ -305,6 +408,68 @@ void main() {
 
       expect(find.byIcon(CupertinoIcons.chevron_back), findsOneWidget);
       expect(find.byIcon(Icons.arrow_back), findsNothing);
+    });
+  });
+
+  group('SessionMoreMenuButton 组件测试', () {
+    testWidgets('在 Material 3 环境下渲染 Icons.more_vert 并能弹出 MenuAnchor', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: UiStyleScope(
+            style: UiStyle.material3,
+            child: Scaffold(
+              body: SessionMoreMenuButton(
+                isPinned: false,
+                isDnd: false,
+                onToggleTop: () {},
+                onToggleDnd: () {},
+                onRemove: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.more_vert), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.ellipsis), findsNothing);
+
+      // 点击打开菜单
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      expect(find.text('置顶会话'), findsOneWidget);
+      expect(find.text('开启免打扰'), findsOneWidget);
+      expect(find.text('删除会话'), findsOneWidget);
+    });
+
+    testWidgets('在 Miuix 环境下渲染 CupertinoIcons.ellipsis', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: UiStyleScope(
+            style: UiStyle.miuix,
+            child: Scaffold(
+              body: SessionMoreMenuButton(
+                isPinned: true,
+                isDnd: true,
+                onToggleTop: () {},
+                onToggleDnd: () {},
+                onRemove: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(CupertinoIcons.ellipsis), findsOneWidget);
+      expect(find.byIcon(Icons.more_vert), findsNothing);
+
+      // 点击打开菜单
+      await tester.tap(find.byIcon(CupertinoIcons.ellipsis));
+      await tester.pumpAndSettle();
+
+      expect(find.text('取消置顶'), findsOneWidget);
+      expect(find.text('关闭免打扰'), findsOneWidget);
+      expect(find.text('删除会话'), findsOneWidget);
     });
   });
 }

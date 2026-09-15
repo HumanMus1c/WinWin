@@ -307,6 +307,279 @@ abstract final class AppIcons {
         UiStyle.miuix =>
           active ? CupertinoIcons.play_fill : CupertinoIcons.play,
       };
+
+  /// 暂停
+  static IconData pause(BuildContext context, {bool active = false}) =>
+      pauseOf(InheritedUiStyle.of(context), active: active);
+
+  static IconData pauseOf(UiStyle style, {bool active = false}) =>
+      switch (style) {
+        UiStyle.material3 => active ? Icons.pause : Icons.pause_circle_outline,
+        UiStyle.miuix =>
+          active ? CupertinoIcons.pause_fill : CupertinoIcons.pause,
+      };
+
+  /// 重播
+  static IconData replay(BuildContext context) =>
+      replayOf(InheritedUiStyle.of(context));
+
+  static IconData replayOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.replay,
+        UiStyle.miuix => CupertinoIcons.restart,
+      };
+
+  /// 快进
+  static IconData fastForward(BuildContext context) =>
+      fastForwardOf(InheritedUiStyle.of(context));
+
+  static IconData fastForwardOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.fast_forward,
+        UiStyle.miuix => CupertinoIcons.forward_fill,
+      };
+
+  /// 快退
+  static IconData fastRewind(BuildContext context) =>
+      fastRewindOf(InheritedUiStyle.of(context));
+
+  static IconData fastRewindOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.fast_rewind,
+        UiStyle.miuix => CupertinoIcons.backward_fill,
+      };
+
+  /// 锁定
+  static IconData lock(BuildContext context) =>
+      lockOf(InheritedUiStyle.of(context));
+
+  static IconData lockOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.lock,
+        UiStyle.miuix => CupertinoIcons.lock_fill,
+      };
+
+  /// 解锁 / 锁外框
+  static IconData lockOutline(BuildContext context) =>
+      lockOutlineOf(InheritedUiStyle.of(context));
+
+  static IconData lockOutlineOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.lock_outline,
+        UiStyle.miuix => CupertinoIcons.lock,
+      };
+
+  /// 音量 — 大
+  static IconData volumeUp(BuildContext context) =>
+      volumeUpOf(InheritedUiStyle.of(context));
+
+  static IconData volumeUpOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.volume_up,
+        UiStyle.miuix => CupertinoIcons.speaker_3_fill,
+      };
+
+  /// 音量 — 小
+  static IconData volumeDown(BuildContext context) =>
+      volumeDownOf(InheritedUiStyle.of(context));
+
+  static IconData volumeDownOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.volume_down,
+        UiStyle.miuix => CupertinoIcons.speaker_1_fill,
+      };
+
+  /// 静音
+  static IconData volumeOff(BuildContext context) =>
+      volumeOffOf(InheritedUiStyle.of(context));
+
+  static IconData volumeOffOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.volume_off,
+        UiStyle.miuix => CupertinoIcons.speaker_slash_fill,
+      };
+
+  /// 全屏 / 退出全屏
+  static IconData fullscreen(BuildContext context, {bool active = false}) =>
+      fullscreenOf(InheritedUiStyle.of(context), active: active);
+
+  static IconData fullscreenOf(UiStyle style, {bool active = false}) =>
+      switch (style) {
+        UiStyle.material3 =>
+          active ? Icons.fullscreen_exit : Icons.fullscreen,
+        UiStyle.miuix =>
+          active ? CupertinoIcons.fullscreen_exit : CupertinoIcons.fullscreen,
+      };
+
+  /// 网页全屏（应用内铺满）
+  static IconData inAppFullscreen(BuildContext context, {bool active = false}) =>
+      inAppFullscreenOf(InheritedUiStyle.of(context), active: active);
+
+  static IconData inAppFullscreenOf(UiStyle style, {bool active = false}) =>
+      switch (style) {
+        UiStyle.material3 =>
+          active ? Icons.crop_square : Icons.crop_square_outlined,
+        UiStyle.miuix =>
+          active ? CupertinoIcons.square_fill : CupertinoIcons.square,
+      };
+
+  /// 画中画
+  static IconData pip(BuildContext context) =>
+      pipOf(InheritedUiStyle.of(context));
+
+  static IconData pipOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.picture_in_picture_alt,
+        UiStyle.miuix => CupertinoIcons.tv,
+      };
+
+  /// 弹幕开关
+  static IconData danmaku(BuildContext context, {bool active = false}) =>
+      danmakuOf(InheritedUiStyle.of(context), active: active);
+
+  static IconData danmakuOf(UiStyle style, {bool active = false}) =>
+      switch (style) {
+        UiStyle.material3 =>
+          active ? Icons.chat_bubble : Icons.chat_bubble_outline,
+        UiStyle.miuix => active
+            ? CupertinoIcons.chat_bubble_fill
+            : CupertinoIcons.chat_bubble,
+      };
+
+  /// 发送弹幕
+  static IconData sendDanmaku(BuildContext context) =>
+      sendDanmakuOf(InheritedUiStyle.of(context));
+
+  static IconData sendDanmakuOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.comment_outlined,
+        UiStyle.miuix => CupertinoIcons.bubble_left,
+      };
+
+  /// 弹幕设置 / 调优
+  static IconData danmakuTune(BuildContext context) =>
+      danmakuTuneOf(InheritedUiStyle.of(context));
+
+  static IconData danmakuTuneOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.tune,
+        UiStyle.miuix => CupertinoIcons.slider_horizontal_3,
+      };
+
+  /// 字幕
+  static IconData subtitle(BuildContext context, {bool active = false}) =>
+      subtitleOf(InheritedUiStyle.of(context), active: active);
+
+  static IconData subtitleOf(UiStyle style, {bool active = false}) =>
+      switch (style) {
+        UiStyle.material3 =>
+          active ? Icons.closed_caption : Icons.closed_caption_outlined,
+        UiStyle.miuix => active
+            ? CupertinoIcons.captions_bubble_fill
+            : CupertinoIcons.captions_bubble,
+      };
+
+  /// 章节
+  static IconData chapter(BuildContext context, {bool active = false}) =>
+      chapterOf(InheritedUiStyle.of(context), active: active);
+
+  static IconData chapterOf(UiStyle style, {bool active = false}) =>
+      switch (style) {
+        UiStyle.material3 =>
+          active ? Icons.bookmarks : Icons.bookmarks_outlined,
+        UiStyle.miuix =>
+          active ? CupertinoIcons.bookmark_fill : CupertinoIcons.bookmark,
+      };
+
+  /// 更多选项（M3: 竖向三点; Miuix: 横向省略三点）
+  static IconData moreOptions(BuildContext context) =>
+      moreOptionsOf(InheritedUiStyle.of(context));
+
+  static IconData moreOptionsOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.more_vert,
+        UiStyle.miuix => CupertinoIcons.ellipsis,
+      };
+
+  /// 置顶
+  static IconData pin(BuildContext context, {bool active = false}) =>
+      pinOf(InheritedUiStyle.of(context), active: active);
+
+  static IconData pinOf(UiStyle style, {bool active = false}) =>
+      switch (style) {
+        UiStyle.material3 =>
+          active ? Icons.vertical_align_bottom : Icons.vertical_align_top,
+        UiStyle.miuix =>
+          active ? CupertinoIcons.pin_slash_fill : CupertinoIcons.pin_fill,
+      };
+
+  /// 免打扰 / 静音通知
+  static IconData notificationsOff(BuildContext context, {bool active = false}) =>
+      notificationsOffOf(InheritedUiStyle.of(context), active: active);
+
+  static IconData notificationsOffOf(UiStyle style, {bool active = false}) =>
+      switch (style) {
+        UiStyle.material3 => active
+            ? Icons.notifications_active_outlined
+            : Icons.notifications_off_outlined,
+        UiStyle.miuix =>
+          active ? CupertinoIcons.bell_fill : CupertinoIcons.bell_slash,
+      };
+
+  /// 单选框
+  static IconData radio(BuildContext context, {required bool selected}) =>
+      radioOf(InheritedUiStyle.of(context), selected: selected);
+
+  static IconData radioOf(UiStyle style, {required bool selected}) =>
+      switch (style) {
+        UiStyle.material3 =>
+          selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+        UiStyle.miuix => selected
+            ? CupertinoIcons.check_mark_circled_solid
+            : CupertinoIcons.circle,
+      };
+
+  /// 屏蔽 / 封禁
+  static IconData block(BuildContext context) =>
+      blockOf(InheritedUiStyle.of(context));
+
+  static IconData blockOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.block,
+        UiStyle.miuix => CupertinoIcons.slash_circle,
+      };
+
+  /// 错误 / 告警提示
+  static IconData error(BuildContext context) =>
+      errorOf(InheritedUiStyle.of(context));
+
+  static IconData errorOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.error_outline,
+        UiStyle.miuix => CupertinoIcons.exclamationmark_circle,
+      };
+
+  /// 视频播放数 / 观看数
+  static IconData viewCount(BuildContext context) =>
+      viewCountOf(InheritedUiStyle.of(context));
+
+  static IconData viewCountOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.play_circle_outline,
+        UiStyle.miuix => CupertinoIcons.play_circle,
+      };
+
+  /// 视频弹幕数
+  static IconData danmakuCount(BuildContext context) =>
+      danmakuCountOf(InheritedUiStyle.of(context));
+
+  static IconData danmakuCountOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.subtitles_outlined,
+        UiStyle.miuix => CupertinoIcons.captions_bubble,
+      };
+
+  /// 视频时长
+  static IconData duration(BuildContext context) =>
+      durationOf(InheritedUiStyle.of(context));
+
+  static IconData durationOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.schedule_outlined,
+        UiStyle.miuix => CupertinoIcons.clock,
+      };
+
+  /// 日历 / 发布日期
+  static IconData calendar(BuildContext context) =>
+      calendarOf(InheritedUiStyle.of(context));
+
+  static IconData calendarOf(UiStyle style) => switch (style) {
+        UiStyle.material3 => Icons.calendar_today_outlined,
+        UiStyle.miuix => CupertinoIcons.calendar,
+      };
 }
 
 /// 全局通用的自适应返回按钮。

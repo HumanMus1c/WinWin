@@ -5,8 +5,11 @@ import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/subtitle_controller.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/theme/ui_style.dart';
 
 /// 字幕选择 + 样式设置面板（Phase 4.4）。
 ///
@@ -73,7 +76,21 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final style = InheritedUiStyle.of(context);
+    final isMiuix = style == UiStyle.miuix;
+
     return Dialog(
+      backgroundColor: isMiuix
+          ? theme.colorScheme.surface.withValues(alpha: 0.96)
+          : theme.colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(isMiuix ? 16 : 24),
+        side: isMiuix
+            ? BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
+              )
+            : BorderSide.none,
+      ),
       insetPadding: const EdgeInsets.symmetric(
         horizontal: Style.lg,
         vertical: Style.xl,
@@ -93,7 +110,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                   Text('字幕设置', style: theme.textTheme.titleMedium),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(AppIcons.clear(context)),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -299,7 +316,7 @@ class _SubtitleOptionTile extends StatelessWidget {
     return ListTile(
       dense: true,
       leading: Icon(
-        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        AppIcons.radio(context, selected: selected),
         color: selected ? biliPink : null,
         size: 20,
       ),

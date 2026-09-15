@@ -1267,19 +1267,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             spacing: Style.md,
             children: [
               Icon(
-                Icons.play_circle_outline,
+                AppIcons.viewCount(context),
                 size: 15,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               Text(NumUtils.formatNum(stat?.view), style: grayStyle),
               Icon(
-                Icons.subtitles_outlined,
+                AppIcons.danmakuCount(context),
                 size: 14,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               Text(NumUtils.formatNum(stat?.danmaku), style: grayStyle),
               Icon(
-                Icons.schedule_outlined,
+                AppIcons.duration(context),
                 size: 14,
                 color: theme.colorScheme.onSurfaceVariant,
               ),

@@ -6,8 +6,11 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/pages/danmaku/danmaku_block.dart';
 import 'package:winwin/pages/danmaku/danmaku_options.dart';
 import 'package:winwin/pages/video/player_controller.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/theme/ui_style.dart';
 
 /// 弹幕设置面板（移植自 PiliPlus `lib/pages/video/widgets/header_mixin.dart`
 /// 中的弹幕设置区）。
@@ -105,7 +108,21 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final style = InheritedUiStyle.of(context);
+    final isMiuix = style == UiStyle.miuix;
+
     return Dialog(
+      backgroundColor: isMiuix
+          ? theme.colorScheme.surface.withValues(alpha: 0.96)
+          : theme.colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(isMiuix ? 16 : 24),
+        side: isMiuix
+            ? BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
+              )
+            : BorderSide.none,
+      ),
       insetPadding: const EdgeInsets.symmetric(
         horizontal: Style.lg,
         vertical: Style.xl,
@@ -125,7 +142,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
                   Text('弹幕设置', style: theme.textTheme.titleMedium),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(AppIcons.clear(context)),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -334,7 +351,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              icon: const Icon(Icons.block, size: 18),
+              icon: Icon(AppIcons.block(context), size: 18),
               label: const Text('屏蔽规则管理'),
               onPressed: () => showDanmakuBlockPage(
                 context,
