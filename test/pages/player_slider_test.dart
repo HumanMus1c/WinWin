@@ -107,5 +107,42 @@ void main() {
       expect((dispatchedSeek!.inMilliseconds - 50000).abs() < 2000, isTrue);
       expect((position.value.inMilliseconds - 50000).abs() < 2000, isTrue);
     });
+
+    test('Buffered progress preserves highest floor when seeking backwards', () {
+      int maxContinuousBufferedMs = 0;
+      int calculateBuffered(int posMs, int durMs, int bufDuration) {
+        int calculated = posMs + bufDuration;
+        if (posMs <= maxContinuousBufferedMs && calculated < maxContinuousBufferedMs) {
+          calculated = maxContinuousBufferedMs;
+        }
+        if (calculated > maxContinuousBufferedMs) {
+          maxContinuousBufferedMs = calculated;
+        }
+        return calculated.clamp(0, durMs);
+      }
+
+      const durMs = 120000; // 120s
+      // 1. Initial play: at 20s, buffered 30s ahead -> 50s
+      final buf1 = calculateBuffered(20000, durMs, 30000);
+      expect(buf1, 50000);
+      expect(maxContinuousBufferedMs, 50000);
+
+      // 2. Fast forward to 40s (within buffered range), buffered 15s ahead -> 55s
+      final buf2 = calculateBuffered(40000, durMs, 15000);
+      expect(buf2, 55000);
+      expect(maxContinuousBufferedMs, 55000);
+
+      // 3. User seeks back to 10s: demuxer reports small 2s buffer at 10s
+      // Without protection, naive posMs + bufMs would collapse to 12s.
+      // With protection, it must NOT shrink below 55s!
+      final buf3 = calculateBuffered(10000, durMs, 2000);
+      expect(buf3, 55000); // Preserved! Does not collapse to 12000!
+      expect(maxContinuousBufferedMs, 55000);
+
+      // 4. User seeks far forward to 90s: beyond 55s, buffers 5s ahead -> 95s
+      final buf4 = calculateBuffered(90000, durMs, 5000);
+      expect(buf4, 95000);
+      expect(maxContinuousBufferedMs, 95000);
+    });
   });
 }

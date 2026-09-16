@@ -229,6 +229,9 @@ class WinWinPlayerController {
   /// 待触发的 HDR 自动升级：首播 SDR 后延后到 media buffered 稳定再二次
   /// 拉流 qn=125，避免与首播的 setMedia/prepare/纹理创建并发竞态。
   PlayUrlModel? _pendingHdrUpgrade;
+  /// 会话级连续已缓冲最大毫秒数：在换视频/换清晰度/重播时重置为 0。
+  /// 用于单调覆盖保障，防止快退 seek 或解码器刷新导致明明已经缓冲过的进度条向左坍塌缩短。
+  int _maxContinuousBufferedMs = 0;
   /// 缓冲假死计时（毫秒），用于超时检测与自愈。
   int _bufferingStallMs = 0;
   /// 用户意图播放标志（playWhenReady）：与底层瞬态解码器 playing 状态解耦。
@@ -539,13 +542,69 @@ class WinWinPlayerController {
       }
 
       final durMs = duration.value.inMilliseconds;
-      // 实时更新已缓冲时长（对标 PiliPlus 进度条缓冲显示）
-      final bufMs = player.buffered();
-      if (durMs > 0 && bufMs > 0) {
-        final bufDuration =
-            Duration(milliseconds: (posMs + bufMs).clamp(0, durMs));
-        if (buffered.value != bufDuration) {
-          buffered.value = bufDuration;
+      if (durMs > 0) {
+        int calculatedBufMs = 0;
+        try {
+          final ranges = player.bufferedTimeRanges();
+          if (ranges.isNotEmpty) {
+            // 1. 优先查找覆盖当前播放点（允许前置/后置 1500ms 容差）的物理缓冲区间
+            dynamic activeRange;
+            for (final r in ranges) {
+              final s = r.start.inMilliseconds;
+              final e = r.end.inMilliseconds;
+              if (posMs >= s - 1500 && posMs <= e + 1500) {
+                activeRange = r;
+                break;
+              }
+            }
+            if (activeRange != null) {
+              calculatedBufMs = activeRange.end.inMilliseconds;
+            } else {
+              // 2. 若没有直接覆盖的区间，查找位于当前播放位置之后的第一个连续区间
+              for (final r in ranges) {
+                final s = r.start.inMilliseconds;
+                if (s >= posMs && (calculatedBufMs == 0 || s < calculatedBufMs)) {
+                  calculatedBufMs = r.end.inMilliseconds;
+                  break;
+                }
+              }
+              // 3. 兜底：若所有区间都在当前点之前，取所有区间中最远 end
+              if (calculatedBufMs == 0) {
+                for (final r in ranges) {
+                  if (r.end.inMilliseconds > calculatedBufMs) {
+                    calculatedBufMs = r.end.inMilliseconds;
+                  }
+                }
+              }
+            }
+          }
+        } catch (_) {}
+
+        // 兜底：若 bufferedTimeRanges 返回空或异常，使用 player.buffered() 相对估算
+        if (calculatedBufMs <= 0) {
+          final bufMs = player.buffered();
+          if (bufMs > 0) {
+            calculatedBufMs = posMs + bufMs;
+          }
+        }
+
+        // 单调保障（对标 PiliPlus）：如果当前播放位置依然在历史已缓冲的最大覆盖线以内，
+        // 缓冲进度绝不允许因快退 Seek 或解码器队列刷新而向左坍塌缩短！
+        if (posMs <= _maxContinuousBufferedMs &&
+            calculatedBufMs < _maxContinuousBufferedMs) {
+          calculatedBufMs = _maxContinuousBufferedMs;
+        }
+
+        if (calculatedBufMs > _maxContinuousBufferedMs) {
+          _maxContinuousBufferedMs = calculatedBufMs;
+        }
+
+        if (calculatedBufMs > 0) {
+          final targetBuf =
+              Duration(milliseconds: calculatedBufMs.clamp(0, durMs));
+          if (buffered.value != targetBuf) {
+            buffered.value = targetBuf;
+          }
         }
       }
       final isNearEnd = durMs > 0 && posMs >= durMs - 200;
@@ -861,6 +920,8 @@ class WinWinPlayerController {
       // （didPopNext 恢复、switchQuality 切换画质时进度条跳变的根因）。
       position.value = Duration.zero;
       duration.value = Duration.zero;
+      buffered.value = Duration.zero;
+      _maxContinuousBufferedMs = 0;
       playing.value = false;
       completed.value = false;
       _reportedEnd = false;
@@ -1337,6 +1398,9 @@ class WinWinPlayerController {
     position.value = clampedTo;
     seekPosition.value = clampedTo;
 
+    // 清空当前屏幕残留旧弹幕（对标 PiliPlus）
+    danmakuEngine?.clear();
+
     final seq = ++_seekSeq;
     _isSeeking = true;
     _seekTargetMs = clampedMs;
@@ -1351,9 +1415,10 @@ class WinWinPlayerController {
           _reportedEnd = false;
           player.state = mdk.PlaybackState.playing;
         }
-        // 精确帧 Seek（fromStart | inCache，不带 keyFrame），直接对准目标帧立即起播，杜绝跳跃至几秒前的关键帧
+        // 快速关键帧 Seek（fromStart | keyFrame），直接对准最近关键帧立即出帧起播（对标 PiliPlus 与 MDK defaultFlags）
+        // 彻底移除 inCache（避免在未缓冲网络区域寻道失败）并开启关键帧快速解码
         const flags =
-            mdk.SeekFlag(mdk.SeekFlag.fromStart | mdk.SeekFlag.inCache);
+            mdk.SeekFlag(mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame);
         final res = await player.seek(position: clampedMs, flags: flags);
         if (_disposed || seq != _seekSeq) return;
         final landedMs = res >= 0 ? res : clampedMs;
