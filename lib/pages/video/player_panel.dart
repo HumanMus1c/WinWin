@@ -898,6 +898,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return ListenableBuilder(
       listenable: Listenable.merge([
         c.position,
+        c.seekPosition,
         c.duration,
         c.viewPointsNotifier,
         _controlsVisible,
@@ -906,7 +907,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
         if (!_controlsVisible.value) {
           return const SizedBox(width: 80, height: 16);
         }
-        final pos = DurationUtils.formatDuration(c.position.value.inSeconds);
+        final pos = DurationUtils.formatDuration(c.currentProgress.inSeconds);
         final dur = DurationUtils.formatDuration(c.duration.value.inSeconds);
         final curChapter = c.currentChapter();
         // B 站风格：当前时间纯白，总时长降饱和。

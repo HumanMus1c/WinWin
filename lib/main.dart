@@ -78,6 +78,11 @@ void main() async {
     }
   });
 
+  // Windows 平台开启 D3D11 CPU-GPU 同步屏障，根除 Flutter Texture 纹理读取与 MDK 解码表面之间的时序撕裂与新旧画面闪烁
+  if (Platform.isWindows) {
+    mdk.setGlobalOption('d3d11.sync.cpu', 1);
+  }
+
   // 对标 PiliPlus 极速启动架构：
   // 极轻量本地存储 bootstrap（Hive/Accounts/Request，仅耗时十数毫秒）与 windowManager 并行执行。
   Object? bootstrapError;
