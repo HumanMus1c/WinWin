@@ -222,16 +222,29 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
   }
 
-  /// 上一个页面 pop 回到本页时：重新挂载事件监听，然后在共享播放器上
-  /// 重新加载本页视频，从记忆的进度恢复（参照 PiliPlus didPopNext:
-  /// addStatusLister + addPositionListener + playerInit）。
+  /// 上一个页面 pop 回到本页时：重新挂载事件监听。
+  /// 若播放器仍保持就绪态（未被其他页面释放或换源），直接复用现有已缓冲媒体与解码器，
+  /// 彻底杜绝从作者空间等页面返回时的重新拉流与重复加载（对标 PiliPlus didPopNext）。
   @override
   void didPopNext() {
     final ctrl = playerController;
     if (ctrl != null) {
-      AppLogger.i('VideoDetailPage', 'didPopNext: reload from ${_savedPosition.inSeconds}s, autoplay=$_wasPlaying');
       ctrl.attachListeners();
-      ctrl.load(start: _savedPosition, autoplay: _wasPlaying);
+      if (!ctrl.ready.value) {
+        AppLogger.i(
+          'VideoDetailPage',
+          'didPopNext: re-init player from ${_savedPosition.inSeconds}s, autoplay=$_wasPlaying',
+        );
+        ctrl.load(start: _savedPosition, autoplay: _wasPlaying);
+      } else {
+        AppLogger.i(
+          'VideoDetailPage',
+          'didPopNext: resume existing player session, wasPlaying=$_wasPlaying, completed=${ctrl.completed.value}',
+        );
+        if (_wasPlaying && !ctrl.completed.value) {
+          ctrl.play();
+        }
+      }
       // 重建弹幕：PlayerPanel 始终挂载，WinWinDanmaku 不会随路由重建，
       // 需显式触发 dm 重建 + 引擎 clear（参照 PiliPlus didPopNext 重建 PlDanmaku）。
       ctrl.reloadDanmaku();

@@ -224,6 +224,7 @@ class WinWinPlayerController {
 
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   Timer? _pollTimer;
+  Timer? _bufferingDebounceTimer;
   bool _disposed = false;
   /// 是否已被销毁（公开访问器，供 UI 层检查）。
   bool get disposed => _disposed;
@@ -341,11 +342,8 @@ class WinWinPlayerController {
     }
 
     // 缓冲窗口（VOD 点播模式）：
-    // min: 0（对标 MDK 规范 minMs == 0: decode ASAP，Seek 后第一帧立即出帧解码，不强制等待缓冲水位，杜绝迟钝）；
-    // max: 最大缓冲窗口（结合 Pref.bufferSec 确保充足网络水位，钳制在 30s~90s，
-    // 避免 3 分钟以上过大缓冲导致网络长时间静默而触发 CDN 60s 闲置断线）。
-    final maxBufMs = (Pref.bufferSec * 1000).clamp(30000.0, 90000.0).toInt();
-    player.setBufferRange(min: 0, max: maxBufMs);
+    // 保持 MDK 官方原生自适应 VOD 缓冲管道（min: 1000ms, max: 4000ms），
+    // 避免误用直播流 setBufferRange(0, 90000) 导致 CDN 抢包限速与视频解码空仓。
 
     final initialFilter = AudioNormalization.parse(
       null,
@@ -430,19 +428,27 @@ class WinWinPlayerController {
         final newValue = event.newValue;
 
         // 缓冲中 / 缓冲完成（监听 stalled 标志，对标 mdk stalled 解码空仓状态与 buffered 就绪状态）。
-        // 注意：buffering 仅为 I/O reader 后台拉流填充，不能作为播放器卡死依据。
+        // 防抖保护：Seek 瞬间底层必然产生几十毫秒的瞬态空仓，引入 350ms 防抖门限，
+        // 彻底杜绝菊花转圈在屏幕中央瞬时闪烁。
         final wasStalled = oldValue.test(mdk.MediaStatus.stalled);
         final isStalled = newValue.test(mdk.MediaStatus.stalled);
         if (!wasStalled && isStalled) {
-          if (!completed.value) {
-            buffering.value = true;
+          if (!completed.value && !_isSeeking) {
+            _bufferingDebounceTimer?.cancel();
+            _bufferingDebounceTimer = Timer(const Duration(milliseconds: 350), () {
+              if (!_disposed && !completed.value && !_isSeeking) {
+                buffering.value = true;
+              }
+            });
           }
         } else if (!isStalled && wasStalled) {
+          _bufferingDebounceTimer?.cancel();
           buffering.value = false;
           _bufferingStallMs = 0;
         }
         if (!oldValue.test(mdk.MediaStatus.buffered) &&
             newValue.test(mdk.MediaStatus.buffered)) {
+          _bufferingDebounceTimer?.cancel();
           buffering.value = false;
           _bufferingStallMs = 0;
           _stallRecoveryRetryCount = 0;
@@ -1466,12 +1472,11 @@ class WinWinPlayerController {
     _nativeSeekInFlight = true;
     unawaited(() async {
       try {
-        // 极速关键帧 Seek（fromStart | keyFrame | Backward 65536）
-        // 确保跳至 <= targetMs 的最近关键帧立即出帧，仅解码 1 帧首帧（耗时 < 30ms），
-        // 杜绝逐帧解码多达上百帧造成的严重卡顿迟钝与 D3D11 同步阻塞。
-        const flags = mdk.SeekFlag(
-          mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame | 65536,
-        );
+        // 采用 MDK 官方原生默认 SeekFlags（fromStart | keyFrame | inCache）：
+        // 1. inCache 保障在已缓冲水位内 Seek 瞬间从内存出帧（零延迟、零网络请求）；
+        // 2. 移除导致反向 HTTP Range 探测死锁的 Backward（65536），消灭网络 reader 阻塞停滞；
+        // 3. 关键帧秒级出画，彻底解决“仅有声音、视频长时间缓冲”与音画不同步问题。
+        const flags = mdk.SeekFlag(mdk.SeekFlag.defaultFlags);
         final res = await player.seek(position: targetMs, flags: flags);
         if (_disposed) return;
 
@@ -1707,6 +1712,8 @@ class WinWinPlayerController {
     detachListeners();
     _pollTimer?.cancel();
     _pollTimer = null;
+    _bufferingDebounceTimer?.cancel();
+    _bufferingDebounceTimer = null;
     _heartBeatTimer?.cancel();
     _heartBeatTimer = null;
     sponsorBlock?.dispose();

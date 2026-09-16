@@ -202,7 +202,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     final ctrl = playerController;
     if (ctrl != null) {
       ctrl.attachListeners();
-      unawaited(ctrl.load(start: _savedPosition, autoplay: _wasPlaying));
+      if (!ctrl.ready.value) {
+        unawaited(ctrl.load(start: _savedPosition, autoplay: _wasPlaying));
+      } else if (_wasPlaying && !ctrl.completed.value) {
+        ctrl.play();
+      }
     }
   }
 
