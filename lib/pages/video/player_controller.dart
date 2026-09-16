@@ -131,6 +131,8 @@ class WinWinPlayerController {
   bool _nativeSeekInFlight = false;
   /// 排队等待执行的最新 Seek 目标时间戳（毫秒）。
   int? _queuedSeekTargetMs;
+  /// 最近一次底层 native seek 完成返回的时间点，用于保障观察期平滑结算。
+  DateTime? _nativeSeekDoneTime;
 
   /// 外部拖动开始（对标 PiliPlus onSeekStart）
   void onSeekStart(int seekFromMs) {
@@ -360,6 +362,8 @@ class WinWinPlayerController {
   /// 视频播放自然结束统一收敛处理（对标 PiliPlus stream.completed & BiliPai STATE_ENDED）。
   void _handlePlaybackEnded() {
     if (_disposed) return;
+    // Seek 执行期间底层 PTS 与解码器状态瞬态刷新，严禁误判播放完毕，彻底消灭重播态/暂停态跳变
+    if (_isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null) return;
     if (completed.value) return;
     completed.value = true;
     playing.value = false;
@@ -387,6 +391,9 @@ class WinWinPlayerController {
         if (isPlaying) {
           completed.value = false;
         } else if (event.newValue == mdk.PlaybackState.stopped) {
+          if (_isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null) {
+            return;
+          }
           // 播放器到达流末尾自然停止（keep_open 未设置时 mdk 在所有帧渲染完成后进入 stopped）
           final durMs = duration.value.inMilliseconds;
           final posMs = player.position;
@@ -524,10 +531,18 @@ class WinWinPlayerController {
       if (_isSeeking) {
         final target = _seekTargetMs ?? position.value.inMilliseconds;
         final currentPosMs = player.position;
-        // 判定是否已经着陆到目标时间附近（误差 1500ms 内，且当前没有 native seek 在进行）
-        final hasLanded = !_nativeSeekInFlight &&
+
+        // 仅在底层 native seek 真正执行完成（_nativeSeekDoneTime != null）且无排队请求后，才进入落地判定
+        final doneTime = _nativeSeekDoneTime;
+        final hasNativeReturned = !_nativeSeekInFlight &&
             _queuedSeekTargetMs == null &&
-            (currentPosMs - target).abs() <= 1500;
+            doneTime != null;
+
+        // 判定落地条件：native 已返回，并且（底层 PTS 已经推进至目标时间附近，或已过 200ms 帧同步缓冲期）
+        final hasLanded = hasNativeReturned &&
+            ((currentPosMs - target).abs() <= 2000 ||
+                DateTime.now().difference(doneTime) >
+                    const Duration(milliseconds: 200));
 
         final isTimeout = _seekStartTime != null &&
             DateTime.now().difference(_seekStartTime!) >
@@ -543,6 +558,7 @@ class WinWinPlayerController {
           _isSeeking = false;
           _seekTargetMs = null;
           _seekStartTime = null;
+          _nativeSeekDoneTime = null;
         } else {
           // 底层 seek 执行中或纹理未排空，维持目标进度，屏蔽旧 PTS 覆盖导致的回跳
           _bufferingStallMs = 0;
@@ -632,7 +648,12 @@ class WinWinPlayerController {
         }
       }
       final isNearEnd = durMs > 0 && posMs >= durMs - 200;
-      if (isNearEnd && !isPosAdvancing && !playing.value) {
+      if (!_isSeeking &&
+          !_nativeSeekInFlight &&
+          _queuedSeekTargetMs == null &&
+          isNearEnd &&
+          !isPosAdvancing &&
+          !playing.value) {
         _handlePlaybackEnded();
         return;
       }
@@ -1404,16 +1425,10 @@ class WinWinPlayerController {
         : (to.inMilliseconds < 0 ? 0 : to.inMilliseconds);
     final clampedTo = Duration(milliseconds: clampedMs);
 
-    final wasCompleted =
-        completed.value || player.state == mdk.PlaybackState.stopped;
-
-    if (wasCompleted || (durMs > 0 && clampedMs < durMs - 500)) {
-      completed.value = false;
-      _reportedEnd = false;
-    }
-    if (wasCompleted) {
-      _userIntentPlaying = true;
-    }
+    // 用户明确 Seek 意图：无论此前是播放完还是暂停，立即解除完成态，保持意图起播
+    completed.value = false;
+    _reportedEnd = false;
+    _userIntentPlaying = true;
     _bufferingStallMs = 0;
     _lastPolledPosMs = clampedMs;
 
@@ -1428,12 +1443,10 @@ class WinWinPlayerController {
     _isSeeking = true;
     _seekTargetMs = clampedMs;
     _seekStartTime = DateTime.now();
+    _nativeSeekDoneTime = null;
     seekCount.value++;
 
-    if (wasCompleted || player.state == mdk.PlaybackState.stopped) {
-      completed.value = false;
-      _userIntentPlaying = true;
-      _reportedEnd = false;
+    if (player.state == mdk.PlaybackState.stopped) {
       player.state = mdk.PlaybackState.playing;
     }
 
@@ -1443,39 +1456,49 @@ class WinWinPlayerController {
       return;
     }
 
-    _processSeekQueue(clampedMs, seq, wasCompleted);
+    _processSeekQueue(clampedMs, seq);
   }
 
-  void _processSeekQueue(int targetMs, int seq, bool wasCompleted) {
+  void _processSeekQueue(int targetMs, int seq) {
     final player = _player;
     if (player == null || _disposed) return;
 
     _nativeSeekInFlight = true;
     unawaited(() async {
       try {
-        // 精确 Seek（fromStart，避免 keyFrame 跨越数秒跳过目标；无 inCache 避免未缓冲区域报错）
-        const flags = mdk.SeekFlag(mdk.SeekFlag.fromStart);
+        // 极速关键帧 Seek（fromStart | keyFrame | Backward 65536）
+        // 确保跳至 <= targetMs 的最近关键帧立即出帧，仅解码 1 帧首帧（耗时 < 30ms），
+        // 杜绝逐帧解码多达上百帧造成的严重卡顿迟钝与 D3D11 同步阻塞。
+        const flags = mdk.SeekFlag(
+          mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame | 65536,
+        );
         final res = await player.seek(position: targetMs, flags: flags);
         if (_disposed) return;
 
-        final landedMs = res >= 0 ? res : targetMs;
+        if (res < 0) {
+          AppLogger.w('PlayerController', 'player.seek error code: $res');
+        }
+
+        // 核心约束：MDK 回调传递的是关键帧时间戳（<= targetMs），绝对严禁将其反向写回覆盖 position.value！
+        // 保持 position.value 与 seekPosition.value 牢固锁定在用户指定的 targetMs
         if (seq == _seekSeq && _queuedSeekTargetMs == null) {
-          _lastPolledPosMs = landedMs;
-          position.value = Duration(milliseconds: landedMs);
-          seekPosition.value = Duration(milliseconds: landedMs);
+          _lastPolledPosMs = targetMs;
+          _nativeSeekDoneTime = DateTime.now();
         }
       } catch (e) {
         AppLogger.w('PlayerController', 'player.seek error: $e');
+        if (seq == _seekSeq) {
+          _nativeSeekDoneTime = DateTime.now();
+        }
       } finally {
         _nativeSeekInFlight = false;
         if (!_disposed) {
           final nextTarget = _queuedSeekTargetMs;
           if (nextTarget != null) {
             _queuedSeekTargetMs = null;
-            _processSeekQueue(nextTarget, _seekSeq, wasCompleted);
+            _processSeekQueue(nextTarget, _seekSeq);
           } else {
-            if (wasCompleted ||
-                (player.state != mdk.PlaybackState.playing && _userIntentPlaying)) {
+            if (player.state != mdk.PlaybackState.playing && _userIntentPlaying) {
               player.state = mdk.PlaybackState.playing;
             }
           }
@@ -1678,6 +1701,7 @@ class WinWinPlayerController {
     _disposed = true;
     _queuedSeekTargetMs = null;
     _nativeSeekInFlight = false;
+    _nativeSeekDoneTime = null;
     SyncTrace.log('PlayerCtrl', 'dispose enter, playerCount=$_playerCount');
     unawaited(reportCurrentProgress());
     detachListeners();
