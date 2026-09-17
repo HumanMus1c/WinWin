@@ -147,13 +147,14 @@ void main() {
   });
 
   group('ProgressiveGlass Widget Tests', () {
-    testWidgets('Renders with ShaderMask, BackdropFilter and ClipRect',
+    testWidgets('Renders with multiple sliced BackdropFilter layers',
         (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
             body: ProgressiveGlass(
               blur: 16.0,
+              slices: 8,
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
               child: Text('Progressive Blur Content'),
@@ -162,16 +163,12 @@ void main() {
         ),
       );
 
-      expect(find.byType(ClipRect), findsOneWidget);
-      expect(find.byType(ShaderMask), findsOneWidget);
-      expect(find.byType(BackdropFilter), findsOneWidget);
-
-      final filter = tester.widget<BackdropFilter>(find.byType(BackdropFilter));
-      expect(filter.filter, ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0));
+      expect(find.byType(ClipRect), findsWidgets);
+      expect(find.byType(BackdropFilter), findsWidgets);
       expect(find.text('Progressive Blur Content'), findsOneWidget);
     });
 
-    testWidgets('Omits BackdropFilter and ShaderMask when blur is 0',
+    testWidgets('Omits BackdropFilter when blur is 0',
         (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -185,7 +182,6 @@ void main() {
       );
 
       expect(find.byType(BackdropFilter), findsNothing);
-      expect(find.byType(ShaderMask), findsNothing);
       expect(find.text('Zero Blur Progressive'), findsOneWidget);
     });
 
@@ -195,6 +191,7 @@ void main() {
           home: Scaffold(
             body: ProgressiveGlass(
               blur: 12.0,
+              slices: 6,
               borderRadius: BorderRadius.circular(8.0),
               child: const Text('Rounded Glass'),
             ),
@@ -203,8 +200,7 @@ void main() {
       );
 
       expect(find.byType(ClipRRect), findsOneWidget);
-      expect(find.byType(ShaderMask), findsOneWidget);
-      expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(find.byType(BackdropFilter), findsWidgets);
       expect(find.text('Rounded Glass'), findsOneWidget);
     });
   });

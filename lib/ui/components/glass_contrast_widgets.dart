@@ -244,19 +244,34 @@ class _GlassControlButtonState extends State<GlassControlButton> {
   }
 }
 
+/// 渐进模糊方向。
+enum GradientBlurDirection {
+  topToBottom,
+  bottomToTop,
+  leftToRight,
+  rightToLeft,
+}
+
 /// 渐进式毛玻璃容器（Progressive Blur / Gradient Blur）。
 ///
-/// 通过 [ShaderMask]（BlendMode.dstIn）与 [BackdropFilter] 的结合，使毛玻璃模糊层与暗色渐变
-/// 从一边到另一边产生平滑连续的 Alpha 衰减，彻底消除传统 [BackdropFilter] 边缘生硬切断的视觉缺陷。
-/// 前景 [child] 位于背景毛玻璃图层之上，不受渐隐遮罩影响，保持图标与文字的 100% 锐利高对比度。
+/// 采用成熟的切片渐进式高斯模糊架构（Sliced Gradient Blur）：
+/// 将模糊区域沿渐变方向切分为多段（[slices]），每段独立进行阶梯式平滑插值采样，
+/// 避免使用 [ShaderMask] 导致底层离屏缓冲擦除背景视频采样像素（Compositor failure），
+/// 确保在 Windows Desktop / Skia / Impeller 全平台上均能稳定呈现真实的渐进式毛玻璃质感。
 class ProgressiveGlass extends StatelessWidget {
   const ProgressiveGlass({
     super.key,
     this.child,
     this.blur = 16.0,
+    this.maxBlur,
+    this.minBlur = 0.0,
+    this.slices = 12,
+    this.direction,
+    this.curve = Curves.linear,
     this.begin = Alignment.topCenter,
     this.end = Alignment.bottomCenter,
     this.stops,
+    this.backgroundGradient,
     this.backgroundGradientColors,
     this.width,
     this.height,
@@ -272,14 +287,33 @@ class ProgressiveGlass extends StatelessWidget {
   /// 最大模糊半径（sigma），默认 16.0。若 <= 0.01 则降级为纯渐变无模糊模式。
   final double blur;
 
-  /// 模糊渐变起点（模糊度与暗度最强端，或依场景反向）。
+  /// 可选显式指定最大模糊半径，优先级高于 [blur]。
+  final double? maxBlur;
+
+  /// 最小模糊半径（默认 0.0）。
+  final double minBlur;
+
+  /// 切片分段数，默认 12 段。在 40~80px 控制栏内平滑自然，无阶梯断层，
+  /// 同时切片相互独立不重叠，兼顾极低 GPU 开销。
+  final int slices;
+
+  /// 模糊递减方向。若未指定，则根据 [begin] 和 [end] 智能推导。
+  final GradientBlurDirection? direction;
+
+  /// 模糊过渡曲线。
+  final Curve curve;
+
+  /// 渐变起点（模糊与暗色最深端，默认顶部居中）。
   final AlignmentGeometry begin;
 
-  /// 模糊渐变终点（模糊度与暗度衰减端）。
+  /// 渐变终点（模糊与暗色消隐端，默认底部居中）。
   final AlignmentGeometry end;
 
   /// 渐变断点分布。
   final List<double>? stops;
+
+  /// 显式传入的背景渐变。
+  final Gradient? backgroundGradient;
 
   /// 背景装饰色渐变色板。若不传，默认从 75% 黑色渐变到透明。
   final List<Color>? backgroundGradientColors;
@@ -291,16 +325,41 @@ class ProgressiveGlass extends StatelessWidget {
   final BorderRadius? borderRadius;
   final Clip clipBehavior;
 
-  @override
-  Widget build(BuildContext context) {
-    final effectiveColors = backgroundGradientColors ??
+  GradientBlurDirection _resolveDirection() {
+    if (direction != null) return direction!;
+    if (begin is Alignment && end is Alignment) {
+      final b = begin as Alignment;
+      final e = end as Alignment;
+      if (b.y > e.y) return GradientBlurDirection.bottomToTop;
+      if (b.y < e.y) return GradientBlurDirection.topToBottom;
+      if (b.x > e.x) return GradientBlurDirection.rightToLeft;
+      if (b.x < e.x) return GradientBlurDirection.leftToRight;
+    }
+    return GradientBlurDirection.topToBottom;
+  }
+
+  Gradient _resolveGradient() {
+    if (backgroundGradient != null) return backgroundGradient!;
+    final colors = backgroundGradientColors ??
         [
           Colors.black.withValues(alpha: 0.75),
           Colors.transparent,
         ];
+    return LinearGradient(
+      begin: begin,
+      end: end,
+      stops: stops,
+      colors: colors,
+    );
+  }
 
-    // 当 blur 近似为 0 时降级为普通渐变容器，完全绕过 BackdropFilter Offscreen 消耗
-    if (blur <= 0.01) {
+  @override
+  Widget build(BuildContext context) {
+    final effectiveMaxBlur = maxBlur ?? blur;
+    final effectiveGradient = _resolveGradient();
+
+    // 当 blur 近似为 0 时降级为普通渐变容器，完全绕过 BackdropFilter
+    if (effectiveMaxBlur <= 0.01) {
       final fallbackContainer = Container(
         width: width,
         height: height,
@@ -308,12 +367,7 @@ class ProgressiveGlass extends StatelessWidget {
         padding: padding,
         decoration: BoxDecoration(
           borderRadius: borderRadius,
-          gradient: LinearGradient(
-            begin: begin,
-            end: end,
-            stops: stops,
-            colors: effectiveColors,
-          ),
+          gradient: effectiveGradient,
         ),
         child: child,
       );
@@ -327,56 +381,80 @@ class ProgressiveGlass extends StatelessWidget {
       return fallbackContainer;
     }
 
-    // 渐进毛玻璃背景层：BackdropFilter 提供底层高斯模糊，
-    // ShaderMask(BlendMode.dstIn) 依方向施加 Alpha 衰减遮罩，
-    // 使得模糊强度在视觉上从一端平滑渐变消隐至另一端。
-    Widget glassLayer = ShaderMask(
-      shaderCallback: (Rect bounds) {
-        return LinearGradient(
-          begin: begin,
-          end: end,
-          stops: stops,
-          colors: const [
-            Colors.white,
-            Colors.transparent,
-          ],
-        ).createShader(bounds);
-      },
-      blendMode: BlendMode.dstIn,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: begin,
-              end: end,
-              stops: stops,
-              colors: effectiveColors,
+    final effectiveDir = _resolveDirection();
+    final isVertical = effectiveDir == GradientBlurDirection.topToBottom ||
+        effectiveDir == GradientBlurDirection.bottomToTop;
+    final isReversed = effectiveDir == GradientBlurDirection.bottomToTop ||
+        effectiveDir == GradientBlurDirection.rightToLeft;
+
+    final count = slices.clamp(2, 32);
+    final blurSlices = <Widget>[];
+
+    for (int i = 0; i < count; i++) {
+      final t = (count > 1) ? i / (count - 1) : 0.0;
+      final curvedT = curve.transform(t);
+      // isReversed 为 true 时（如 bottomToTop），顶部(i=0)为 minBlur(0)，底部(i=count-1)为 maxBlur(16)
+      final double blurAmount = lerpDouble(
+        isReversed ? minBlur : effectiveMaxBlur,
+        isReversed ? effectiveMaxBlur : minBlur,
+        curvedT,
+      )!;
+
+      if (blurAmount <= 0.05) {
+        blurSlices.add(const Expanded(child: SizedBox.expand()));
+      } else {
+        blurSlices.add(
+          Expanded(
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: blurAmount,
+                  sigmaY: blurAmount,
+                ),
+                child: const SizedBox.expand(),
+              ),
             ),
           ),
+        );
+      }
+    }
+
+    Widget blurStack = Flex(
+      direction: isVertical ? Axis.vertical : Axis.horizontal,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: blurSlices,
+    );
+
+    Widget content = Stack(
+      fit: StackFit.passthrough,
+      children: [
+        // 1. 分片真实渐进式毛玻璃层（直接采样底层视频画面）
+        Positioned.fill(child: blurStack),
+        // 2. 渐变半透明暗色蒙版（确保对比度与视觉融合）
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(gradient: effectiveGradient),
+          ),
         ),
-      ),
+        // 3. 前景组件（控制按钮、文字，不受滤镜影响）
+        if (child != null)
+          Padding(
+            padding: padding ?? EdgeInsets.zero,
+            child: child!,
+          ),
+      ],
     );
 
     if (borderRadius != null) {
-      glassLayer = ClipRRect(
+      content = ClipRRect(
         borderRadius: borderRadius!,
         clipBehavior: clipBehavior,
-        child: glassLayer,
+        child: content,
       );
     } else {
-      glassLayer = ClipRect(
+      content = ClipRect(
         clipBehavior: clipBehavior,
-        child: glassLayer,
-      );
-    }
-
-    if (child == null) {
-      return Container(
-        width: width,
-        height: height,
-        margin: margin,
-        child: glassLayer,
+        child: content,
       );
     }
 
@@ -384,16 +462,8 @@ class ProgressiveGlass extends StatelessWidget {
       width: width,
       height: height,
       margin: margin,
-      child: Stack(
-        fit: StackFit.passthrough,
-        children: [
-          Positioned.fill(child: glassLayer),
-          Padding(
-            padding: padding ?? EdgeInsets.zero,
-            child: child!,
-          ),
-        ],
-      ),
+      child: content,
     );
   }
 }
+
