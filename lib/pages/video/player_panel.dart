@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -781,104 +780,104 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// 底部控制条（BiliPai 风格）：进度条置顶 + 下方左右分区控制行。
+  /// 底部控制条（BiliPai 风格）：进度条置顶悬浮 + 刚好衔接在进度条下方的渐进式毛玻璃控制行。
   Widget _buildControlBar() {
     final c = widget.controller;
-    // BiliPai 底部控制条：亚克力毛玻璃 + 透明→黑渐变遮罩（bottomScrim）。
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Color(0xD9000000)],
-            ),
-          ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 第一行：进度条（全宽悬浮，不被毛玻璃覆盖，确保画面绝对纯净与极佳清晰度）
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+          child: _buildProgressSlider(),
+        ),
+        // 第二行：控制按钮行（左右分区）
+        // 渐进式毛玻璃上高度刚好衔接在进度条下方，向下朝屏幕底边缘展开渐进模糊与暗色遮罩
+        ProgressiveGlass(
+          blur: 16,
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          stops: const [0.0, 0.7, 1.0],
+          backgroundGradientColors: [
+            const Color(0xD9000000),
+            const Color(0x7F000000),
+            Colors.transparent,
+          ],
           padding: const EdgeInsets.only(
             left: Style.sm,
             right: Style.sm,
-            top: Style.lg,
+            top: 4.0,
             bottom: Style.xs,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             children: [
-              // 第一行：进度条（全宽）
-              _buildProgressSlider(),
-              const SizedBox(height: Style.xs),
-              // 第二行：控制按钮（左右分区）
-              Row(
-                children: [
-                  // 左侧：播放/暂停 + 时间 + 弹幕开关
-                  _buildPlayPauseButton(),
-                  const SizedBox(width: Style.sm),
-                  _buildTimeText(),
-                  const SizedBox(width: Style.md),
-                  _buildDanmakuChip(),
-                  const Spacer(),
-                  // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
-                  _buildAudioCodecLabel(),
-                  _buildQualityLabel(),
-                  _buildSpeedLabel(),
-                  _buildChapterButton(),
-                  _buildSubtitleChip(),
-                  const SizedBox(width: Style.sm),
-                  _iconButton(
-                    icon: AppIcons.sendDanmaku(context),
-                    tooltip: '发弹幕',
-                    onPressed: () => showSendDanmakuPanel(context, controller: c),
-                  ),
-                  _iconButton(
-                    icon: AppIcons.danmakuTune(context),
-                    tooltip: '弹幕设置',
-                    onPressed: () => showDanmakuSettingsPanel(
-                      context,
-                      controller: c,
-                      fullscreen: widget.fullscreen || widget.inAppFullscreen,
-                    ),
-                  ),
-                  _iconButton(
-                    icon: AppIcons.volumeUp(context),
-                    tooltip: '音量',
-                    onPressed: _toggleVolumePopup,
-                  ),
-                  _iconButton(
-                    icon: AppIcons.lockOutline(context),
-                    tooltip: '锁定控制条',
-                    onPressed: _toggleLock,
-                  ),
-                  if (!widget.fullscreen)
-                    _iconButton(
-                      icon: AppIcons.pip(context),
-                      tooltip: '画中画',
-                      onPressed: () => DesktopPipController.instance.togglePip(),
-                    ),
-                  if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
-                    _iconButton(
-                      icon: AppIcons.inAppFullscreen(
-                        context,
-                        active: widget.inAppFullscreen,
-                      ),
-                      tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
-                      onPressed: widget.onToggleInAppFullscreen!,
-                    ),
-                  if (widget.onToggleFullscreen != null)
-                    _iconButton(
-                      icon: AppIcons.fullscreen(
-                        context,
-                        active: widget.fullscreen,
-                      ),
-                      tooltip: widget.fullscreen ? '退出全屏' : '全屏',
-                      onPressed: widget.onToggleFullscreen!,
-                    ),
-                ],
+              // 左侧：播放/暂停 + 时间 + 弹幕开关
+              _buildPlayPauseButton(),
+              const SizedBox(width: Style.sm),
+              _buildTimeText(),
+              const SizedBox(width: Style.md),
+              _buildDanmakuChip(),
+              const Spacer(),
+              // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
+              _buildAudioCodecLabel(),
+              _buildQualityLabel(),
+              _buildSpeedLabel(),
+              _buildChapterButton(),
+              _buildSubtitleChip(),
+              const SizedBox(width: Style.sm),
+              _iconButton(
+                icon: AppIcons.sendDanmaku(context),
+                tooltip: '发弹幕',
+                onPressed: () => showSendDanmakuPanel(context, controller: c),
               ),
+              _iconButton(
+                icon: AppIcons.danmakuTune(context),
+                tooltip: '弹幕设置',
+                onPressed: () => showDanmakuSettingsPanel(
+                  context,
+                  controller: c,
+                  fullscreen: widget.fullscreen || widget.inAppFullscreen,
+                ),
+              ),
+              _iconButton(
+                icon: AppIcons.volumeUp(context),
+                tooltip: '音量',
+                onPressed: _toggleVolumePopup,
+              ),
+              _iconButton(
+                icon: AppIcons.lockOutline(context),
+                tooltip: '锁定控制条',
+                onPressed: _toggleLock,
+              ),
+              if (!widget.fullscreen)
+                _iconButton(
+                  icon: AppIcons.pip(context),
+                  tooltip: '画中画',
+                  onPressed: () => DesktopPipController.instance.togglePip(),
+                ),
+              if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
+                _iconButton(
+                  icon: AppIcons.inAppFullscreen(
+                    context,
+                    active: widget.inAppFullscreen,
+                  ),
+                  tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
+                  onPressed: widget.onToggleInAppFullscreen!,
+                ),
+              if (widget.onToggleFullscreen != null)
+                _iconButton(
+                  icon: AppIcons.fullscreen(
+                    context,
+                    active: widget.fullscreen,
+                  ),
+                  tooltip: widget.fullscreen ? '退出全屏' : '全屏',
+                  onPressed: widget.onToggleFullscreen!,
+                ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 

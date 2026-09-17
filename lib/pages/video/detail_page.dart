@@ -37,6 +37,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
+import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -1152,6 +1153,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 icon: Icon(
                   AppIcons.back(context),
                   color: overVideo ? Colors.white : barContrast.contentColor,
+                  shadows: overVideo ? ContrastStyle.glyphShadows : null,
                 ),
                 onPressed: () {
                   SyncTrace.log('DetailPage', 'back button pressed');
@@ -1169,6 +1171,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: barContrast.contentColor,
+                            shadows:
+                                overVideo ? ContrastStyle.glyphShadows : null,
                           ),
                         ),
                       )
@@ -1178,18 +1182,45 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           ),
         );
 
-        // 当几乎完全透明时，完全绕过 BackdropFilter，避免无意义的 GPU Offscreen 渲染
-        if (opacity <= 0.01) {
+        // 完全吸顶态（opacity >= 0.95）：固态实色毛玻璃顶栏，防止正文穿透
+        if (opacity >= 0.95) {
           return Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
               bottom: false,
-              child: barContent,
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    height: kToolbarHeight,
+                    decoration: BoxDecoration(
+                      color: theme.scaffoldBackgroundColor
+                          .withValues(alpha: 0.95),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.3),
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                    child: barContent,
+                  ),
+                ),
+              ),
             ),
           );
         }
+
+        // 浮动/过渡态（overVideo 或滚动渐变）：朝下的渐进式毛玻璃，消除生硬横切边缘
+        final glassBlur = (16.0 * opacity).clamp(0.0, 16.0);
+        final topColor = overVideo
+            ? Colors.black.withValues(
+                alpha: (0.65 * (1.0 - opacity) + 0.85 * opacity).clamp(0.0, 1.0))
+            : theme.scaffoldBackgroundColor
+                .withValues(alpha: (opacity * 0.95).clamp(0.0, 1.0));
 
         return Positioned(
           top: 0,
@@ -1197,32 +1228,18 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           right: 0,
           child: SafeArea(
             bottom: false,
-            // 毛玻璃顶栏：模糊强度随 _scrollRatio 渐显（sigma 0→20），
-            // ClipRect 限定模糊区域。
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: 20 * opacity,
-                  sigmaY: 20 * opacity,
-                ),
-                child: Container(
-                  height: kToolbarHeight,
-                  decoration: BoxDecoration(
-                    color: theme.scaffoldBackgroundColor
-                        .withValues(alpha: opacity * 0.95),
-                    border: opacity > 0.5
-                        ? Border(
-                            bottom: BorderSide(
-                              color: theme.colorScheme.outlineVariant
-                                  .withValues(alpha: 0.3),
-                              width: 0.5,
-                            ),
-                          )
-                        : null,
-                  ),
-                  child: barContent,
-                ),
-              ),
+            child: ProgressiveGlass(
+              blur: glassBlur > 0.5 ? glassBlur : (overVideo ? 8.0 : 0.0),
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0.0, 0.7, 1.0],
+              backgroundGradientColors: [
+                topColor,
+                topColor.withValues(alpha: topColor.a * 0.5),
+                Colors.transparent,
+              ],
+              height: kToolbarHeight,
+              child: barContent,
             ),
           ),
         );

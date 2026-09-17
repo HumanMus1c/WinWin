@@ -17,6 +17,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/tcp/live.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
@@ -1049,18 +1050,15 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       top: 0,
       left: 0,
       right: 0,
-      child: Container(
+      child: ProgressiveGlass(
+        blur: 16,
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withValues(alpha: 0.8),
-              Colors.transparent,
-            ],
-          ),
-        ),
+        backgroundGradientColors: [
+          Colors.black.withValues(alpha: 0.8),
+          Colors.transparent,
+        ],
         child: Row(
           children: [
             IconButton(
@@ -1252,18 +1250,15 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       left: 0,
       right: 0,
       bottom: 0,
-      child: Container(
+      child: ProgressiveGlass(
+        blur: 16,
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              Colors.black.withValues(alpha: 0.85),
-              Colors.transparent,
-            ],
-          ),
-        ),
+        backgroundGradientColors: [
+          Colors.black.withValues(alpha: 0.85),
+          Colors.transparent,
+        ],
         child: Row(
           children: [
             // 1. 播放/暂停
