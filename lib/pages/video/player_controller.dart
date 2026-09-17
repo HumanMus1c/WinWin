@@ -248,6 +248,8 @@ class WinWinPlayerController {
   bool _userIntentPlaying = true;
   /// 上次轮询到的播放进度（毫秒），用于检测进度是否停滞。
   int _lastPolledPosMs = -1;
+  /// 最近一次 Seek 实际完成返回的时间点，用于在 Seek 后短时间内屏蔽看门狗误重载。
+  DateTime? _lastSeekFinishTime;
   /// 是否正在执行卡顿自愈（防重入）。
   bool _isRecovering = false;
   /// 连续自愈失败重试计数。
@@ -304,7 +306,7 @@ class WinWinPlayerController {
         'FFmpeg',
         'dav1d',
       ];
-      player.setProperty('video.decoder', 'shader_resource=1');
+      player.setProperty('video.decoder', 'shader_resource=0');
     } else {
       player.videoDecoders = const ['FFmpeg', 'dav1d'];
       player.setProperty('video.decoder', 'shader_resource=0');
@@ -315,26 +317,24 @@ class WinWinPlayerController {
     player.setProperty('avformat.extension_picky', '0');
     player.setProperty('avformat.allowed_segment_extensions', 'ALL');
 
-    // 全量网络流断线自动重连与防死锁超时配置：
+    // 网络流断线自动重连与超时配置（对齐 fvp 官方 video_player_mdk.dart）：
     // B站 CDN 在客户端由于缓冲满暂停读取时可能在 60s 左右主动切断连接。
-    // reconnect_at_eof: 遇到服务端非预期 FIN/EOF 时自动以 Range 请求重连，杜绝误判为音画结束。
-    // reconnect_streamed: 开启流式传输重连。
+    // avio.reconnect: 遇断开自动发起新 Range 请求重连。
     // reconnect_on_network_error: 偶发网络波动或丢包时重试。
     // reconnect_on_http_error: 瞬态 4xx/5xx 错误时重试。
-    // avio.timeout / avio.rw_timeout: FFmpeg 默认无超时无限阻塞，设置 10s 超时防死锁（微秒）。
+    // avio.timeout / avio.rw_timeout: FFmpeg 设置 10s 超时防死锁（微秒）。
+    // 注意：严禁开启 avio.reconnect_streamed 与 reconnect_at_eof，两者专用于不可 seek 的直播流，
+    // 会导致点播快退时 FFmpeg 误判流类型而拒绝发送精准 HTTP Range 偏移，造成网络停滞！
     player.setProperty('avio.reconnect', '1');
-    player.setProperty('avio.reconnect_at_eof', '1');
-    player.setProperty('avio.reconnect_streamed', '1');
     player.setProperty('avio.reconnect_delay_max', '5');
     player.setProperty('avio.reconnect_on_network_error', '1');
     player.setProperty('avio.reconnect_on_http_error', '4xx,5xx');
     player.setProperty('avio.timeout', '10000000');
     player.setProperty('avio.rw_timeout', '10000000');
 
-    // 解复用器包缓存与容错：加速 seek，避免重复请求 CDN，容忍轻微网络丢包。
-    player.setProperty('demux.buffer.ranges', '50');
-    player.setProperty('demux.buffer.protocols', 'http,https');
-    player.setProperty('demux.max_errors', '50');
+    // 注意：严禁开启 demux.buffer.ranges（对标官方 fvp 保持默认值 0）。
+    // 在音视频分离双流（DASH）下，解复用器包缓存会导致快退时 demuxer 无法向已激活解码器
+    // 重发合法关键帧 bitstream，导致 PacketIOWrapper::seek 永久卡死在历史包缓存中！
 
     // Windows 平台开启 D3D11 CPU-GPU 纹理同步屏障，杜绝 Flutter Texture 渲染表面的时序撕裂与新旧画面闪烁
     if (Platform.isWindows) {
@@ -513,6 +513,7 @@ class WinWinPlayerController {
     _isSeeking = false;
     _seekTargetMs = null;
     _seekStartTime = null;
+    _lastSeekFinishTime = null;
   }
 
   void _syncTextureId() {
@@ -565,6 +566,7 @@ class WinWinPlayerController {
           _seekTargetMs = null;
           _seekStartTime = null;
           _nativeSeekDoneTime = null;
+          _lastPolledPosMs = currentPosMs;
         } else {
           // 底层 seek 执行中或纹理未排空，维持目标进度，屏蔽旧 PTS 覆盖导致的回跳
           _bufferingStallMs = 0;
@@ -578,9 +580,10 @@ class WinWinPlayerController {
         position.value = newPos;
       }
       // 进度推进检测：若播放进度在前进，清零卡顿计时并解除缓冲态。
-      final isPosAdvancing = posMs > _lastPolledPosMs;
+      // 每轮无条件更新 _lastPolledPosMs 为最新采样位置，杜绝快退时高位死锁。
+      final isPosAdvancing = _lastPolledPosMs >= 0 && posMs > _lastPolledPosMs;
+      _lastPolledPosMs = posMs;
       if (isPosAdvancing) {
-        _lastPolledPosMs = posMs;
         _bufferingStallMs = 0;
         if (buffering.value) {
           buffering.value = false;
@@ -674,15 +677,20 @@ class WinWinPlayerController {
       // 卡死看门狗（Watchdog，参照 BiliPai resolvePlaybackStallRecoveryDecision）：
       // 1. 用户意图播放（_userIntentPlaying，非手动暂停，且未播放完毕）；
       // 2. 若播放进度正常推进（isPosAdvancing），坚决维持非缓冲态；
-      // 3. 仅在播放停滞（!isPosAdvancing）时检测底层 stalled（解码空仓）或累计停滞达 1 秒；
-      // 4. 达到 4.5 秒门限（早于 CDN 60s 闲置与长缓冲超时，及时自愈无感续播）。
-      if (_userIntentPlaying && playing.value) {
+      // 3. 仅在播放停滞（!isPosAdvancing）且脱离 seek 保护期时检测底层 stalled（解码空仓）或累计停滞达 1 秒；
+      // 4. Seek 落地后 3 秒保护期内绝对禁止触发重载，防止高码率流首次缓冲网络延迟被误杀；
+      // 5. 达到 10 秒真卡死门限且底层无任何缓冲水位（buffered <= 0）时，才触发自愈。
+      final isSeekRecent = _lastSeekFinishTime != null &&
+          DateTime.now().difference(_lastSeekFinishTime!) <
+              const Duration(seconds: 3);
+
+      if (_userIntentPlaying && playing.value && !_isSeeking) {
         if (isPosAdvancing) {
           _bufferingStallMs = 0;
           if (buffering.value) {
             buffering.value = false;
           }
-        } else {
+        } else if (!isSeekRecent) {
           final status = player.mediaStatus;
           final isStalled = status.test(mdk.MediaStatus.stalled);
           if (isStalled) {
@@ -697,16 +705,20 @@ class WinWinPlayerController {
         }
       }
 
-      if (_userIntentPlaying && buffering.value && !_isRecovering) {
-        if (_bufferingStallMs >= 4500) {
+      if (_userIntentPlaying &&
+          buffering.value &&
+          !_isRecovering &&
+          !_isSeeking &&
+          !isSeekRecent) {
+        if (_bufferingStallMs >= 10000 && player.buffered() <= 0) {
           _bufferingStallMs = 0;
           AppLogger.w(
             'PlayerController',
-            'Buffering stall detected (4.5s) at ${posMs}ms, triggering stream recovery',
+            'Buffering stall detected (10s) at ${posMs}ms, triggering stream recovery',
           );
           unawaited(_recoverStalledStream());
         }
-      } else if (!_userIntentPlaying) {
+      } else if (!_userIntentPlaying || isSeekRecent) {
         _bufferingStallMs = 0;
       }
       // SponsorBlock 自动跳过：检查当前位置是否在可跳过段落内。
@@ -1436,7 +1448,6 @@ class WinWinPlayerController {
     _reportedEnd = false;
     _userIntentPlaying = true;
     _bufferingStallMs = 0;
-    _lastPolledPosMs = clampedMs;
 
     // 立即更新对外暴露的 position 与 seekPosition，使 UI 进度条瞬时稳定在目标位置，杜绝回弹
     position.value = clampedTo;
@@ -1472,11 +1483,22 @@ class WinWinPlayerController {
     _nativeSeekInFlight = true;
     unawaited(() async {
       try {
-        // 采用 MDK 官方原生默认 SeekFlags（fromStart | keyFrame | inCache）：
-        // 1. inCache 保障在已缓冲水位内 Seek 瞬间从内存出帧（零延迟、零网络请求）；
-        // 2. 移除导致反向 HTTP Range 探测死锁的 Backward（65536），消灭网络 reader 阻塞停滞；
-        // 3. 关键帧秒级出画，彻底解决“仅有声音、视频长时间缓冲”与音画不同步问题。
-        const flags = mdk.SeekFlag(mdk.SeekFlag.defaultFlags);
+        // 精准分流 SeekFlags：
+        // 1. 若向已播放过时间点快退（targetMs < currentPosMs），严禁传 inCache（MDK 官方规范明确要求
+        //    inCache 的目标位置必须落在 (position, position + buffered] 正向区间内）。快退使用 fromStart | keyFrame；
+        // 2. 若向后快进且落在正向已缓冲水位内，使用 fromStart | keyFrame | inCache 从内存秒开；
+        // 3. 若向后快进超出缓冲水位，使用 fromStart | keyFrame 从网络直接 Range 命中。
+        final currentPosMs = player.position;
+        final bufMax = player.buffered();
+        final isForwardInCache = targetMs >= currentPosMs &&
+            targetMs <= currentPosMs + bufMax &&
+            bufMax > 0;
+
+        final int flagBits = mdk.SeekFlag.fromStart |
+            mdk.SeekFlag.keyFrame |
+            (isForwardInCache ? mdk.SeekFlag.inCache : 0);
+        final flags = mdk.SeekFlag(flagBits);
+
         final res = await player.seek(position: targetMs, flags: flags);
         if (_disposed) return;
 
@@ -1484,16 +1506,16 @@ class WinWinPlayerController {
           AppLogger.w('PlayerController', 'player.seek error code: $res');
         }
 
-        // 核心约束：MDK 回调传递的是关键帧时间戳（<= targetMs），绝对严禁将其反向写回覆盖 position.value！
-        // 保持 position.value 与 seekPosition.value 牢固锁定在用户指定的 targetMs
         if (seq == _seekSeq && _queuedSeekTargetMs == null) {
-          _lastPolledPosMs = targetMs;
+          _lastPolledPosMs = res >= 0 ? res : player.position;
           _nativeSeekDoneTime = DateTime.now();
+          _lastSeekFinishTime = DateTime.now();
         }
       } catch (e) {
         AppLogger.w('PlayerController', 'player.seek error: $e');
         if (seq == _seekSeq) {
           _nativeSeekDoneTime = DateTime.now();
+          _lastSeekFinishTime = DateTime.now();
         }
       } finally {
         _nativeSeekInFlight = false;
