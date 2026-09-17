@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -21,6 +22,7 @@ import 'package:winwin/pages/video/subtitle_settings_panel.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/utils/duration_utils.dart';
 
@@ -464,33 +466,34 @@ class _PlayerPanelState extends State<PlayerPanel> {
           child: IgnorePointer(
             child: Align(
               alignment: align,
-              child: Container(
+              child: GlassCapsule(
+                blur: 16,
                 padding: const EdgeInsets.symmetric(
                   horizontal: Style.lg,
                   vertical: Style.md,
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(Style.radiusSm),
-                ),
+                backgroundColor: Colors.black.withValues(alpha: 0.55),
+                borderRadius: Style.radiusSm,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    ContrastIcon(
                       feedback.isForward
                           ? AppIcons.fastForward(context)
                           : AppIcons.fastRewind(context),
                       color: Colors.white,
                       size: 28,
+                      shadows: ContrastStyle.boldGlyphShadows,
                     ),
                     const SizedBox(width: Style.xs),
-                    Text(
+                    ContrastText(
                       '${feedback.isForward ? '+' : '-'}${feedback.deltaSec}s',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
+                      shadows: ContrastStyle.boldGlyphShadows,
                     ),
                   ],
                 ),
@@ -511,16 +514,35 @@ class _PlayerPanelState extends State<PlayerPanel> {
         return Positioned.fill(
           child: IgnorePointer(
             child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(AppIcons.fastForward(context), color: biliPink, size: 40),
-                  const SizedBox(height: Style.xs),
-                  const Text(
-                    '倍速播放中',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                ],
+              child: GlassCapsule(
+                blur: 16,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Style.lg,
+                  vertical: Style.md,
+                ),
+                backgroundColor: Colors.black.withValues(alpha: 0.55),
+                borderRadius: Style.radiusSm,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ContrastIcon(
+                      AppIcons.fastForward(context),
+                      color: biliPink,
+                      size: 40,
+                      shadows: ContrastStyle.boldGlyphShadows,
+                    ),
+                    const SizedBox(height: Style.xs),
+                    const ContrastText(
+                      '倍速播放中',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      shadows: ContrastStyle.glyphShadows,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -539,46 +561,48 @@ class _PlayerPanelState extends State<PlayerPanel> {
         return Positioned.fill(
           child: IgnorePointer(
             child: Center(
-              child: Container(
+              child: GlassCapsule(
+                blur: 16,
                 padding: const EdgeInsets.symmetric(
                   horizontal: Style.lg,
                   vertical: Style.md,
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(Style.radiusSm),
-                ),
+                backgroundColor: Colors.black.withValues(alpha: 0.55),
+                borderRadius: Style.radiusSm,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        ContrastIcon(
                           isForward
                               ? AppIcons.fastForward(context)
                               : AppIcons.fastRewind(context),
                           color: biliPink,
                           size: 20,
+                          shadows: ContrastStyle.glyphShadows,
                         ),
                         const SizedBox(width: Style.xs),
-                        Text(
+                        ContrastText(
                           '${isForward ? '+' : ''}${feedback.deltaSec}s',
                           style: const TextStyle(
                             color: biliPink,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
+                          shadows: ContrastStyle.boldGlyphShadows,
                         ),
                       ],
                     ),
                     const SizedBox(height: Style.xs),
-                    Text(
+                    ContrastText(
                       DurationUtils.formatDuration(feedback.target.inSeconds),
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: Colors.white,
                         fontSize: 13,
                       ),
+                      shadows: ContrastStyle.glyphShadows,
                     ),
                   ],
                 ),
@@ -593,10 +617,21 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// Phase 4.3：锁定指示器（锁定时仅显示一个解锁按钮）。
   Widget _buildLockIndicator() {
     return Center(
-      child: IconButton(
-        icon: Icon(AppIcons.lock(context), color: Colors.white70, size: 32),
-        onPressed: _toggleLock,
-        tooltip: '解锁控制条',
+      child: GlassCapsule(
+        shape: BoxShape.circle,
+        blur: 16,
+        padding: const EdgeInsets.all(Style.xs),
+        backgroundColor: Colors.black.withValues(alpha: 0.45),
+        child: IconButton(
+          icon: ContrastIcon(
+            AppIcons.lock(context),
+            color: Colors.white,
+            size: 32,
+            shadows: ContrastStyle.boldGlyphShadows,
+          ),
+          onPressed: _toggleLock,
+          tooltip: '解锁控制条',
+        ),
       ),
     );
   }
@@ -725,20 +760,18 @@ class _PlayerPanelState extends State<PlayerPanel> {
         return Positioned.fill(
           child: IgnorePointer(
             child: Center(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  color: Color(0x8C000000),
-                  shape: BoxShape.circle,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(Style.md),
-                  child: Icon(
-                    isCompleted
-                        ? AppIcons.replay(context)
-                        : AppIcons.play(context, active: true),
-                    color: Colors.white,
-                    size: 44,
-                  ),
+              child: GlassCapsule(
+                shape: BoxShape.circle,
+                blur: 16,
+                padding: const EdgeInsets.all(Style.md),
+                backgroundColor: Colors.black.withValues(alpha: 0.45),
+                child: ContrastIcon(
+                  isCompleted
+                      ? AppIcons.replay(context)
+                      : AppIcons.play(context, active: true),
+                  color: Colors.white,
+                  size: 44,
+                  shadows: ContrastStyle.boldGlyphShadows,
                 ),
               ),
             ),
@@ -751,95 +784,100 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// 底部控制条（BiliPai 风格）：进度条置顶 + 下方左右分区控制行。
   Widget _buildControlBar() {
     final c = widget.controller;
-    // BiliPai 底部控制条：透明→黑渐变遮罩（bottomScrim）。
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.transparent, Color(0xD9000000)],
-        ),
-      ),
-      padding: const EdgeInsets.only(
-        left: Style.sm,
-        right: Style.sm,
-        top: Style.lg,
-        bottom: Style.xs,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 第一行：进度条（全宽）
-          _buildProgressSlider(),
-          const SizedBox(height: Style.xs),
-          // 第二行：控制按钮（左右分区）
-          Row(
+    // BiliPai 底部控制条：亚克力毛玻璃 + 透明→黑渐变遮罩（bottomScrim）。
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Color(0xD9000000)],
+            ),
+          ),
+          padding: const EdgeInsets.only(
+            left: Style.sm,
+            right: Style.sm,
+            top: Style.lg,
+            bottom: Style.xs,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // 左侧：播放/暂停 + 时间 + 弹幕开关
-              _buildPlayPauseButton(),
-              const SizedBox(width: Style.sm),
-              _buildTimeText(),
-              const SizedBox(width: Style.md),
-              _buildDanmakuChip(),
-              const Spacer(),
-              // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
-              _buildAudioCodecLabel(),
-              _buildQualityLabel(),
-              _buildSpeedLabel(),
-              _buildChapterButton(),
-              _buildSubtitleChip(),
-              const SizedBox(width: Style.sm),
-              _iconButton(
-                icon: AppIcons.sendDanmaku(context),
-                tooltip: '发弹幕',
-                onPressed: () => showSendDanmakuPanel(context, controller: c),
-              ),
-              _iconButton(
-                icon: AppIcons.danmakuTune(context),
-                tooltip: '弹幕设置',
-                onPressed: () => showDanmakuSettingsPanel(
-                  context,
-                  controller: c,
-                  fullscreen: widget.fullscreen || widget.inAppFullscreen,
-                ),
-              ),
-              _iconButton(
-                icon: AppIcons.volumeUp(context),
-                tooltip: '音量',
-                onPressed: _toggleVolumePopup,
-              ),
-              _iconButton(
-                icon: AppIcons.lockOutline(context),
-                tooltip: '锁定控制条',
-                onPressed: _toggleLock,
-              ),
-              if (!widget.fullscreen)
-                _iconButton(
-                  icon: AppIcons.pip(context),
-                  tooltip: '画中画',
-                  onPressed: () => DesktopPipController.instance.togglePip(),
-                ),
-              if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
-                _iconButton(
-                  icon: AppIcons.inAppFullscreen(
-                    context,
-                    active: widget.inAppFullscreen,
+              // 第一行：进度条（全宽）
+              _buildProgressSlider(),
+              const SizedBox(height: Style.xs),
+              // 第二行：控制按钮（左右分区）
+              Row(
+                children: [
+                  // 左侧：播放/暂停 + 时间 + 弹幕开关
+                  _buildPlayPauseButton(),
+                  const SizedBox(width: Style.sm),
+                  _buildTimeText(),
+                  const SizedBox(width: Style.md),
+                  _buildDanmakuChip(),
+                  const Spacer(),
+                  // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
+                  _buildAudioCodecLabel(),
+                  _buildQualityLabel(),
+                  _buildSpeedLabel(),
+                  _buildChapterButton(),
+                  _buildSubtitleChip(),
+                  const SizedBox(width: Style.sm),
+                  _iconButton(
+                    icon: AppIcons.sendDanmaku(context),
+                    tooltip: '发弹幕',
+                    onPressed: () => showSendDanmakuPanel(context, controller: c),
                   ),
-                  tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
-                  onPressed: widget.onToggleInAppFullscreen!,
-                ),
-              if (widget.onToggleFullscreen != null)
-                _iconButton(
-                  icon: AppIcons.fullscreen(
-                    context,
-                    active: widget.fullscreen,
+                  _iconButton(
+                    icon: AppIcons.danmakuTune(context),
+                    tooltip: '弹幕设置',
+                    onPressed: () => showDanmakuSettingsPanel(
+                      context,
+                      controller: c,
+                      fullscreen: widget.fullscreen || widget.inAppFullscreen,
+                    ),
                   ),
-                  tooltip: widget.fullscreen ? '退出全屏' : '全屏',
-                  onPressed: widget.onToggleFullscreen!,
-                ),
+                  _iconButton(
+                    icon: AppIcons.volumeUp(context),
+                    tooltip: '音量',
+                    onPressed: _toggleVolumePopup,
+                  ),
+                  _iconButton(
+                    icon: AppIcons.lockOutline(context),
+                    tooltip: '锁定控制条',
+                    onPressed: _toggleLock,
+                  ),
+                  if (!widget.fullscreen)
+                    _iconButton(
+                      icon: AppIcons.pip(context),
+                      tooltip: '画中画',
+                      onPressed: () => DesktopPipController.instance.togglePip(),
+                    ),
+                  if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
+                    _iconButton(
+                      icon: AppIcons.inAppFullscreen(
+                        context,
+                        active: widget.inAppFullscreen,
+                      ),
+                      tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
+                      onPressed: widget.onToggleInAppFullscreen!,
+                    ),
+                  if (widget.onToggleFullscreen != null)
+                    _iconButton(
+                      icon: AppIcons.fullscreen(
+                        context,
+                        active: widget.fullscreen,
+                      ),
+                      tooltip: widget.fullscreen ? '退出全屏' : '全屏',
+                      onPressed: widget.onToggleFullscreen!,
+                    ),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -859,7 +897,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
           hoverColor: Colors.white.withValues(alpha: 0.12),
           child: Tooltip(
             message: isCompleted ? '重新播放' : (isPlaying ? '暂停' : '播放'),
-            child: Icon(
+            child: ContrastIcon(
               isPlaying
                   ? AppIcons.pause(context, active: true)
                   : (isCompleted
@@ -867,6 +905,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       : AppIcons.play(context, active: true)),
               color: Colors.white,
               size: 24,
+              shadows: ContrastStyle.glyphShadows,
             ),
           ),
         );
@@ -888,7 +927,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
       hoverColor: Colors.white.withValues(alpha: 0.12),
       child: Tooltip(
         message: tooltip ?? '',
-        child: Icon(icon, color: color, size: 20),
+        child: ContrastIcon(
+          icon,
+          color: color,
+          size: 20,
+          shadows: ContrastStyle.glyphShadows,
+        ),
       ),
     );
   }
@@ -910,7 +954,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
         final pos = DurationUtils.formatDuration(c.currentProgress.inSeconds);
         final dur = DurationUtils.formatDuration(c.duration.value.inSeconds);
         final curChapter = c.currentChapter();
-        // B 站风格：当前时间纯白，总时长降饱和。
+        // B 站风格：当前时间纯白，总时长降饱和，配合高对比度多向阴影。
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -919,56 +963,72 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 children: [
                   TextSpan(
                     text: pos,
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      shadows: ContrastStyle.glyphShadows,
+                    ),
                   ),
                   TextSpan(
                     text: ' / $dur',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      shadows: ContrastStyle.glyphShadows,
+                    ),
                   ),
                 ],
               ),
             ),
             if (curChapter != null && curChapter.title.isNotEmpty) ...[
               const SizedBox(width: Style.xs),
-              HoverContainer(
-                onTap: () {
-                  setState(() => _chapterPanelOpen = !_chapterPanelOpen);
-                  _onPointerActivity();
-                },
+              GlassCapsule(
                 borderRadius: 4.0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
-                color: _chapterPanelOpen
+                blur: 8.0,
+                backgroundColor: _chapterPanelOpen
                     ? biliBlue.withValues(alpha: 0.25)
-                    : Colors.white.withValues(alpha: 0.08),
-                hoverColor: biliBlue.withValues(alpha: 0.3),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 160),
-                      child: Text(
-                        '· ${curChapter.title}',
-                        style: TextStyle(
-                          color: _chapterPanelOpen
-                              ? biliBlue
-                              : Colors.white.withValues(alpha: 0.88),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                    : Colors.black.withValues(alpha: 0.35),
+                padding: EdgeInsets.zero,
+                child: HoverContainer(
+                  onTap: () {
+                    setState(() => _chapterPanelOpen = !_chapterPanelOpen);
+                    _onPointerActivity();
+                  },
+                  borderRadius: 4.0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  color: Colors.transparent,
+                  hoverColor: biliBlue.withValues(alpha: 0.3),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 160),
+                        child: Text(
+                          '· ${curChapter.title}',
+                          style: TextStyle(
+                            color: _chapterPanelOpen
+                                ? biliBlue
+                                : Colors.white.withValues(alpha: 0.88),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            shadows: ContrastStyle.glyphShadows,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: 2),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 14,
-                      color: _chapterPanelOpen ? biliBlue : Colors.white54,
-                    ),
-                  ],
+                      const SizedBox(width: 2),
+                      ContrastIcon(
+                        Icons.chevron_right_rounded,
+                        size: 14,
+                        color: _chapterPanelOpen ? biliBlue : Colors.white54,
+                        shadows: ContrastStyle.glyphShadows,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1205,11 +1265,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
             borderRadius: 6.0,
             padding: const EdgeInsets.symmetric(horizontal: Style.sm, vertical: 4),
             hoverColor: Colors.white.withValues(alpha: 0.12),
-            child: Text(
+            child: ContrastText(
               (current >= 0 && current < labels.length)
                   ? labels[current]
                   : '画质',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+              shadows: ContrastStyle.glyphShadows,
             ),
           ),
         );
@@ -1218,7 +1279,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
   }
 
   /// BiliPai 风格弹幕开关圆角 chip：
-  /// 开启时 primary α0.22 背景 + 图标 + "开" 文字，关闭时白色半透明 + "关"。
+  /// 开启时 primary 背景 + 图标 + "开" 文字，毛玻璃胶囊底衬确保对比度。
   Widget _buildDanmakuChip() {
     final enabled = Pref.enableShowDanmaku;
     return HoverContainer(
@@ -1229,31 +1290,37 @@ class _PlayerPanelState extends State<PlayerPanel> {
         vertical: Style.xs,
       ),
       hoverColor: Colors.white.withValues(alpha: 0.12),
-      child: Container(
+      child: GlassCapsule(
+        borderRadius: Style.radiusFull,
+        blur: 8,
         padding: const EdgeInsets.symmetric(
           horizontal: Style.sm,
           vertical: Style.xs,
         ),
-        decoration: BoxDecoration(
-          color: enabled ? biliBlue.withValues(alpha: 0.22) : Colors.white12,
-          borderRadius: BorderRadius.circular(Style.radiusFull),
-        ),
+        backgroundColor: enabled
+            ? biliBlue.withValues(alpha: 0.28)
+            : Colors.black.withValues(alpha: 0.35),
+        borderColor: enabled
+            ? biliBlue.withValues(alpha: 0.45)
+            : Colors.white.withValues(alpha: 0.15),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            ContrastIcon(
               AppIcons.danmaku(context, active: enabled),
               size: 14,
-              color: enabled ? biliBlue : Colors.white70,
+              color: enabled ? const Color(0xFF00AEEC) : Colors.white,
+              shadows: ContrastStyle.glyphShadows,
             ),
             const SizedBox(width: Style.xs),
-            Text(
+            ContrastText(
               enabled ? '开' : '关',
               style: TextStyle(
-                color: enabled ? biliBlue : Colors.white70,
+                color: enabled ? const Color(0xFF00AEEC) : Colors.white,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
+              shadows: ContrastStyle.glyphShadows,
             ),
           ],
         ),
@@ -1261,7 +1328,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// BiliPai 风格字幕 chip：有字幕时高亮，点击打开字幕面板。
+  /// BiliPai 风格字幕 chip：有字幕时高亮，毛玻璃胶囊底衬。
   Widget _buildSubtitleChip() {
     final c = widget.controller;
     return ListenableBuilder(
@@ -1280,31 +1347,37 @@ class _PlayerPanelState extends State<PlayerPanel> {
             vertical: Style.xs,
           ),
           hoverColor: Colors.white.withValues(alpha: 0.12),
-          child: Container(
+          child: GlassCapsule(
+            borderRadius: Style.radiusFull,
+            blur: 8,
             padding: const EdgeInsets.symmetric(
               horizontal: Style.sm,
               vertical: Style.xs,
             ),
-            decoration: BoxDecoration(
-              color: isActive ? biliBlue.withValues(alpha: 0.22) : Colors.white12,
-              borderRadius: BorderRadius.circular(Style.radiusFull),
-            ),
+            backgroundColor: isActive
+                ? biliBlue.withValues(alpha: 0.28)
+                : Colors.black.withValues(alpha: 0.35),
+            borderColor: isActive
+                ? biliBlue.withValues(alpha: 0.45)
+                : Colors.white.withValues(alpha: 0.15),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                ContrastIcon(
                   AppIcons.subtitle(context, active: isActive),
                   size: 14,
-                  color: isActive ? biliBlue : Colors.white70,
+                  color: isActive ? const Color(0xFF00AEEC) : Colors.white,
+                  shadows: ContrastStyle.glyphShadows,
                 ),
                 const SizedBox(width: Style.xs),
-                Text(
+                ContrastText(
                   '字幕',
                   style: TextStyle(
-                    color: isActive ? biliBlue : Colors.white70,
+                    color: isActive ? const Color(0xFF00AEEC) : Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
+                  shadows: ContrastStyle.glyphShadows,
                 ),
               ],
             ),
@@ -1455,21 +1528,23 @@ class _PlayerPanelState extends State<PlayerPanel> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                ContrastText(
                   codec,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  shadows: ContrastStyle.glyphShadows,
                 ),
                 if (c.audioNormalizeEnabled) ...[
                   const SizedBox(width: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
-                      color: biliPink.withValues(alpha: 0.2),
+                      color: biliPink.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(3),
                     ),
-                    child: const Text(
+                    child: const ContrastText(
                       '均衡',
                       style: TextStyle(color: biliPink, fontSize: 10),
+                      shadows: ContrastStyle.glyphShadows,
                     ),
                   ),
                 ],
@@ -1564,7 +1639,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
 
 
-  /// 章节列表按钮（BiliPai 风格圆角 chip）：有章节时显示，点击打开/关闭章节面板。
+  /// 章节列表按钮（BiliPai 风格圆角 chip）：有章节时显示，毛玻璃胶囊底衬。
   Widget _buildChapterButton() {
     final c = widget.controller;
     return ValueListenableBuilder<List<ViewPoint>>(
@@ -1583,31 +1658,37 @@ class _PlayerPanelState extends State<PlayerPanel> {
             vertical: Style.xs,
           ),
           hoverColor: Colors.white.withValues(alpha: 0.12),
-          child: Container(
+          child: GlassCapsule(
+            borderRadius: Style.radiusFull,
+            blur: 8,
             padding: const EdgeInsets.symmetric(
               horizontal: Style.sm,
               vertical: Style.xs,
             ),
-            decoration: BoxDecoration(
-              color: isOpen ? biliBlue.withValues(alpha: 0.22) : Colors.white12,
-              borderRadius: BorderRadius.circular(Style.radiusFull),
-            ),
+            backgroundColor: isOpen
+                ? biliBlue.withValues(alpha: 0.28)
+                : Colors.black.withValues(alpha: 0.35),
+            borderColor: isOpen
+                ? biliBlue.withValues(alpha: 0.45)
+                : Colors.white.withValues(alpha: 0.15),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                ContrastIcon(
                   AppIcons.chapter(context, active: isOpen),
                   size: 14,
-                  color: isOpen ? biliBlue : Colors.white70,
+                  color: isOpen ? const Color(0xFF00AEEC) : Colors.white,
+                  shadows: ContrastStyle.glyphShadows,
                 ),
                 const SizedBox(width: Style.xs),
-                Text(
+                ContrastText(
                   '章节 (${chapters.length})',
                   style: TextStyle(
-                    color: isOpen ? biliBlue : Colors.white70,
+                    color: isOpen ? const Color(0xFF00AEEC) : Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
+                  shadows: ContrastStyle.glyphShadows,
                 ),
               ],
             ),
@@ -1895,13 +1976,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
             borderRadius: 6.0,
             padding: const EdgeInsets.symmetric(horizontal: Style.sm, vertical: 4),
             hoverColor: Colors.white.withValues(alpha: 0.12),
-            child: Text(
+            child: ContrastText(
               speed == 1.0 ? '倍速' : '${speed.toStringAsFixed(1)}x',
               style: TextStyle(
-                color: speed == 1.0 ? Colors.white70 : biliBlue,
+                color: speed == 1.0 ? Colors.white : const Color(0xFF00AEEC),
                 fontSize: 12,
                 fontWeight: speed == 1.0 ? FontWeight.normal : FontWeight.bold,
               ),
+              shadows: ContrastStyle.glyphShadows,
             ),
           ),
         );
@@ -1915,65 +1997,66 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return Positioned(
       left: Style.lg,
       bottom: 60,
-      child: Material(
-        color: const Color(0xE61A1A1A),
-        borderRadius: BorderRadius.circular(Style.radiusSm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Style.md,
-            vertical: Style.sm,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ValueListenableBuilder<double>(
+      child: GlassCapsule(
+        blur: 16,
+        backgroundColor: Colors.black.withValues(alpha: 0.55),
+        borderRadius: Style.radiusSm,
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.md,
+          vertical: Style.sm,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ValueListenableBuilder<double>(
+              valueListenable: c.volume,
+              builder: (context, vol, _) {
+                return ContrastIcon(
+                  vol <= 0
+                      ? AppIcons.volumeOff(context)
+                      : (vol > 100
+                          ? AppIcons.volumeUp(context)
+                          : AppIcons.volumeDown(context)),
+                  color: vol > 100 ? Colors.amberAccent : Colors.white,
+                  size: 18,
+                  shadows: ContrastStyle.glyphShadows,
+                );
+              },
+            ),
+            const SizedBox(width: Style.sm),
+            SizedBox(
+              width: 150,
+              child: ValueListenableBuilder<double>(
                 valueListenable: c.volume,
                 builder: (context, vol, _) {
-                  return Icon(
-                    vol <= 0
-                        ? AppIcons.volumeOff(context)
-                        : (vol > 100
-                            ? AppIcons.volumeUp(context)
-                            : AppIcons.volumeDown(context)),
-                    color: vol > 100 ? Colors.amberAccent : Colors.white70,
-                    size: 18,
+                  return Slider(
+                    value: vol.clamp(0.0, Pref.maxVolume).toDouble(),
+                    min: 0,
+                    max: Pref.maxVolume,
+                    activeColor: vol > 100 ? Colors.amberAccent : biliPink,
+                    inactiveColor: Colors.white24,
+                    onChanged: c.setVolume,
                   );
                 },
               ),
-              const SizedBox(width: Style.sm),
-              SizedBox(
-                width: 150,
-                child: ValueListenableBuilder<double>(
-                  valueListenable: c.volume,
-                  builder: (context, vol, _) {
-                    return Slider(
-                      value: vol.clamp(0.0, Pref.maxVolume).toDouble(),
-                      min: 0,
-                      max: Pref.maxVolume,
-                      activeColor: vol > 100 ? Colors.amberAccent : biliPink,
-                      inactiveColor: Colors.white24,
-                      onChanged: c.setVolume,
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: Style.sm),
-              ValueListenableBuilder<double>(
-                valueListenable: c.volume,
-                builder: (context, vol, _) {
-                  final rounded = vol.round();
-                  return Text(
-                    rounded > 100 ? '$rounded% (增益)' : '$rounded%',
-                    style: TextStyle(
-                      color: rounded > 100 ? Colors.amberAccent : Colors.white70,
-                      fontWeight: rounded > 100 ? FontWeight.bold : FontWeight.normal,
-                      fontSize: 12,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: Style.sm),
+            ValueListenableBuilder<double>(
+              valueListenable: c.volume,
+              builder: (context, vol, _) {
+                final rounded = vol.round();
+                return ContrastText(
+                  rounded > 100 ? '$rounded% (增益)' : '$rounded%',
+                  style: TextStyle(
+                    color: rounded > 100 ? Colors.amberAccent : Colors.white,
+                    fontWeight: rounded > 100 ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 12,
+                  ),
+                  shadows: ContrastStyle.glyphShadows,
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
