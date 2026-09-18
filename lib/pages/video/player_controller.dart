@@ -349,6 +349,13 @@ class WinWinPlayerController {
     // drop: false（点播模式严禁丢包）。
     player.setBufferRange(min: 500, max: 60000, drop: false);
 
+    // 保持底层播放内核在视频播放完毕后不释放资源（对标 MDK 官方 keep_open 规范）：
+    // 默认 keep_open=0 时，播放完毕 MDK 会自动调用 set(State::Stopped) 释放解码器和渲染管线，
+    // 导致底层状态被销毁、seek(0) 报错（-3 Unloaded / -6 NotReady）且无法重新拉流。
+    // 设置 keep_open=1 时，播放完毕自动转入 State::Paused 并置位 MediaStatus.end，
+    // 保持解码器与网络上下文活跃，确保重播与 seek(0) 秒开且零死锁。
+    player.setProperty('keep_open', '1');
+
     final initialFilter = AudioNormalization.parse(
       null,
       AudioNormalization.getParamFromConfig(Pref.audioNormalization),
@@ -373,6 +380,10 @@ class WinWinPlayerController {
     _userIntentPlaying = false;
     _bufferingStallMs = 0;
     _maybeReportPlaybackEnd();
+    final p = _player;
+    if (p != null && p.state == mdk.PlaybackState.playing) {
+      p.state = mdk.PlaybackState.paused;
+    }
     AppLogger.i(
       'PlayerController',
       'Playback completed naturally at ${position.value.inSeconds}s/${duration.value.inSeconds}s',
@@ -392,11 +403,12 @@ class WinWinPlayerController {
         playing.value = isPlaying;
         if (isPlaying) {
           completed.value = false;
-        } else if (event.newValue == mdk.PlaybackState.stopped) {
+        } else if (event.newValue == mdk.PlaybackState.stopped ||
+            event.newValue == mdk.PlaybackState.paused) {
           if (_isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null) {
             return;
           }
-          // 播放器到达流末尾自然停止（keep_open 未设置时 mdk 在所有帧渲染完成后进入 stopped）
+          // 播放器到达流末尾自然停止（keep_open=1 时 MDK 在所有帧渲染完成后转入 paused，keep_open=0 时转入 stopped）
           final durMs = duration.value.inMilliseconds;
           final posMs = player.position;
           if (!_loading &&
@@ -430,6 +442,15 @@ class WinWinPlayerController {
         if (_disposed) return;
         final oldValue = event.oldValue;
         final newValue = event.newValue;
+
+        // 监听流结束标志（keep_open=1 下 MDK 置位 MediaStatus.end）
+        if (!oldValue.test(mdk.MediaStatus.end) &&
+            newValue.test(mdk.MediaStatus.end)) {
+          AppLogger.i('PlayerController', 'onMediaStatus: end detected');
+          if (!_isSeeking && !_nativeSeekInFlight && _queuedSeekTargetMs == null) {
+            _handlePlaybackEnded();
+          }
+        }
 
         // 缓冲中 / 缓冲完成（监听 stalled 标志，对标 mdk stalled 解码空仓状态与 buffered 就绪状态）。
         // 防抖保护：Seek 瞬间底层必然产生几十毫秒的瞬态空仓，引入 350ms 防抖门限，
@@ -552,9 +573,14 @@ class WinWinPlayerController {
         // 判定真正落地条件：
         // 1. native seek 已返回成功；
         // 2. 底层 player.position 已经同步推进到目标物理关键帧附近（允许 2500ms 容差）；
-        // 3. 严禁基于短超时（如 200ms）强行解除 seek 锁，否则底层未上屏的旧 PTS 会瞬间覆盖 UI 进度条导致弹跳！
+        // 3. 若已返回超过 400ms 且目标点为 0，即便底层 PTS 采样有微小时滞，也判定已落地，避免 3 秒僵死；
+        // 4. 严禁基于短超时（如 200ms）强行解除 seek 锁，否则底层未上屏的旧 PTS 会瞬间覆盖 UI 进度条导致弹跳！
         final isNearTarget = (currentPosMs - target).abs() <= 2500;
-        final hasLanded = hasNativeReturned && isNearTarget;
+        final isTargetZeroSettled = hasNativeReturned &&
+            target == 0 &&
+            DateTime.now().difference(doneTime) >
+                const Duration(milliseconds: 400);
+        final hasLanded = hasNativeReturned && (isNearTarget || isTargetZeroSettled);
 
         final isTimeout = _seekStartTime != null &&
             DateTime.now().difference(_seekStartTime!) >
@@ -1404,6 +1430,15 @@ class WinWinPlayerController {
     _userIntentPlaying = true;
     _bufferingStallMs = 0;
     _reportedEnd = false;
+    _maxContinuousBufferedMs = 0;
+
+    // 极端异常兜底：若底层播放器处于 stopped 状态，重新 load 快速拉起
+    if (player.state == mdk.PlaybackState.stopped) {
+      AppLogger.w('PlayerController', 'replay: player is stopped, reloading');
+      await load(start: Duration.zero, autoplay: true);
+      return;
+    }
+
     seek(Duration.zero);
   }
 
@@ -1454,6 +1489,9 @@ class WinWinPlayerController {
     _reportedEnd = false;
     _userIntentPlaying = true;
     _bufferingStallMs = 0;
+    if (clampedMs == 0) {
+      _maxContinuousBufferedMs = 0;
+    }
 
     // 立即更新对外暴露的 position 与 seekPosition，使 UI 进度条瞬时稳定在目标位置，杜绝回弹
     position.value = clampedTo;
@@ -1469,9 +1507,10 @@ class WinWinPlayerController {
     _nativeSeekDoneTime = null;
     seekCount.value++;
 
-    if (player.state == mdk.PlaybackState.stopped) {
-      player.state = mdk.PlaybackState.playing;
-    }
+    // 注意：严禁在片尾直接执行 player.state = playing！
+    // 否则底层播放指针停留在 EOF 时立即尝试出帧会导致再次触发流结束，
+    // 并冲刷掉正在派发的 seek(0)。正确的时序是由 _processSeekQueue 执行 seek 落地后，
+    // 再根据 _userIntentPlaying 切换为 playing。
 
     if (_nativeSeekInFlight) {
       // 当前已有底层 native seek 在执行，排队保存最新目标（覆盖旧排队）
@@ -1490,19 +1529,23 @@ class WinWinPlayerController {
     unawaited(() async {
       try {
         // 精准分流 SeekFlags：
-        // 1. 若向已播放过时间点快退（targetMs < currentPosMs），严禁传 inCache（MDK 官方规范明确要求
+        // 1. 若定位到片头 0ms，使用纯净的 fromStart（对标 MDK 最佳实践 seek(0, SeekFlag::FromStart)），
+        //    精准定位至流第一帧物理起始点；
+        // 2. 若向已播放过时间点快退（targetMs < currentPosMs），严禁传 inCache（MDK 官方规范明确要求
         //    inCache 的目标位置必须落在 (position, position + buffered] 正向区间内）。快退使用 fromStart | keyFrame；
-        // 2. 若向后快进且落在正向已缓冲水位内，使用 fromStart | keyFrame | inCache 从内存秒开；
-        // 3. 若向后快进超出缓冲水位，使用 fromStart | keyFrame 从网络直接 Range 命中。
+        // 3. 若向后快进且落在正向已缓冲水位内，使用 fromStart | keyFrame | inCache 从内存秒开；
+        // 4. 若向后快进超出缓冲水位，使用 fromStart | keyFrame 从网络直接 Range 命中。
         final currentPosMs = player.position;
         final bufMax = player.buffered();
         final isForwardInCache = targetMs >= currentPosMs &&
             targetMs <= currentPosMs + bufMax &&
             bufMax > 0;
 
-        final int flagBits = mdk.SeekFlag.fromStart |
-            mdk.SeekFlag.keyFrame |
-            (isForwardInCache ? mdk.SeekFlag.inCache : 0);
+        final int flagBits = targetMs == 0
+            ? mdk.SeekFlag.fromStart
+            : (mdk.SeekFlag.fromStart |
+                mdk.SeekFlag.keyFrame |
+                (isForwardInCache ? mdk.SeekFlag.inCache : 0));
         final flags = mdk.SeekFlag(flagBits);
 
         final res = await player.seek(position: targetMs, flags: flags);
