@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/account/accounts.dart';
@@ -451,8 +453,12 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
 
   /// 内联模式：点击设置按钮时弹出弹幕样式设置面板（Overlay）。
   void _showInlineSettings(BuildContext buttonContext) {
-    // 如果已有 overlay，先移除
-    _settingsOverlay?.remove();
+    // 如果已有 overlay，先移除并返回（点击切换开/关）
+    if (_settingsOverlay != null) {
+      _settingsOverlay?.remove();
+      _settingsOverlay = null;
+      return;
+    }
     
     final renderBox = buttonContext.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
@@ -463,6 +469,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
     _settingsOverlay = OverlayEntry(
       builder: (context) {
         final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
         // 面板在按钮正上方，右对齐按钮右边缘
         final panelWidth = 340.0;
         final panelLeft = (buttonPosition.dx + buttonSize.width - panelWidth)
@@ -478,7 +485,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
               },
               child: Container(color: Colors.transparent),
             ),
-            // 设置面板（PiliPlus 风格）
+            // 设置面板（灰色半透明毛玻璃高质感容器）
             Positioned(
               left: panelLeft,
               bottom: MediaQuery.of(context).size.height -
@@ -486,66 +493,84 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
                   8,
               width: panelWidth,
               child: Material(
-                color: theme.colorScheme.surfaceContainerHighest,
-                elevation: 12,
-                shadowColor: Colors.black.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(12),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: theme.colorScheme.outlineVariant
-                            .withValues(alpha: 0.2),
-                        width: 1,
+                type: MaterialType.transparency,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.15),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 标题
-                          Row(
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xD9262626) // 暗色模式：灰色半透明 (~85% 不透明度)
+                              : const Color(0xD9EAEAEA), // 亮色模式：灰色半透明 (~85% 不透明度)
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : Colors.black.withValues(alpha: 0.08),
+                            width: 1,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.palette_outlined,
-                                size: 18,
-                                color: theme.colorScheme.primary,
+                              // 标题
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.palette_outlined,
+                                    size: 18,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '弹幕样式',
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '弹幕样式',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurface,
-                                ),
+                              const SizedBox(height: 16),
+                              // 分隔线
+                              Container(
+                                height: 1,
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.1)
+                                    : Colors.black.withValues(alpha: 0.08),
+                              ),
+                              const SizedBox(height: 16),
+                              // 颜色选择
+                              _buildColorSection(theme),
+                              const SizedBox(height: 20),
+                              // 位置选择
+                              _buildChipSection(theme, '位置', _modeOptions, _mode),
+                              const SizedBox(height: 20),
+                              // 字号选择
+                              _buildChipSection(
+                                theme,
+                                '字号',
+                                _fontSizeOptions,
+                                _fontSize,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          // 分隔线
-                          Container(
-                            height: 1,
-                            color: theme.colorScheme.outlineVariant
-                                .withValues(alpha: 0.3),
-                          ),
-                          const SizedBox(height: 16),
-                          // 颜色选择
-                          _buildColorSection(theme),
-                          const SizedBox(height: 20),
-                          // 位置选择
-                          _buildChipSection(theme, '位置', _modeOptions, _mode),
-                          const SizedBox(height: 20),
-                          // 字号选择
-                          _buildChipSection(
-                            theme,
-                            '字号',
-                            _fontSizeOptions,
-                            _fontSize,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -669,6 +694,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
     VoidCallback onTap,
   ) {
     final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -676,12 +702,16 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
         decoration: BoxDecoration(
           color: selected
               ? cs.primaryContainer
-              : cs.surfaceContainerHighest.withValues(alpha: 0.38),
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.05)),
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
             color: selected
                 ? cs.primary.withValues(alpha: 0.4)
-                : cs.outlineVariant.withValues(alpha: 0.4),
+                : (isDark
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : Colors.black.withValues(alpha: 0.08)),
             width: 0.5,
           ),
         ),
