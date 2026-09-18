@@ -148,7 +148,7 @@ class VideoCardH extends StatelessWidget {
     final int? danmakuCount = data.danmakuCount;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           title,
@@ -162,22 +162,23 @@ class VideoCardH extends StatelessWidget {
             children: [
               Icon(Icons.person_outline, size: 13, color: cs.outline),
               const SizedBox(width: 3),
-              Flexible(
-                child: Text(
-                  ownerName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    ownerName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+                  ),
                 ),
               ),
-              if (!showStat) ...[
-                const Spacer(),
+              if (!showStat)
                 VideoPopupMenu(
                   data: data,
                   videoItem: videoItem,
                   onRemove: onRemove,
                 ),
-              ],
             ],
           ),
         if (showStat) ...[

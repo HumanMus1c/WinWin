@@ -67,7 +67,7 @@ class VideoCardV extends StatelessWidget {
           },
           borderRadius: BorderRadius.all(radius),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AspectRatio(
                 aspectRatio: 16 / 10,
@@ -121,7 +121,7 @@ class VideoCardV extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               child: Text(
@@ -140,43 +140,47 @@ class VideoCardV extends StatelessWidget {
                 if (isFollowed)
                   const PBadge(text: '已关注', type: PBadgeType.status),
                 if (ownerName.isNotEmpty)
-                  Flexible(
-                    child: GestureDetector(
-                      onTap: () {
-                        if (mid != null && mid > 0) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => MemberSpacePage(mid: mid),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (mid != null && mid > 0) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MemberSpacePage(mid: mid),
+                              ),
+                            );
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.secondaryContainer
+                                .withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: Text(
+                            ownerName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            semanticsLabel: 'UP：$ownerName',
+                            style: TextStyle(
+                              height: 1.5,
+                              fontSize: theme.textTheme.labelMedium?.fontSize,
+                              color: theme.colorScheme.outline,
                             ),
-                          );
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.secondaryContainer
-                              .withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(100),
-                        ),
-                        child: Text(
-                          ownerName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          semanticsLabel: 'UP：$ownerName',
-                          style: TextStyle(
-                            height: 1.5,
-                            fontSize: theme.textTheme.labelMedium?.fontSize,
-                            color: theme.colorScheme.outline,
                           ),
                         ),
                       ),
                     ),
-                  ),
-                const Spacer(),
+                  )
+                else
+                  const Spacer(),
                 VideoPopupMenu(
                   data: data,
                   videoItem: videoItem,
