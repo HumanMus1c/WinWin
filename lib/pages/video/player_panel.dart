@@ -847,10 +847,21 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         fullscreen: widget.fullscreen || widget.inAppFullscreen,
                       ),
                     ),
-                    _iconButton(
-                      icon: AppIcons.volumeUp(context),
-                      tooltip: '音量',
-                      onPressed: _toggleVolumePopup,
+                    ValueListenableBuilder<double>(
+                      valueListenable: c.volume,
+                      builder: (context, vol, _) {
+                        final IconData volIcon = vol <= 0
+                            ? AppIcons.volumeOff(context)
+                            : (vol > 100
+                                ? AppIcons.volumeUp(context)
+                                : AppIcons.volumeDown(context));
+                        return _iconButton(
+                          icon: volIcon,
+                          tooltip: '音量',
+                          color: _volumePopupOpen ? biliBlue : null,
+                          onPressed: _toggleVolumePopup,
+                        );
+                      },
                     ),
                     _iconButton(
                       icon: AppIcons.lockOutline(context),
@@ -870,12 +881,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
                           active: widget.inAppFullscreen,
                         ),
                         tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
+                        color: widget.inAppFullscreen ? biliBlue : null,
                         onPressed: widget.onToggleInAppFullscreen!,
                       ),
                     if (widget.onToggleFullscreen != null)
                       _iconButton(
                         icon: AppIcons.fullscreen(context, active: widget.fullscreen),
                         tooltip: widget.fullscreen ? '退出全屏' : '全屏',
+                        color: widget.fullscreen ? biliBlue : null,
                         onPressed: widget.onToggleFullscreen!,
                       ),
                   ],
@@ -888,7 +901,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// 播放/暂停按钮。
+  /// 播放/暂停按钮：统一为 20px 规格图标，具备温和柔白与 hover 提亮动效。
   Widget _buildPlayPauseButton() {
     final c = widget.controller;
     return ListenableBuilder(
@@ -896,50 +909,35 @@ class _PlayerPanelState extends State<PlayerPanel> {
       builder: (context, _) {
         final isPlaying = c.playing.value;
         final isCompleted = c.completed.value;
-        return HoverContainer(
-          onTap: c.playOrPause,
-          borderRadius: 6.0,
-          padding: const EdgeInsets.all(6),
-          hoverColor: Colors.white.withValues(alpha: 0.12),
-          child: Tooltip(
-            message: isCompleted ? '重新播放' : (isPlaying ? '暂停' : '播放'),
-            child: ContrastIcon(
-              isPlaying
-                  ? AppIcons.pause(context, active: true)
-                  : (isCompleted
-                        ? AppIcons.replay(context)
-                        : AppIcons.play(context, active: true)),
-              color: Colors.white,
-              size: 24,
-              shadows: ContrastStyle.glyphShadows,
-            ),
-          ),
+        final icon = isPlaying
+            ? AppIcons.pause(context, active: true)
+            : (isCompleted
+                  ? AppIcons.replay(context)
+                  : AppIcons.play(context, active: true));
+        return _iconButton(
+          icon: icon,
+          tooltip: isCompleted ? '重新播放' : (isPlaying ? '暂停' : '播放'),
+          onPressed: c.playOrPause,
+          size: 20.0,
         );
       },
     );
   }
 
-  /// 控制条图标按钮统一风格：20px 图标 + 紧凑密度 + hover 效果。
+  /// 控制条图标按钮统一风格：默认 18px 规范图标 + 30px 点击区域 + 温和白亮度 + hover 平滑提亮。
   Widget _iconButton({
     required IconData icon,
     required VoidCallback? onPressed,
     String? tooltip,
-    Color color = Colors.white,
+    Color? color,
+    double size = 18.0,
   }) {
-    return HoverContainer(
-      onTap: onPressed,
-      borderRadius: 6.0,
-      padding: const EdgeInsets.all(6),
-      hoverColor: Colors.white.withValues(alpha: 0.12),
-      child: Tooltip(
-        message: tooltip ?? '',
-        child: ContrastIcon(
-          icon,
-          color: color,
-          size: 20,
-          shadows: ContrastStyle.glyphShadows,
-        ),
-      ),
+    return _PlayerBarIconButton(
+      icon: icon,
+      onPressed: onPressed,
+      tooltip: tooltip,
+      color: color,
+      size: size,
     );
   }
 
@@ -1299,14 +1297,17 @@ class _PlayerPanelState extends State<PlayerPanel> {
             borderRadius: 6.0,
             padding: const EdgeInsets.symmetric(
               horizontal: Style.sm,
-              vertical: 4,
+              vertical: 6,
             ),
             hoverColor: Colors.white.withValues(alpha: 0.12),
             child: ContrastText(
               (current >= 0 && current < labels.length)
                   ? labels[current]
                   : '画质',
-              style: const TextStyle(color: Colors.white, fontSize: 12),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.85),
+                fontSize: 12,
+              ),
               shadows: ContrastStyle.glyphShadows,
             ),
           ),
@@ -1316,45 +1317,46 @@ class _PlayerPanelState extends State<PlayerPanel> {
   }
 
   /// BiliPai 风格弹幕开关圆角 chip：
-  /// 开启时 primary 背景 + 图标 + "开" 文字，毛玻璃胶囊底衬确保对比度。
+  /// 统一 ~30px 高度规范，图标放大至 16.5px，温和白与高对比度毛玻璃胶囊底衬。
   Widget _buildDanmakuChip() {
     final enabled = Pref.enableShowDanmaku;
-    return HoverContainer(
-      onTap: _toggleDanmaku,
+    return GlassCapsule(
       borderRadius: Style.radiusFull,
-      padding: const EdgeInsets.symmetric(
-        horizontal: Style.sm,
-        vertical: Style.xs,
-      ),
-      hoverColor: Colors.white.withValues(alpha: 0.12),
-      child: GlassCapsule(
+      blur: 8,
+      padding: EdgeInsets.zero,
+      backgroundColor: enabled
+          ? biliBlue.withValues(alpha: 0.28)
+          : Colors.black.withValues(alpha: 0.35),
+      borderColor: enabled
+          ? biliBlue.withValues(alpha: 0.45)
+          : Colors.white.withValues(alpha: 0.15),
+      child: HoverContainer(
+        onTap: _toggleDanmaku,
         borderRadius: Style.radiusFull,
-        blur: 8,
         padding: const EdgeInsets.symmetric(
-          horizontal: Style.sm,
-          vertical: Style.xs,
+          horizontal: 9,
+          vertical: 5,
         ),
-        backgroundColor: enabled
-            ? biliBlue.withValues(alpha: 0.28)
-            : Colors.black.withValues(alpha: 0.35),
-        borderColor: enabled
-            ? biliBlue.withValues(alpha: 0.45)
-            : Colors.white.withValues(alpha: 0.15),
+        hoverColor: Colors.white.withValues(alpha: 0.12),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             ContrastIcon(
               AppIcons.danmaku(context, active: enabled),
-              size: 14,
-              color: enabled ? const Color(0xFF00AEEC) : Colors.white,
+              size: 16.5,
+              color: enabled
+                  ? const Color(0xFF00AEEC)
+                  : Colors.white.withValues(alpha: 0.85),
               shadows: ContrastStyle.glyphShadows,
             ),
             const SizedBox(width: Style.xs),
             ContrastText(
               enabled ? '开' : '关',
               style: TextStyle(
-                color: enabled ? const Color(0xFF00AEEC) : Colors.white,
-                fontSize: 11,
+                color: enabled
+                    ? const Color(0xFF00AEEC)
+                    : Colors.white.withValues(alpha: 0.85),
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
               shadows: ContrastStyle.glyphShadows,
@@ -1365,53 +1367,54 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// BiliPai 风格字幕 chip：有字幕时高亮，毛玻璃胶囊底衬。
+  /// BiliPai 风格字幕 chip：统一 ~30px 高度规范与 16.5px 图标，有字幕时高亮，毛玻璃胶囊底衬。
   Widget _buildSubtitleChip() {
     final c = widget.controller;
     return ListenableBuilder(
       listenable: c.subtitle,
       builder: (context, _) {
         final isActive = c.subtitle.current != null;
-        return HoverContainer(
-          onTap: () => showSubtitleSettingsPanel(
-            context,
-            controller: c,
-            fullscreen: widget.fullscreen || widget.inAppFullscreen,
-          ),
+        return GlassCapsule(
           borderRadius: Style.radiusFull,
-          padding: const EdgeInsets.symmetric(
-            horizontal: Style.sm,
-            vertical: Style.xs,
-          ),
-          hoverColor: Colors.white.withValues(alpha: 0.12),
-          child: GlassCapsule(
-            borderRadius: Style.radiusFull,
-            blur: 8,
-            padding: const EdgeInsets.symmetric(
-              horizontal: Style.sm,
-              vertical: Style.xs,
+          blur: 8,
+          padding: EdgeInsets.zero,
+          backgroundColor: isActive
+              ? biliBlue.withValues(alpha: 0.28)
+              : Colors.black.withValues(alpha: 0.35),
+          borderColor: isActive
+              ? biliBlue.withValues(alpha: 0.45)
+              : Colors.white.withValues(alpha: 0.15),
+          child: HoverContainer(
+            onTap: () => showSubtitleSettingsPanel(
+              context,
+              controller: c,
+              fullscreen: widget.fullscreen || widget.inAppFullscreen,
             ),
-            backgroundColor: isActive
-                ? biliBlue.withValues(alpha: 0.28)
-                : Colors.black.withValues(alpha: 0.35),
-            borderColor: isActive
-                ? biliBlue.withValues(alpha: 0.45)
-                : Colors.white.withValues(alpha: 0.15),
+            borderRadius: Style.radiusFull,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 9,
+              vertical: 5,
+            ),
+            hoverColor: Colors.white.withValues(alpha: 0.12),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 ContrastIcon(
                   AppIcons.subtitle(context, active: isActive),
-                  size: 14,
-                  color: isActive ? const Color(0xFF00AEEC) : Colors.white,
+                  size: 16.5,
+                  color: isActive
+                      ? const Color(0xFF00AEEC)
+                      : Colors.white.withValues(alpha: 0.85),
                   shadows: ContrastStyle.glyphShadows,
                 ),
                 const SizedBox(width: Style.xs),
                 ContrastText(
                   '字幕',
                   style: TextStyle(
-                    color: isActive ? const Color(0xFF00AEEC) : Colors.white,
-                    fontSize: 11,
+                    color: isActive
+                        ? const Color(0xFF00AEEC)
+                        : Colors.white.withValues(alpha: 0.85),
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                   shadows: ContrastStyle.glyphShadows,
@@ -1563,7 +1566,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
             borderRadius: 6.0,
             padding: const EdgeInsets.symmetric(
               horizontal: Style.sm,
-              vertical: 4,
+              vertical: 6,
             ),
             hoverColor: Colors.white.withValues(alpha: 0.12),
             child: Row(
@@ -1571,7 +1574,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
               children: [
                 ContrastText(
                   codec,
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 12,
+                  ),
                   shadows: ContrastStyle.glyphShadows,
                 ),
                 if (c.audioNormalizeEnabled) ...[
@@ -1681,7 +1687,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return weights[idx];
   }
 
-  /// 章节列表按钮（BiliPai 风格圆角 chip）：有章节时显示，毛玻璃胶囊底衬。
+  /// 章节列表按钮（BiliPai 风格圆角 chip）：统一 ~30px 高度规范与 16.5px 图标，有章节时显示，毛玻璃胶囊底衬。
   Widget _buildChapterButton() {
     final c = widget.controller;
     return ValueListenableBuilder<List<ViewPoint>>(
@@ -1689,45 +1695,46 @@ class _PlayerPanelState extends State<PlayerPanel> {
       builder: (context, chapters, _) {
         if (chapters.isEmpty) return const SizedBox.shrink();
         final isOpen = _chapterPanelOpen;
-        return HoverContainer(
-          onTap: () {
-            setState(() => _chapterPanelOpen = !_chapterPanelOpen);
-            _onPointerActivity();
-          },
+        return GlassCapsule(
           borderRadius: Style.radiusFull,
-          padding: const EdgeInsets.symmetric(
-            horizontal: Style.sm,
-            vertical: Style.xs,
-          ),
-          hoverColor: Colors.white.withValues(alpha: 0.12),
-          child: GlassCapsule(
+          blur: 8,
+          padding: EdgeInsets.zero,
+          backgroundColor: isOpen
+              ? biliBlue.withValues(alpha: 0.28)
+              : Colors.black.withValues(alpha: 0.35),
+          borderColor: isOpen
+              ? biliBlue.withValues(alpha: 0.45)
+              : Colors.white.withValues(alpha: 0.15),
+          child: HoverContainer(
+            onTap: () {
+              setState(() => _chapterPanelOpen = !_chapterPanelOpen);
+              _onPointerActivity();
+            },
             borderRadius: Style.radiusFull,
-            blur: 8,
             padding: const EdgeInsets.symmetric(
-              horizontal: Style.sm,
-              vertical: Style.xs,
+              horizontal: 9,
+              vertical: 5,
             ),
-            backgroundColor: isOpen
-                ? biliBlue.withValues(alpha: 0.28)
-                : Colors.black.withValues(alpha: 0.35),
-            borderColor: isOpen
-                ? biliBlue.withValues(alpha: 0.45)
-                : Colors.white.withValues(alpha: 0.15),
+            hoverColor: Colors.white.withValues(alpha: 0.12),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 ContrastIcon(
                   AppIcons.chapter(context, active: isOpen),
-                  size: 14,
-                  color: isOpen ? const Color(0xFF00AEEC) : Colors.white,
+                  size: 16.5,
+                  color: isOpen
+                      ? const Color(0xFF00AEEC)
+                      : Colors.white.withValues(alpha: 0.85),
                   shadows: ContrastStyle.glyphShadows,
                 ),
                 const SizedBox(width: Style.xs),
                 ContrastText(
                   '章节 (${chapters.length})',
                   style: TextStyle(
-                    color: isOpen ? const Color(0xFF00AEEC) : Colors.white,
-                    fontSize: 11,
+                    color: isOpen
+                        ? const Color(0xFF00AEEC)
+                        : Colors.white.withValues(alpha: 0.85),
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                   shadows: ContrastStyle.glyphShadows,
@@ -2107,13 +2114,15 @@ class _PlayerPanelState extends State<PlayerPanel> {
             borderRadius: 6.0,
             padding: const EdgeInsets.symmetric(
               horizontal: Style.sm,
-              vertical: 4,
+              vertical: 6,
             ),
             hoverColor: Colors.white.withValues(alpha: 0.12),
             child: ContrastText(
               speed == 1.0 ? '倍速' : '${speed.toStringAsFixed(1)}x',
               style: TextStyle(
-                color: speed == 1.0 ? Colors.white : const Color(0xFF00AEEC),
+                color: speed == 1.0
+                    ? Colors.white.withValues(alpha: 0.85)
+                    : const Color(0xFF00AEEC),
                 fontSize: 12,
                 fontWeight: speed == 1.0 ? FontWeight.normal : FontWeight.bold,
               ),
@@ -2353,3 +2362,71 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
     );
   }
 }
+
+/// 控制条专用图标按钮：统一尺寸、温和白默认亮度、hover 平滑提亮与高对比度阴影。
+class _PlayerBarIconButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final String? tooltip;
+  final Color? color;
+  final double size;
+
+  const _PlayerBarIconButton({
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+    this.color,
+    this.size = 18.0,
+  });
+
+  @override
+  State<_PlayerBarIconButton> createState() => _PlayerBarIconButtonState();
+}
+
+class _PlayerBarIconButtonState extends State<_PlayerBarIconButton> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // 默认温和白 (~82% alpha)，避免纯白在深色控制条上刺目；hover 时提亮至纯白 (100%)
+    final effectiveColor = widget.color ??
+        (_isHovering ? Colors.white : Colors.white.withValues(alpha: 0.82));
+
+    final child = MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      cursor: widget.onPressed != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      child: GestureDetector(
+        onTap: widget.onPressed,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: _isHovering
+                ? Colors.white.withValues(alpha: 0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(6.0),
+          ),
+          child: ContrastIcon(
+            widget.icon,
+            color: effectiveColor,
+            size: widget.size,
+            shadows: ContrastStyle.glyphShadows,
+          ),
+        ),
+      ),
+    );
+
+    if (widget.tooltip != null && widget.tooltip!.isNotEmpty) {
+      return Tooltip(
+        message: widget.tooltip!,
+        child: child,
+      );
+    }
+    return child;
+  }
+}
+
