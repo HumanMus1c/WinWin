@@ -117,11 +117,19 @@ abstract final class CdnPolicy {
           continue;
         }
 
-        // 用户指定了特定服务商 Host，替换并重置端口为 443
+        // 用户指定了特定服务商 Host，替换并重置端口为 443（首选候选）
         final targetHost = service.host ?? CDNService.ali.host!;
         addCandidate(
           uri.replace(scheme: 'https', host: targetHost, port: 443).toString(),
         );
+        // 同时注入对等高质量备选 UPOS 镜像与原始链接，为流卡死自愈提供完备的多 CDN 容灾候选
+        final altHost = targetHost == CDNService.ali.host
+            ? CDNService.cos.host!
+            : CDNService.ali.host!;
+        addCandidate(
+          uri.replace(scheme: 'https', host: altHost, port: 443).toString(),
+        );
+        addCandidate(url);
         continue;
       }
 
@@ -145,6 +153,13 @@ abstract final class CdnPolicy {
           addCandidate(
             uri.replace(scheme: 'https', host: targetHost, port: 443).toString(),
           );
+          final altHost = targetHost == CDNService.ali.host
+              ? CDNService.cos.host!
+              : CDNService.ali.host!;
+          addCandidate(
+            uri.replace(scheme: 'https', host: altHost, port: 443).toString(),
+          );
+          addCandidate(url);
         }
         continue;
       }

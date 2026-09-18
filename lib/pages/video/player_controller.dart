@@ -332,18 +332,22 @@ class WinWinPlayerController {
     player.setProperty('avio.timeout', '10000000');
     player.setProperty('avio.rw_timeout', '10000000');
 
-    // 注意：严禁开启 demux.buffer.ranges（对标官方 fvp 保持默认值 0）。
-    // 在音视频分离双流（DASH）下，解复用器包缓存会导致快退时 demuxer 无法向已激活解码器
-    // 重发合法关键帧 bitstream，导致 PacketIOWrapper::seek 永久卡死在历史包缓存中！
+    // 启用解复用器包缓存（MDK 官方推荐 ranges=16）：
+    // 允许在内存中缓存解复用后的物理数据包。当向后或向前短距离 Seek 时，
+    // 解复用器直接从内存命中历史包，无需发起网络 Range 请求，大幅加速出帧并杜绝转圈。
+    player.setProperty('demux.buffer.ranges', '16');
+    player.setProperty('demux.buffer.protocols', 'http,https');
 
     // Windows 平台开启 D3D11 CPU-GPU 纹理同步屏障，杜绝 Flutter Texture 渲染表面的时序撕裂与新旧画面闪烁
     if (Platform.isWindows) {
       mdk.setGlobalOption('d3d11.sync.cpu', 1);
     }
 
-    // 缓冲窗口（VOD 点播模式）：
-    // 保持 MDK 官方原生自适应 VOD 缓冲管道（min: 1000ms, max: 4000ms），
-    // 避免误用直播流 setBufferRange(0, 90000) 导致 CDN 抢包限速与视频解码空仓。
+    // 缓冲窗口（VOD 点播模式，对标 MDK 官方 wiki 及 PiliPlus 宽幅缓冲策略）：
+    // min: 500ms（只要缓冲满 0.5s 即极速出帧起播，解决初次加载与 seek 响应迟缓）；
+    // max: 60000ms（后台预读 60s 音视频流，解决默认 4s 水位过浅导致低码率音频连接被 CDN 判定闲置切断并在空仓时卡死的问题）；
+    // drop: false（点播模式严禁丢包）。
+    player.setBufferRange(min: 500, max: 60000, drop: false);
 
     final initialFilter = AudioNormalization.parse(
       null,
@@ -545,28 +549,30 @@ class WinWinPlayerController {
             _queuedSeekTargetMs == null &&
             doneTime != null;
 
-        // 判定落地条件：native 已返回，并且（底层 PTS 已经推进至目标时间附近，或已过 200ms 帧同步缓冲期）
-        final hasLanded = hasNativeReturned &&
-            ((currentPosMs - target).abs() <= 2000 ||
-                DateTime.now().difference(doneTime) >
-                    const Duration(milliseconds: 200));
+        // 判定真正落地条件：
+        // 1. native seek 已返回成功；
+        // 2. 底层 player.position 已经同步推进到目标物理关键帧附近（允许 2500ms 容差）；
+        // 3. 严禁基于短超时（如 200ms）强行解除 seek 锁，否则底层未上屏的旧 PTS 会瞬间覆盖 UI 进度条导致弹跳！
+        final isNearTarget = (currentPosMs - target).abs() <= 2500;
+        final hasLanded = hasNativeReturned && isNearTarget;
 
         final isTimeout = _seekStartTime != null &&
             DateTime.now().difference(_seekStartTime!) >
-                const Duration(milliseconds: 2500);
+                const Duration(milliseconds: 3000);
 
         if (hasLanded || isTimeout) {
           if (isTimeout && !hasLanded) {
             AppLogger.w(
               'PlayerController',
-              'Seek timeout for target $target ms, releasing seek lock',
+              'Seek timeout for target $target ms (currentPos=$currentPosMs), releasing seek lock',
             );
           }
           _isSeeking = false;
           _seekTargetMs = null;
           _seekStartTime = null;
           _nativeSeekDoneTime = null;
-          _lastPolledPosMs = currentPosMs;
+          // 若已确认到达目标，同步底层采样基准；若硬超时且未落地，以 target 为基准，避免旧高位 PTS 污染
+          _lastPolledPosMs = hasLanded ? currentPosMs : target;
         } else {
           // 底层 seek 执行中或纹理未排空，维持目标进度，屏蔽旧 PTS 覆盖导致的回跳
           _bufferingStallMs = 0;
@@ -1507,7 +1513,12 @@ class WinWinPlayerController {
         }
 
         if (seq == _seekSeq && _queuedSeekTargetMs == null) {
-          _lastPolledPosMs = res >= 0 ? res : player.position;
+          final landedMs = res >= 0 ? res : targetMs;
+          _seekTargetMs = landedMs;
+          final landedDuration = Duration(milliseconds: landedMs);
+          position.value = landedDuration;
+          seekPosition.value = landedDuration;
+          _lastPolledPosMs = landedMs;
           _nativeSeekDoneTime = DateTime.now();
           _lastSeekFinishTime = DateTime.now();
         }

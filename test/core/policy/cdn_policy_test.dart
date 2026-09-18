@@ -126,6 +126,22 @@ void main() {
       expect(uri.host, equals('upos-sz-mirrorali.bilivideo.com'));
       expect(uri.port, equals(443));
     });
+
+    test('指定阿里云服务时，候选列表首项为阿里云镜像且包含腾讯云与原始链接备选', () {
+      final candidates = [officialCosUrl, officialHwUrl];
+      final resolved = CdnPolicy.resolveAllUrls(
+        candidates,
+        service: CDNService.ali,
+      );
+      expect(resolved.isNotEmpty, isTrue);
+      // 首个必定是阿里云镜像
+      expect(Uri.parse(resolved[0]).host, equals('upos-sz-mirrorali.bilivideo.com'));
+      // 备选包含腾讯云镜像
+      expect(resolved.any((u) => Uri.parse(u).host == 'upos-sz-mirrorcos.bilivideo.com'), isTrue);
+      // 备选包含原始链接
+      expect(resolved.contains(officialCosUrl), isTrue);
+      expect(resolved.contains(officialHwUrl), isTrue);
+    });
   });
 }
 
