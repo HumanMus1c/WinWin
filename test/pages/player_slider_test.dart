@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -143,6 +145,93 @@ void main() {
       final buf4 = calculateBuffered(90000, durMs, 5000);
       expect(buf4, 95000);
       expect(maxContinuousBufferedMs, 95000);
+    });
+
+    testWidgets('Hover preview updates locally without triggering parent rebuilds', (tester) async {
+      int parentBuildCount = 0;
+      final hoverNotifier = ValueNotifier<({double fraction, double seconds})?>(null);
+      const maxSec = 100.0;
+      const sliderWidth = 400.0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                parentBuildCount++;
+                return SizedBox(
+                  width: sliderWidth,
+                  height: 60,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      ValueListenableBuilder<({double fraction, double seconds})?>(
+                        valueListenable: hoverNotifier,
+                        builder: (context, hover, _) {
+                          if (hover == null) return const SizedBox.shrink();
+                          return Positioned(
+                            bottom: 28,
+                            left: hover.fraction * sliderWidth,
+                            child: Text('Hover: ${hover.seconds.toInt()}s'),
+                          );
+                        },
+                      ),
+                      MouseRegion(
+                        key: const ValueKey('slider_mouse_region'),
+                        onHover: (e) {
+                          final fraction = (e.localPosition.dx / sliderWidth).clamp(0.0, 1.0);
+                          hoverNotifier.value = (
+                            fraction: fraction,
+                            seconds: fraction * maxSec,
+                          );
+                        },
+                        onExit: (_) {
+                          hoverNotifier.value = null;
+                        },
+                        child: const SizedBox(
+                          width: sliderWidth,
+                          height: 20,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(parentBuildCount, 1);
+      expect(find.textContaining('Hover:'), findsNothing);
+
+      // Simulate mouse hover at x = 200 (50%)
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      final mouseRegionFinder = find.byKey(const ValueKey('slider_mouse_region'));
+      await gesture.moveTo(tester.getCenter(mouseRegionFinder));
+      await tester.pump();
+
+      // Tooltip is rendered!
+      expect(find.textContaining('Hover: 50s'), findsOneWidget);
+      // Crucial assertion: Parent build count must STILL be 1! (Zero setState, zero parent rebuild!)
+      expect(parentBuildCount, 1);
+
+      // Move mouse to x = 300 (75%)
+      await gesture.moveTo(tester.getTopLeft(mouseRegionFinder) + const Offset(300, 10));
+      await tester.pump();
+
+      expect(find.textContaining('Hover: 75s'), findsOneWidget);
+      expect(parentBuildCount, 1);
+
+      // Move mouse out
+      await gesture.moveTo(const Offset(600, 600));
+      await tester.pump();
+
+      expect(find.textContaining('Hover:'), findsNothing);
+      expect(parentBuildCount, 1);
+
+      await gesture.removePointer();
     });
   });
 }

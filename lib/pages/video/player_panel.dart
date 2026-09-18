@@ -72,8 +72,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
   final ValueNotifier<bool> _controlsVisible = ValueNotifier(true);
   bool _draggingProgress = false;
   double _dragSeconds = 0;
-  double? _hoverSliderSeconds;
-  double? _hoverSliderFraction;
+  /// 进度条悬浮预览状态（fraction, seconds）：独立局部驱动，杜绝滑动触发全局 setState 重绘风暴。
+  final ValueNotifier<({double fraction, double seconds})?> _sliderHoverNotifier =
+      ValueNotifier(null);
   bool _volumePopupOpen = false;
   bool _chapterPanelOpen = false;
 
@@ -103,6 +104,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     _hideTimer?.cancel();
     _feedbackTimer?.cancel();
     _dragFeedbackTimer?.cancel();
+    _sliderHoverNotifier.dispose();
     _controlsVisible.dispose();
     _doubleTapFeedback.dispose();
     _longPressSpeedFeedback.dispose();
@@ -795,84 +797,86 @@ class _PlayerPanelState extends State<PlayerPanel> {
         ),
         // 第二行：控制按钮行（左右分区）
         // 渐进式毛玻璃上高度刚好衔接在进度条下方，向下朝屏幕底边缘展开渐进模糊与暗色遮罩
-        ProgressiveGlass(
-          blur: 16,
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          stops: const [0.0, 0.7, 1.0],
-          backgroundGradientColors: [
-            const Color(0xD9000000),
-            const Color(0x7F000000),
-            Colors.transparent,
-          ],
-          padding: const EdgeInsets.only(
-            left: Style.sm,
-            right: Style.sm,
-            top: 4.0,
-            bottom: Style.xs,
-          ),
-          child: Row(
-            children: [
-              // 左侧：播放/暂停 + 时间 + 弹幕开关
-              _buildPlayPauseButton(),
-              const SizedBox(width: Style.sm),
-              _buildTimeText(),
-              const SizedBox(width: Style.md),
-              _buildDanmakuChip(),
-              const Spacer(),
-              // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
-              _buildAudioCodecLabel(),
-              _buildQualityLabel(),
-              _buildSpeedLabel(),
-              _buildChapterButton(),
-              _buildSubtitleChip(),
-              const SizedBox(width: Style.sm),
-              _iconButton(
-                icon: AppIcons.sendDanmaku(context),
-                tooltip: '发弹幕',
-                onPressed: () => showSendDanmakuPanel(context, controller: c),
-              ),
-              _iconButton(
-                icon: AppIcons.danmakuTune(context),
-                tooltip: '弹幕设置',
-                onPressed: () => showDanmakuSettingsPanel(
-                  context,
-                  controller: c,
-                  fullscreen: widget.fullscreen || widget.inAppFullscreen,
-                ),
-              ),
-              _iconButton(
-                icon: AppIcons.volumeUp(context),
-                tooltip: '音量',
-                onPressed: _toggleVolumePopup,
-              ),
-              _iconButton(
-                icon: AppIcons.lockOutline(context),
-                tooltip: '锁定控制条',
-                onPressed: _toggleLock,
-              ),
-              if (!widget.fullscreen)
-                _iconButton(
-                  icon: AppIcons.pip(context),
-                  tooltip: '画中画',
-                  onPressed: () => DesktopPipController.instance.togglePip(),
-                ),
-              if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
-                _iconButton(
-                  icon: AppIcons.inAppFullscreen(
-                    context,
-                    active: widget.inAppFullscreen,
-                  ),
-                  tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
-                  onPressed: widget.onToggleInAppFullscreen!,
-                ),
-              if (widget.onToggleFullscreen != null)
-                _iconButton(
-                  icon: AppIcons.fullscreen(context, active: widget.fullscreen),
-                  tooltip: widget.fullscreen ? '退出全屏' : '全屏',
-                  onPressed: widget.onToggleFullscreen!,
-                ),
+        RepaintBoundary(
+          child: ProgressiveGlass(
+            blur: 16,
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            stops: const [0.0, 0.7, 1.0],
+            backgroundGradientColors: [
+              const Color(0xD9000000),
+              const Color(0x7F000000),
+              Colors.transparent,
             ],
+            padding: const EdgeInsets.only(
+              left: Style.sm,
+              right: Style.sm,
+              top: 4.0,
+              bottom: Style.xs,
+            ),
+            child: Row(
+              children: [
+                // 左侧：播放/暂停 + 时间 + 弹幕开关
+                _buildPlayPauseButton(),
+                const SizedBox(width: Style.sm),
+                _buildTimeText(),
+                const SizedBox(width: Style.md),
+                _buildDanmakuChip(),
+                const Spacer(),
+                // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
+                _buildAudioCodecLabel(),
+                _buildQualityLabel(),
+                _buildSpeedLabel(),
+                _buildChapterButton(),
+                _buildSubtitleChip(),
+                const SizedBox(width: Style.sm),
+                _iconButton(
+                  icon: AppIcons.sendDanmaku(context),
+                  tooltip: '发弹幕',
+                  onPressed: () => showSendDanmakuPanel(context, controller: c),
+                ),
+                _iconButton(
+                  icon: AppIcons.danmakuTune(context),
+                  tooltip: '弹幕设置',
+                  onPressed: () => showDanmakuSettingsPanel(
+                    context,
+                    controller: c,
+                    fullscreen: widget.fullscreen || widget.inAppFullscreen,
+                  ),
+                ),
+                _iconButton(
+                  icon: AppIcons.volumeUp(context),
+                  tooltip: '音量',
+                  onPressed: _toggleVolumePopup,
+                ),
+                _iconButton(
+                  icon: AppIcons.lockOutline(context),
+                  tooltip: '锁定控制条',
+                  onPressed: _toggleLock,
+                ),
+                if (!widget.fullscreen)
+                  _iconButton(
+                    icon: AppIcons.pip(context),
+                    tooltip: '画中画',
+                    onPressed: () => DesktopPipController.instance.togglePip(),
+                  ),
+                if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
+                  _iconButton(
+                    icon: AppIcons.inAppFullscreen(
+                      context,
+                      active: widget.inAppFullscreen,
+                    ),
+                    tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
+                    onPressed: widget.onToggleInAppFullscreen!,
+                  ),
+                if (widget.onToggleFullscreen != null)
+                  _iconButton(
+                    icon: AppIcons.fullscreen(context, active: widget.fullscreen),
+                    tooltip: widget.fullscreen ? '退出全屏' : '全屏',
+                    onPressed: widget.onToggleFullscreen!,
+                  ),
+              ],
+            ),
           ),
         ),
       ],
@@ -1055,91 +1059,104 @@ class _PlayerPanelState extends State<PlayerPanel> {
         final bufMs = c.buffered.value.inMilliseconds;
         final maxSec = durMs > 0 ? durMs / 1000.0 : 1.0;
         final chapters = c.viewPoints;
-        final previewSec = _draggingProgress
-            ? _dragSeconds
-            : _hoverSliderSeconds;
-        final previewChapter = previewSec != null
-            ? c.currentChapter(previewSec)
-            : null;
-        final showTooltip = previewSec != null && durMs > 0;
 
         return LayoutBuilder(
           builder: (context, constraints) {
             final sliderWidth = constraints.maxWidth;
-            final targetFraction = _draggingProgress
-                ? (_dragSeconds / maxSec).clamp(0.0, 1.0)
-                : (_hoverSliderFraction ??
-                      (durMs > 0 ? (posMs / durMs).clamp(0.0, 1.0) : 0.0));
-            final tooltipLeft = (targetFraction * (sliderWidth - 24)).clamp(
-              8.0,
-              (sliderWidth - 180).clamp(8.0, double.infinity),
-            );
 
             return Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
-                // Hover/Drag 章节与时间浮动预览提示
-                if (showTooltip)
-                  Positioned(
-                    bottom: 28,
-                    left: tooltipLeft,
-                    child: IgnorePointer(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xF0181818),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            width: 0.5,
-                          ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black54,
-                              blurRadius: 6,
-                              offset: Offset(0, 2),
+                // 1. 浮动时间节点与章节胶囊（Tooltip）— 局部 ValueListenableBuilder 独立渲染，带 RepaintBoundary
+                ValueListenableBuilder<({double fraction, double seconds})?>(
+                  valueListenable: _sliderHoverNotifier,
+                  builder: (context, hover, _) {
+                    final previewSec = _draggingProgress
+                        ? _dragSeconds
+                        : hover?.seconds;
+                    final showTooltip = previewSec != null && durMs > 0;
+                    if (!showTooltip) return const SizedBox.shrink();
+
+                    final previewChapter = c.currentChapter(previewSec);
+                    final targetFraction = _draggingProgress
+                        ? (_dragSeconds / maxSec).clamp(0.0, 1.0)
+                        : (hover?.fraction ??
+                            (durMs > 0
+                                ? (posMs / durMs).clamp(0.0, 1.0)
+                                : 0.0));
+                    final tooltipLeft =
+                        (targetFraction * (sliderWidth - 24)).clamp(
+                      8.0,
+                      (sliderWidth - 180).clamp(8.0, double.infinity),
+                    );
+
+                    return Positioned(
+                      bottom: 28,
+                      left: tooltipLeft,
+                      child: RepaintBoundary(
+                        child: IgnorePointer(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              DurationUtils.formatDuration(previewSec.toInt()),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                            decoration: BoxDecoration(
+                              color: const Color(0xF0181818),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                width: 0.5,
                               ),
-                            ),
-                            if (previewChapter != null &&
-                                previewChapter.title.isNotEmpty) ...[
-                              const SizedBox(width: 6),
-                              ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 160,
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black54,
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2),
                                 ),
-                                child: Text(
-                                  previewChapter.title,
-                                  style: const TextStyle(
-                                    color: Color(0xFF00AEEC),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  DurationUtils.formatDuration(
+                                    previewSec.toInt(),
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ],
+                                if (previewChapter != null &&
+                                    previewChapter.title.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 160,
+                                    ),
+                                    child: Text(
+                                      previewChapter.title,
+                                      style: const TextStyle(
+                                        color: Color(0xFF00AEEC),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
+                ),
+                // 2. 进度条主体与手势检测 — 零全局 setState，局部驱动
                 MouseRegion(
                   cursor: SystemMouseCursors.click,
                   onHover: (e) {
@@ -1150,61 +1167,70 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     final fraction = (sliderWidth > 24)
                         ? (localX / (sliderWidth - 24)).clamp(0.0, 1.0)
                         : 0.0;
-                    setState(() {
-                      _hoverSliderFraction = fraction;
-                      _hoverSliderSeconds = fraction * maxSec;
-                    });
+                    // 局部更新：彻底移除全局 setState，杜绝父级全量 Rebuild 与毛玻璃高频重绘
+                    _sliderHoverNotifier.value = (
+                      fraction: fraction,
+                      seconds: fraction * maxSec,
+                    );
                     _onPointerActivity();
                   },
                   onExit: (_) {
-                    setState(() {
-                      _hoverSliderSeconds = null;
-                      _hoverSliderFraction = null;
-                    });
+                    _sliderHoverNotifier.value = null;
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: ProgressBar(
-                      progress: _draggingProgress
-                          ? (_dragSeconds * 1000).round()
-                          : posMs,
-                      buffered: bufMs,
-                      total: durMs,
-                      barHeight: 3.5,
-                      thumbRadius: 6.0,
-                      thumbGlowRadius: 16.0,
-                      baseBarColor: Colors.white24,
-                      bufferedBarColor: Colors.white38,
-                      progressBarColor: biliBlue,
-                      thumbColor: biliBlue,
-                      thumbGlowColor: const Color(0x3300AEEC),
-                      onDragStart: (details) {
-                        setState(() {
-                          _draggingProgress = true;
+                    child: RepaintBoundary(
+                      child: ProgressBar(
+                        progress: _draggingProgress
+                            ? (_dragSeconds * 1000).round()
+                            : posMs,
+                        buffered: bufMs,
+                        total: durMs,
+                        barHeight: 3.5,
+                        thumbRadius: 6.0,
+                        thumbGlowRadius: 16.0,
+                        baseBarColor: Colors.white24,
+                        bufferedBarColor: Colors.white38,
+                        progressBarColor: biliBlue,
+                        thumbColor: biliBlue,
+                        thumbGlowColor: const Color(0x3300AEEC),
+                        onDragStart: (details) {
+                          setState(() {
+                            _draggingProgress = true;
+                            _dragSeconds = details.seconds.toDouble();
+                          });
+                          _sliderHoverNotifier.value = (
+                            fraction:
+                                (details.seconds / maxSec).clamp(0.0, 1.0),
+                            seconds: details.seconds.toDouble(),
+                          );
+                          c.onSeekStart(details.milliseconds);
+                          _onPointerActivity();
+                        },
+                        onDragUpdate: (details) {
                           _dragSeconds = details.seconds.toDouble();
-                        });
-                        c.onSeekStart(details.milliseconds);
-                        _onPointerActivity();
-                      },
-                      onDragUpdate: (details) {
-                        setState(() {
-                          _dragSeconds = details.seconds.toDouble();
-                        });
-                        c.onSeekUpdate(details.milliseconds);
-                        _onPointerActivity();
-                      },
-                      onDragEnd: () {
-                        _onPointerActivity();
-                      },
-                      onSeek: (targetMs) {
-                        setState(() {
-                          _draggingProgress = false;
-                          _dragSeconds = targetMs / 1000.0;
-                        });
-                        c.seek(Duration(milliseconds: targetMs));
-                        c.onSeekEnd();
-                        _onPointerActivity();
-                      },
+                          _sliderHoverNotifier.value = (
+                            fraction:
+                                (details.seconds / maxSec).clamp(0.0, 1.0),
+                            seconds: details.seconds.toDouble(),
+                          );
+                          c.onSeekUpdate(details.milliseconds);
+                          _onPointerActivity();
+                        },
+                        onDragEnd: () {
+                          _onPointerActivity();
+                        },
+                        onSeek: (targetMs) {
+                          setState(() {
+                            _draggingProgress = false;
+                            _dragSeconds = targetMs / 1000.0;
+                          });
+                          _sliderHoverNotifier.value = null;
+                          c.seek(Duration(milliseconds: targetMs));
+                          c.onSeekEnd();
+                          _onPointerActivity();
+                        },
+                      ),
                     ),
                   ),
                 ),
