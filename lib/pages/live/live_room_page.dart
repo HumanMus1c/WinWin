@@ -1051,12 +1051,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       left: 0,
       right: 0,
       child: ProgressiveGlass(
-        blur: 16,
+        blur: 10,
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         backgroundGradientColors: [
-          Colors.black.withValues(alpha: 0.8),
+          Colors.black.withValues(alpha: 0.45),
           Colors.transparent,
         ],
         child: Row(
@@ -1251,12 +1251,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       right: 0,
       bottom: 0,
       child: ProgressiveGlass(
-        blur: 16,
+        blur: 10,
         begin: Alignment.bottomCenter,
         end: Alignment.topCenter,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         backgroundGradientColors: [
-          Colors.black.withValues(alpha: 0.85),
+          Colors.black.withValues(alpha: 0.45),
           Colors.transparent,
         ],
         child: Row(

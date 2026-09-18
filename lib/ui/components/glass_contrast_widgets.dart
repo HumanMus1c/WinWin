@@ -262,7 +262,7 @@ class ProgressiveGlass extends StatelessWidget {
   const ProgressiveGlass({
     super.key,
     this.child,
-    this.blur = 16.0,
+    this.blur = 10.0,
     this.maxBlur,
     this.minBlur = 0.0,
     this.slices = 4,
@@ -284,7 +284,7 @@ class ProgressiveGlass extends StatelessWidget {
   /// 前景内容（按钮行、标题等）。如果为 null，则作为纯背景毛玻璃遮罩使用。
   final Widget? child;
 
-  /// 最大模糊半径（sigma），默认 16.0。若 <= 0.01 则降级为纯渐变无模糊模式。
+  /// 最大模糊半径（sigma），默认 10.0。若 <= 0.01 则降级为纯渐变无模糊模式。
   final double blur;
 
   /// 可选显式指定最大模糊半径，优先级高于 [blur]。

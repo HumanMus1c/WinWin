@@ -1215,10 +1215,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         }
 
         // 浮动/过渡态（overVideo 或滚动渐变）：朝下的渐进式毛玻璃，消除生硬横切边缘
-        final glassBlur = (16.0 * opacity).clamp(0.0, 16.0);
+        final glassBlur = (10.0 * opacity).clamp(0.0, 10.0);
         final topColor = overVideo
             ? Colors.black.withValues(
-                alpha: (0.65 * (1.0 - opacity) + 0.85 * opacity).clamp(0.0, 1.0))
+                alpha: (0.45 * (1.0 - opacity) + 0.70 * opacity).clamp(0.0, 1.0))
             : theme.scaffoldBackgroundColor
                 .withValues(alpha: (opacity * 0.95).clamp(0.0, 1.0));
 
@@ -1229,13 +1229,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           child: SafeArea(
             bottom: false,
             child: ProgressiveGlass(
-              blur: glassBlur > 0.5 ? glassBlur : (overVideo ? 8.0 : 0.0),
+              blur: glassBlur > 0.5 ? glassBlur : (overVideo ? 10.0 : 0.0),
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              stops: const [0.0, 0.7, 1.0],
+              stops: const [0.0, 0.6, 1.0],
               backgroundGradientColors: [
                 topColor,
-                topColor.withValues(alpha: topColor.a * 0.5),
+                topColor.withValues(alpha: topColor.a * 0.4),
                 Colors.transparent,
               ],
               height: kToolbarHeight,
