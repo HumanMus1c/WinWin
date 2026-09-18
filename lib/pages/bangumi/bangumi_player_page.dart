@@ -888,8 +888,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           );
         }
 
-        // 浮动/过渡态（overVideo 或滚动渐变）：朝下的渐进式毛玻璃，消除生硬横切边缘
-        final glassBlur = (10.0 * opacity).clamp(0.0, 10.0);
+        // 浮动/过渡态（overVideo 或滚动渐变）：朝下的纯渐进式压暗阴影，轻盈通透且零 GPU 滤镜开销
         final topColor = overVideo
             ? Colors.black.withValues(
                 alpha: (0.45 * (1.0 - opacity) + 0.70 * opacity).clamp(0.0, 1.0))
@@ -902,17 +901,20 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           right: 0,
           child: SafeArea(
             bottom: false,
-            child: ProgressiveGlass(
-              blur: glassBlur > 0.5 ? glassBlur : (overVideo ? 10.0 : 0.0),
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: const [0.0, 0.6, 1.0],
-              backgroundGradientColors: [
-                topColor,
-                topColor.withValues(alpha: topColor.a * 0.4),
-                Colors.transparent,
-              ],
+            child: Container(
               height: kToolbarHeight,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.6, 1.0],
+                  colors: [
+                    topColor,
+                    topColor.withValues(alpha: topColor.a * 0.4),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
               child: barContent,
             ),
           ),

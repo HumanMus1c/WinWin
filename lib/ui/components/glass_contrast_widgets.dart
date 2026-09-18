@@ -454,7 +454,7 @@ class ProgressiveGlass extends StatelessWidget {
         clipBehavior: clipBehavior,
         child: content,
       );
-    } else {
+    } else if (clipBehavior != Clip.none) {
       content = ClipRect(
         clipBehavior: clipBehavior,
         child: content,

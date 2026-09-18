@@ -17,7 +17,6 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/tcp/live.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
@@ -1050,15 +1049,18 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       top: 0,
       left: 0,
       right: 0,
-      child: ProgressiveGlass(
-        blur: 10,
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        backgroundGradientColors: [
-          Colors.black.withValues(alpha: 0.45),
-          Colors.transparent,
-        ],
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black.withValues(alpha: 0.45),
+              Colors.transparent,
+            ],
+          ),
+        ),
         child: Row(
           children: [
             IconButton(
@@ -1250,15 +1252,18 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       left: 0,
       right: 0,
       bottom: 0,
-      child: ProgressiveGlass(
-        blur: 10,
-        begin: Alignment.bottomCenter,
-        end: Alignment.topCenter,
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        backgroundGradientColors: [
-          Colors.black.withValues(alpha: 0.45),
-          Colors.transparent,
-        ],
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [
+              Colors.black.withValues(alpha: 0.45),
+              Colors.transparent,
+            ],
+          ),
+        ),
         child: Row(
           children: [
             // 1. 播放/暂停

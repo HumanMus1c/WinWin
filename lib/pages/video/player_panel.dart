@@ -783,101 +783,106 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// 底部控制条：渐进式毛玻璃与渐进压暗柔和延伸至进度条上方，大幅削减压暗厚重感。
+  /// 底部控制条：纯渐进式压暗阴影延伸至进度条上方，无毛玻璃（0 GPU 滤镜开销），且无任何裁剪容器阻挡时间胶囊向上溢出。
   Widget _buildControlBar() {
     final c = widget.controller;
     return RepaintBoundary(
-      child: ProgressiveGlass(
-        blur: 10,
-        begin: Alignment.bottomCenter,
-        end: Alignment.topCenter,
-        stops: const [0.0, 0.55, 1.0],
-        backgroundGradientColors: [
-          const Color(0x73000000), // 底部轻柔暗色 (~45% 黑，显著削减原 85% 的沉重压抑感)
-          const Color(0x2B000000), // 中部微弱过渡暗色 (~17% 黑)
-          Colors.transparent,      // 向上延伸至进度条上方平滑消隐至完全透明与 0 模糊
-        ],
-        padding: const EdgeInsets.only(
-          top: 10.0, // 向上延伸至进度条上方，提供舒适的渐隐过渡空间
-          bottom: Style.xs,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            stops: [0.0, 0.55, 1.0],
+            colors: [
+              Color(0x73000000), // 底部轻柔渐进压暗 (~45% 黑)
+              Color(0x28000000), // 中部微弱过渡暗色 (~16% 黑)
+              Colors.transparent, // 向上延伸至进度条上方平滑消隐至完全透明
+            ],
+          ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 第一行：进度条（位于渐进式毛玻璃与柔和暗色渐变内，向上平滑自然消隐）
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Style.sm),
-              child: _buildProgressSlider(),
-            ),
-            // 第二行：控制按钮行（左右分区）
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Style.sm),
-              child: Row(
-                children: [
-                  // 左侧：播放/暂停 + 时间 + 弹幕开关
-                  _buildPlayPauseButton(),
-                  const SizedBox(width: Style.sm),
-                  _buildTimeText(),
-                  const SizedBox(width: Style.md),
-                  _buildDanmakuChip(),
-                  const Spacer(),
-                  // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
-                  _buildAudioCodecLabel(),
-                  _buildQualityLabel(),
-                  _buildSpeedLabel(),
-                  _buildChapterButton(),
-                  _buildSubtitleChip(),
-                  const SizedBox(width: Style.sm),
-                  _iconButton(
-                    icon: AppIcons.sendDanmaku(context),
-                    tooltip: '发弹幕',
-                    onPressed: () => showSendDanmakuPanel(context, controller: c),
-                  ),
-                  _iconButton(
-                    icon: AppIcons.danmakuTune(context),
-                    tooltip: '弹幕设置',
-                    onPressed: () => showDanmakuSettingsPanel(
-                      context,
-                      controller: c,
-                      fullscreen: widget.fullscreen || widget.inAppFullscreen,
-                    ),
-                  ),
-                  _iconButton(
-                    icon: AppIcons.volumeUp(context),
-                    tooltip: '音量',
-                    onPressed: _toggleVolumePopup,
-                  ),
-                  _iconButton(
-                    icon: AppIcons.lockOutline(context),
-                    tooltip: '锁定控制条',
-                    onPressed: _toggleLock,
-                  ),
-                  if (!widget.fullscreen)
-                    _iconButton(
-                      icon: AppIcons.pip(context),
-                      tooltip: '画中画',
-                      onPressed: () => DesktopPipController.instance.togglePip(),
-                    ),
-                  if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
-                    _iconButton(
-                      icon: AppIcons.inAppFullscreen(
-                        context,
-                        active: widget.inAppFullscreen,
-                      ),
-                      tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
-                      onPressed: widget.onToggleInAppFullscreen!,
-                    ),
-                  if (widget.onToggleFullscreen != null)
-                    _iconButton(
-                      icon: AppIcons.fullscreen(context, active: widget.fullscreen),
-                      tooltip: widget.fullscreen ? '退出全屏' : '全屏',
-                      onPressed: widget.onToggleFullscreen!,
-                    ),
-                ],
+        child: Padding(
+          padding: const EdgeInsets.only(
+            top: 14.0, // 向上延伸至进度条上方，提供舒适的阴影渐变空间
+            bottom: Style.xs,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 第一行：进度条（时间胶囊可向上自由悬浮溢出，无任何 ClipRect 截断）
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+                child: _buildProgressSlider(),
               ),
-            ),
-          ],
+              // 第二行：控制按钮行（左右分区）
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+                child: Row(
+                  children: [
+                    // 左侧：播放/暂停 + 时间 + 弹幕开关
+                    _buildPlayPauseButton(),
+                    const SizedBox(width: Style.sm),
+                    _buildTimeText(),
+                    const SizedBox(width: Style.md),
+                    _buildDanmakuChip(),
+                    const Spacer(),
+                    // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
+                    _buildAudioCodecLabel(),
+                    _buildQualityLabel(),
+                    _buildSpeedLabel(),
+                    _buildChapterButton(),
+                    _buildSubtitleChip(),
+                    const SizedBox(width: Style.sm),
+                    _iconButton(
+                      icon: AppIcons.sendDanmaku(context),
+                      tooltip: '发弹幕',
+                      onPressed: () => showSendDanmakuPanel(context, controller: c),
+                    ),
+                    _iconButton(
+                      icon: AppIcons.danmakuTune(context),
+                      tooltip: '弹幕设置',
+                      onPressed: () => showDanmakuSettingsPanel(
+                        context,
+                        controller: c,
+                        fullscreen: widget.fullscreen || widget.inAppFullscreen,
+                      ),
+                    ),
+                    _iconButton(
+                      icon: AppIcons.volumeUp(context),
+                      tooltip: '音量',
+                      onPressed: _toggleVolumePopup,
+                    ),
+                    _iconButton(
+                      icon: AppIcons.lockOutline(context),
+                      tooltip: '锁定控制条',
+                      onPressed: _toggleLock,
+                    ),
+                    if (!widget.fullscreen)
+                      _iconButton(
+                        icon: AppIcons.pip(context),
+                        tooltip: '画中画',
+                        onPressed: () => DesktopPipController.instance.togglePip(),
+                      ),
+                    if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
+                      _iconButton(
+                        icon: AppIcons.inAppFullscreen(
+                          context,
+                          active: widget.inAppFullscreen,
+                        ),
+                        tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
+                        onPressed: widget.onToggleInAppFullscreen!,
+                      ),
+                    if (widget.onToggleFullscreen != null)
+                      _iconButton(
+                        icon: AppIcons.fullscreen(context, active: widget.fullscreen),
+                        tooltip: widget.fullscreen ? '退出全屏' : '全屏',
+                        onPressed: widget.onToggleFullscreen!,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
