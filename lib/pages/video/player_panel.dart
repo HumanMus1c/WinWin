@@ -346,6 +346,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return PlayerFocus(
       controller: c,
       enabled: !_locked,
+      onSpeedChange: _onLongPressSpeedChange,
       onToggleFullscreen: widget.onToggleFullscreen,
       onToggleInAppFullscreen: widget.onToggleInAppFullscreen,
       onEscape: () {

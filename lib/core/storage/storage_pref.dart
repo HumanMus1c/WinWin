@@ -143,7 +143,7 @@ abstract final class Pref {
         return CDNService.values.byName(cdnName);
       } catch (_) {}
     }
-    return CDNService.ali;
+    return CDNService.backupUrl;
   }
 
   static set defaultCDNService(CDNService service) {

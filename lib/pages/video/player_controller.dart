@@ -133,6 +133,8 @@ class WinWinPlayerController {
   int? _queuedSeekTargetMs;
   /// 最近一次底层 native seek 完成返回的时间点，用于保障观察期平滑结算。
   DateTime? _nativeSeekDoneTime;
+  /// 短时连续快速 Seek 请求防抖合并定时器（35ms）。
+  Timer? _seekDebounceTimer;
 
   /// 外部拖动开始（对标 PiliPlus onSeekStart）
   void onSeekStart(int seekFromMs) {
@@ -322,15 +324,18 @@ class WinWinPlayerController {
     // avio.reconnect: 遇断开自动发起新 Range 请求重连。
     // reconnect_on_network_error: 偶发网络波动或丢包时重试。
     // reconnect_on_http_error: 瞬态 4xx/5xx 错误时重试。
-    // avio.timeout / avio.rw_timeout: FFmpeg 设置 10s 超时防死锁（微秒）。
+    // avio.timeout / avio.rw_timeout: FFmpeg 设置 5s 超时防死锁（微秒），加快弱网及死链逃生自愈。
     // 注意：严禁开启 avio.reconnect_streamed 与 reconnect_at_eof，两者专用于不可 seek 的直播流，
     // 会导致点播快退时 FFmpeg 误判流类型而拒绝发送精准 HTTP Range 偏移，造成网络停滞！
     player.setProperty('avio.reconnect', '1');
     player.setProperty('avio.reconnect_delay_max', '5');
     player.setProperty('avio.reconnect_on_network_error', '1');
     player.setProperty('avio.reconnect_on_http_error', '4xx,5xx');
-    player.setProperty('avio.timeout', '10000000');
-    player.setProperty('avio.rw_timeout', '10000000');
+    player.setProperty('avio.timeout', '5000000');
+    player.setProperty('avio.rw_timeout', '5000000');
+
+    // 显式绑定音频时钟为 Master Clock，确保点播与双流模式下音画严格对齐防时钟漂移
+    player.setProperty('avsync.audio', 'true');
 
     // 启用解复用器包缓存（MDK 官方推荐 ranges=16）：
     // 允许在内存中缓存解复用后的物理数据包。当向后或向前短距离 Seek 时，
@@ -342,12 +347,6 @@ class WinWinPlayerController {
     if (Platform.isWindows) {
       mdk.setGlobalOption('d3d11.sync.cpu', 1);
     }
-
-    // 缓冲窗口（VOD 点播模式，对标 MDK 官方 wiki 及 PiliPlus 宽幅缓冲策略）：
-    // min: 500ms（只要缓冲满 0.5s 即极速出帧起播，解决初次加载与 seek 响应迟缓）；
-    // max: 60000ms（后台预读 60s 音视频流，解决默认 4s 水位过浅导致低码率音频连接被 CDN 判定闲置切断并在空仓时卡死的问题）；
-    // drop: false（点播模式严禁丢包）。
-    player.setBufferRange(min: 500, max: 60000, drop: false);
 
     // 保持底层播放内核在视频播放完毕后不释放资源（对标 MDK 官方 keep_open 规范）：
     // 默认 keep_open=0 时，播放完毕 MDK 会自动调用 set(State::Stopped) 释放解码器和渲染管线，
@@ -1518,7 +1517,16 @@ class WinWinPlayerController {
       return;
     }
 
-    _processSeekQueue(clampedMs, seq);
+    // 短时防抖（35ms）：连续快速按键/拖动微调时合并请求，只向底层派发最终目标，避免底层网络与解码被无用中间请求堵死
+    _seekDebounceTimer?.cancel();
+    _seekDebounceTimer = Timer(const Duration(milliseconds: 35), () {
+      if (_disposed) return;
+      if (_nativeSeekInFlight) {
+        _queuedSeekTargetMs = clampedMs;
+        return;
+      }
+      _processSeekQueue(clampedMs, seq);
+    });
   }
 
   void _processSeekQueue(int targetMs, int seq) {
@@ -1529,8 +1537,8 @@ class WinWinPlayerController {
     unawaited(() async {
       try {
         // 精准分流 SeekFlags：
-        // 1. 若定位到片头 0ms，使用纯净的 fromStart（对标 MDK 最佳实践 seek(0, SeekFlag::FromStart)），
-        //    精准定位至流第一帧物理起始点；
+        // 1. 若定位到片头 0ms，使用 fromStart | keyFrame 极速出首个物理关键帧（对标 MDK 最佳实践），
+        //    杜绝无 keyFrame 导致解码器从文件头逐帧解码引发数秒卡顿；
         // 2. 若向已播放过时间点快退（targetMs < currentPosMs），严禁传 inCache（MDK 官方规范明确要求
         //    inCache 的目标位置必须落在 (position, position + buffered] 正向区间内）。快退使用 fromStart | keyFrame；
         // 3. 若向后快进且落在正向已缓冲水位内，使用 fromStart | keyFrame | inCache 从内存秒开；
@@ -1542,7 +1550,7 @@ class WinWinPlayerController {
             bufMax > 0;
 
         final int flagBits = targetMs == 0
-            ? mdk.SeekFlag.fromStart
+            ? (mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame)
             : (mdk.SeekFlag.fromStart |
                 mdk.SeekFlag.keyFrame |
                 (isForwardInCache ? mdk.SeekFlag.inCache : 0));
@@ -1790,6 +1798,8 @@ class WinWinPlayerController {
     _pollTimer = null;
     _bufferingDebounceTimer?.cancel();
     _bufferingDebounceTimer = null;
+    _seekDebounceTimer?.cancel();
+    _seekDebounceTimer = null;
     _heartBeatTimer?.cancel();
     _heartBeatTimer = null;
     sponsorBlock?.dispose();

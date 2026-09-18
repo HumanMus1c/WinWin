@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -31,6 +33,7 @@ class PlayerFocus extends StatefulWidget {
     this.onScreenshot,
     this.onToggleDanmaku,
     this.onLockToggle,
+    this.onSpeedChange,
     this.enabled = true,
   });
 
@@ -45,6 +48,9 @@ class PlayerFocus extends StatefulWidget {
   final VoidCallback? onToggleDanmaku;
   final ValueChanged<bool>? onLockToggle;
 
+  /// 长按快进倍速提示回调（对标 PiliPlus，驱动 UI 胶囊提示）
+  final void Function(bool isLongPress, double speed)? onSpeedChange;
+
   /// 是否启用键盘快捷键（锁定控制条时可设为 false）。
   final bool enabled;
 
@@ -56,6 +62,12 @@ class _PlayerFocusState extends State<PlayerFocus> {
   final FocusNode _focusNode = FocusNode();
   double? _mutedVolume;
 
+  // ── 方向键交互防抖与长按高倍速快进（对标 PiliPlus）──
+  Timer? _rightArrowLongPressTimer;
+  bool _isRightArrowLongPressing = false;
+  double? _originalSpeedBeforeLongPress;
+  bool _isLeftArrowPressed = false;
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +76,8 @@ class _PlayerFocusState extends State<PlayerFocus> {
 
   @override
   void dispose() {
+    _rightArrowLongPressTimer?.cancel();
+    _rightArrowLongPressTimer = null;
     _focusNode.dispose();
     super.dispose();
   }
@@ -75,9 +89,67 @@ class _PlayerFocusState extends State<PlayerFocus> {
 
   bool _handleKey(KeyEvent event) {
     if (!widget.enabled) return false;
-    if (event is! KeyDownEvent) return false;
     final c = widget.controller;
     final key = event.logicalKey;
+
+    // ── 左右方向键交互（对标 PiliPlus：长按 200ms 触发 3x 高倍速，KeyUp 触发单次 Seek，杜绝 KeyDown 狂轰滥炸）──
+    if (key == LogicalKeyboardKey.arrowRight) {
+      if (event is KeyDownEvent) {
+        if (_isRightArrowLongPressing || _rightArrowLongPressTimer != null) {
+          // Windows 键盘自动 repeat 派发的重复 KeyDown，全部吸收拦截
+          return true;
+        }
+        _originalSpeedBeforeLongPress = c.playbackSpeed.value;
+        _rightArrowLongPressTimer = Timer(const Duration(milliseconds: 200), () {
+          if (!mounted || !widget.enabled) return;
+          _isRightArrowLongPressing = true;
+          final targetSpeed = GStorage.video.get(
+            VideoBoxKey.longPressSpeedDefault,
+            defaultValue: 3.0,
+          );
+          c.setPlaybackSpeed(targetSpeed);
+          widget.onSpeedChange?.call(true, targetSpeed);
+        });
+        return true;
+      } else if (event is KeyUpEvent) {
+        if (_isRightArrowLongPressing) {
+          // 长按状态松开：恢复原速
+          final original = _originalSpeedBeforeLongPress ?? 1.0;
+          c.setPlaybackSpeed(original);
+          _originalSpeedBeforeLongPress = null;
+          _isRightArrowLongPressing = false;
+          widget.onSpeedChange?.call(false, original);
+        } else if (_rightArrowLongPressTimer != null) {
+          // 200ms 内松开：属于短按单击，触发单次快进 10s
+          _rightArrowLongPressTimer?.cancel();
+          _rightArrowLongPressTimer = null;
+          _seekRelative(c, _seekStep);
+        }
+        return true;
+      }
+      return false;
+    }
+
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      if (event is KeyDownEvent) {
+        if (_isLeftArrowPressed) {
+          // 吸收长按产生的重复 KeyDown
+          return true;
+        }
+        _isLeftArrowPressed = true;
+        return true;
+      } else if (event is KeyUpEvent) {
+        if (_isLeftArrowPressed) {
+          _isLeftArrowPressed = false;
+          _seekRelative(c, -_seekStep);
+        }
+        return true;
+      }
+      return false;
+    }
+
+    // 其余功能键仅在按下瞬间（KeyDownEvent）生效
+    if (event is! KeyDownEvent) return false;
 
     // 空格 = 播放/暂停
     if (key == LogicalKeyboardKey.space) {
@@ -117,16 +189,6 @@ class _PlayerFocusState extends State<PlayerFocus> {
     // Esc = 返回上一级（全屏态退出全屏，否则退出页面；不再切换全屏）
     if (key == LogicalKeyboardKey.escape) {
       widget.onEscape?.call();
-      return true;
-    }
-    // ← = 后退 10s
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      _seekRelative(c, -_seekStep);
-      return true;
-    }
-    // → = 前进 10s
-    if (key == LogicalKeyboardKey.arrowRight) {
-      _seekRelative(c, _seekStep);
       return true;
     }
     // ↑ = 音量 +10
