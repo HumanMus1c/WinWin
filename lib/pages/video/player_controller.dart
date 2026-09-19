@@ -348,9 +348,10 @@ class WinWinPlayerController {
     // 注意：早期使用的字符串属性 avsync.audio='true' 会在 mdk 0.38.0 解析时抛
     // std::invalid_argument 导致 Release 必崩（见 docs/进入视频播放页崩溃根因与修复.md），
     // 已废弃；此处改用官方 int32 全局选项（与 d3d11.sync.cpu 同路径，无崩溃风险）。
-    // [AB] 音画同步 Seek 取证：B 组=1（adaptive 开启，现状，已测得快退后 rate≈0.53x 压速音频）；
-    // A 组=0（关闭）验证「音频极慢爬行」是否消失。取证结束后按结论定稿。
-    mdk.setGlobalOption('avsync.audio.adaptive', 0); // [AB] A 组验证（关闭 adaptive）
+    // [AB] 取证结论（2026-09-19）：adaptive 仅放大 seek 后追赶窗口的音频压速（B 组 rate≈0.53x），
+    // 非主因（A 组=0 仍出现时钟不归位）；主因是快退 seek 缺 Backward 位（见 _processSeekQueue）。
+    // 恢复 =1 保留长程音画对齐收益；seek 时钟归位修复后压速窗口自然消失。
+    mdk.setGlobalOption('avsync.audio.adaptive', 1);
 
     if (kDebugMode) {
       // ===== 音画同步 Seek 取证（临时，取证结束后移除）=====
@@ -1618,7 +1619,8 @@ class WinWinPlayerController {
         // 1. 若定位到片头 0ms，使用 fromStart | keyFrame 极速出首个物理关键帧（对标 MDK 最佳实践），
         //    杜绝无 keyFrame 导致解码器从文件头逐帧解码引发数秒卡顿；
         // 2. 若向已播放过时间点快退（targetMs < currentPosMs），严禁传 inCache（MDK 官方规范明确要求
-        //    inCache 的目标位置必须落在 (position, position + buffered] 正向区间内）。快退使用 fromStart | keyFrame；
+        //    inCache 的目标位置必须落在 (position, position + buffered] 正向区间内）。快退使用
+        //    fromStart | keyFrame | Backward（Backward 位保证 mdk 按反向语义定位，时钟正确归位）；
         // 3. 若向后快进且落在正向已缓冲水位内，使用 fromStart | keyFrame | inCache 从内存秒开；
         // 4. 若向后快进超出缓冲水位，使用 fromStart | keyFrame 从网络直接 Range 命中。
         final currentPosMs = player.position;
@@ -1627,10 +1629,19 @@ class WinWinPlayerController {
             targetMs <= currentPosMs + bufMax &&
             bufMax > 0;
 
+        // 快退必须显式带 Backward 位（MDK SeekFlag.Backward = 1<<16，fvp 未暴露该常量）。
+        // MDK 文档："KeyFrame seek fast, forward if Backward is not set" —— 缺 Backward 时
+        // mdk 按 forward 语义处理快退，导致外部音轨时钟不归位、视频高速追赶旧位置的
+        // 音画错位（2026-09-19 取证：快退 seek 返回正确但 130ms 后 position 回跳旧位置）。
+        // 提取自 MDK SDK 头文件 mdk/global.h。
+        const int kSeekFlagBackward = 1 << 16;
+        final bool isBackward = targetMs < currentPosMs;
+
         final int flagBits = targetMs == 0
             ? (mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame)
             : (mdk.SeekFlag.fromStart |
                 mdk.SeekFlag.keyFrame |
+                (isBackward ? kSeekFlagBackward : 0) |
                 (isForwardInCache ? mdk.SeekFlag.inCache : 0));
         final flags = mdk.SeekFlag(flagBits);
 
