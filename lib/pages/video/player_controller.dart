@@ -438,12 +438,20 @@ class WinWinPlayerController {
       ..add(player.onStateChanged.listen((event) {
         if (_disposed) return;
         final isPlaying = event.newValue == mdk.PlaybackState.playing;
-        playing.value = isPlaying;
+        // pause-during-seek 冻结窗口：seek 流程内部切换的 paused 态不向 UI 广播
+        // （播放按钮/弹幕保持播放中，加载态由 buffering 转圈承载），seek 结束统一恢复。
+        // 若用户在冻结窗口内主动暂停（_userIntentPlaying=false），则正常广播暂停态。
+        final inSeekFreeze = _isSeeking ||
+            _nativeSeekInFlight ||
+            _queuedSeekTargetMs != null;
+        if (isPlaying || !inSeekFreeze || !_userIntentPlaying) {
+          playing.value = isPlaying;
+        }
         if (isPlaying) {
           completed.value = false;
         } else if (event.newValue == mdk.PlaybackState.stopped ||
             event.newValue == mdk.PlaybackState.paused) {
-          if (_isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null) {
+          if (inSeekFreeze) {
             return;
           }
           // 播放器到达流末尾自然停止（keep_open=1 时 MDK 在所有帧渲染完成后转入 paused，keep_open=0 时转入 stopped）
@@ -1482,7 +1490,16 @@ class WinWinPlayerController {
   void playOrPause() {
     final player = _player;
     if (player == null || _disposed) return;
-    if (player.state == mdk.PlaybackState.playing) {
+    // seek 冻结窗口（内部 paused 态）：按用户意图判定实际播放方向。
+    // 冻结期间底层 state 恒为 paused，若直接读 state 会把「转圈中的播放」误判为
+    // 暂停态，导致点击暂停变成中途恢复（重新暴露错位窗口）。
+    final inSeekFreeze = _isSeeking ||
+        _nativeSeekInFlight ||
+        _queuedSeekTargetMs != null;
+    final bool isEffectivelyPlaying = inSeekFreeze
+        ? _userIntentPlaying
+        : player.state == mdk.PlaybackState.playing;
+    if (isEffectivelyPlaying) {
       _userIntentPlaying = false;
       _bufferingStallMs = 0;
       player.state = mdk.PlaybackState.paused;
@@ -1631,6 +1648,8 @@ class WinWinPlayerController {
             targetMs <= currentPosMs + bufMax &&
             bufMax > 0;
         final bool isBackward = targetMs < currentPosMs;
+        final bool isDualTrack =
+            _currentAudioUrl != null && _currentAudioUrl!.isNotEmpty;
 
         final int flagBits = targetMs == 0
             ? (mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame)
@@ -1639,10 +1658,27 @@ class WinWinPlayerController {
                 (isForwardInCache ? mdk.SeekFlag.inCache : 0));
         final flags = mdk.SeekFlag(flagBits);
 
+        // ===== pause-during-seek 冻结（2026-09-19 AVSyncTrace 取证定论）=====
+        // 根因实证：mdk 0.38.0 双轨（主视频 + 外挂音轨）快退 seek 后，外挂音轨
+        // demuxer 不归位 → 音频主时钟停留在旧位置（SEEK <= res 精确、posAfter 仍为
+        // 旧值）→ 视频向旧时钟高速追赶（倍速快进观感）+ avsync.audio.adaptive
+        // 压速音频（慢放观感），错位窗口 0.6~1.5s；快进出缓存时视频需网络 Range +
+        // 关键帧解码数秒，期间音频（小流）先就绪出声。
+        // 对策（对标 YouTube/PiliPlus 的 seek 转圈体验）：seek 全程冻结播放——
+        //   暂停态音频后端立即静音（无压速慢放可闻）、视频渲染停在落点帧（无倍速
+        //   追赶），两类错位统一收敛为标准「转圈 → 落地续播」；seek 落地 + 时钟
+        //   归位后统一恢复。暂停态下解复用/解码/网络缓冲照常进行（不影响耗时）。
+        if (_userIntentPlaying) {
+          buffering.value = true; // 冻结窗口统一呈现加载转圈
+          if (player.state == mdk.PlaybackState.playing) {
+            player.state = mdk.PlaybackState.paused; // 冻结音频主时钟与视频渲染
+          }
+        }
+
         // ===== 音画同步 Seek 取证（临时）=====
         AppLogger.w(
           'AVSyncTrace',
-          'SEEK => target=$targetMs flags=$flagBits curPos=$currentPosMs bufMax=$bufMax inCache=$isForwardInCache audioBuffered=${_audioCdnCandidates.isNotEmpty ? 'dual-track' : 'none'}',
+          'SEEK => target=$targetMs flags=$flagBits curPos=$currentPosMs bufMax=$bufMax inCache=$isForwardInCache audioBuffered=${isDualTrack ? 'dual-track' : 'none'} frozen=${player.state != mdk.PlaybackState.playing}',
         );
         // =================================
         final res = await player.seek(position: targetMs, flags: flags);
@@ -1661,16 +1697,16 @@ class WinWinPlayerController {
         // ===== 双轨快退：外部音轨强制跟随（2026-09-19 取证定论）=====
         // 实证：seek 后视频 demuxer 归位成功（res 精确），但外部音轨 demuxer 不跟随，
         // 音频时钟(master)停在旧位置、视频被迫高速追赶；唯一有效手段是重挂外部音轨后
-        // 二次 seek 目标（延迟自愈实测有效，仅 800ms 兜底前有 1.5s 错位窗口）。
-        // 故快退时在首次 seek 完成后立即执行重挂+二次定位，消除错位窗口。
+        // 二次 seek 目标。原先播放态下执行仍有 0.6~1.5s 可感知错位窗口（倍速追赶 +
+        // 压速慢放）；现改为冻结（暂停）态下执行重挂+二次定位，并轮询等待音频主时钟
+        // 归位后再统一恢复播放——错位窗口内无任何输出，用户只感知标准转圈加载。
         if (seq == _seekSeq &&
             _queuedSeekTargetMs == null &&
             isBackward &&
-            _currentAudioUrl != null &&
-            _currentAudioUrl!.isNotEmpty) {
+            isDualTrack) {
           AppLogger.w(
             'PlayerController',
-            'backward seek: force resync external audio track to $targetMs',
+            'backward seek: force resync external audio track to $targetMs (frozen)',
           );
           player.setMedia(_currentAudioUrl!, mdk.MediaType.audio);
           player.activeAudioTracks = const [0];
@@ -1685,6 +1721,23 @@ class WinWinPlayerController {
               'PlayerController',
               'audio re-seek after backward seek failed: $res2',
             );
+          }
+          // 等待音频主时钟归位：重挂+二次定位后时钟应锚定到目标点附近。
+          // 50ms 步进轮询，上限 600ms 防异常僵死；未归位则放弃等待，
+          // 由恢复播放后的 800ms 自愈兜底（音频流动可强制时钟重锚定）。
+          final settleDeadline =
+              DateTime.now().add(const Duration(milliseconds: 600));
+          while (DateTime.now().isBefore(settleDeadline)) {
+            final p = _player;
+            if (_disposed || p == null) break;
+            if ((p.position - targetMs).abs() <= 400) {
+              AppLogger.w(
+                'AVSyncTrace',
+                'clock settled: pos=${p.position}ms target=$targetMs (backward dual-track)',
+              );
+              break;
+            }
+            await Future.delayed(const Duration(milliseconds: 50));
           }
         }
         // ========================================================
@@ -1741,8 +1794,14 @@ class WinWinPlayerController {
             _queuedSeekTargetMs = null;
             _processSeekQueue(nextTarget, _seekSeq);
           } else {
+            // 队列排空：统一解除 seek 冻结——清除加载转圈并按用户意图恢复播放。
+            buffering.value = false;
             if (player.state != mdk.PlaybackState.playing && _userIntentPlaying) {
               player.state = mdk.PlaybackState.playing;
+            } else if (!_userIntentPlaying) {
+              // 用户在冻结窗口内主动暂停：底层已是 paused（冻结用），
+              // 显式同步 UI 播放态（onStateChanged 冻结抑制未广播该变化）。
+              playing.value = false;
             }
           }
         }
