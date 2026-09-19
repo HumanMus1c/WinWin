@@ -1783,10 +1783,13 @@ class WinWinPlayerController {
         // =================================
         final res = await player.seek(position: targetMs, flags: flags);
         if (_disposed) return;
+        // 主 seek 返回时刻的时钟快照：该时机的 position 读取两次死锁取证均安全返回
+        //（死点均在此之后）。除日志外，供下方「归位跳过重挂」判定复用，不重复读取。
+        final posAfterMainSeek = player.position;
         // ===== 音画同步 Seek 取证（临时）=====
         AppLogger.w(
           'AVSyncTrace',
-          'SEEK <= res=$res posAfter=${player.position}ms buf=${player.buffered()}ms state=${player.state}',
+          'SEEK <= res=$res posAfter=${posAfterMainSeek}ms buf=${player.buffered()}ms state=${player.state}',
         );
         // =================================
 
@@ -1800,10 +1803,26 @@ class WinWinPlayerController {
         // 二次 seek 目标。原先播放态下执行仍有 0.6~1.5s 可感知错位窗口（倍速追赶 +
         // 压速慢放）；现改为冻结（暂停）态下执行重挂+二次定位，并轮询等待音频主时钟
         // 归位后再统一恢复播放——错位窗口内无任何输出，用户只感知标准转圈加载。
+        // 前置归位检查（2026-09-20 00:34 死锁取证）：若外挂音轨已跟随主 seek 归位
+        //（position 与目标一致），重挂纯属多余，且归位瞬态调用 setMedia 存在死锁
+        // 风险（实证 isolate 永久阻塞、程序无响应）——仅未归位时才重挂。
+        final bool clockSettledAfterMainSeek =
+            (posAfterMainSeek - targetMs).abs() <= 1000;
         if (seq == _seekSeq &&
             _queuedSeekTargetMs == null &&
             isBackward &&
-            isDualTrack) {
+            isDualTrack &&
+            clockSettledAfterMainSeek) {
+          AppLogger.w(
+            'AVSyncTrace',
+            'clock settled after main seek: pos=$posAfterMainSeek target=$targetMs, skip remount',
+          );
+        }
+        if (seq == _seekSeq &&
+            _queuedSeekTargetMs == null &&
+            isBackward &&
+            isDualTrack &&
+            !clockSettledAfterMainSeek) {
           AppLogger.w(
             'PlayerController',
             'backward seek: force resync external audio track to $targetMs (frozen)',
