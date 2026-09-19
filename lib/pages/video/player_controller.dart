@@ -1619,8 +1619,10 @@ class WinWinPlayerController {
         // 1. 若定位到片头 0ms，使用 fromStart | keyFrame 极速出首个物理关键帧（对标 MDK 最佳实践），
         //    杜绝无 keyFrame 导致解码器从文件头逐帧解码引发数秒卡顿；
         // 2. 若向已播放过时间点快退（targetMs < currentPosMs），严禁传 inCache（MDK 官方规范明确要求
-        //    inCache 的目标位置必须落在 (position, position + buffered] 正向区间内）。快退使用
-        //    fromStart | keyFrame | Backward（Backward 位保证 mdk 按反向语义定位，时钟正确归位）；
+        //    inCache 的目标位置必须落在 (position, position + buffered] 正向区间内）。
+        //    快退改用 Accurate（去 KeyFrame，MDK 文档：Accurate seek implies Backward，
+        //    内部完整反向定位）；实证（2026-09-19）：fast keyFrame|Backward 快退仍不驱动
+        //    外部音轨 demuxer，导致音频时钟不归位、视频高速追赶旧位置；
         // 3. 若向后快进且落在正向已缓冲水位内，使用 fromStart | keyFrame | inCache 从内存秒开；
         // 4. 若向后快进超出缓冲水位，使用 fromStart | keyFrame 从网络直接 Range 命中。
         final currentPosMs = player.position;
@@ -1628,20 +1630,12 @@ class WinWinPlayerController {
         final isForwardInCache = targetMs >= currentPosMs &&
             targetMs <= currentPosMs + bufMax &&
             bufMax > 0;
-
-        // 快退必须显式带 Backward 位（MDK SeekFlag.Backward = 1<<16，fvp 未暴露该常量）。
-        // MDK 文档："KeyFrame seek fast, forward if Backward is not set" —— 缺 Backward 时
-        // mdk 按 forward 语义处理快退，导致外部音轨时钟不归位、视频高速追赶旧位置的
-        // 音画错位（2026-09-19 取证：快退 seek 返回正确但 130ms 后 position 回跳旧位置）。
-        // 提取自 MDK SDK 头文件 mdk/global.h。
-        const int kSeekFlagBackward = 1 << 16;
         final bool isBackward = targetMs < currentPosMs;
 
         final int flagBits = targetMs == 0
             ? (mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame)
             : (mdk.SeekFlag.fromStart |
-                mdk.SeekFlag.keyFrame |
-                (isBackward ? kSeekFlagBackward : 0) |
+                (isBackward ? 0 : mdk.SeekFlag.keyFrame) |
                 (isForwardInCache ? mdk.SeekFlag.inCache : 0));
         final flags = mdk.SeekFlag(flagBits);
 
@@ -1673,6 +1667,34 @@ class WinWinPlayerController {
           _lastPolledPosMs = landedMs;
           _nativeSeekDoneTime = DateTime.now();
           _lastSeekFinishTime = DateTime.now();
+
+          // ===== 音画同步 Seek 自愈兜底（2026-09-19 取证）=====
+          // 快退 seek 后外部音轨 demuxer 可能不归位（position 回跳旧位置、视频追赶），
+          // 延迟 800ms 校验：若 position 仍远离目标且非 seek 竞争，重挂外部音轨并二次定位。
+          if (_currentAudioUrl != null &&
+              _currentAudioUrl!.isNotEmpty &&
+              isBackward) {
+            final checkTarget = targetMs;
+            Future.delayed(const Duration(milliseconds: 800), () {
+              if (_disposed || !_userIntentPlaying) return;
+              final p = _player;
+              if (p == null) return;
+              final cur = p.position;
+              if ((cur - checkTarget).abs() > 2500) {
+                AppLogger.w(
+                  'PlayerController',
+                  'seek clock not settled (target=$checkTarget pos=$cur), resync external audio track',
+                );
+                p.setMedia(_currentAudioUrl!, mdk.MediaType.audio);
+                p.activeAudioTracks = const [0];
+                unawaited(p.seek(
+                  position: checkTarget,
+                  flags: const mdk.SeekFlag(mdk.SeekFlag.fromStart),
+                ));
+              }
+            });
+          }
+          // =================================================
         }
       } catch (e) {
         AppLogger.w('PlayerController', 'player.seek error: $e');
