@@ -1658,6 +1658,37 @@ class WinWinPlayerController {
           AppLogger.w('PlayerController', 'player.seek error code: $res');
         }
 
+        // ===== 双轨快退：外部音轨强制跟随（2026-09-19 取证定论）=====
+        // 实证：seek 后视频 demuxer 归位成功（res 精确），但外部音轨 demuxer 不跟随，
+        // 音频时钟(master)停在旧位置、视频被迫高速追赶；唯一有效手段是重挂外部音轨后
+        // 二次 seek 目标（延迟自愈实测有效，仅 800ms 兜底前有 1.5s 错位窗口）。
+        // 故快退时在首次 seek 完成后立即执行重挂+二次定位，消除错位窗口。
+        if (seq == _seekSeq &&
+            _queuedSeekTargetMs == null &&
+            isBackward &&
+            _currentAudioUrl != null &&
+            _currentAudioUrl!.isNotEmpty) {
+          AppLogger.w(
+            'PlayerController',
+            'backward seek: force resync external audio track to $targetMs',
+          );
+          player.setMedia(_currentAudioUrl!, mdk.MediaType.audio);
+          player.activeAudioTracks = const [0];
+          final res2 = await player.seek(
+            position: targetMs,
+            flags: const mdk.SeekFlag(
+              mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame,
+            ),
+          );
+          if (res2 < 0) {
+            AppLogger.w(
+              'PlayerController',
+              'audio re-seek after backward seek failed: $res2',
+            );
+          }
+        }
+        // ========================================================
+
         if (seq == _seekSeq && _queuedSeekTargetMs == null) {
           final landedMs = res >= 0 ? res : targetMs;
           _seekTargetMs = landedMs;
