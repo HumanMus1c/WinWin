@@ -1722,69 +1722,21 @@ class WinWinPlayerController {
               'audio re-seek after backward seek failed: $res2',
             );
           }
-          // 等待音频主时钟真正归位（2026-09-19 23:41 取证升级）：
-          // setMedia 重挂不冲刷音频渲染管线中的旧缓冲——二次 seek 返回后
-          // master clock 被旧缓冲拖回旧位置（实证 pos 从 40725 跳回 123888）
-          // 并以 1x 前进（旧缓冲消费中），耗尽后时钟停滞；停滞点再重挂一次
-          // 才能干净归位（旧缓冲已空，管线中只剩新音轨数据）。
-          // 循环策略：连续 2 tick 归位（100ms 稳定）才判定 settled；
-          // 连续 3 tick 停滞（150ms pos 不变）且远离目标 → 重挂冲刷
-          // （单次重挂后 800ms 宽限期防 seek 进行中误判，最多重挂 3 次）；
-          // 上限 3200ms 防僵死，超时放弃由 800ms 自愈兜底接管。
-          // 前置等待 200ms：给「时钟跳回旧位置」事件留出发生窗口，防止
-          // 跳回晚于 seek 返回时被假归位（pos 暂显目标值）误判 settled。
-          await Future.delayed(const Duration(milliseconds: 200));
-          var lastPos = -1;
-          var stagnantTicks = 0;
-          var settledTicks = 0;
-          var remountCount = 0;
-          var remountGraceUntil = DateTime.fromMillisecondsSinceEpoch(0);
+          // 等待音频主时钟归位：重挂+二次定位后时钟应锚定到目标点附近。
+          // 50ms 步进轮询，上限 600ms 防异常僵死；未归位则放弃等待，
+          // 由恢复播放后的 800ms 自愈兜底（音频流动可强制时钟重锚定）。
           final settleDeadline =
-              DateTime.now().add(const Duration(milliseconds: 3200));
+              DateTime.now().add(const Duration(milliseconds: 600));
           while (DateTime.now().isBefore(settleDeadline)) {
             final p = _player;
-            if (_disposed || p == null || seq != _seekSeq) break;
-            if (_queuedSeekTargetMs != null) break; // 新 seek 已排队，让位
-            final pos = p.position;
-            if ((pos - targetMs).abs() <= 400) {
-              settledTicks++;
-              if (settledTicks >= 2) {
-                AppLogger.w(
-                  'AVSyncTrace',
-                  'clock settled: pos=${pos}ms target=$targetMs (backward dual-track, remounts=$remountCount)',
-                );
-                break;
-              }
-            } else {
-              settledTicks = 0;
-              if ((pos - lastPos).abs() <= 40) {
-                stagnantTicks++;
-                final now = DateTime.now();
-                if (stagnantTicks >= 3 &&
-                    remountCount < 3 &&
-                    now.isAfter(remountGraceUntil)) {
-                  remountCount++;
-                  remountGraceUntil =
-                      now.add(const Duration(milliseconds: 800));
-                  AppLogger.w(
-                    'PlayerController',
-                    'audio clock stagnant at ${pos}ms, remount #$remountCount to $targetMs',
-                  );
-                  p.setMedia(_currentAudioUrl!, mdk.MediaType.audio);
-                  p.activeAudioTracks = const [0];
-                  unawaited(p.seek(
-                    position: targetMs,
-                    flags: const mdk.SeekFlag(
-                      mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame,
-                    ),
-                  ));
-                  stagnantTicks = 0;
-                }
-              } else {
-                stagnantTicks = 0;
-              }
+            if (_disposed || p == null) break;
+            if ((p.position - targetMs).abs() <= 400) {
+              AppLogger.w(
+                'AVSyncTrace',
+                'clock settled: pos=${p.position}ms target=$targetMs (backward dual-track)',
+              );
+              break;
             }
-            lastPos = pos;
             await Future.delayed(const Duration(milliseconds: 50));
           }
         }
