@@ -348,9 +348,9 @@ class WinWinPlayerController {
     // 注意：早期使用的字符串属性 avsync.audio='true' 会在 mdk 0.38.0 解析时抛
     // std::invalid_argument 导致 Release 必崩（见 docs/进入视频播放页崩溃根因与修复.md），
     // 已废弃；此处改用官方 int32 全局选项（与 d3d11.sync.cpu 同路径，无崩溃风险）。
-    // [AB] 音画同步 Seek 取证：=1 为 B 组（adaptive 开启，现状）；A/B 验证时改为 0（关闭），
-    // 对比快退 seek 是否仍出现「音频极慢爬行」。取证结束后按结论定稿。
-    mdk.setGlobalOption('avsync.audio.adaptive', 1);
+    // [AB] 音画同步 Seek 取证：B 组=1（adaptive 开启，现状，已测得快退后 rate≈0.53x 压速音频）；
+    // A 组=0（关闭）验证「音频极慢爬行」是否消失。取证结束后按结论定稿。
+    mdk.setGlobalOption('avsync.audio.adaptive', 0); // [AB] A 组验证（关闭 adaptive）
 
     if (kDebugMode) {
       // ===== 音画同步 Seek 取证（临时，取证结束后移除）=====
