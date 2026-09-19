@@ -334,8 +334,15 @@ class WinWinPlayerController {
     player.setProperty('avio.timeout', '5000000');
     player.setProperty('avio.rw_timeout', '5000000');
 
-    // 显式绑定音频时钟为 Master Clock，确保点播与双流模式下音画严格对齐防时钟漂移
-    player.setProperty('avsync.audio', 'true');
+    // 音画同步（A/V Sync）优化，依据 MDK 官方 Global-Options 文档（wiki/Global-Options）：
+    // - avsync.audio.adaptive=1：视频解码/缓冲落后时主动放慢音频节奏让视频追上，
+    //   杜绝「音频先播完、视频与进度条卡在结尾前」及「seek/缓冲后音频先出、画面慢出追赶」漂移；
+    // - avsync.audio.duration_diff：保持默认 800ms（音视频时长差 ≤800ms 时才以音频时钟为主，
+    //   B 站 DASH 双轨时长基本一致，无需调整）。
+    // 注意：早期使用的字符串属性 avsync.audio='true' 会在 mdk 0.38.0 解析时抛
+    // std::invalid_argument 导致 Release 必崩（见 docs/进入视频播放页崩溃根因与修复.md），
+    // 已废弃；此处改用官方 int32 全局选项（与 d3d11.sync.cpu 同路径，无崩溃风险）。
+    mdk.setGlobalOption('avsync.audio.adaptive', 1);
 
     // 启用解复用器包缓存（MDK 官方推荐 ranges=16）：
     // 允许在内存中缓存解复用后的物理数据包。当向后或向前短距离 Seek 时，
@@ -352,7 +359,11 @@ class WinWinPlayerController {
     // 默认 keep_open=0 时，播放完毕 MDK 会自动调用 set(State::Stopped) 释放解码器和渲染管线，
     // 导致底层状态被销毁、seek(0) 报错（-3 Unloaded / -6 NotReady）且无法重新拉流。
     // 设置 keep_open=1 时，播放完毕自动转入 State::Paused 并置位 MediaStatus.end，
-    // 保持解码器与网络上下文活跃，确保重播与 seek(0) 秒开且零死锁。
+    // 保持解码器与网络上下文活跃，确保重播与 seek(0) 秒开且零死锁，
+    // 且 EOS 时 position 自然收敛到总时长，进度条能走到头。
+    // 注：本次崩溃排查（docs/进入视频播放页崩溃根因与修复.md）已证实 keep_open='1' 为数值
+    // 字符串，不触发 mdk 0.38.0 的非数值解析崩溃（肇事属性是 avsync.audio，已废弃），
+    // 故在此安全恢复。
     player.setProperty('keep_open', '1');
 
     final initialFilter = AudioNormalization.parse(
@@ -376,6 +387,13 @@ class WinWinPlayerController {
     completed.value = true;
     playing.value = false;
     buffering.value = false;
+    // 完成态进度归一：受音画微差影响，底层 PTS 可能停在总时长之前（音频先播完、
+    // 视频后到位），将 position 收敛到 duration，保证进度条与时间显示走到头
+    // （与主流播放器 EOS 显示行为一致；轮询侧已做 completed 冻结防回拖）。
+    final durMs = duration.value.inMilliseconds;
+    if (durMs > 0 && position.value.inMilliseconds < durMs) {
+      position.value = Duration(milliseconds: durMs);
+    }
     _userIntentPlaying = false;
     _bufferingStallMs = 0;
     _maybeReportPlaybackEnd();
@@ -607,7 +625,12 @@ class WinWinPlayerController {
 
       final posMs = player.position;
       final newPos = Duration(milliseconds: posMs);
-      if (position.value != newPos) {
+      // 完成态冻结进度：音画微差会导致底层 PTS 停在总时长之前，禁止轮询
+      // 把 _handlePlaybackEnded 已归一到 duration 的进度再往回拖（音频先播完场景）。
+      final completedFrozen = completed.value &&
+          duration.value.inMilliseconds > 0 &&
+          posMs < duration.value.inMilliseconds;
+      if (!completedFrozen && position.value != newPos) {
         position.value = newPos;
       }
       // 进度推进检测：若播放进度在前进，清零卡顿计时并解除缓冲态。
