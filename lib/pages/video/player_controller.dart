@@ -136,6 +136,12 @@ class WinWinPlayerController {
   /// 短时连续快速 Seek 请求防抖合并定时器（35ms）。
   Timer? _seekDebounceTimer;
 
+  // ===== 音画同步 Seek 取证（临时字段，取证结束后删除）=====
+  int _avTraceTick = 0;
+  DateTime? _avTraceLastTime;
+  int _avTraceLastPosMs = -1;
+  // ==================================================
+
   /// 外部拖动开始（对标 PiliPlus onSeekStart）
   void onSeekStart(int seekFromMs) {
     _isSeeking = true;
@@ -342,7 +348,21 @@ class WinWinPlayerController {
     // 注意：早期使用的字符串属性 avsync.audio='true' 会在 mdk 0.38.0 解析时抛
     // std::invalid_argument 导致 Release 必崩（见 docs/进入视频播放页崩溃根因与修复.md），
     // 已废弃；此处改用官方 int32 全局选项（与 d3d11.sync.cpu 同路径，无崩溃风险）。
+    // [AB] 音画同步 Seek 取证：=1 为 B 组（adaptive 开启，现状）；A/B 验证时改为 0（关闭），
+    // 对比快退 seek 是否仍出现「音频极慢爬行」。取证结束后按结论定稿。
     mdk.setGlobalOption('avsync.audio.adaptive', 1);
+
+    if (kDebugMode) {
+      // ===== 音画同步 Seek 取证（临时，取证结束后移除）=====
+      // 转发 MDK 内部日志（播放状态 position/fps/cache 等）到 Debug 控制台
+      // （仅 flutter run 可见，不落盘避免污染 runtime.log）。
+      mdk.setLogHandler((level, msg) {
+        debugPrint('[MDK:$level] $msg');
+      });
+      mdk.setGlobalOption('log', mdk.LogLevel.warning);
+      mdk.setGlobalOption('log.status', 2);
+      // ==================================================
+    }
 
     // 启用解复用器包缓存（MDK 官方推荐 ranges=16）：
     // 允许在内存中缓存解复用后的物理数据包。当向后或向前短距离 Seek 时，
@@ -438,6 +458,18 @@ class WinWinPlayerController {
       }))
       ..add(player.onEvent.listen((ev) {
         if (_disposed || _loading || _isRecovering) return;
+        // ===== 音画同步 Seek 取证（临时）=====
+        AppLogger.i(
+          'AVSyncTrace',
+          'onEvent cat=${ev.category} detail=${ev.detail} code=${ev.error}',
+        );
+        if (ev.category == 'render.video' && ev.detail == '1st_frame') {
+          AppLogger.w(
+            'AVSyncTrace',
+            'VIDEO 1st_frame rendered: pos=${player.position}ms (视频画面可用时刻)',
+          );
+        }
+        // ===================================
         // NOTE: for 'reader.buffering' the error field is progress [0,100],
         // not an error code; real mdk failures carry negative codes.
         // -1 语义同 prepare 的 -1（already loading/open），不是硬错误：
@@ -581,6 +613,27 @@ class WinWinPlayerController {
         final target = _seekTargetMs ?? position.value.inMilliseconds;
         final currentPosMs = player.position;
 
+        // ===== 音画同步 Seek 取证（临时）：采样底层 position 推进速率。
+        // adaptive 压速音频时，master(音频) 时钟推进 rate 会显著 < 1.0 ====
+        _avTraceTick++;
+        if (_avTraceTick % 3 == 0) {
+          final now = DateTime.now();
+          var rate = 0.0;
+          final lastT = _avTraceLastTime;
+          final lastP = _avTraceLastPosMs;
+          if (lastT != null && lastP >= 0) {
+            final deltaMs = now.difference(lastT).inMilliseconds;
+            if (deltaMs > 0) rate = (currentPosMs - lastP) / deltaMs;
+          }
+          AppLogger.i(
+            'AVSyncTrace',
+            'seekPoll target=$target pos=$currentPosMs rate=${rate.toStringAsFixed(2)}x buf=${player.buffered()}ms state=${player.state}',
+          );
+          _avTraceLastTime = now;
+          _avTraceLastPosMs = currentPosMs;
+        }
+        // ================================================================
+
         // 仅在底层 native seek 真正执行完成（_nativeSeekDoneTime != null）且无排队请求后，才进入落地判定
         final doneTime = _nativeSeekDoneTime;
         final hasNativeReturned = !_nativeSeekInFlight &&
@@ -614,6 +667,8 @@ class WinWinPlayerController {
           _seekTargetMs = null;
           _seekStartTime = null;
           _nativeSeekDoneTime = null;
+          _avTraceLastTime = null; // 取证：重置速率采样基准
+          _avTraceLastPosMs = -1; // 取证：重置速率采样基准
           // 若已确认到达目标，同步底层采样基准；若硬超时且未落地，以 target 为基准，避免旧高位 PTS 污染
           _lastPolledPosMs = hasLanded ? currentPosMs : target;
         } else {
@@ -1579,8 +1634,20 @@ class WinWinPlayerController {
                 (isForwardInCache ? mdk.SeekFlag.inCache : 0));
         final flags = mdk.SeekFlag(flagBits);
 
+        // ===== 音画同步 Seek 取证（临时）=====
+        AppLogger.w(
+          'AVSyncTrace',
+          'SEEK => target=$targetMs flags=$flagBits curPos=$currentPosMs bufMax=$bufMax inCache=$isForwardInCache audioBuffered=${_audioCdnCandidates.isNotEmpty ? 'dual-track' : 'none'}',
+        );
+        // =================================
         final res = await player.seek(position: targetMs, flags: flags);
         if (_disposed) return;
+        // ===== 音画同步 Seek 取证（临时）=====
+        AppLogger.w(
+          'AVSyncTrace',
+          'SEEK <= res=$res posAfter=${player.position}ms buf=${player.buffered()}ms state=${player.state}',
+        );
+        // =================================
 
         if (res < 0) {
           AppLogger.w('PlayerController', 'player.seek error code: $res');
