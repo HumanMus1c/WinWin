@@ -16,7 +16,8 @@ import 'package:winwin/core/policy/cdn_policy.dart';
 import 'package:winwin/core/policy/stream_selection_policy.dart';
 import 'package:winwin/core/policy/video_load_policy.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
-import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart' hide SubtitleItem;
+import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart'
+    hide SubtitleItem;
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
 import 'package:winwin/http/video.dart';
@@ -98,7 +99,8 @@ class WinWinPlayerController {
   bool get isCompleted => completed.value;
 
   /// 当前显示/交互进度：若正在 seek 或拖动，返回 seekPosition，否则返回 position。
-  Duration get currentProgress => _isSeeking ? seekPosition.value : position.value;
+  Duration get currentProgress =>
+      _isSeeking ? seekPosition.value : position.value;
 
   /// mdk 注册的 Flutter Texture id，供面板 `Texture(textureId:)` 渲染。
   /// 首帧就绪前 / 画质切换重建纹理期间为 null。
@@ -129,10 +131,17 @@ class WinWinPlayerController {
 
   /// 当前是否有底层 native player.seek 正在执行（串行化防并发，根除 fvp Completer 错位）。
   bool _nativeSeekInFlight = false;
+
   /// 排队等待执行的最新 Seek 目标时间戳（毫秒）。
   int? _queuedSeekTargetMs;
+
+  /// 双轨快退的外部音轨重挂窗口标志：窗口内底层存在时钟「跳回」瞬态的
+  /// 锁竞争风险（2026-09-20 00:11 死锁实证），期间禁止同步 FFI 读取 position。
+  bool _audioRemountInFlight = false;
+
   /// 最近一次底层 native seek 完成返回的时间点，用于保障观察期平滑结算。
   DateTime? _nativeSeekDoneTime;
+
   /// 短时连续快速 Seek 请求防抖合并定时器（35ms）。
   Timer? _seekDebounceTimer;
 
@@ -205,8 +214,9 @@ class WinWinPlayerController {
 
   /// 章节标记列表（Phase 4.5，来自 playInfo view_points）。
   /// 由 [setViewPoints] 设置，供面板在进度条与章节面板中渲染。
-  final ValueNotifier<List<ViewPoint>> viewPointsNotifier =
-      ValueNotifier(const []);
+  final ValueNotifier<List<ViewPoint>> viewPointsNotifier = ValueNotifier(
+    const [],
+  );
   List<ViewPoint> get viewPoints => viewPointsNotifier.value;
 
   /// 是否启用 SponsorBlock 自动跳过（默认 true，用户可在设置中关闭）。
@@ -234,55 +244,75 @@ class WinWinPlayerController {
   Timer? _pollTimer;
   Timer? _bufferingDebounceTimer;
   bool _disposed = false;
+
   /// 是否已被销毁（公开访问器，供 UI 层检查）。
   bool get disposed => _disposed;
+
   /// 是否正在加载/切换 media：为 true 时忽略 onEvent 的 error 事件，
   /// 避免旧 media 卸载产生的错误事件污染 [error]（真正的失败由 prepare
   /// 返回值 < 0 判断）。
   bool _loading = false;
+
   /// 待恢复的进度：prepare 返回 -1（already loading）时无法立即 seek，
   /// 暂存到此字段，等 onMediaStatus.buffered 事件触发后 seek。
   Duration? _pendingSeek;
+
   /// 待触发的 HDR 自动升级：首播 SDR 后延后到 media buffered 稳定再二次
   /// 拉流 qn=125，避免与首播的 setMedia/prepare/纹理创建并发竞态。
   PlayUrlModel? _pendingHdrUpgrade;
+
   /// 会话级连续已缓冲最大毫秒数：在换视频/换清晰度/重播时重置为 0。
   /// 用于单调覆盖保障，防止快退 seek 或解码器刷新导致明明已经缓冲过的进度条向左坍塌缩短。
   int _maxContinuousBufferedMs = 0;
+
   /// 缓冲假死计时（毫秒），用于超时检测与自愈。
   int _bufferingStallMs = 0;
+
   /// 用户意图播放标志（playWhenReady）：与底层瞬态解码器 playing 状态解耦。
   /// 用户点击暂停时为 false，起播/恢复时为 true。用于看门狗准确判定卡死。
   bool _userIntentPlaying = true;
+
   /// 上次轮询到的播放进度（毫秒），用于检测进度是否停滞。
   int _lastPolledPosMs = -1;
+
   /// 最近一次 Seek 实际完成返回的时间点，用于在 Seek 后短时间内屏蔽看门狗误重载。
   DateTime? _lastSeekFinishTime;
+
   /// 是否正在执行卡顿自愈（防重入）。
   bool _isRecovering = false;
+
   /// 连续自愈失败重试计数。
   int _stallRecoveryRetryCount = 0;
+
   /// 视频可用 CDN 候选 URL 列表（已过滤 MCDN/PCDN）。
   List<String> _videoCdnCandidates = const [];
+
   /// 音频可用 CDN 候选 URL 列表（已过滤 MCDN/PCDN）。
   List<String> _audioCdnCandidates = const [];
+
   /// 当前正在使用的 CDN 候选下标。
   int _currentCdnIndex = 0;
+
   /// 当前生效的视频播放直链。
   String? _currentVideoUrl;
+
   /// 当前生效的音频播放直链。
   String? _currentAudioUrl;
 
   // ── 心跳上报（Phase 4.2 & PGC/番剧支持）──
   /// 心跳定时器：每 5 秒上报一次播放进度。
   Timer? _heartBeatTimer;
+
   /// 上次心跳上报时的播放状态，用于检测状态变化。
   /// null 表示尚未上报过任何心跳（首次状态变化报 play_type=0）。
   bool? _lastHeartBeatPlaying;
+
   /// 上次上报心跳时的播放进度（秒），用于计算推进增量。
   int _lastHeartBeatPosSec = -1;
+
   /// 累计播放时长（秒），用于满足 "playing ≥5s" 触发条件。
   int _playingAccumSec = 0;
+
   /// 是否已上报过结束（play_type=3/progressSec=-1），避免重复。
   bool _reportedEnd = false;
 
@@ -403,7 +433,8 @@ class WinWinPlayerController {
   void _handlePlaybackEnded() {
     if (_disposed) return;
     // Seek 执行期间底层 PTS 与解码器状态瞬态刷新，严禁误判播放完毕，彻底消灭重播态/暂停态跳变
-    if (_isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null) return;
+    if (_isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null)
+      return;
     if (completed.value) return;
     completed.value = true;
     playing.value = false;
@@ -435,135 +466,158 @@ class WinWinPlayerController {
     final player = _sharedPlayer;
     if (player == null) return;
     _subscriptions
-      ..add(player.onStateChanged.listen((event) {
-        if (_disposed) return;
-        final isPlaying = event.newValue == mdk.PlaybackState.playing;
-        // pause-during-seek 冻结窗口：seek 流程内部切换的 paused 态不向 UI 广播
-        // （播放按钮/弹幕保持播放中，加载态由 buffering 转圈承载），seek 结束统一恢复。
-        // 若用户在冻结窗口内主动暂停（_userIntentPlaying=false），则正常广播暂停态。
-        final inSeekFreeze = _isSeeking ||
-            _nativeSeekInFlight ||
-            _queuedSeekTargetMs != null;
-        if (isPlaying || !inSeekFreeze || !_userIntentPlaying) {
-          playing.value = isPlaying;
-        }
-        if (isPlaying) {
-          completed.value = false;
-        } else if (event.newValue == mdk.PlaybackState.stopped ||
-            event.newValue == mdk.PlaybackState.paused) {
-          if (inSeekFreeze) {
-            return;
+      ..add(
+        player.onStateChanged.listen((event) {
+          if (_disposed) return;
+          final isPlaying = event.newValue == mdk.PlaybackState.playing;
+          // pause-during-seek 冻结窗口：seek 流程内部切换的 paused 态不向 UI 广播
+          // （播放按钮/弹幕保持播放中，加载态由 buffering 转圈承载），seek 结束统一恢复。
+          // 若用户在冻结窗口内主动暂停（_userIntentPlaying=false），则正常广播暂停态。
+          final inSeekFreeze =
+              _isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null;
+          if (isPlaying || !inSeekFreeze || !_userIntentPlaying) {
+            playing.value = isPlaying;
           }
-          // 播放器到达流末尾自然停止（keep_open=1 时 MDK 在所有帧渲染完成后转入 paused，keep_open=0 时转入 stopped）
-          final durMs = duration.value.inMilliseconds;
-          final posMs = player.position;
-          if (!_loading &&
-              ready.value &&
-              durMs > 0 &&
-              posMs >= durMs - 1500) {
-            _handlePlaybackEnded();
+          if (isPlaying) {
+            completed.value = false;
+          } else if (event.newValue == mdk.PlaybackState.stopped ||
+              event.newValue == mdk.PlaybackState.paused) {
+            if (inSeekFreeze) {
+              return;
+            }
+            // 播放器到达流末尾自然停止（keep_open=1 时 MDK 在所有帧渲染完成后转入 paused，keep_open=0 时转入 stopped）
+            final durMs = duration.value.inMilliseconds;
+            final posMs = player.position;
+            if (!_loading &&
+                ready.value &&
+                durMs > 0 &&
+                posMs >= durMs - 1500) {
+              _handlePlaybackEnded();
+            }
           }
-        }
-      }))
-      ..add(player.onEvent.listen((ev) {
-        if (_disposed || _loading || _isRecovering) return;
-        // ===== 音画同步 Seek 取证（临时）=====
-        AppLogger.i(
-          'AVSyncTrace',
-          'onEvent cat=${ev.category} detail=${ev.detail} code=${ev.error}',
-        );
-        if (ev.category == 'render.video' && ev.detail == '1st_frame') {
-          AppLogger.w(
+        }),
+      )
+      ..add(
+        player.onEvent.listen((ev) {
+          if (_disposed || _loading || _isRecovering) return;
+          // ===== 音画同步 Seek 取证（临时）=====
+          AppLogger.i(
             'AVSyncTrace',
-            'VIDEO 1st_frame rendered: pos=${player.position}ms (视频画面可用时刻)',
+            'onEvent cat=${ev.category} detail=${ev.detail} code=${ev.error}',
           );
-        }
-        // ===================================
-        // NOTE: for 'reader.buffering' the error field is progress [0,100],
-        // not an error code; real mdk failures carry negative codes.
-        // -1 语义同 prepare 的 -1（already loading/open），不是硬错误：
-        // 共享 player 切换 media 时 setMedia 已触发 open，onEvent "open" 返回 -1
-        // 表示"已在加载"。仅对 < -1 的硬错误报错（与 prepare 判断一致）。
-        if (ev.error < -1) {
-          AppLogger.e('PlayerController', 'onEvent error: code=${ev.error} detail=${ev.detail}');
-          // 参照 BiliPai PlayerErrorRecoveryPolicy：网络断开/错误时优先触发自愈重连或切线，
-          // 而非直接向用户弹窗中断播放。
-          if (ready.value && _userIntentPlaying && _stallRecoveryRetryCount < 3) {
-            AppLogger.w('PlayerController', 'Triggering stream self-healing after onEvent error');
-            unawaited(_recoverStalledStream(isNetworkError: true));
-            return;
+          if (ev.category == 'render.video' && ev.detail == '1st_frame') {
+            AppLogger.w(
+              'AVSyncTrace',
+              'VIDEO 1st_frame rendered: pos=${player.position}ms (视频画面可用时刻)',
+            );
           }
-          error.value = '播放错误 ${ev.error}: ${ev.detail}';
-        }
-      }))
-      ..add(player.onMediaStatus.listen((event) {
-        if (_disposed) return;
-        final oldValue = event.oldValue;
-        final newValue = event.newValue;
-
-        // 监听流结束标志（keep_open=1 下 MDK 置位 MediaStatus.end）
-        if (!oldValue.test(mdk.MediaStatus.end) &&
-            newValue.test(mdk.MediaStatus.end)) {
-          AppLogger.i('PlayerController', 'onMediaStatus: end detected');
-          if (!_isSeeking && !_nativeSeekInFlight && _queuedSeekTargetMs == null) {
-            _handlePlaybackEnded();
+          // ===================================
+          // NOTE: for 'reader.buffering' the error field is progress [0,100],
+          // not an error code; real mdk failures carry negative codes.
+          // -1 语义同 prepare 的 -1（already loading/open），不是硬错误：
+          // 共享 player 切换 media 时 setMedia 已触发 open，onEvent "open" 返回 -1
+          // 表示"已在加载"。仅对 < -1 的硬错误报错（与 prepare 判断一致）。
+          if (ev.error < -1) {
+            AppLogger.e(
+              'PlayerController',
+              'onEvent error: code=${ev.error} detail=${ev.detail}',
+            );
+            // 参照 BiliPai PlayerErrorRecoveryPolicy：网络断开/错误时优先触发自愈重连或切线，
+            // 而非直接向用户弹窗中断播放。
+            if (ready.value &&
+                _userIntentPlaying &&
+                _stallRecoveryRetryCount < 3) {
+              AppLogger.w(
+                'PlayerController',
+                'Triggering stream self-healing after onEvent error',
+              );
+              unawaited(_recoverStalledStream(isNetworkError: true));
+              return;
+            }
+            error.value = '播放错误 ${ev.error}: ${ev.detail}';
           }
-        }
+        }),
+      )
+      ..add(
+        player.onMediaStatus.listen((event) {
+          if (_disposed) return;
+          final oldValue = event.oldValue;
+          final newValue = event.newValue;
 
-        // 缓冲中 / 缓冲完成（监听 stalled 标志，对标 mdk stalled 解码空仓状态与 buffered 就绪状态）。
-        // 防抖保护：Seek 瞬间底层必然产生几十毫秒的瞬态空仓，引入 350ms 防抖门限，
-        // 彻底杜绝菊花转圈在屏幕中央瞬时闪烁。
-        final wasStalled = oldValue.test(mdk.MediaStatus.stalled);
-        final isStalled = newValue.test(mdk.MediaStatus.stalled);
-        if (!wasStalled && isStalled) {
-          if (!completed.value && !_isSeeking) {
+          // 监听流结束标志（keep_open=1 下 MDK 置位 MediaStatus.end）
+          if (!oldValue.test(mdk.MediaStatus.end) &&
+              newValue.test(mdk.MediaStatus.end)) {
+            AppLogger.i('PlayerController', 'onMediaStatus: end detected');
+            if (!_isSeeking &&
+                !_nativeSeekInFlight &&
+                _queuedSeekTargetMs == null) {
+              _handlePlaybackEnded();
+            }
+          }
+
+          // 缓冲中 / 缓冲完成（监听 stalled 标志，对标 mdk stalled 解码空仓状态与 buffered 就绪状态）。
+          // 防抖保护：Seek 瞬间底层必然产生几十毫秒的瞬态空仓，引入 350ms 防抖门限，
+          // 彻底杜绝菊花转圈在屏幕中央瞬时闪烁。
+          final wasStalled = oldValue.test(mdk.MediaStatus.stalled);
+          final isStalled = newValue.test(mdk.MediaStatus.stalled);
+          if (!wasStalled && isStalled) {
+            if (!completed.value && !_isSeeking) {
+              _bufferingDebounceTimer?.cancel();
+              _bufferingDebounceTimer = Timer(
+                const Duration(milliseconds: 350),
+                () {
+                  if (!_disposed && !completed.value && !_isSeeking) {
+                    buffering.value = true;
+                  }
+                },
+              );
+            }
+          } else if (!isStalled && wasStalled) {
             _bufferingDebounceTimer?.cancel();
-            _bufferingDebounceTimer = Timer(const Duration(milliseconds: 350), () {
-              if (!_disposed && !completed.value && !_isSeeking) {
-                buffering.value = true;
-              }
-            });
+            buffering.value = false;
+            _bufferingStallMs = 0;
           }
-        } else if (!isStalled && wasStalled) {
-          _bufferingDebounceTimer?.cancel();
-          buffering.value = false;
-          _bufferingStallMs = 0;
-        }
-        if (!oldValue.test(mdk.MediaStatus.buffered) &&
-            newValue.test(mdk.MediaStatus.buffered)) {
-          _bufferingDebounceTimer?.cancel();
-          buffering.value = false;
-          _bufferingStallMs = 0;
-          _stallRecoveryRetryCount = 0;
-          AppLogger.i('PlayerController', 'onMediaStatus: buffered (duration=${player.mediaInfo.duration}ms)');
-          // media 加载完成：获取正确的 duration 和 videoSize。
-          // 避免切换 media 时拿到旧 media 的值（B 的 duration 比 A 长，
-          // 导致时间轴超出 A 的长度）。
-          final ms = player.mediaInfo.duration;
-          if (ms > 0) duration.value = Duration(milliseconds: ms);
-          unawaited(player.textureSize.then((size) {
-            if (!_disposed && size != null) videoSize.value = size;
-          }));
-          // 处理待恢复的进度：prepare 返回 -1 时无法立即 seek，
-          // 暂存到此；media buffered 后 seek 生效。
-          final pending = _pendingSeek;
-          if (pending != null && pending > Duration.zero) {
-            _pendingSeek = null;
-            unawaited(player.seek(position: pending.inMilliseconds));
+          if (!oldValue.test(mdk.MediaStatus.buffered) &&
+              newValue.test(mdk.MediaStatus.buffered)) {
+            _bufferingDebounceTimer?.cancel();
+            buffering.value = false;
+            _bufferingStallMs = 0;
+            _stallRecoveryRetryCount = 0;
+            AppLogger.i(
+              'PlayerController',
+              'onMediaStatus: buffered (duration=${player.mediaInfo.duration}ms)',
+            );
+            // media 加载完成：获取正确的 duration 和 videoSize。
+            // 避免切换 media 时拿到旧 media 的值（B 的 duration 比 A 长，
+            // 导致时间轴超出 A 的长度）。
+            final ms = player.mediaInfo.duration;
+            if (ms > 0) duration.value = Duration(milliseconds: ms);
+            unawaited(
+              player.textureSize.then((size) {
+                if (!_disposed && size != null) videoSize.value = size;
+              }),
+            );
+            // 处理待恢复的进度：prepare 返回 -1 时无法立即 seek，
+            // 暂存到此；media buffered 后 seek 生效。
+            final pending = _pendingSeek;
+            if (pending != null && pending > Duration.zero) {
+              _pendingSeek = null;
+              unawaited(player.seek(position: pending.inMilliseconds));
+            }
+            // 触发待执行的 HDR 自动升级：首播 SDR buffered 稳定后再二次拉流，
+            // 避免与首播的 setMedia/prepare/纹理创建并发竞态。
+            final pendingHdr = _pendingHdrUpgrade;
+            if (pendingHdr != null) {
+              _pendingHdrUpgrade = null;
+              unawaited(_maybeUpgradeToHdr(pendingHdr));
+            }
           }
-          // 触发待执行的 HDR 自动升级：首播 SDR buffered 稳定后再二次拉流，
-          // 避免与首播的 setMedia/prepare/纹理创建并发竞态。
-          final pendingHdr = _pendingHdrUpgrade;
-          if (pendingHdr != null) {
-            _pendingHdrUpgrade = null;
-            unawaited(_maybeUpgradeToHdr(pendingHdr));
-          }
-        }
-        // NOTE: 切换 media 时旧 media 会触发 invalid 状态，这是正常行为而非
-        // 真正的加载失败。真正的加载失败由 prepare() 返回值 < 0 判断并设置
-        // error，此处不再因 invalid 事件误报错误（参照 PiliPlus 不依赖
-        // media status invalid 设 error 的做法）。
-      }));
+          // NOTE: 切换 media 时旧 media 会触发 invalid 状态，这是正常行为而非
+          // 真正的加载失败。真正的加载失败由 prepare() 返回值 < 0 判断并设置
+          // error，此处不再因 invalid 事件误报错误（参照 PiliPlus 不依赖
+          // media status invalid 设 error 的做法）。
+        }),
+      );
     // mdk 内部 updateTexture() 会更新 player.textureId，镜像到对外 notifier。
     player.textureId.addListener(_syncTextureId);
     // 复用单例时 texture 可能已存在，立即同步一次。
@@ -620,12 +674,15 @@ class WinWinPlayerController {
       // 保持当前 target 进度，避免进度条来回跳变抖动；同时屏蔽卡顿看门狗误判。
       if (_isSeeking) {
         final target = _seekTargetMs ?? position.value.inMilliseconds;
-        final currentPosMs = player.position;
+        // 重挂窗口内不读底层 position：时钟「跳回」瞬态存在锁竞争风险
+        //（2026-09-20 00:11 死锁实证，同步 FFI 读取可永久阻塞 isolate），
+        // 用 target 代替——落地判定已由 hasNativeReturned 门控，不受影响。
+        final currentPosMs = _audioRemountInFlight ? target : player.position;
 
         // ===== 音画同步 Seek 取证（临时）：采样底层 position 推进速率。
         // adaptive 压速音频时，master(音频) 时钟推进 rate 会显著 < 1.0 ====
         _avTraceTick++;
-        if (_avTraceTick % 3 == 0) {
+        if (_avTraceTick % 3 == 0 && !_audioRemountInFlight) {
           final now = DateTime.now();
           var rate = 0.0;
           final lastT = _avTraceLastTime;
@@ -645,7 +702,8 @@ class WinWinPlayerController {
 
         // 仅在底层 native seek 真正执行完成（_nativeSeekDoneTime != null）且无排队请求后，才进入落地判定
         final doneTime = _nativeSeekDoneTime;
-        final hasNativeReturned = !_nativeSeekInFlight &&
+        final hasNativeReturned =
+            !_nativeSeekInFlight &&
             _queuedSeekTargetMs == null &&
             doneTime != null;
 
@@ -655,13 +713,16 @@ class WinWinPlayerController {
         // 3. 若已返回超过 400ms 且目标点为 0，即便底层 PTS 采样有微小时滞，也判定已落地，避免 3 秒僵死；
         // 4. 严禁基于短超时（如 200ms）强行解除 seek 锁，否则底层未上屏的旧 PTS 会瞬间覆盖 UI 进度条导致弹跳！
         final isNearTarget = (currentPosMs - target).abs() <= 2500;
-        final isTargetZeroSettled = hasNativeReturned &&
+        final isTargetZeroSettled =
+            hasNativeReturned &&
             target == 0 &&
             DateTime.now().difference(doneTime) >
                 const Duration(milliseconds: 400);
-        final hasLanded = hasNativeReturned && (isNearTarget || isTargetZeroSettled);
+        final hasLanded =
+            hasNativeReturned && (isNearTarget || isTargetZeroSettled);
 
-        final isTimeout = _seekStartTime != null &&
+        final isTimeout =
+            _seekStartTime != null &&
             DateTime.now().difference(_seekStartTime!) >
                 const Duration(milliseconds: 3000);
 
@@ -691,7 +752,8 @@ class WinWinPlayerController {
       final newPos = Duration(milliseconds: posMs);
       // 完成态冻结进度：音画微差会导致底层 PTS 停在总时长之前，禁止轮询
       // 把 _handlePlaybackEnded 已归一到 duration 的进度再往回拖（音频先播完场景）。
-      final completedFrozen = completed.value &&
+      final completedFrozen =
+          completed.value &&
           duration.value.inMilliseconds > 0 &&
           posMs < duration.value.inMilliseconds;
       if (!completedFrozen && position.value != newPos) {
@@ -730,7 +792,8 @@ class WinWinPlayerController {
               // 2. 若没有直接覆盖的区间，查找位于当前播放位置之后的第一个连续区间
               for (final r in ranges) {
                 final s = r.start.inMilliseconds;
-                if (s >= posMs && (calculatedBufMs == 0 || s < calculatedBufMs)) {
+                if (s >= posMs &&
+                    (calculatedBufMs == 0 || s < calculatedBufMs)) {
                   calculatedBufMs = r.end.inMilliseconds;
                   break;
                 }
@@ -767,8 +830,9 @@ class WinWinPlayerController {
         }
 
         if (calculatedBufMs > 0) {
-          final targetBuf =
-              Duration(milliseconds: calculatedBufMs.clamp(0, durMs));
+          final targetBuf = Duration(
+            milliseconds: calculatedBufMs.clamp(0, durMs),
+          );
           if (buffered.value != targetBuf) {
             buffered.value = targetBuf;
           }
@@ -798,7 +862,8 @@ class WinWinPlayerController {
       // 3. 仅在播放停滞（!isPosAdvancing）且脱离 seek 保护期时检测底层 stalled（解码空仓）或累计停滞达 1 秒；
       // 4. Seek 落地后 3 秒保护期内绝对禁止触发重载，防止高码率流首次缓冲网络延迟被误杀；
       // 5. 达到 10 秒真卡死门限且底层无任何缓冲水位（buffered <= 0）时，才触发自愈。
-      final isSeekRecent = _lastSeekFinishTime != null &&
+      final isSeekRecent =
+          _lastSeekFinishTime != null &&
           DateTime.now().difference(_lastSeekFinishTime!) <
               const Duration(seconds: 3);
 
@@ -859,7 +924,9 @@ class WinWinPlayerController {
   }) async {
     if (!Accounts.history.isLogin || Pref.historyPause) return;
     if (_disposed && !isManual) return;
-    if ((aid == null || aid! <= 0) && bvid.isEmpty && (epId == null || epId! <= 0)) {
+    if ((aid == null || aid! <= 0) &&
+        bvid.isEmpty &&
+        (epId == null || epId! <= 0)) {
       return;
     }
 
@@ -940,7 +1007,9 @@ class WinWinPlayerController {
       unawaited(makeHeartBeat(-1, playType: 3, isManual: true));
       final effectiveAid = aid;
       if (effectiveAid != null && effectiveAid > 0) {
-        unawaited(VideoHttp.reportHistory(aid: effectiveAid, cid: cid, progressSec: 0));
+        unawaited(
+          VideoHttp.reportHistory(aid: effectiveAid, cid: cid, progressSec: 0),
+        );
       }
     }
   }
@@ -1018,12 +1087,16 @@ class WinWinPlayerController {
           if (!done.isCompleted) done.complete();
         }
       }
+
       ready.addListener(check);
       duration.addListener(check);
       error.addListener(check);
       try {
         // 兜底超时：load 被防抖吞掉等极端情况下不悬挂监听。
-        await done.future.timeout(const Duration(seconds: 15), onTimeout: () {});
+        await done.future.timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {},
+        );
       } finally {
         ready.removeListener(check);
         duration.removeListener(check);
@@ -1111,7 +1184,8 @@ class WinWinPlayerController {
       // 1. PlayUrlCache：先查缓存，命中且未过期则跳过 HTTP。
       final cacheKey = (epId != null && epId! > 0) ? 'ep_$epId' : bvid;
       PlayUrlModel? playUrl =
-          playUrlCache.get(cacheKey, cid, requestedQuality: qn) as PlayUrlModel?;
+          playUrlCache.get(cacheKey, cid, requestedQuality: qn)
+              as PlayUrlModel?;
       if (playUrl == null) {
         LoadingState<PlayUrlModel> result;
         if (epId != null && epId! > 0) {
@@ -1152,17 +1226,13 @@ class WinWinPlayerController {
           null,
           requestedQuality: qn,
           returnedQuality: playUrl.quality ?? 0,
-          dashVideoIds: playUrl.dash?.video
+          dashVideoIds:
+              playUrl.dash?.video
                   ?.map((v) => v.id ?? 0)
                   .toList(growable: false) ??
               const [],
         )) {
-          playUrlCache.put(
-            cacheKey,
-            cid,
-            playUrl,
-            quality: qn,
-          );
+          playUrlCache.put(cacheKey, cid, playUrl, quality: qn);
         }
       }
 
@@ -1186,7 +1256,9 @@ class WinWinPlayerController {
       bool isDurlFallback = false;
       if (_videoCdnCandidates.isEmpty) {
         final durls = playUrl.durl;
-        if (durls != null && durls.isNotEmpty && durls.first.playUrls.isNotEmpty) {
+        if (durls != null &&
+            durls.isNotEmpty &&
+            durls.first.playUrls.isNotEmpty) {
           _videoCdnCandidates = CdnPolicy.resolveAllUrls(durls.first.playUrls);
           isDurlFallback = _videoCdnCandidates.isNotEmpty;
         }
@@ -1198,13 +1270,16 @@ class WinWinPlayerController {
       }
 
       // 提取音频候选 URL（durl 模式已内嵌音频无需外部挂载）
-      _audioCdnCandidates = (isDurlFallback || audio == null || audio.playUrls.isEmpty)
+      _audioCdnCandidates =
+          (isDurlFallback || audio == null || audio.playUrls.isEmpty)
           ? const []
           : CdnPolicy.resolveAllUrls(audio.playUrls, isAudio: true);
 
       _currentCdnIndex = 0;
       final videoUrl = _videoCdnCandidates.first;
-      final audioUrl = _audioCdnCandidates.isNotEmpty ? _audioCdnCandidates.first : null;
+      final audioUrl = _audioCdnCandidates.isNotEmpty
+          ? _audioCdnCandidates.first
+          : null;
       _currentVideoUrl = videoUrl;
       _currentAudioUrl = audioUrl;
 
@@ -1234,7 +1309,9 @@ class WinWinPlayerController {
       if (account is LoginAccount) {
         final cookies = account.keyCookies;
         if (cookies.isNotEmpty) {
-          final cookieStr = cookies.map((c) => '${c.name}=${c.value}').join('; ');
+          final cookieStr = cookies
+              .map((c) => '${c.name}=${c.value}')
+              .join('; ');
           headers += 'Cookie: $cookieStr\r\n';
         }
       }
@@ -1274,7 +1351,10 @@ class WinWinPlayerController {
       // 加载首帧，进度恢复统一用 seek（ret >= 0 时立即 seek，ret == -1
       // 时延迟到 onMediaStatus.buffered 事件后 seek）。
       final ret = await player.prepare();
-      AppLogger.w('PlayerController', 'prepare ret=$ret (0=ok, -1=already loading, <-1=error)');
+      AppLogger.w(
+        'PlayerController',
+        'prepare ret=$ret (0=ok, -1=already loading, <-1=error)',
+      );
       if (_disposed) return;
       // prepare 返回值语义（见 fvp player.dart 注释）：
       //   0: streams==0 无效媒体，否则成功
@@ -1284,7 +1364,10 @@ class WinWinPlayerController {
       // 常返回 -1。这不是失败：真正的失败由 onEvent 错误事件（ev.error < 0）
       // 设置 error。仅对 < -1 的硬错误报错。
       if (ret < -1) {
-        AppLogger.e('PlayerController', 'prepare failed: ret=$ret, aborting load');
+        AppLogger.e(
+          'PlayerController',
+          'prepare failed: ret=$ret, aborting load',
+        );
         error.value = '播放失败（错误码 $ret）';
         return;
       }
@@ -1319,10 +1402,14 @@ class WinWinPlayerController {
       }
 
       if (_disposed) return;
-      player.state =
-          autoplay ? mdk.PlaybackState.playing : mdk.PlaybackState.paused;
+      player.state = autoplay
+          ? mdk.PlaybackState.playing
+          : mdk.PlaybackState.paused;
       ready.value = true;
-      AppLogger.w('PlayerController', 'ready=true, state=${player.state}, textureId=${player.textureId}');
+      AppLogger.w(
+        'PlayerController',
+        'ready=true, state=${player.state}, textureId=${player.textureId}',
+      );
       // Phase 4.2：播放就绪后启动心跳定时器（每 5 秒上报进度）。
       _startHeartBeat();
 
@@ -1335,7 +1422,9 @@ class WinWinPlayerController {
             final segments = res.dataOrNull;
             if (segments == null) return;
             if (kDebugMode && segments.isNotEmpty) {
-              debugPrint('SponsorBlock: loaded ${segments.length} segments for $bvid');
+              debugPrint(
+                'SponsorBlock: loaded ${segments.length} segments for $bvid',
+              );
             }
           }),
         );
@@ -1370,7 +1459,8 @@ class WinWinPlayerController {
     try {
       final account = Accounts.main;
       final userInfo = Pref.userInfoCache;
-      final currentIds = currentPlayUrl.dash?.video
+      final currentIds =
+          currentPlayUrl.dash?.video
               ?.map((v) => v.id ?? 0)
               .toList(growable: false) ??
           const <int>[];
@@ -1379,7 +1469,8 @@ class WinWinPlayerController {
         isAutoHighestQuality: Pref.autoHighestQuality,
         isVip: userInfo?.isVip ?? false,
         isMobileData: false,
-        hasAccessToken: account.accessKey != null && account.accessKey!.isNotEmpty,
+        hasAccessToken:
+            account.accessKey != null && account.accessKey!.isNotEmpty,
         currentPlayableDashVideoIds: currentIds,
         userHasExplicitQualitySelection: false,
         upgradeAlreadyAttempted: false,
@@ -1426,7 +1517,9 @@ class WinWinPlayerController {
     _stallRecoveryRetryCount++;
     try {
       final resumePosMs = player.position;
-      final resumeDuration = Duration(milliseconds: resumePosMs > 0 ? resumePosMs : 0);
+      final resumeDuration = Duration(
+        milliseconds: resumePosMs > 0 ? resumePosMs : 0,
+      );
 
       AppLogger.w(
         'PlayerController',
@@ -1438,7 +1531,9 @@ class WinWinPlayerController {
         _currentCdnIndex = (_currentCdnIndex + 1) % _videoCdnCandidates.length;
         _currentVideoUrl = _videoCdnCandidates[_currentCdnIndex];
         if (_audioCdnCandidates.isNotEmpty) {
-          _currentAudioUrl = _audioCdnCandidates[_currentCdnIndex % _audioCdnCandidates.length];
+          _currentAudioUrl =
+              _audioCdnCandidates[_currentCdnIndex %
+                  _audioCdnCandidates.length];
         }
         AppLogger.w(
           'PlayerController',
@@ -1481,7 +1576,12 @@ class WinWinPlayerController {
         'Stream stall recovery successfully executed at ${resumeDuration.inSeconds}s',
       );
     } catch (e, s) {
-      AppLogger.e('PlayerController', 'Stream stall recovery failed', error: e, stackTrace: s);
+      AppLogger.e(
+        'PlayerController',
+        'Stream stall recovery failed',
+        error: e,
+        stackTrace: s,
+      );
     } finally {
       _isRecovering = false;
     }
@@ -1493,9 +1593,8 @@ class WinWinPlayerController {
     // seek 冻结窗口（内部 paused 态）：按用户意图判定实际播放方向。
     // 冻结期间底层 state 恒为 paused，若直接读 state 会把「转圈中的播放」误判为
     // 暂停态，导致点击暂停变成中途恢复（重新暴露错位窗口）。
-    final inSeekFreeze = _isSeeking ||
-        _nativeSeekInFlight ||
-        _queuedSeekTargetMs != null;
+    final inSeekFreeze =
+        _isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null;
     final bool isEffectivelyPlaying = inSeekFreeze
         ? _userIntentPlaying
         : player.state == mdk.PlaybackState.playing;
@@ -1644,7 +1743,8 @@ class WinWinPlayerController {
         // 4. 若向后快进超出缓冲水位，使用 fromStart | keyFrame 从网络直接 Range 命中。
         final currentPosMs = player.position;
         final bufMax = player.buffered();
-        final isForwardInCache = targetMs >= currentPosMs &&
+        final isForwardInCache =
+            targetMs >= currentPosMs &&
             targetMs <= currentPosMs + bufMax &&
             bufMax > 0;
         final bool isBackward = targetMs < currentPosMs;
@@ -1654,8 +1754,8 @@ class WinWinPlayerController {
         final int flagBits = targetMs == 0
             ? (mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame)
             : (mdk.SeekFlag.fromStart |
-                (isBackward ? 0 : mdk.SeekFlag.keyFrame) |
-                (isForwardInCache ? mdk.SeekFlag.inCache : 0));
+                  (isBackward ? 0 : mdk.SeekFlag.keyFrame) |
+                  (isForwardInCache ? mdk.SeekFlag.inCache : 0));
         final flags = mdk.SeekFlag(flagBits);
 
         // ===== pause-during-seek 冻结（2026-09-19 AVSyncTrace 取证定论）=====
@@ -1708,36 +1808,65 @@ class WinWinPlayerController {
             'PlayerController',
             'backward seek: force resync external audio track to $targetMs (frozen)',
           );
-          player.setMedia(_currentAudioUrl!, mdk.MediaType.audio);
-          player.activeAudioTracks = const [0];
-          final res2 = await player.seek(
-            position: targetMs,
-            flags: const mdk.SeekFlag(
-              mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame,
-            ),
-          );
-          if (res2 < 0) {
-            AppLogger.w(
-              'PlayerController',
-              'audio re-seek after backward seek failed: $res2',
-            );
-          }
-          // 等待音频主时钟归位：重挂+二次定位后时钟应锚定到目标点附近。
-          // 50ms 步进轮询，上限 600ms 防异常僵死；未归位则放弃等待，
-          // 由恢复播放后的 800ms 自愈兜底（音频流动可强制时钟重锚定）。
-          final settleDeadline =
-              DateTime.now().add(const Duration(milliseconds: 600));
-          while (DateTime.now().isBefore(settleDeadline)) {
-            final p = _player;
-            if (_disposed || p == null) break;
-            if ((p.position - targetMs).abs() <= 400) {
+          // 零 FFI 读取的时间预算方案（2026-09-20 00:11 取证定论）：
+          // 重挂后音频渲染管线中的旧缓冲继续被消费，master clock 被拖回
+          // 旧位置（「跳回」），跳回瞬态 mdk 内部存在锁竞争窗口——期间
+          // 任何同步 FFI 读取 position 都可能永久阻塞 isolate（实证程序
+          // 直接无响应）。因此本段完全不读 position，改用纯时间预算驱动：
+          //   1. 重挂+二次 seek：await 回调驱动完成（seek 返回≈跳回时刻）；
+          //   2. 等 1200ms：覆盖「跳回→旧缓冲消费→时钟停滞」全过程；
+          //   3. 停滞点二次重挂：旧缓冲已耗尽、管线干净，一次干净归位；
+          //   4. 等 300ms 缓冲就绪后交由 finally 统一解冻。
+          // 归位校验交给解冻后的 800ms 自愈兜底（playing 态执行，历史安全）。
+          _audioRemountInFlight = true;
+          try {
+            player.setMedia(_currentAudioUrl!, mdk.MediaType.audio);
+            player.activeAudioTracks = const [0];
+            final res2 = await player
+                .seek(
+                  position: targetMs,
+                  flags: const mdk.SeekFlag(
+                    mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame,
+                  ),
+                )
+                .timeout(const Duration(seconds: 4));
+            if (res2 < 0) {
               AppLogger.w(
-                'AVSyncTrace',
-                'clock settled: pos=${p.position}ms target=$targetMs (backward dual-track)',
+                'PlayerController',
+                'audio re-seek after backward seek failed: $res2',
               );
-              break;
             }
-            await Future.delayed(const Duration(milliseconds: 50));
+            // 跳回+旧缓冲消费+停滞窗口：纯等待，零 FFI 读取。
+            await Future.delayed(const Duration(milliseconds: 1200));
+            final p2 = _player;
+            if (!_disposed &&
+                p2 != null &&
+                seq == _seekSeq &&
+                _queuedSeekTargetMs == null) {
+              AppLogger.w(
+                'PlayerController',
+                'stagnation remount external audio track to $targetMs (frozen)',
+              );
+              p2.setMedia(_currentAudioUrl!, mdk.MediaType.audio);
+              p2.activeAudioTracks = const [0];
+              final res3 = await p2
+                  .seek(
+                    position: targetMs,
+                    flags: const mdk.SeekFlag(
+                      mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame,
+                    ),
+                  )
+                  .timeout(const Duration(seconds: 4));
+              if (res3 < 0) {
+                AppLogger.w(
+                  'PlayerController',
+                  'audio re-seek (stagnation remount) failed: $res3',
+                );
+              }
+              await Future.delayed(const Duration(milliseconds: 300));
+            }
+          } finally {
+            _audioRemountInFlight = false;
           }
         }
         // ========================================================
@@ -1771,10 +1900,12 @@ class WinWinPlayerController {
                 );
                 p.setMedia(_currentAudioUrl!, mdk.MediaType.audio);
                 p.activeAudioTracks = const [0];
-                unawaited(p.seek(
-                  position: checkTarget,
-                  flags: const mdk.SeekFlag(mdk.SeekFlag.fromStart),
-                ));
+                unawaited(
+                  p.seek(
+                    position: checkTarget,
+                    flags: const mdk.SeekFlag(mdk.SeekFlag.fromStart),
+                  ),
+                );
               }
             });
           }
@@ -1796,7 +1927,8 @@ class WinWinPlayerController {
           } else {
             // 队列排空：统一解除 seek 冻结——清除加载转圈并按用户意图恢复播放。
             buffering.value = false;
-            if (player.state != mdk.PlaybackState.playing && _userIntentPlaying) {
+            if (player.state != mdk.PlaybackState.playing &&
+                _userIntentPlaying) {
               player.state = mdk.PlaybackState.playing;
             } else if (!_userIntentPlaying) {
               // 用户在冻结窗口内主动暂停：底层已是 paused（冻结用），
@@ -1847,7 +1979,8 @@ class WinWinPlayerController {
   }
 
   /// Phase 4.5：查找当前播放位置对应的章节标题（无则返回 null）。
-  String? currentChapterTitle([double? posSec]) => currentChapter(posSec)?.title;
+  String? currentChapterTitle([double? posSec]) =>
+      currentChapter(posSec)?.title;
 
   // ── Phase 4.6 截图 ──
 
@@ -1889,8 +2022,8 @@ class WinWinPlayerController {
       final title = meta['title']?.isNotEmpty == true
           ? meta['title']!
           : (meta['language']?.isNotEmpty == true
-              ? meta['language']!
-              : '音轨 ${s.index}');
+                ? meta['language']!
+                : '音轨 ${s.index}');
       return (index: s.index, title: title);
     }).toList();
   }
@@ -1958,7 +2091,9 @@ class WinWinPlayerController {
       setAudioNormalize('0');
     } else {
       setAudioNormalize(
-        Pref.fallbackNormalization.isNotEmpty ? Pref.fallbackNormalization : '2',
+        Pref.fallbackNormalization.isNotEmpty
+            ? Pref.fallbackNormalization
+            : '2',
       );
     }
   }
