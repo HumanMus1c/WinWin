@@ -11,6 +11,7 @@ import 'package:window_manager/window_manager.dart' hide calcWindowPosition;
 import 'core/bootstrap.dart';
 import 'core/log/app_logger.dart';
 import 'core/log/sync_trace.dart';
+import 'core/player/seek_probe.dart';
 import 'core/storage/storage_pref.dart';
 import 'core/window/title_bar_controller.dart';
 import 'core/window/window_state_controller.dart';
@@ -53,6 +54,9 @@ void main() async {
   // 同步崩溃安全追踪（诊断用）：关键生命周期埋点，瞬死不丢尾部。
   unawaited(SyncTrace.init());
   SyncTrace.log('main', 'app starting, pid=$pid');
+
+  // Seek 取证探针（诊断用）：读取 Documents/logs/seek_probe.json 选择 A/B 变体。
+  await SeekProbe.init();
 
   // L6：fvp 播放器日志接入。
   // setLogHandler 接收 mdk 内部日志，分级映射到 AppLogger。
