@@ -368,18 +368,22 @@ class WinWinPlayerController {
     player.setProperty('avio.timeout', '5000000');
     player.setProperty('avio.rw_timeout', '5000000');
 
-    // 音画同步（A/V Sync）优化，依据 MDK 官方 Global-Options 文档（wiki/Global-Options）：
-    // - avsync.audio.adaptive=1：视频解码/缓冲落后时主动放慢音频节奏让视频追上，
-    //   杜绝「音频先播完、视频与进度条卡在结尾前」及「seek/缓冲后音频先出、画面慢出追赶」漂移；
-    // - avsync.audio.duration_diff：保持默认 800ms（音视频时长差 ≤800ms 时才以音频时钟为主，
-    //   B 站 DASH 双轨时长基本一致，无需调整）。
+    // 音画同步（A/V Sync）配置，依据 MDK 官方 Global-Options 文档（wiki/Global-Options）：
+    // - avsync.audio.adaptive 保持默认 0（不启用）：实测（2026-09-20 实机复测）该选项在
+    //   视频落后（含网络缓冲停顿）时主动放慢音频，玩家可听到明显「慢放」异响；且 09-19
+    //   的 A/B 取证已确认它对 seek 时钟不归位无根治作用（仅放大现象，B 组 rate≈0.53x），
+    //   故关闭，交由播放器默认同步策略 + 后续 seek 时钟归位修复处理。
+    // - avsync.audio.duration_diff 保持默认 800ms（音视频时长差 ≤800ms 时才以音频时钟为主）。
     // 注意：早期使用的字符串属性 avsync.audio='true' 会在 mdk 0.38.0 解析时抛
     // std::invalid_argument 导致 Release 必崩（见 docs/进入视频播放页崩溃根因与修复.md），
-    // 已废弃；此处改用官方 int32 全局选项（与 d3d11.sync.cpu 同路径，无崩溃风险）。
-    // [AB] 取证结论（2026-09-19）：adaptive 仅放大 seek 后追赶窗口的音频压速（B 组 rate≈0.53x），
-    // 非主因（A 组=0 仍出现时钟不归位）；主因是快退 seek 缺 Backward 位（见 _processSeekQueue）。
-    // 恢复 =1 保留长程音画对齐收益；seek 时钟归位修复后压速窗口自然消失。
-    mdk.setGlobalOption('avsync.audio.adaptive', 1);
+    // 已废弃；此处使用官方 int32 全局选项（与 d3d11.sync.cpu 同路径，无崩溃风险）。
+    mdk.setGlobalOption('avsync.audio.adaptive', 0);
+
+    // 读缓冲水位：MDK 官方明确「maxMs 越大越好，不影响延迟」（默认 1000/4000ms）。
+    // 实测（2026-09-20）默认水位下自然播放与 seek 后均易因缓冲耗尽停顿（mdk 缓冲期会
+    // 暂停主时钟，观感为长时间卡住 + 音频异常），故把预留量提高到 30s，用内存换停顿时长
+    // 与频率；min 保持 1000ms（缓冲恢复判据，过大会拉长每次停顿后的恢复等待）。
+    player.setBufferRange(min: 1000, max: 30000);
 
     if (kDebugMode) {
       // ===== 音画同步 Seek 取证（临时，取证结束后移除）=====
@@ -1703,17 +1707,31 @@ class WinWinPlayerController {
   }
 
   /// 取证探针：自动执行脚本化 seek 序列（诊断专用，随 [SeekProbe] 一并移除）。
+  /// 支持单会话多轮：每轮开始前重读配置，可热切换 variant（无需重启应用）。
   void _maybeStartSeekProbe() {
     if (_disposed || !SeekProbe.autoSeekEnabled) return;
     if (!SeekProbe.markAutoStarted()) return;
     unawaited(() async {
       await Future.delayed(Duration(seconds: SeekProbe.autoSeekWarmupSec));
-      final targets = SeekProbe.autoSeekTargets;
-      for (var i = 0; i < targets.length; i++) {
+      for (var round = 0; round < SeekProbe.autoSeekRounds; round++) {
         if (_disposed) return;
-        SeekProbe.probeStep(i, targets[i] * 1000);
-        seek(Duration(seconds: targets[i]));
-        await Future.delayed(const Duration(milliseconds: 4600));
+        await SeekProbe.refresh();
+        SeekProbe.applyRoundVariant(round);
+        _player?.setProperty(
+          'demux.buffer.ranges',
+          SeekProbe.demuxBufferRanges,
+        );
+        SeekProbe.probeRound(round);
+        final targets = SeekProbe.autoSeekTargets;
+        for (var i = 0; i < targets.length; i++) {
+          if (_disposed) return;
+          SeekProbe.probeStep(i, targets[i] * 1000);
+          seek(Duration(seconds: targets[i]));
+          await Future.delayed(const Duration(milliseconds: 4600));
+        }
+        if (round + 1 < SeekProbe.autoSeekRounds) {
+          await Future.delayed(Duration(seconds: SeekProbe.roundGapSec));
+        }
       }
       if (!_disposed) SeekProbe.probeDone();
     }());

@@ -57,6 +57,21 @@ abstract final class SeekProbe {
   static List<int> autoSeekTargets = const [20, 60, 25, 70, 30, 75];
   static bool _autoStarted = false;
 
+  /// 单会话轮数：每轮重新读取配置文件（可在应用运行中热切换 variant），
+  /// 轮间隔 [roundGapSec] 秒。
+  static int autoSeekRounds = 1;
+  static int roundGapSec = 15;
+  static int _lastConfigStamp = 0;
+
+  /// 轮次变体序列：配置后每轮按序切换变体（一次会话跑完整矩阵，无需人工干预）。
+  static List<SeekVariant> variantSequence = const [];
+
+  /// 轮首应用序列变体（未配置序列则沿用配置文件里的 variant）。
+  static void applyRoundVariant(int round) {
+    if (variantSequence.isEmpty) return;
+    variant = variantSequence[round % variantSequence.length];
+  }
+
   /// 首次调用返回 true（保证自动序列在本进程内只跑一次）。
   static bool markAutoStarted() {
     if (_autoStarted) return false;
@@ -90,42 +105,92 @@ abstract final class SeekProbe {
       variant == SeekVariant.noCache ? '0' : '16';
 
   static Future<void> init() async {
+    await _loadConfig();
+    SyncTrace.log(
+      'SeekProbe',
+      'init enabled=$enabled variant=${variant.name} '
+      'autoSeek=$autoSeekEnabled warmup=$autoSeekWarmupSec '
+      'targets=$autoSeekTargets rounds=$autoSeekRounds gap=$roundGapSec',
+    );
+  }
+
+  /// 重新读取配置（按 mtime 去重）：应用运行中可热切换 variant / 轮数。
+  static Future<void> refresh() async {
+    try {
+      final file = await _configFile();
+      if (file == null) return;
+      final stamp = file.statSync().modified.millisecondsSinceEpoch;
+      if (stamp == _lastConfigStamp) return;
+      await _loadConfig();
+      SyncTrace.log(
+        'SeekProbe',
+        'config reloaded variant=${variant.name} enabled=$enabled',
+      );
+    } catch (_) {}
+  }
+
+  static Future<File?> _configFile() async {
     try {
       final runtime = await LoggerUtils.getRuntimeLogsPath();
       final file = File(
         '${runtime.parent.path}${Platform.pathSeparator}seek_probe.json',
       );
-      if (file.existsSync()) {
-        final raw = jsonDecode(await file.readAsString());
-        if (raw is Map) {
-          enabled = raw['enabled'] != false;
-          final name = raw['variant']?.toString() ?? 'baseline';
-          variant = SeekVariant.values.firstWhere(
-            (e) => e.name == name,
-            orElse: () => SeekVariant.baseline,
-          );
-          final auto = raw['autoSeek'];
-          if (auto is Map) {
-            autoSeekEnabled = auto['enabled'] == true;
-            autoSeekWarmupSec =
-                int.tryParse('${auto['warmupSec']}') ?? autoSeekWarmupSec;
-            final targets = auto['targetsSec'];
-            if (targets is List) {
-              final parsed = targets
-                  .map((e) => int.tryParse('$e') ?? -1)
-                  .where((e) => e >= 0)
-                  .toList();
-              if (parsed.isNotEmpty) autoSeekTargets = parsed;
-            }
+      return file.existsSync() ? file : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _loadConfig() async {
+    try {
+      final file = await _configFile();
+      if (file == null) return;
+      _lastConfigStamp = file.statSync().modified.millisecondsSinceEpoch;
+      final raw = jsonDecode(await file.readAsString());
+      if (raw is Map) {
+        enabled = raw['enabled'] != false;
+        final name = raw['variant']?.toString() ?? 'baseline';
+        variant = SeekVariant.values.firstWhere(
+          (e) => e.name == name,
+          orElse: () => SeekVariant.baseline,
+        );
+        final auto = raw['autoSeek'];
+        if (auto is Map) {
+          autoSeekEnabled = auto['enabled'] == true;
+          autoSeekWarmupSec =
+              int.tryParse('${auto['warmupSec']}') ?? autoSeekWarmupSec;
+          autoSeekRounds =
+              int.tryParse('${auto['roundsPerSession']}') ?? autoSeekRounds;
+          roundGapSec = int.tryParse('${auto['roundGapSec']}') ?? roundGapSec;
+          final seq = auto['variantSequence'];
+          if (seq is List) {
+            variantSequence = seq
+                .map(
+                  (e) => SeekVariant.values.firstWhere(
+                    (v) => v.name == '$e',
+                    orElse: () => SeekVariant.baseline,
+                  ),
+                )
+                .toList();
+          }
+          final targets = auto['targetsSec'];
+          if (targets is List) {
+            final parsed = targets
+                .map((e) => int.tryParse('$e') ?? -1)
+                .where((e) => e >= 0)
+                .toList();
+            if (parsed.isNotEmpty) autoSeekTargets = parsed;
           }
         }
       }
     } catch (_) {}
+  }
+
+  /// 自动序列：第 [round] 轮开始（variant 已在轮首刷新）。
+  static void probeRound(int round) {
     SyncTrace.log(
       'SeekProbe',
-      'init enabled=$enabled variant=${variant.name} '
-      'autoSeek=$autoSeekEnabled warmup=$autoSeekWarmupSec '
-      'targets=$autoSeekTargets',
+      'PROBE ROUND $round variant=${variant.name}',
     );
   }
 
@@ -301,7 +366,22 @@ abstract final class SeekProbe {
       }
     }
     final hasRange = posMin <= posMax;
-    final dragBack = hasRange && posMin < _targetMs - 1500;
+    // 快退：时钟回跳旧位置表现为「跑回目标之上」；快进：表现为「落回目标之下」。
+    final driftBack = hasRange &&
+        (_backward
+            ? posMax > _targetMs + 2500
+            : posMin < _targetMs - 2500);
+    final endT = _sampleT.isEmpty ? 0 : _sampleT.last;
+    final endPos = _samplePos.isEmpty ? -1 : _samplePos.last;
+    final settled = endPos >= 0 && (endPos - _targetMs).abs() <= 1500;
+    // 末段 600ms 稳态推进速率（排除回跳瞬态）
+    var steadyRate = double.nan;
+    for (var i = _sampleT.length - 1; i >= 0; i--) {
+      final dt = endT - _sampleT[i];
+      if (dt < 600) continue;
+      steadyRate = (_samplePos.last - _samplePos[i]) / dt;
+      break;
+    }
     final catchUp = rateMax.isFinite && rateMax >= 1.5;
     final audioSlow = rateMin.isFinite && rateMin <= 0.7;
     final frameLateMs = _firstFrameT == null
@@ -314,11 +394,13 @@ abstract final class SeekProbe {
       'SEEK#$_seq END variant=${variant.name} target=$_targetMs '
       'backward=${_backward ? 1 : 0} posAfter=${_seekReturnPos ?? -1} '
       'posMin=${hasRange ? posMin : -1} posMax=${hasRange ? posMax : -1} '
+      'endPos=$endPos settled=${settled ? 1 : 0} '
+      'steadyRate=${steadyRate.isFinite ? steadyRate.toStringAsFixed(2) : '-'} '
       'rateMin=${rateMin.isFinite ? rateMin.toStringAsFixed(2) : '-'} '
       'rateMax=${rateMax.isFinite ? rateMax.toStringAsFixed(2) : '-'} '
       'unfreeze=$_unfreezeReason unfreezeT=${_unfreezeT ?? -1} '
       'firstFrameT=${_firstFrameT ?? -1} firstFrameTs=${_firstFrameTs ?? -1} '
-      'frameLateMs=$frameLateMs dragBack=${dragBack ? 1 : 0} '
+      'frameLateMs=$frameLateMs driftBack=${driftBack ? 1 : 0} '
       'catchUp=${catchUp ? 1 : 0} audioSlow=${audioSlow ? 1 : 0}',
     );
   }
