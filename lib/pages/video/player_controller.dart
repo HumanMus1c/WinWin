@@ -895,7 +895,16 @@ class WinWinPlayerController {
         try {
           if (player.state == mdk.PlaybackState.playing &&
               apd.state == mdk.PlaybackState.playing) {
-            final decision = SeekProbe.driftDecision(posMs, apd.position);
+            final sinceSeek = _lastSeekFinishTime == null
+                ? 1 << 30
+                : DateTime.now()
+                      .difference(_lastSeekFinishTime!)
+                      .inMilliseconds;
+            final decision = SeekProbe.driftDecision(
+              posMs,
+              apd.position,
+              sinceSeekMs: sinceSeek,
+            );
             if (decision == 2) {
               unawaited(apd.seek(position: posMs));
               apd.playbackRate = 1.0;
@@ -2330,6 +2339,16 @@ class WinWinPlayerController {
             if (_seekWindowMuted) {
               player.mute = false;
               _seekWindowMuted = false;
+            }
+            // 优化：解冻时先起音频实例、再起视频实例（实测音频侧起播延迟更大，
+            // 先起可把 seek 后的初始偏差压小一档；残余由自适应校正接管）。
+            final apOrder = _audioPlayer;
+            if (apOrder != null && _userIntentPlaying) {
+              try {
+                if (apOrder.state != mdk.PlaybackState.playing) {
+                  apOrder.state = mdk.PlaybackState.playing;
+                }
+              } catch (_) {}
             }
             if (player.state != mdk.PlaybackState.playing &&
                 _userIntentPlaying) {

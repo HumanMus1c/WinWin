@@ -181,21 +181,39 @@ abstract final class SeekProbe {
     SyncTrace.log('SeekProbe', message);
   }
 
-  /// 方案 3：双实例漂移校正判定（1s 节流）。返回：
-  /// 0=不动，1=音频滞后需加速(+3%)，-1=音频超前需减速(-3%)，2=偏差过大需硬定位。
-  static int _driftTick = 0;
+  /// 方案 3：双实例漂移校正判定（自适应节流 + 仅在超阈值时落盘）。
+  /// seek 后 3s 内每 250ms 检查（快速收敛），稳定后每 5s 一次（长期开销趋近于零）。
+  /// 返回：0=不动，1=音频滞后需加速(+3%)，-1=音频超前需减速(-3%)，2=偏差过大需硬定位。
+  static DateTime? _driftLastAt;
 
-  static int driftDecision(int videoPosMs, int audioPosMs) {
+  static int driftDecision(
+    int videoPosMs,
+    int audioPosMs, {
+    required int sinceSeekMs,
+  }) {
     if (!enabled) return 0;
-    _driftTick++;
-    if (_driftTick % 10 != 0) return 0;
+    final now = DateTime.now();
+    final periodMs = sinceSeekMs < 3000 ? 250 : 5000;
+    final last = _driftLastAt;
+    if (last != null && now.difference(last).inMilliseconds < periodMs) {
+      return 0;
+    }
+    _driftLastAt = now;
     final drift = audioPosMs - videoPosMs;
-    SyncTrace.log(
-      'SeekProbe',
-      'DRIFT drift=$drift v=$videoPosMs a=$audioPosMs',
-    );
-    if (drift.abs() > 1500) return 2;
-    if (drift.abs() > 250) return drift < 0 ? 1 : -1;
+    if (drift.abs() > 1500) {
+      SyncTrace.log(
+        'SeekProbe',
+        'DRIFT hard drift=$drift v=$videoPosMs a=$audioPosMs',
+      );
+      return 2;
+    }
+    if (drift.abs() > 250) {
+      SyncTrace.log(
+        'SeekProbe',
+        'DRIFT nudge drift=$drift v=$videoPosMs a=$audioPosMs',
+      );
+      return drift < 0 ? 1 : -1;
+    }
     return 0;
   }
 
