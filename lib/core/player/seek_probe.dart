@@ -79,10 +79,76 @@ abstract final class SeekProbe {
   static int _monBufMin = 1 << 30;
   static int _monBufMax = 0;
 
+  /// 监控/心跳专用单调时钟。
+  ///
+  /// 严禁复用 [_clock]：探针秒表只在 seek 窗口内 start/stop，窗口外恒停在 ≤4000ms，
+  /// 导致 `t - _monLastReportT >= 5000` 永假——2026-09-24 重播后快进事件期间
+  /// MON 心跳一条未落盘，常态证据全部丢失。此处独立计时，进程内恒走。
+  static final Stopwatch _monClock = Stopwatch()..start();
+
+  /// 轮询阶段标记：由轮询回调各阶段写入，供心跳行携带（零 FFI，绝不阻塞）。
+  static String _pollPhase = 'init';
+  static String get pollPhase => _pollPhase;
+  static void markPhase(String phase) {
+    _pollPhase = phase;
+  }
+
+  static int _beatIndex = 0;
+  static int _beatLastMs = -(1 << 30);
+
+  /// 存活心跳（关键取证）：每 [monitorReportSec] 秒一行，**零 FFI 读取**
+  /// （只读 ValueNotifier 缓存与控制器自身标志），且在轮询回调最前端调用，
+  /// 不受任何早退分支影响。价值：日志一旦缺失心跳即可判定 UI isolate 被
+  /// 同步 FFI 读取阻塞（定时器随之停止），且末条心跳的 `phase` 给出卡死前
+  /// 最后完成的轮询阶段。
+  static void beat({
+    required bool ready,
+    required bool playing,
+    required bool completed,
+    required bool buffering,
+    required int uiPosMs,
+    required int uiDurMs,
+    required bool seeking,
+    required bool nativeSeekInFlight,
+    required int? queuedTargetMs,
+    required bool userIntent,
+  }) {
+    if (!enabled || !monitorEnabled) return;
+    final t = _monClock.elapsedMilliseconds;
+    if (t - _beatLastMs < monitorReportSec * 1000) return;
+    _beatLastMs = t;
+    _beatIndex++;
+    // 顺带结算上一窗口的采样统计（monitorTick 只采样不落盘）。
+    final winT = _monLastReportT == 0 ? t : t - _monLastReportT;
+    final adv = _monPos.length >= 2 ? _monPos.last - _monPos.first : 0;
+    final avgRate = winT > 0 ? adv / winT : 0.0;
+    SyncTrace.log(
+      'SeekProbe',
+      'BEAT #$_beatIndex t=+${t}ms phase=$_pollPhase '
+      'uiPos=$uiPosMs uiDur=$uiDurMs '
+      'ready=${ready ? 1 : 0} playing=${playing ? 1 : 0} '
+      'completed=${completed ? 1 : 0} buffering=${buffering ? 1 : 0} '
+      'seeking=${seeking ? 1 : 0} inFlight=${nativeSeekInFlight ? 1 : 0} '
+      'queued=${queuedTargetMs ?? -1} intent=${userIntent ? 1 : 0} '
+      'samples=${_monT.length} avgRate=${avgRate.toStringAsFixed(2)} '
+      'stalls=$_monStallEpisodes stallMs=$_monStallMs '
+      'bufMin=${_monBufMin == 1 << 30 ? -1 : _monBufMin} bufMax=$_monBufMax',
+    );
+    _monT.clear();
+    _monPos.clear();
+    _monStallEpisodes = 0;
+    _monStallMs = 0;
+    _monInStall = false;
+    _monBufMin = 1 << 30;
+    _monBufMax = 0;
+    _monLastReportT = t;
+  }
+
   /// 每 [monitorPeriodMs] 采样一次；停滞（1s 内位置推进 < 50ms）计为一次停顿。
-  static void monitorTick(int posMs, int bufferedMs, String state) {
-    if (!enabled || !monitorEnabled || _active) return;
-    final t = nowMs;
+  /// 只累计统计，不落盘（报告统一由 [beat] 输出）。
+  static void monitorTick(int posMs, int bufferedMs) {
+    if (!enabled || !monitorEnabled) return;
+    final t = _monClock.elapsedMilliseconds;
     if (_monT.isNotEmpty && t - _monT.last < monitorPeriodMs) return;
     _monT.add(t);
     _monPos.add(posMs);
@@ -104,27 +170,68 @@ abstract final class SeekProbe {
         if (stalled) _monStallMs += dt;
       }
     }
-    if (t - _monLastReportT >= monitorReportSec * 1000) {
-      final dt = _monLastReportT == 0 ? t : t - _monLastReportT;
-      final adv = _monPos.length >= 2 ? _monPos.last - _monPos.first : 0;
-      final avgRate = dt > 0 ? adv / dt : 0.0;
+  }
+
+  // ── pollTrace：逐 tick 阶段埋点（默认关，仅卡死取证期打开）──
+  /// 每 tick 写 4~5 条短行 `POLL#n <stage> dt=<自本 tick 起点耗时>`：若 isolate
+  /// 阻塞在某个同步 FFI 读取上，最后一条 POLL 行即直接指向卡死的那次读取，
+  /// 且 dt 序列给出阻塞前的耗时恶化趋势。
+  static bool pollTrace = false;
+  static int pollSlowMs = 300;
+  static int _pollTick = 0;
+  static int _pollTickStartMs = 0;
+  static int _pollSlowCount = 0;
+
+  static void pollBegin() {
+    if (!enabled) return;
+    _pollTick++;
+    _pollTickStartMs = _monClock.elapsedMilliseconds;
+    if (!pollTrace) return;
+    SyncTrace.log('SeekProbe', 'POLL#$_pollTick enter t=${_pollTickStartMs}ms');
+  }
+
+  static void pollStage(String stage, [String extra = '']) {
+    if (!enabled || !pollTrace) return;
+    SyncTrace.log(
+      'SeekProbe',
+      'POLL#$_pollTick $stage dt=${_monClock.elapsedMilliseconds - _pollTickStartMs}ms'
+      '${extra.isEmpty ? '' : ' $extra'}',
+    );
+  }
+
+  /// tick 结束：pollTrace 下补 done 行；无 pollTrace 时兜底记录异常慢 tick。
+  static void pollEnd() {
+    if (!enabled) return;
+    final dt = _monClock.elapsedMilliseconds - _pollTickStartMs;
+    if (dt >= pollSlowMs) {
+      _pollSlowCount++;
       SyncTrace.log(
         'SeekProbe',
-        'MON variant=${variant.name} t=+${t}ms samples=${_monT.length} '
-        'avgRate=${avgRate.toStringAsFixed(2)} '
-        'stalls=$_monStallEpisodes stallMs=$_monStallMs '
-        'bufMin=${_monBufMin == 1 << 30 ? -1 : _monBufMin} bufMax=$_monBufMax '
-        'pos=${_monPos.isEmpty ? -1 : _monPos.last} state=$state',
+        'POLL#$_pollTick SLOW dt=${dt}ms count=$_pollSlowCount',
       );
-      _monT.clear();
-      _monPos.clear();
-      _monStallEpisodes = 0;
-      _monStallMs = 0;
-      _monInStall = false;
-      _monBufMin = 1 << 30;
-      _monBufMax = 0;
-      _monLastReportT = t;
+    } else if (pollTrace) {
+      SyncTrace.log('SeekProbe', 'POLL#$_pollTick done dt=${dt}ms');
     }
+  }
+
+  // ── RAW：常态原始读数（5s 节流；字段由控制器侧组装）──
+  static int _rawLastMs = -(1 << 30);
+
+  /// RAW 行是否到期。供控制器在**读取底层 FFI 之前**判定，避免每 tick 多读。
+  static bool rawDue() {
+    if (!enabled) return false;
+    return _monClock.elapsedMilliseconds - _rawLastMs >=
+        monitorReportSec * 1000;
+  }
+
+  /// 写一条 RAW 行（5s 节流）：与零风险心跳互补，给出底层真实 state/status、
+  /// 缓冲水位与第二实例状态。
+  static void raw(String line) {
+    if (!enabled) return;
+    final t = _monClock.elapsedMilliseconds;
+    if (t - _rawLastMs < monitorReportSec * 1000) return;
+    _rawLastMs = t;
+    SyncTrace.log('SeekProbe', 'RAW #$_pollTick $line');
   }
 
   /// 轮首应用序列变体（未配置序列则沿用配置文件里的 variant）。
@@ -312,6 +419,9 @@ abstract final class SeekProbe {
         manifestModeEnabled = raw['manifestMode'] == true;
         flushAudioOnSeek = raw['flushAudioOnSeek'] == true;
         reopenOnBackwardSeek = raw['reopenOnBackwardSeek'] == true;
+        pollTrace = raw['pollTrace'] == true;
+        final slow = int.tryParse('${raw['pollSlowMs']}');
+        if (slow != null && slow > 0) pollSlowMs = slow;
       }
     } catch (_) {}
   }

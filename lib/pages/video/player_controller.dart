@@ -438,33 +438,78 @@ class WinWinPlayerController {
     return player;
   }
 
+  /// 创建第二实例（纯音频轨）并挂状态/媒体状态取证监听。
+  ///
+  /// 生命周期与全局静态实例一致（首次进入双播放器模式时创建），监听常驻：
+  /// 2026-09-24 事件中第二实例全程零埋点，无法判断其 EOS/暂停是否参与了误判。
+  mdk.Player _createAudioPlayer() {
+    final p = mdk.Player();
+    p.onStateChanged.listen((event) {
+      SeekProbe.note(
+        'AUDIO state ${event.oldValue} -> ${event.newValue}',
+      );
+    });
+    p.onMediaStatus.listen((event) {
+      SeekProbe.note(
+        'AUDIO status ${event.oldValue} -> ${event.newValue}',
+      );
+    });
+    SeekProbe.note('AUDIO instance created');
+    return p;
+  }
+
   /// 视频播放自然结束统一收敛处理（对标 PiliPlus stream.completed & BiliPai STATE_ENDED）。
-  void _handlePlaybackEnded() {
+  ///
+  /// [source] 记录触发源，便于回溯误判来源（四个调用点：mediaStatus.end /
+  /// statePaused / pollNearEnd / stallRecovery）。
+  ///
+  /// 片尾位置门控（2026-09-24 事件修复）：mdk 会在 seek、预读触达流末尾等
+  /// **非自然播完**场景瞬时置位 `MediaStatus.end`（实证：2026-09-24T23:09:06
+  /// 一次普通前进 seek 中即出现 `buffered+seeking → buffered+end`）。若不校验
+  /// 位置，这种瞬态信号会把进度归一到片尾 + 置 completed + 暂停播放器，观感
+  /// 即「视频瞬间回到播放完毕/重播态」。故位置不在片尾（< 时长-1500ms）时
+  /// 只落取证行、绝不改状态、绝不暂停播放。
+  void _handlePlaybackEnded({required String source}) {
     if (_disposed) return;
     // Seek 执行期间底层 PTS 与解码器状态瞬态刷新，严禁误判播放完毕，彻底消灭重播态/暂停态跳变
-    if (_isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null)
+    if (_isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null) {
       return;
+    }
     if (completed.value) return;
+    final p = _player;
+    final durMs = duration.value.inMilliseconds;
+    final rawPosMs = p?.position ?? position.value.inMilliseconds;
+    if (durMs <= 0 || rawPosMs < durMs - 1500) {
+      SeekProbe.note(
+        'FAKE-END source=$source pos=$rawPosMs dur=$durMs '
+        'status=${p?.mediaStatus} state=${p?.state} '
+        'playing=${playing.value ? 1 : 0} seek=${_isSeeking ? 1 : 0} '
+        'inFlight=${_nativeSeekInFlight ? 1 : 0} '
+        'queued=${_queuedSeekTargetMs ?? -1}',
+      );
+      return;
+    }
     completed.value = true;
     playing.value = false;
     buffering.value = false;
     // 完成态进度归一：受音画微差影响，底层 PTS 可能停在总时长之前（音频先播完、
     // 视频后到位），将 position 收敛到 duration，保证进度条与时间显示走到头
     // （与主流播放器 EOS 显示行为一致；轮询侧已做 completed 冻结防回拖）。
-    final durMs = duration.value.inMilliseconds;
-    if (durMs > 0 && position.value.inMilliseconds < durMs) {
+    if (position.value.inMilliseconds < durMs) {
       position.value = Duration(milliseconds: durMs);
     }
     _userIntentPlaying = false;
     _bufferingStallMs = 0;
     _maybeReportPlaybackEnd();
-    final p = _player;
     if (p != null && p.state == mdk.PlaybackState.playing) {
       p.state = mdk.PlaybackState.paused;
     }
-    AppLogger.i(
+    SeekProbe.note(
+      'ENDED source=$source pos=$rawPosMs dur=$durMs state=${p?.state}',
+    );
+    AppLogger.w(
       'PlayerController',
-      'Playback completed naturally at ${position.value.inSeconds}s/${duration.value.inSeconds}s',
+      'Playback completed ($source) at ${rawPosMs}ms/$durMs ms',
     );
   }
 
@@ -479,6 +524,16 @@ class WinWinPlayerController {
         player.onStateChanged.listen((event) {
           if (_disposed) return;
           final isPlaying = event.newValue == mdk.PlaybackState.playing;
+          // 取证：播放器状态变迁全量落盘（不受 seek 探针窗口限制；零额外 FFI 读取）
+          SeekProbe.note(
+            'STATE ${event.oldValue} -> ${event.newValue} '
+            'uiPos=${position.value.inMilliseconds} '
+            'playing=${playing.value ? 1 : 0} '
+            'completed=${completed.value ? 1 : 0} seek=${_isSeeking ? 1 : 0} '
+            'inFlight=${_nativeSeekInFlight ? 1 : 0} '
+            'queued=${_queuedSeekTargetMs ?? -1} '
+            'intent=${_userIntentPlaying ? 1 : 0}',
+          );
           // 方案 3 最小验证：播放/暂停镜像到音频实例（冻结窗口内的内部 paused
           // 也会同步给音频实例，两侧行为保持一致）。
           final ap0 = _audioPlayer;
@@ -514,7 +569,13 @@ class WinWinPlayerController {
                 ready.value &&
                 durMs > 0 &&
                 posMs >= durMs - 1500) {
-              _handlePlaybackEnded();
+              _handlePlaybackEnded(source: 'statePaused');
+            } else {
+              // 取证：暂停/停止事件被片尾门控拒绝（用于回溯「暂停但不该判完成」的场景）
+              SeekProbe.note(
+                'STATE-STOP-NOTEND pos=$posMs dur=$durMs '
+                'loading=${_loading ? 1 : 0} ready=${ready.value ? 1 : 0}',
+              );
             }
           }
         }),
@@ -564,15 +625,28 @@ class WinWinPlayerController {
           final oldValue = event.oldValue;
           final newValue = event.newValue;
           SeekProbe.event('mediastatus', '$oldValue -> $newValue', 0);
+          // 取证：媒体状态变迁全量落盘（不受 seek 探针窗口限制）。`end` 位在本项目
+          // 存在「seek 中瞬时置位」现象（2026-09-24 实证），必须全量留痕才能回溯。
+          SeekProbe.note(
+            'STATUS $oldValue -> $newValue '
+            'uiPos=${position.value.inMilliseconds} '
+            'dur=${duration.value.inMilliseconds} '
+            'playing=${playing.value ? 1 : 0} '
+            'completed=${completed.value ? 1 : 0} seek=${_isSeeking ? 1 : 0} '
+            'inFlight=${_nativeSeekInFlight ? 1 : 0} '
+            'queued=${_queuedSeekTargetMs ?? -1}',
+          );
 
           // 监听流结束标志（keep_open=1 下 MDK 置位 MediaStatus.end）
           if (!oldValue.test(mdk.MediaStatus.end) &&
               newValue.test(mdk.MediaStatus.end)) {
-            AppLogger.i('PlayerController', 'onMediaStatus: end detected');
             if (!_isSeeking &&
                 !_nativeSeekInFlight &&
                 _queuedSeekTargetMs == null) {
-              _handlePlaybackEnded();
+              _handlePlaybackEnded(source: 'mediaStatus.end');
+            } else {
+              // 冻结窗口内置位：属 seek 瞬态，忽略（位置门控在 _handlePlaybackEnded 内二次把关）
+              SeekProbe.note('END-FLIP-IN-SEEKWINDOW (ignored)');
             }
           }
 
@@ -701,8 +775,28 @@ class WinWinPlayerController {
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      // 存活心跳（关键取证）：置于最前端、零 FFI 读取，任何早退分支都不影响其
+      // 落盘。心跳一断即证明 UI isolate 被同步 FFI 读取阻塞（定时器随之停摆），
+      // 末条心跳的 phase 直接指向卡死前最后完成的轮询阶段。
+      SeekProbe.beat(
+        ready: ready.value,
+        playing: playing.value,
+        completed: completed.value,
+        buffering: buffering.value,
+        uiPosMs: position.value.inMilliseconds,
+        uiDurMs: duration.value.inMilliseconds,
+        seeking: _isSeeking,
+        nativeSeekInFlight: _nativeSeekInFlight,
+        queuedTargetMs: _queuedSeekTargetMs,
+        userIntent: _userIntentPlaying,
+      );
+      SeekProbe.pollBegin();
       final player = _player;
-      if (_disposed || player == null || !ready.value) return;
+      if (_disposed || player == null || !ready.value) {
+        SeekProbe.markPhase('skip-notready');
+        SeekProbe.pollEnd();
+        return;
+      }
 
       // 若正在 seek 过程中，底层 player.position 仍可能返回旧 PTS，
       // 保持当前 target 进度，避免进度条来回跳变抖动；同时屏蔽卡顿看门狗误判。
@@ -712,6 +806,15 @@ class WinWinPlayerController {
         //（2026-09-20 00:11 死锁实证，同步 FFI 读取可永久阻塞 isolate），
         // 用 target 代替——落地判定已由 hasNativeReturned 门控，不受影响。
         final currentPosMs = _audioRemountInFlight ? target : player.position;
+        SeekProbe.markPhase('seek-wait');
+        SeekProbe.pollStage('after-position', 'v=$currentPosMs target=$target');
+        if (SeekProbe.rawDue()) {
+          SeekProbe.raw(
+            'seek pos=$currentPosMs target=$target state=${player.state} '
+            'status=${player.mediaStatus} inFlight=${_nativeSeekInFlight ? 1 : 0} '
+            'queued=${_queuedSeekTargetMs ?? -1}',
+          );
+        }
 
         // 取证：采样 position 轨迹与推进速率（重挂窗口内不读底层 position）
         if (!_audioRemountInFlight) {
@@ -757,14 +860,19 @@ class WinWinPlayerController {
           _nativeSeekDoneTime = null;
           // 若已确认到达目标，同步底层采样基准；若硬超时且未落地，以 target 为基准，避免旧高位 PTS 污染
           _lastPolledPosMs = hasLanded ? currentPosMs : target;
+          SeekProbe.markPhase('seek-landed');
         } else {
           // 底层 seek 执行中或纹理未排空，维持目标进度，屏蔽旧 PTS 覆盖导致的回跳
           _bufferingStallMs = 0;
+          SeekProbe.markPhase('seek-pending');
+          SeekProbe.pollEnd();
           return;
         }
       }
 
       final posMs = player.position;
+      SeekProbe.pollStage('after-position', 'v=$posMs');
+      SeekProbe.markPhase('pos-read');
       SeekProbe.tick(posMs);
       final newPos = Duration(milliseconds: posMs);
       // 完成态冻结进度：音画微差会导致底层 PTS 停在总时长之前，禁止轮询
@@ -855,6 +963,24 @@ class WinWinPlayerController {
           }
         }
       }
+      SeekProbe.markPhase('buffered');
+      SeekProbe.pollStage(
+        'after-buffered',
+        'v=$posMs b=${buffered.value.inMilliseconds}',
+      );
+      SeekProbe.monitorTick(posMs, buffered.value.inMilliseconds);
+      // 常态原始读数（5s 节流）：与零风险心跳互补，给出底层真实 state/status
+      // 与第二实例状态——2026-09-24 事件中该行会直接落在「完成态冻结」分支内。
+      if (SeekProbe.rawDue()) {
+        final ap = _audioPlayer;
+        SeekProbe.raw(
+          'pos=$posMs dur=$durMs buf=${buffered.value.inMilliseconds} '
+          'state=${player.state} status=${player.mediaStatus} '
+          'adv=${isPosAdvancing ? 1 : 0} playing=${playing.value ? 1 : 0} '
+          'completed=${completed.value ? 1 : 0} '
+          'audio=${ap == null ? '-' : (_audioRemountInFlight ? 'remount' : '${ap.state}@${ap.position}')}',
+        );
+      }
       final isNearEnd = durMs > 0 && posMs >= durMs - 200;
       if (!_isSeeking &&
           !_nativeSeekInFlight &&
@@ -862,7 +988,9 @@ class WinWinPlayerController {
           isNearEnd &&
           !isPosAdvancing &&
           !playing.value) {
-        _handlePlaybackEnded();
+        SeekProbe.markPhase('near-end-ended');
+        SeekProbe.pollEnd();
+        _handlePlaybackEnded(source: 'pollNearEnd');
         return;
       }
 
@@ -870,6 +998,8 @@ class WinWinPlayerController {
       if (completed.value || (durMs > 0 && posMs >= durMs - 1000)) {
         buffering.value = false;
         _bufferingStallMs = 0;
+        SeekProbe.markPhase('completed-frozen');
+        SeekProbe.pollEnd();
         return;
       }
 
@@ -879,12 +1009,7 @@ class WinWinPlayerController {
       // 3. 仅在播放停滞（!isPosAdvancing）且脱离 seek 保护期时检测底层 stalled（解码空仓）或累计停滞达 1 秒；
       // 4. Seek 落地后 3 秒保护期内绝对禁止触发重载，防止高码率流首次缓冲网络延迟被误杀；
       // 5. 达到 10 秒真卡死门限且底层无任何缓冲水位（buffered <= 0）时，才触发自愈。
-      // 取证：常态流监控（停顿频率/时长/平均速率），定位自然播放频繁缓冲与追赶。
-      SeekProbe.monitorTick(
-        posMs,
-        buffered.value.inMilliseconds,
-        '${player.state}',
-      );
+      SeekProbe.markPhase('watchdog');
       // 方案 3（docs 2.9）：双实例漂移校正——音频侧滞后则提速 3%、超前则减速 3%，
       // 偏差 >1.5s 直接硬定位；seek 期与任一实例非播放态一律跳过（避开瞬态）。
       final apd = _audioPlayer;
@@ -906,6 +1031,9 @@ class WinWinPlayerController {
               sinceSeekMs: sinceSeek,
             );
             if (decision == 2) {
+              SeekProbe.note(
+                'DRIFT-HARD video=$posMs audio=${apd.position} -> audio seek',
+              );
               unawaited(apd.seek(position: posMs));
               apd.playbackRate = 1.0;
             } else if (decision == 1) {
@@ -918,6 +1046,8 @@ class WinWinPlayerController {
           }
         } catch (_) {}
       }
+      SeekProbe.markPhase('drift');
+      SeekProbe.pollStage('after-drift');
       final isSeekRecent =
           _lastSeekFinishTime != null &&
           DateTime.now().difference(_lastSeekFinishTime!) <
@@ -960,6 +1090,7 @@ class WinWinPlayerController {
       } else if (!_userIntentPlaying || isSeekRecent) {
         _bufferingStallMs = 0;
       }
+      SeekProbe.markPhase('sponsor');
       // SponsorBlock 自动跳过：检查当前位置是否在可跳过段落内。
       if (sponsorBlockEnabled) {
         final target = sponsorBlock?.computeSkipTarget(posMs / 1000.0);
@@ -969,6 +1100,8 @@ class WinWinPlayerController {
       }
       // 播放结束检测：进度达到 duration 的 99% 视为播完，上报 -1。
       _maybeReportPlaybackEnd();
+      SeekProbe.markPhase('tick-done');
+      SeekProbe.pollEnd();
     });
   }
 
@@ -1468,7 +1601,7 @@ class WinWinPlayerController {
       } else if (_dualPlayerAudio && audioUrl != null && audioUrl.isNotEmpty) {
         // 方案 3 最小验证：主播放器只放纯视频 URL（不再挂外挂音轨，
         // 回到实测可靠的「主媒体 seek」），音频交给第二实例（音轨即其主媒体）。
-        final ap = _audioPlayer ??= mdk.Player();
+        final ap = _audioPlayer ??= _createAudioPlayer();
         ap.setProperty('avio.headers', headers);
         ap.setProperty('keep_open', '1');
         ap.volume = volume.value / 100.0;
@@ -1662,7 +1795,7 @@ class WinWinPlayerController {
     final durMs = duration.value.inMilliseconds;
     final curPosMs = player.position;
     if (completed.value || (durMs > 0 && curPosMs >= durMs - 1000)) {
-      _handlePlaybackEnded();
+      _handlePlaybackEnded(source: 'stallRecovery');
       return;
     }
 
@@ -1835,6 +1968,17 @@ class WinWinPlayerController {
         : (to.inMilliseconds < 0 ? 0 : to.inMilliseconds);
     final clampedTo = Duration(milliseconds: clampedMs);
 
+    // 取证：seek 请求入口（零 FFI 读取，置于所有状态改写之前）。
+    // 用于区分「seek 未派发（UI 无响应/手势被吞）」与「派发后未生效/卡死」——
+    // 2026-09-24 事件正是缺此埋点而无法判定。
+    SeekProbe.note(
+      'SEEK-REQ to=${to.inMilliseconds} clamped=$clampedMs dur=$durMs '
+      'uiPos=${position.value.inMilliseconds} '
+      'completed=${completed.value ? 1 : 0} playing=${playing.value ? 1 : 0} '
+      'seek=${_isSeeking ? 1 : 0} inFlight=${_nativeSeekInFlight ? 1 : 0} '
+      'queued=${_queuedSeekTargetMs ?? -1} intent=${_userIntentPlaying ? 1 : 0}',
+    );
+
     // 用户明确 Seek 意图：无论此前是播放完还是暂停，立即解除完成态，保持意图起播
     completed.value = false;
     _reportedEnd = false;
@@ -1866,6 +2010,9 @@ class WinWinPlayerController {
     if (_nativeSeekInFlight) {
       // 当前已有底层 native seek 在执行，排队保存最新目标（覆盖旧排队）
       _queuedSeekTargetMs = clampedMs;
+      SeekProbe.note(
+        'SEEK-QUEUE seq=$seq target=$clampedMs (native seek in flight)',
+      );
       return;
     }
 
@@ -1875,8 +2022,12 @@ class WinWinPlayerController {
       if (_disposed) return;
       if (_nativeSeekInFlight) {
         _queuedSeekTargetMs = clampedMs;
+        SeekProbe.note(
+          'SEEK-QUEUE seq=$seq target=$clampedMs (in flight at debounce)',
+        );
         return;
       }
+      SeekProbe.note('SEEK-DISPATCH seq=$seq target=$clampedMs');
       _processSeekQueue(clampedMs, seq);
     });
   }
@@ -1917,6 +2068,9 @@ class WinWinPlayerController {
     if (player == null || _disposed) return;
 
     _nativeSeekInFlight = true;
+    // 取证：进入 seek 流程（在首次 FFI 读取之前）——若卡死发生在下方
+    // `player.position` / `player.buffered()` 上，本行即为最后现场。
+    SeekProbe.note('PROC seq=$seq target=$targetMs enter');
     unawaited(() async {
       try {
         // 精准分流 SeekFlags：
@@ -2125,20 +2279,27 @@ class WinWinPlayerController {
         final apSeek = _audioPlayer;
         if (apSeek != null) {
           SeekProbe.stage('audio_player_seek', 'target=$targetMs');
+          SeekProbe.note('AUDIO seek seq=$seq -> $targetMs');
           try {
             await apSeek
                 .seek(position: targetMs)
                 .timeout(const Duration(seconds: 3));
           } catch (_) {}
           try {
+            final apPos = apSeek.position;
+            SeekProbe.note(
+              'AUDIO seek ret seq=$seq pos=$apPos target=$targetMs '
+              'state=${apSeek.state}',
+            );
             SeekProbe.stage(
               'audio_player_pos',
-              'pos=${apSeek.position} target=$targetMs',
+              'pos=$apPos target=$targetMs',
             );
           } catch (_) {}
         }
 
         final seekStartedAt = DateTime.now();
+        SeekProbe.note('MAIN seek seq=$seq -> $targetMs flags=$flagBits');
         final res = await player.seek(position: targetMs, flags: flags);
         if (_disposed) return;
         // 主 seek 返回时刻的时钟快照：该时机的 position 读取两次死锁取证均安全返回
@@ -2150,6 +2311,10 @@ class WinWinPlayerController {
           posAfterMs: posAfterMainSeek,
           bufferedMs: player.buffered(),
           state: '${player.state}',
+        );
+        SeekProbe.note(
+          'MAIN seek ret seq=$seq res=$res posAfter=$posAfterMainSeek '
+          'target=$targetMs state=${player.state}',
         );
 
         if (res < 0) {
@@ -2303,6 +2468,7 @@ class WinWinPlayerController {
         }
       } catch (e) {
         AppLogger.w('PlayerController', 'player.seek error: $e');
+        SeekProbe.note('MAIN seek EXCEPTION seq=$seq target=$targetMs err=$e');
         if (seq == _seekSeq) {
           _nativeSeekDoneTime = DateTime.now();
           _lastSeekFinishTime = DateTime.now();
@@ -2313,6 +2479,9 @@ class WinWinPlayerController {
           final nextTarget = _queuedSeekTargetMs;
           if (nextTarget != null) {
             _queuedSeekTargetMs = null;
+            SeekProbe.note(
+              'SEEK-QUEUE-DRAIN seq=$_seekSeq next=$nextTarget',
+            );
             _processSeekQueue(nextTarget, _seekSeq);
           } else {
             // 取证变体 E6：解冻前轮询等待主时钟真正收敛到目标，
@@ -2347,6 +2516,7 @@ class WinWinPlayerController {
               try {
                 if (apOrder.state != mdk.PlaybackState.playing) {
                   apOrder.state = mdk.PlaybackState.playing;
+                  SeekProbe.note('AUDIO unfreeze -> playing');
                 }
               } catch (_) {}
             }
@@ -2358,6 +2528,10 @@ class WinWinPlayerController {
               // 显式同步 UI 播放态（onStateChanged 冻结抑制未广播该变化）。
               playing.value = false;
             }
+            SeekProbe.note(
+              'UNFREEZE seq=$seq target=$targetMs uiPos=${position.value.inMilliseconds} '
+              'state=${player.state} intent=${_userIntentPlaying ? 1 : 0}',
+            );
             SeekProbe.unfreeze(
               SeekProbe.convergeBeforeUnfreeze ? 'converge' : 'queue_drained',
             );
