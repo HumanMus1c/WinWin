@@ -212,9 +212,11 @@ abstract final class VideoHttp {
       'bvid': ?bvid,
       'cid': cid,
       'qn': qn,
-      // 获取所有格式的视频（DASH + durl 合并流：bit0=1 使响应同时返回 durl 节点，
-      // 供单源化方案 B 兜底使用——durl 为音视频合并流，走主媒体 seek 路径最稳）。
-      'fnval': 4049,
+      // 获取所有格式的视频（DASH）。
+      // 注意：fnval 加 bit0（durl，4049）会让接口只返回 durl、丢掉 dash 节点
+      // （2026-09-24 实测 playUrl.dash=null → 主路径被降级），故保持 4048；
+      // 需要 durl 兜底时必须**另发一次** fnval=1 的请求，不能合并位。
+      'fnval': 4048,
       'fourk': 1,
       'fnver': 0,
       'voice_balance': isVoiceBalance ? 1 : 0,

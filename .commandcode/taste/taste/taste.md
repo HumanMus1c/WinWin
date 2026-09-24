@@ -10,6 +10,7 @@
 - Does not weaken security settings to work around failures (e.g. never disables SSL/TLS certificate verification for a failing `git push`); prefers to keep retrying and report the blocker. Confidence: 0.6
 - Communicates in Chinese and expects replies in Chinese. Confidence: 0.9
 - Wants to be able to build/run the app himself: asks for exact, copy-pasteable Debug/Release compile-and-run commands (build output paths, `flutter run -d windows`) instead of relying solely on the agent to drive builds. Confidence: 0.5
+- Prefers to drive end-to-end verification himself by manually interacting with the running app; asks for automated test drivers (e.g. scripted auto-seek) to be turned off while keeping the underlying logging/observability fully in place. Confidence: 0.65
 - Expects the feasibility of candidate solutions to be re-evaluated against the latest releases/changelogs of the relevant libraries and dependencies before committing to an approach. Confidence: 0.7
 - Consults comparable open-source projects (e.g. PiliPlus) as reference implementations and expects their approach to be investigated with concrete source evidence before picking a design. Confidence: 0.55
 - When a format/library-based approach fails, expects the actual capability of the bundled runtime to be verified empirically (e.g. scanning the shipped binary/DLL for compiled demuxer/library symbols) to pin down the true root cause, rather than assuming the format is supported. Confidence: 0.55

@@ -164,6 +164,10 @@ abstract final class SeekProbe {
   /// 读缓冲上限（ms）：用于 A/B 验证缓冲水位对卡顿的影响。
   static int bufferMaxMs = 30000;
 
+  /// seek 前是否强制重建音轨（丢弃陈旧音频队列）。默认开启：
+  /// 实测 mdk 的 seek 不 flush 已排队音频，旧材料会把主时钟拖回 seek 前位置。
+  static bool flushAudioOnSeek = true;
+
   /// MPD 单源模式：把双 CDN URL 合成一个本地 MPD 播放（验证单 timeline 是否
   /// 同时解决 seek/缓冲/追赶问题）。默认关闭，仅验证用。
   static bool manifestModeEnabled = false;
@@ -267,6 +271,7 @@ abstract final class SeekProbe {
         final bufMax = int.tryParse('${raw['bufferMaxMs']}');
         if (bufMax != null && bufMax > 0) bufferMaxMs = bufMax;
         manifestModeEnabled = raw['manifestMode'] == true;
+        flushAudioOnSeek = raw['flushAudioOnSeek'] != false;
       }
     } catch (_) {}
   }

@@ -1964,6 +1964,20 @@ class WinWinPlayerController {
           SeekProbe.stage('premount_audio');
         }
 
+        // 冲掉音频陈旧队列（2026-09-24 实测定论）：mdk 的 seek 不会 flush
+        // 已解码/已排队的音频，旧材料继续被渲染会把主时钟拖回 seek 前位置，
+        // 视频只能加速追赶——该现象在**单一源（durl 合并流）**上同样复现
+        //（target=120587 落点正确后跳到 346886，aheadMax=224862），故与外挂音轨无关。
+        // 冻结（暂停）态下先关闭再启用音轨，强制重建音频管线丢弃陈旧数据；
+        // 零网络开销，失败静默（不影响 seek 主流程）。
+        if (SeekProbe.flushAudioOnSeek) {
+          try {
+            player.activeAudioTracks = const [];
+            player.activeAudioTracks = const [0];
+            SeekProbe.stage('audio_flush');
+          } catch (_) {}
+        }
+
         final seekStartedAt = DateTime.now();
         final res = await player.seek(position: targetMs, flags: flags);
         if (_disposed) return;
