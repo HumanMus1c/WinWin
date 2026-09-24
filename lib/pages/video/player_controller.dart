@@ -1964,7 +1964,53 @@ class WinWinPlayerController {
           SeekProbe.stage('premount_audio');
         }
 
-        // 冲掉音频陈旧队列（2026-09-24 实测定论）：mdk 的 seek 不会 flush
+        // 快退改用「重开媒体 + 带位置打开」（2026-09-24 第四笔）：
+        // 机制定论——mdk 的 seek 不 flush 陈旧音频队列，旧材料把主时钟拖回
+        // seek 前位置（Accurate/KeyFrame/Backward 三种 flags 实测均复现，
+        // durl 单一源同样复现）。而「带位置打开」没有任何陈旧队列——它是项目
+        // 首播/续播/切画质同源的已验证路径。为强制真正重载（同 URL setMedia
+        // 可能不重载），轮换到下一条 CDN 候选 URL。代价：多花约 0.5~1.5s、
+        // 丢弃读缓冲，全部藏在冻结转圈窗口内。
+        if (SeekProbe.reopenOnBackwardSeek &&
+            isBackward &&
+            _videoCdnCandidates.isNotEmpty) {
+          final n = _videoCdnCandidates.length;
+          _currentCdnIndex = (_currentCdnIndex + 1) % n;
+          final vUrl = _videoCdnCandidates[_currentCdnIndex];
+          final aUrl = _audioCdnCandidates.isNotEmpty
+              ? _audioCdnCandidates[_currentCdnIndex % _audioCdnCandidates.length]
+              : null;
+          SeekProbe.stage(
+            'reopen',
+            'cdn=$_currentCdnIndex/$n target=$targetMs',
+          );
+          player.media = vUrl;
+          if (aUrl != null && aUrl.isNotEmpty) {
+            player.setMedia(aUrl, mdk.MediaType.audio);
+            player.activeAudioTracks = const [0];
+          }
+          final ret = await player.prepare(position: targetMs);
+          SeekProbe.stage('reopen_prepare', 'ret=$ret');
+          if (_disposed) return;
+          _currentVideoUrl = vUrl;
+          _currentAudioUrl = aUrl;
+          if (ret < 0) {
+            // 同 URL 未真正重载（prepare 返回 -1）等情形：退回普通 seek 兜底。
+            await player.seek(position: targetMs, flags: flags);
+            SeekProbe.stage('reopen_fallback_seek');
+          }
+          if (seq == _seekSeq && _queuedSeekTargetMs == null) {
+            _seekTargetMs = targetMs;
+            position.value = Duration(milliseconds: targetMs);
+            seekPosition.value = Duration(milliseconds: targetMs);
+            _lastPolledPosMs = targetMs;
+            _nativeSeekDoneTime = DateTime.now();
+            _lastSeekFinishTime = DateTime.now();
+          }
+          return;
+        }
+
+
         // 已解码/已排队的音频，旧材料继续被渲染会把主时钟拖回 seek 前位置，
         // 视频只能加速追赶——该现象在**单一源（durl 合并流）**上同样复现
         //（target=120587 落点正确后跳到 346886，aheadMax=224862），故与外挂音轨无关。
