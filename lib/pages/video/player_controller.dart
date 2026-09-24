@@ -1984,6 +1984,20 @@ class WinWinPlayerController {
             'reopen',
             'cdn=$_currentCdnIndex/$n target=$targetMs',
           );
+          // 最后一层手段（2026-09-24 第五笔）：mdk 文档明确 setState(Stopped) 会
+          // 释放全部资源（含音频设备）。实测「重挂音轨 + 整媒体重开 + 带位置
+          // prepare」后，音频输出队列里的旧材料仍被继续播放（时钟从 24.2s 走到
+          // 26.7s），说明陈旧音频活在音频设备/输出管线里，只有停止-state 才能
+          // 真正关闭它。故：先 stopped（关音频设备）→ 等 300ms（不读任何 player
+          // 属性，避开瞬态）→ 再轮换 URL 重开 + 带位置 prepare。
+          if (SeekProbe.reopenOnBackwardSeek) {
+            try {
+              player.state = mdk.PlaybackState.stopped;
+              SeekProbe.stage('stop_before_reopen');
+              await Future.delayed(const Duration(milliseconds: 300));
+              if (_disposed) return;
+            } catch (_) {}
+          }
           player.media = vUrl;
           if (aUrl != null && aUrl.isNotEmpty) {
             player.setMedia(aUrl, mdk.MediaType.audio);
