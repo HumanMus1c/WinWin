@@ -1822,14 +1822,17 @@ class WinWinPlayerController {
         final bool isDualTrack =
             _currentAudioUrl != null && _currentAudioUrl!.isNotEmpty;
 
-        // 取证变体 E5：快退改 KeyFrame|Backward 定位（fvp 未暴露 Backward 位，按原始位构造）
+        // 单源模式（HLS 合成清单，无外挂音轨）：快退同样使用 keyFrame 定位。
+        // 实测（2026-09-24）：单源下 Accurate（flags=2）快退会间歇性不生效——demuxer
+        // 仍停在 seek 前位置（target=25000 而 posMin=60262；target=30000 而 posAfter=70884），
+        // 观感即「自动回退到原位 + 画面加速追赶」；改用 keyFrame 后与快进走同一定位路径。
+        final bool singleSource = _currentAudioUrl == null;
+        final bool useKeyFrame = !isBackward || singleSource;
         const int backwardBit = 0x10000;
         final int flagBits = targetMs == 0
             ? (mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame)
             : (mdk.SeekFlag.fromStart |
-                  (isBackward
-                      ? (SeekProbe.backwardKeyFrame ? mdk.SeekFlag.keyFrame : 0)
-                      : mdk.SeekFlag.keyFrame) |
+                  (useKeyFrame ? mdk.SeekFlag.keyFrame : 0) |
                   (isBackward && SeekProbe.backwardKeyFrame ? backwardBit : 0) |
                   (isForwardInCache ? mdk.SeekFlag.inCache : 0));
         final flags = mdk.SeekFlag(flagBits);

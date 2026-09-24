@@ -1,4 +1,5 @@
 # Taste
+- When an attempted fix reintroduces an older regression, expects it to be rolled back immediately to the last known-good state instead of being iterated on in place; experimental changes are not kept just because they partially helped. Confidence: 0.7
 - Prefers root-cause analysis grounded in recent git commit history and the project's `docs/` development documents before writing any code; asks for an explicit development plan rather than immediate edits. Confidence: 0.8
 - Prefers an evidence-first workflow: add structured runtime logging/tracing and run an A/B variant matrix to get objective data before touching fragile logic — especially in code with a history of fix-then-revert cycles. Confidence: 0.75
 - When trading off in a fix, prioritizes correctness (e.g. deterministic synchronization) over speed, accepting slight added latency. Confidence: 0.6
