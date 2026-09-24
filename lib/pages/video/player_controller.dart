@@ -11,6 +11,7 @@ import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/cache/play_url_cache.dart';
 import 'package:winwin/core/log/sync_trace.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/player/hls_manifest.dart';
 import 'package:winwin/core/player/seek_probe.dart';
 import 'package:winwin/core/player/sponsorblock_usecase.dart';
 import 'package:winwin/core/policy/cdn_policy.dart';
@@ -383,7 +384,7 @@ class WinWinPlayerController {
     // 实测（2026-09-20）默认水位下自然播放与 seek 后均易因缓冲耗尽停顿（mdk 缓冲期会
     // 暂停主时钟，观感为长时间卡住 + 音频异常），故把预留量提高到 30s，用内存换停顿时长
     // 与频率；min 保持 1000ms（缓冲恢复判据，过大会拉长每次停顿后的恢复等待）。
-    player.setBufferRange(min: 1000, max: 30000);
+    player.setBufferRange(min: 1000, max: SeekProbe.bufferMaxMs);
 
     if (kDebugMode) {
       // ===== 音画同步 Seek 取证（临时，取证结束后移除）=====
@@ -504,6 +505,14 @@ class WinWinPlayerController {
           if (_disposed || _loading || _isRecovering) return;
           // 取证：关键事件（含 render.video/1st_frame = 视频首帧上屏时刻）
           SeekProbe.event(ev.category, ev.detail, ev.error);
+          // 取证：视频解码/渲染相关事件常开记录（判定是否存在「每次 seek 都触发」的信号）
+          if (ev.category == 'render.video' ||
+              ev.category == 'video' ||
+              ev.category == 'decoder.video') {
+            SeekProbe.note(
+              'EVT ${ev.category}/${ev.detail} code=${ev.error}',
+            );
+          }
           // NOTE: for 'reader.buffering' the error field is progress [0,100],
           // not an error code; real mdk failures carry negative codes.
           // -1 语义同 prepare 的 -1（already loading/open），不是硬错误：
@@ -842,6 +851,12 @@ class WinWinPlayerController {
       // 3. 仅在播放停滞（!isPosAdvancing）且脱离 seek 保护期时检测底层 stalled（解码空仓）或累计停滞达 1 秒；
       // 4. Seek 落地后 3 秒保护期内绝对禁止触发重载，防止高码率流首次缓冲网络延迟被误杀；
       // 5. 达到 10 秒真卡死门限且底层无任何缓冲水位（buffered <= 0）时，才触发自愈。
+      // 取证：常态流监控（停顿频率/时长/平均速率），定位自然播放频繁缓冲与追赶。
+      SeekProbe.monitorTick(
+        posMs,
+        buffered.value.inMilliseconds,
+        '${player.state}',
+      );
       final isSeekRecent =
           _lastSeekFinishTime != null &&
           DateTime.now().difference(_lastSeekFinishTime!) <
@@ -1313,16 +1328,59 @@ class WinWinPlayerController {
         'PlayerController',
         'setMedia video: cdn=${Pref.defaultCDNService.name} candidates=${_videoCdnCandidates.length} videoUrl=$videoUrl audioUrl=$audioUrl',
       );
-      player.media = videoUrl;
-      // DASH 分离音轨：以外部音轨方式挂载（prepare 之前）。
-      // 参照 fvp setExternalAudio → setMedia(url, MediaType.audio) 用法：
-      // native setMedia(url 变化) 会重置轨道，setMediaForType 挂载外部音轨
-      // 后必须调用 setActiveTracks 显式激活，否则音频轨道不会被自动选中
-      // （B站 DASH 主 media 为纯视频流，无内部音频轨，导致无声）。
-      // 在 prepare 之前挂载，使 prepare 能一次性加载主视频 + 外部音轨。
-      if (audioUrl != null && audioUrl.isNotEmpty) {
-        player.setMedia(audioUrl, mdk.MediaType.audio);
-        player.activeAudioTracks = const [0];
+
+      // 验证模式（默认关闭）：把视频/音频两条 CDN URL 合成一个本地 HLS 单源清单，
+      // 音视频落在同一个 AVFormatContext（单 timeline、单 seek），
+      // 规避外挂音轨不跟随 seek 的架构问题。
+      final dashDurationSec = playUrl.dash?.duration ?? 0;
+      String? manifestUrl;
+      if (SeekProbe.manifestModeEnabled &&
+          audioUrl != null &&
+          audioUrl.isNotEmpty &&
+          dashDurationSec > 0) {
+        try {
+          final vCodecs = video?.codecs;
+          final codecs = [
+            if (vCodecs != null && vCodecs.isNotEmpty) vCodecs,
+            'mp4a.40.2',
+          ].join(',');
+          manifestUrl = await HlsManifest.publish(
+            name: 'stream_$bvid',
+            videoUrl: videoUrl,
+            audioUrl: audioUrl,
+            durationSec: dashDurationSec.toDouble(),
+            bandwidth: (video?.bandwidth ?? 0) + (audio?.bandwidth ?? 0),
+            codecs: codecs,
+          );
+        } catch (e) {
+          manifestUrl = null;
+          AppLogger.w('PlayerController', 'HLS 清单生成失败，回退双轨：$e');
+        }
+      }
+
+      if (manifestUrl != null) {
+        SeekProbe.note(
+          'MANIFEST single-source url=$manifestUrl '
+          'vDur=${dashDurationSec}s vCodecs=${video?.codecs} '
+          'vBandwidth=${video?.bandwidth} aBandwidth=${audio?.bandwidth}',
+        );
+        _currentVideoUrl = manifestUrl;
+        _currentAudioUrl = null;
+        _videoCdnCandidates = [manifestUrl];
+        _audioCdnCandidates = const [];
+        player.media = manifestUrl;
+      } else {
+        player.media = videoUrl;
+        // DASH 分离音轨：以外部音轨方式挂载（prepare 之前）。
+        // 参照 fvp setExternalAudio → setMedia(url, MediaType.audio) 用法：
+        // native setMedia(url 变化) 会重置轨道，setMediaForType 挂载外部音轨
+        // 后必须调用 setActiveTracks 显式激活，否则音频轨道不会被自动选中
+        // （B站 DASH 主 media 为纯视频流，无内部音频轨，导致无声）。
+        // 在 prepare 之前挂载，使 prepare 能一次性加载主视频 + 外部音轨。
+        if (audioUrl != null && audioUrl.isNotEmpty) {
+          player.setMedia(audioUrl, mdk.MediaType.audio);
+          player.activeAudioTracks = const [0];
+        }
       }
 
       // 2. prepare 加载首帧。
@@ -2061,6 +2119,10 @@ class WinWinPlayerController {
               }
             }
             // 队列排空：统一解除 seek 冻结——清除加载转圈并按用户意图恢复播放。
+            // 注：曾试过在解冻前轮询 buffered()/mediaStatus 做「视频就绪」门控，
+            // 实测反而让快退退回「时钟回跳 seek 前位置」的旧故障（aheadMax≈34s）——
+            // 该轮询落在 seek 后瞬态窗口内（与历史上「瞬态读取 position 死锁」同类），
+            // 已回滚；后续若再做就绪门控必须走事件驱动、且避开瞬态。
             buffering.value = false;
             if (_seekWindowMuted) {
               player.mute = false;

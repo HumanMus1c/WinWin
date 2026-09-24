@@ -66,6 +66,67 @@ abstract final class SeekProbe {
   /// 轮次变体序列：配置后每轮按序切换变体（一次会话跑完整矩阵，无需人工干预）。
   static List<SeekVariant> variantSequence = const [];
 
+  /// 常态流监控：定位「自然播放频繁缓冲/追赶」的客观数据（停顿次数与时长、平均速率）。
+  static bool monitorEnabled = false;
+  static int monitorPeriodMs = 500;
+  static int monitorReportSec = 5;
+  static final List<int> _monT = [];
+  static final List<int> _monPos = [];
+  static int _monStallEpisodes = 0;
+  static int _monStallMs = 0;
+  static bool _monInStall = false;
+  static int _monLastReportT = 0;
+  static int _monBufMin = 1 << 30;
+  static int _monBufMax = 0;
+
+  /// 每 [monitorPeriodMs] 采样一次；停滞（1s 内位置推进 < 50ms）计为一次停顿。
+  static void monitorTick(int posMs, int bufferedMs, String state) {
+    if (!enabled || !monitorEnabled || _active) return;
+    final t = nowMs;
+    if (_monT.isNotEmpty && t - _monT.last < monitorPeriodMs) return;
+    _monT.add(t);
+    _monPos.add(posMs);
+    if (bufferedMs < _monBufMin) _monBufMin = bufferedMs;
+    if (bufferedMs > _monBufMax) _monBufMax = bufferedMs;
+    // 停滞判定：与前 1s 前的采样比较
+    if (_monT.length >= 3) {
+      final back = _monT.length - 3;
+      final dt = t - _monT[back];
+      if (dt >= 1000) {
+        final adv = posMs - _monPos[back];
+        final stalled = adv < 50;
+        if (stalled && !_monInStall) {
+          _monInStall = true;
+          _monStallEpisodes++;
+        } else if (!stalled && _monInStall) {
+          _monInStall = false;
+        }
+        if (stalled) _monStallMs += dt;
+      }
+    }
+    if (t - _monLastReportT >= monitorReportSec * 1000) {
+      final dt = _monLastReportT == 0 ? t : t - _monLastReportT;
+      final adv = _monPos.length >= 2 ? _monPos.last - _monPos.first : 0;
+      final avgRate = dt > 0 ? adv / dt : 0.0;
+      SyncTrace.log(
+        'SeekProbe',
+        'MON variant=${variant.name} t=+${t}ms samples=${_monT.length} '
+        'avgRate=${avgRate.toStringAsFixed(2)} '
+        'stalls=$_monStallEpisodes stallMs=$_monStallMs '
+        'bufMin=${_monBufMin == 1 << 30 ? -1 : _monBufMin} bufMax=$_monBufMax '
+        'pos=${_monPos.isEmpty ? -1 : _monPos.last} state=$state',
+      );
+      _monT.clear();
+      _monPos.clear();
+      _monStallEpisodes = 0;
+      _monStallMs = 0;
+      _monInStall = false;
+      _monBufMin = 1 << 30;
+      _monBufMax = 0;
+      _monLastReportT = t;
+    }
+  }
+
   /// 轮首应用序列变体（未配置序列则沿用配置文件里的 variant）。
   static void applyRoundVariant(int round) {
     if (variantSequence.isEmpty) return;
@@ -99,6 +160,19 @@ abstract final class SeekProbe {
 
   /// 解冻前是否轮询等待主时钟收敛到目标（E6）。
   static bool get convergeBeforeUnfreeze => variant == SeekVariant.converge;
+
+  /// 读缓冲上限（ms）：用于 A/B 验证缓冲水位对卡顿的影响。
+  static int bufferMaxMs = 30000;
+
+  /// MPD 单源模式：把双 CDN URL 合成一个本地 MPD 播放（验证单 timeline 是否
+  /// 同时解决 seek/缓冲/追赶问题）。默认关闭，仅验证用。
+  static bool manifestModeEnabled = false;
+
+  /// 探针自由日志（与 seek 事件无关的一次性记录）。
+  static void note(String message) {
+    if (!enabled) return;
+    SyncTrace.log('SeekProbe', message);
+  }
 
   /// demux 包缓存范围数（E1 置 0）。
   static String get demuxBufferRanges =>
@@ -182,6 +256,17 @@ abstract final class SeekProbe {
             if (parsed.isNotEmpty) autoSeekTargets = parsed;
           }
         }
+        final mon = raw['monitor'];
+        if (mon is Map) {
+          monitorEnabled = mon['enabled'] == true;
+          monitorPeriodMs =
+              int.tryParse('${mon['periodMs']}') ?? monitorPeriodMs;
+          monitorReportSec =
+              int.tryParse('${mon['reportSec']}') ?? monitorReportSec;
+        }
+        final bufMax = int.tryParse('${raw['bufferMaxMs']}');
+        if (bufMax != null && bufMax > 0) bufferMaxMs = bufMax;
+        manifestModeEnabled = raw['manifestMode'] == true;
       }
     } catch (_) {}
   }
@@ -366,14 +451,27 @@ abstract final class SeekProbe {
       }
     }
     final hasRange = posMin <= posMax;
-    // 快退：时钟回跳旧位置表现为「跑回目标之上」；快进：表现为「落回目标之下」。
-    final driftBack = hasRange &&
-        (_backward
-            ? posMax > _targetMs + 2500
-            : posMin < _targetMs - 2500);
+    // 以「落点 + 真实经过时间」为期望轨迹判定漂移：
+    // 正常播放 4s 窗口本来就会前进 4s，不能直接拿 posMax 与 target 比。
+    // aheadMax：领先期望轨迹的最大值（快退时表现为「回跳 seek 前位置」）；
+    // behindMax：落后期望轨迹的最大值（时钟卡住 / 未归位）。
+    final anchor = (_seekReturnPos ?? -1) > 0 ? _seekReturnPos! : _targetMs;
+    var aheadMax = 0;
+    var behindMax = 0;
+    for (var i = 0; i < _sampleT.length; i++) {
+      if (retT == null || _sampleT[i] < retT) continue;
+      final expected = anchor + (_sampleT[i] - retT);
+      final over = _samplePos[i] - expected;
+      if (over > aheadMax) aheadMax = over;
+      if (-over > behindMax) behindMax = -over;
+    }
+    final driftBack = aheadMax > 1500;
+    final noProgress = behindMax > 1500;
     final endT = _sampleT.isEmpty ? 0 : _sampleT.last;
     final endPos = _samplePos.isEmpty ? -1 : _samplePos.last;
-    final settled = endPos >= 0 && (endPos - _targetMs).abs() <= 1500;
+    final settled = retT != null &&
+        endPos >= 0 &&
+        (endPos - (anchor + (endT - retT))).abs() <= 1500;
     // 末段 600ms 稳态推进速率（排除回跳瞬态）
     var steadyRate = double.nan;
     for (var i = _sampleT.length - 1; i >= 0; i--) {
@@ -395,12 +493,14 @@ abstract final class SeekProbe {
       'backward=${_backward ? 1 : 0} posAfter=${_seekReturnPos ?? -1} '
       'posMin=${hasRange ? posMin : -1} posMax=${hasRange ? posMax : -1} '
       'endPos=$endPos settled=${settled ? 1 : 0} '
+      'aheadMax=$aheadMax behindMax=$behindMax '
       'steadyRate=${steadyRate.isFinite ? steadyRate.toStringAsFixed(2) : '-'} '
       'rateMin=${rateMin.isFinite ? rateMin.toStringAsFixed(2) : '-'} '
       'rateMax=${rateMax.isFinite ? rateMax.toStringAsFixed(2) : '-'} '
       'unfreeze=$_unfreezeReason unfreezeT=${_unfreezeT ?? -1} '
       'firstFrameT=${_firstFrameT ?? -1} firstFrameTs=${_firstFrameTs ?? -1} '
       'frameLateMs=$frameLateMs driftBack=${driftBack ? 1 : 0} '
+      'noProgress=${noProgress ? 1 : 0} '
       'catchUp=${catchUp ? 1 : 0} audioSlow=${audioSlow ? 1 : 0}',
     );
   }
