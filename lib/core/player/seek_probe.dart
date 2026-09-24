@@ -181,6 +181,24 @@ abstract final class SeekProbe {
     SyncTrace.log('SeekProbe', message);
   }
 
+  /// 方案 3：双实例漂移校正判定（1s 节流）。返回：
+  /// 0=不动，1=音频滞后需加速(+3%)，-1=音频超前需减速(-3%)，2=偏差过大需硬定位。
+  static int _driftTick = 0;
+
+  static int driftDecision(int videoPosMs, int audioPosMs) {
+    if (!enabled) return 0;
+    _driftTick++;
+    if (_driftTick % 10 != 0) return 0;
+    final drift = audioPosMs - videoPosMs;
+    SyncTrace.log(
+      'SeekProbe',
+      'DRIFT drift=$drift v=$videoPosMs a=$audioPosMs',
+    );
+    if (drift.abs() > 1500) return 2;
+    if (drift.abs() > 250) return drift < 0 ? 1 : -1;
+    return 0;
+  }
+
   /// demux 包缓存范围数（E1 置 0）。
   static String get demuxBufferRanges =>
       variant == SeekVariant.noCache ? '0' : '16';

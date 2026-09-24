@@ -672,6 +672,15 @@ class WinWinPlayerController {
     _seekTargetMs = null;
     _seekStartTime = null;
     _lastSeekFinishTime = null;
+    // 方案 3：页面不可见时同步第二实例；退出（dispose）则直接停止，杜绝声音残留。
+    final apDetach = _audioPlayer;
+    if (apDetach != null) {
+      try {
+        apDetach.state = _disposed
+            ? mdk.PlaybackState.stopped
+            : mdk.PlaybackState.paused;
+      } catch (_) {}
+    }
     if (_seekWindowMuted) {
       _sharedPlayer?.mute = false;
       _seekWindowMuted = false;
@@ -876,6 +885,30 @@ class WinWinPlayerController {
         buffered.value.inMilliseconds,
         '${player.state}',
       );
+      // 方案 3（docs 2.9）：双实例漂移校正——音频侧滞后则提速 3%、超前则减速 3%，
+      // 偏差 >1.5s 直接硬定位；seek 期与任一实例非播放态一律跳过（避开瞬态）。
+      final apd = _audioPlayer;
+      if (apd != null &&
+          !_isSeeking &&
+          !_nativeSeekInFlight &&
+          _queuedSeekTargetMs == null) {
+        try {
+          if (player.state == mdk.PlaybackState.playing &&
+              apd.state == mdk.PlaybackState.playing) {
+            final decision = SeekProbe.driftDecision(posMs, apd.position);
+            if (decision == 2) {
+              unawaited(apd.seek(position: posMs));
+              apd.playbackRate = 1.0;
+            } else if (decision == 1) {
+              apd.playbackRate = 1.03;
+            } else if (decision == -1) {
+              apd.playbackRate = 0.97;
+            } else if ((apd.playbackRate - 1.0).abs() > 0.001) {
+              apd.playbackRate = 1.0;
+            }
+          }
+        } catch (_) {}
+      }
       final isSeekRecent =
           _lastSeekFinishTime != null &&
           DateTime.now().difference(_lastSeekFinishTime!) <
@@ -1759,6 +1792,10 @@ class WinWinPlayerController {
     if (player.state == mdk.PlaybackState.playing) {
       player.state = mdk.PlaybackState.paused;
     }
+    // 方案 3：同步暂停第二实例（避免主实例暂停后音频仍在播）。
+    try {
+      _audioPlayer?.state = mdk.PlaybackState.paused;
+    } catch (_) {}
   }
 
   /// 恢复播放（仅在暂停态生效），用于折叠自动暂停后展开时恢复。
@@ -2075,19 +2112,21 @@ class WinWinPlayerController {
         }
 
         // 方案 3 最小验证：音频实例同步定位（音频侧同样是「主媒体 seek」）。
+        // await 保证两侧都到位后再解冻，避免音频侧起播晚造成的固定滞后。
         final apSeek = _audioPlayer;
         if (apSeek != null) {
-          unawaited(apSeek.seek(position: targetMs));
           SeekProbe.stage('audio_player_seek', 'target=$targetMs');
-          final logTarget = targetMs;
-          Future.delayed(const Duration(milliseconds: 1500), () {
-            try {
-              SeekProbe.stage(
-                'audio_player_pos',
-                'pos=${apSeek.position} target=$logTarget',
-              );
-            } catch (_) {}
-          });
+          try {
+            await apSeek
+                .seek(position: targetMs)
+                .timeout(const Duration(seconds: 3));
+          } catch (_) {}
+          try {
+            SeekProbe.stage(
+              'audio_player_pos',
+              'pos=${apSeek.position} target=$targetMs',
+            );
+          } catch (_) {}
         }
 
         final seekStartedAt = DateTime.now();
