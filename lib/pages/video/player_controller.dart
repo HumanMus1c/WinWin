@@ -1329,41 +1329,76 @@ class WinWinPlayerController {
         'setMedia video: cdn=${Pref.defaultCDNService.name} candidates=${_videoCdnCandidates.length} videoUrl=$videoUrl audioUrl=$audioUrl',
       );
 
-      // 验证模式（默认关闭）：把视频/音频两条 CDN URL 合成一个本地 HLS 单源清单，
-      // 音视频落在同一个 AVFormatContext（单 timeline、单 seek），
-      // 规避外挂音轨不跟随 seek 的架构问题。
+      // 单源化（验证模式，默认关闭）：
+      // 方案 A = 按 sidx 分段的 HLS 清单（seek 走 HLS 原生选段+段内定位）；
+      // 兜底 1 = 整段 HLS 清单；兜底 2（方案 B）= durl 合并流（单一 URL，
+      // 直接走已验证可用的主媒体 seek 路径，清晰度上限较低）；
+      // 三者都不可用时退回双轨（保持改动前行为）。
       final dashDurationSec = playUrl.dash?.duration ?? 0;
       String? manifestUrl;
-      if (SeekProbe.manifestModeEnabled &&
-          audioUrl != null &&
-          audioUrl.isNotEmpty &&
-          dashDurationSec > 0) {
-        try {
+      String sourceMode = 'dual-track';
+      if (SeekProbe.manifestModeEnabled && dashDurationSec > 0) {
+        final durlUrls = playUrl.durl?.isNotEmpty == true
+            ? playUrl.durl!.first.playUrls
+            : const <String>[];
+        final durlUrl = durlUrls.isNotEmpty ? durlUrls.first : null;
+        if (audioUrl != null && audioUrl.isNotEmpty) {
+          final headerMap = <String, String>{};
+          for (final line in headers.split('\r\n')) {
+            final i = line.indexOf(':');
+            if (i > 0) {
+              headerMap[line.substring(0, i).trim()] =
+                  line.substring(i + 1).trim();
+            }
+          }
           final vCodecs = video?.codecs;
           final codecs = [
             if (vCodecs != null && vCodecs.isNotEmpty) vCodecs,
             'mp4a.40.2',
           ].join(',');
-          manifestUrl = await HlsManifest.publish(
-            name: 'stream_$bvid',
-            videoUrl: videoUrl,
-            audioUrl: audioUrl,
-            durationSec: dashDurationSec.toDouble(),
-            bandwidth: (video?.bandwidth ?? 0) + (audio?.bandwidth ?? 0),
-            codecs: codecs,
-          );
-        } catch (e) {
-          manifestUrl = null;
-          AppLogger.w('PlayerController', 'HLS 清单生成失败，回退双轨：$e');
+          final bw = (video?.bandwidth ?? 0) + (audio?.bandwidth ?? 0);
+          try {
+            manifestUrl = await HlsManifest.publishSegmented(
+              name: 'stream_$bvid',
+              videoUrl: videoUrl,
+              audioUrl: audioUrl,
+              headers: headerMap,
+              durationSec: dashDurationSec.toDouble(),
+              bandwidth: bw,
+              codecs: codecs,
+            );
+            if (manifestUrl != null) sourceMode = 'hls-segmented';
+          } catch (e) {
+            AppLogger.w('PlayerController', 'HLS 分段清单生成失败：$e');
+          }
+          if (manifestUrl == null) {
+            try {
+              manifestUrl = await HlsManifest.publish(
+                name: 'stream_$bvid',
+                videoUrl: videoUrl,
+                audioUrl: audioUrl,
+                durationSec: dashDurationSec.toDouble(),
+                bandwidth: bw,
+                codecs: codecs,
+              );
+              if (manifestUrl != null) sourceMode = 'hls-single';
+            } catch (e) {
+              AppLogger.w('PlayerController', 'HLS 整段清单生成失败：$e');
+            }
+          }
+        }
+        if (manifestUrl == null && durlUrl != null) {
+          manifestUrl = durlUrl;
+          sourceMode = 'durl';
         }
       }
+      SeekProbe.note(
+        'MANIFEST mode=$sourceMode url=${manifestUrl ?? '-'} '
+        'vDur=${dashDurationSec}s vCodecs=${video?.codecs} '
+        'vBandwidth=${video?.bandwidth} aBandwidth=${audio?.bandwidth}',
+      );
 
       if (manifestUrl != null) {
-        SeekProbe.note(
-          'MANIFEST single-source url=$manifestUrl '
-          'vDur=${dashDurationSec}s vCodecs=${video?.codecs} '
-          'vBandwidth=${video?.bandwidth} aBandwidth=${audio?.bandwidth}',
-        );
         _currentVideoUrl = manifestUrl;
         _currentAudioUrl = null;
         _videoCdnCandidates = [manifestUrl];

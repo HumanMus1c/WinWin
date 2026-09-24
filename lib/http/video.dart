@@ -212,8 +212,9 @@ abstract final class VideoHttp {
       'bvid': ?bvid,
       'cid': cid,
       'qn': qn,
-      // 获取所有格式的视频（DASH）
-      'fnval': 4048,
+      // 获取所有格式的视频（DASH + durl 合并流：bit0=1 使响应同时返回 durl 节点，
+      // 供单源化方案 B 兜底使用——durl 为音视频合并流，走主媒体 seek 路径最稳）。
+      'fnval': 4049,
       'fourk': 1,
       'fnver': 0,
       'voice_balance': isVoiceBalance ? 1 : 0,
