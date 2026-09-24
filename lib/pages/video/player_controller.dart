@@ -78,6 +78,12 @@ class WinWinPlayerController {
   static mdk.Player? _sharedPlayer;
   static int _playerCount = 0;
 
+  /// 方案 3 最小验证（docs 2.9）：第二实例专放音轨——视频/音频各自都是
+  /// 「主媒体 seek」（本项目实测唯一可靠的 seek 路径）。验证期硬编码开启，
+  /// 回退 = 回滚到本笔之前的快照。
+  static mdk.Player? _audioPlayer;
+  static const bool _dualPlayerAudio = true;
+
   /// 共享 player 延迟销毁时长：等引擎光栅线程排空对视频纹理的合成，
   /// 避开 fvp ReleaseRT 立即销毁纹理对象与光栅并发的崩溃竞态（见 dispose）。
   static const Duration _sharedTeardownDelay = Duration(milliseconds: 400);
@@ -473,6 +479,19 @@ class WinWinPlayerController {
         player.onStateChanged.listen((event) {
           if (_disposed) return;
           final isPlaying = event.newValue == mdk.PlaybackState.playing;
+          // 方案 3 最小验证：播放/暂停镜像到音频实例（冻结窗口内的内部 paused
+          // 也会同步给音频实例，两侧行为保持一致）。
+          final ap0 = _audioPlayer;
+          if (ap0 != null) {
+            try {
+              if (isPlaying && ap0.state != mdk.PlaybackState.playing) {
+                ap0.state = mdk.PlaybackState.playing;
+              } else if (!isPlaying &&
+                  ap0.state == mdk.PlaybackState.playing) {
+                ap0.state = mdk.PlaybackState.paused;
+              }
+            } catch (_) {}
+          }
           // pause-during-seek 冻结窗口：seek 流程内部切换的 paused 态不向 UI 广播
           // （播放按钮/弹幕保持播放中，加载态由 buffering 转圈承载），seek 结束统一恢复。
           // 若用户在冻结窗口内主动暂停（_userIntentPlaying=false），则正常广播暂停态。
@@ -1404,6 +1423,23 @@ class WinWinPlayerController {
         _videoCdnCandidates = [manifestUrl];
         _audioCdnCandidates = const [];
         player.media = manifestUrl;
+      } else if (_dualPlayerAudio && audioUrl != null && audioUrl.isNotEmpty) {
+        // 方案 3 最小验证：主播放器只放纯视频 URL（不再挂外挂音轨，
+        // 回到实测可靠的「主媒体 seek」），音频交给第二实例（音轨即其主媒体）。
+        final ap = _audioPlayer ??= mdk.Player();
+        ap.setProperty('avio.headers', headers);
+        ap.setProperty('keep_open', '1');
+        ap.volume = volume.value / 100.0;
+        player.media = videoUrl;
+        ap.media = audioUrl;
+        unawaited(ap.prepare());
+        _currentVideoUrl = videoUrl;
+        // 主播放器无外挂音轨：置空以避免双轨补救逻辑（重挂舞步/自愈）误触发。
+        _currentAudioUrl = null;
+        SeekProbe.note(
+          'DUAL-PLAYER main=video-only second=audio-only '
+          'videoUrl=$videoUrl audioUrl=$audioUrl',
+        );
       } else {
         player.media = videoUrl;
         // DASH 分离音轨：以外部音轨方式挂载（prepare 之前）。
@@ -2036,6 +2072,22 @@ class WinWinPlayerController {
             player.activeAudioTracks = const [0];
             SeekProbe.stage('audio_flush');
           } catch (_) {}
+        }
+
+        // 方案 3 最小验证：音频实例同步定位（音频侧同样是「主媒体 seek」）。
+        final apSeek = _audioPlayer;
+        if (apSeek != null) {
+          unawaited(apSeek.seek(position: targetMs));
+          SeekProbe.stage('audio_player_seek', 'target=$targetMs');
+          final logTarget = targetMs;
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            try {
+              SeekProbe.stage(
+                'audio_player_pos',
+                'pos=${apSeek.position} target=$logTarget',
+              );
+            } catch (_) {}
+          });
         }
 
         final seekStartedAt = DateTime.now();
