@@ -274,7 +274,8 @@ abstract final class SeekProbe {
         final bufMax = int.tryParse('${raw['bufferMaxMs']}');
         if (bufMax != null && bufMax > 0) bufferMaxMs = bufMax;
         manifestModeEnabled = raw['manifestMode'] == true;
-        flushAudioOnSeek = raw['flushAudioOnSeek'] != false;
+        flushAudioOnSeek = raw['flushAudioOnSeek'] == true;
+        reopenOnBackwardSeek = raw['reopenOnBackwardSeek'] == true;
       }
     } catch (_) {}
   }
