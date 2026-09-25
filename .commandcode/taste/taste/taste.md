@@ -4,6 +4,7 @@
 - Prefers an evidence-first workflow: add structured runtime logging/tracing and run an A/B variant matrix to get objective data before touching fragile logic — especially in code with a history of fix-then-revert cycles. Confidence: 0.75
 - When trading off in a fix, prioritizes correctness (e.g. deterministic synchronization) over speed, accepting slight added latency. Confidence: 0.6
 - Runs `dart analyze` expecting 0 error / 0 warning, and builds both `--debug` and `--release` Windows configs, reported separately; dislikes temporary-directory builds. Confidence: 0.7
+- Surfaces raw build-output warnings back to the agent and expects each one explained and driven to a clean run: the root cause stated, a re-run in an uncontended state to obtain a 0-warning record, and environment-caused warnings (e.g. `MSB3026` copy retries because the running app locks `WebView2Loader.dll`) clearly distinguished from real code warnings rather than silently tolerated. Confidence: 0.5
 - Has a standing rule that nothing is committed until both Debug and Release builds pass — a blocked/failed build (e.g. the running app holding a DLL) is a hard reason to hold off committing and retry after the build is re-run, never something to commit past. Confidence: 0.65
 - Treats a pre-change snapshot (`git stash create` → `refs/snapshots/latest`) as a mandatory step for every change — a stated global rule, not optional — and calls it out when it's skipped. Confidence: 0.85
 - Uses bracketed conventional commit messages: `[type](scope): 中文描述`. Confidence: 0.7
