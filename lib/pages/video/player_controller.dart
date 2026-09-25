@@ -1161,21 +1161,30 @@ class WinWinPlayerController {
                 unawaited(_recoverAudioStalled(posMs));
               }
             } else if (decision.action == 1) {
-              if ((apd.playbackRate - decision.rate).abs() >= 0.005) {
+              // 漂移微调以**基速**为基准（2026-09-26 自审修正）：倍速下若写绝对值
+              // （0.97~1.03）会把音频拉回 1x，与用户倍速互搏 ⇒ 必须乘基速。
+              final baseRate = playbackSpeed.value > 0
+                  ? playbackSpeed.value
+                  : 1.0;
+              final targetRate = baseRate * decision.rate;
+              if ((apd.playbackRate - targetRate).abs() >= 0.005) {
                 SeekProbe.note(
-                  'DRIFT-APPLY rate=${decision.rate.toStringAsFixed(4)} '
-                  'drift=${apPosMs - posMs} video=$posMs audio=$apPosMs '
-                  'sinceSeek=$sinceSeek',
+                  'DRIFT-APPLY rate=${targetRate.toStringAsFixed(4)} '
+                  'base=$baseRate drift=${apPosMs - posMs} video=$posMs '
+                  'audio=$apPosMs sinceSeek=$sinceSeek',
                 );
               }
-              apd.playbackRate = decision.rate;
+              apd.playbackRate = targetRate;
             } else if (decision.action == 0) {
-              if ((apd.playbackRate - 1.0).abs() > 0.001) {
+              final baseRate = playbackSpeed.value > 0
+                  ? playbackSpeed.value
+                  : 1.0;
+              if ((apd.playbackRate - baseRate).abs() > 0.001) {
                 SeekProbe.note(
-                  'DRIFT-APPLY rate=1.0000 reset drift=${apPosMs - posMs} '
-                  'video=$posMs audio=$apPosMs',
+                  'DRIFT-APPLY rate=${baseRate.toStringAsFixed(4)} reset '
+                  'drift=${apPosMs - posMs} video=$posMs audio=$apPosMs',
                 );
-                apd.playbackRate = 1.0;
+                apd.playbackRate = baseRate;
               }
             }
           }
@@ -1745,6 +1754,8 @@ class WinWinPlayerController {
         _applyStreamProperties(ap);
         ap.setProperty('avio.headers', headers);
         ap.volume = volume.value / 100.0;
+        // 倍速同样下发（2026-09-26 自审修正）：切画质/换视频后第二实例不能回落到 1x。
+        ap.playbackRate = playbackSpeed.value > 0 ? playbackSpeed.value : 1.0;
         player.media = videoUrl;
         ap.media = audioUrl;
         unawaited(ap.prepare());
@@ -1993,6 +2004,11 @@ class WinWinPlayerController {
         }
       }
 
+      // 重挂后恢复基速（2026-09-26 自审修正）：否则倍速会在自愈后丢失，
+      // UI 显示 2x 而实播 1x ⇒ 音画差还会反向拉开。
+      player.playbackRate = playbackSpeed.value > 0
+          ? playbackSpeed.value
+          : 1.0;
       player.state = mdk.PlaybackState.playing;
       buffering.value = false;
       _bufferingStallMs = 0;
@@ -2060,6 +2076,9 @@ class WinWinPlayerController {
             .seek(position: videoPosMs)
             .timeout(const Duration(seconds: 8), onTimeout: () => -99);
       }
+      // 重挂后恢复基速与音量（否则以 1x 起播并迅速积累音画差，倍速下尤其明显）。
+      ap.playbackRate = playbackSpeed.value > 0 ? playbackSpeed.value : 1.0;
+      ap.volume = volume.value / 100.0;
       if (!_disposed && _userIntentPlaying) {
         ap.state = mdk.PlaybackState.playing;
       }
@@ -2918,6 +2937,9 @@ class WinWinPlayerController {
     volume.value = clamped;
     Pref.desktopVolume = clamped;
     _player?.volume = clamped / 100.0;
+    // 第二实例（纯音频）才是**实际出声**的实例，必须同步（2026-09-26 自审修正：
+    // 此前只写主实例 ⇒ 用户调音量/静音对声音无效，直到下次重挂才生效）。
+    _audioPlayer?.volume = clamped / 100.0;
   }
 
   /// 设置播放倍速：下发 mdk playbackRate 并更新 [playbackSpeed]。
@@ -2931,6 +2953,9 @@ class WinWinPlayerController {
     _lastPlaybackSpeed = playbackSpeed.value;
     playbackSpeed.value = v;
     _player?.playbackRate = v;
+    // 第二实例必须同速（2026-09-26 自审修正）：否则倍速下音频恒为 1x，音画差快速
+    // 增长并触发无谓的硬定位/重挂；漂移微调也以基速为基准（见漂移块 baseRate）。
+    _audioPlayer?.playbackRate = v;
     final engine = danmakuEngine;
     if (engine != null) {
       try {
