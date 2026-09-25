@@ -291,6 +291,9 @@ class WinWinPlayerController {
   int _lastAudioPosMs = -1;
   int _audioStallMs = 0;
 
+  /// 第二实例自愈进行中（串行化门：进行中不再触发、漂移控制也不干预）。
+  bool _audioRecovering = false;
+
   /// 第二实例自愈冷却截止时间与累计次数（避免 seek/重挂风暴）。
   DateTime? _audioRecoverCooldownUntil;
   int _audioRecoverAttempts = 0;
@@ -1056,7 +1059,8 @@ class WinWinPlayerController {
       if (apd != null &&
           !_isSeeking &&
           !_nativeSeekInFlight &&
-          _queuedSeekTargetMs == null) {
+          _queuedSeekTargetMs == null &&
+          !_audioRecovering) {
         try {
           if (player.state == mdk.PlaybackState.playing &&
               apd.state == mdk.PlaybackState.playing) {
@@ -1072,17 +1076,34 @@ class WinWinPlayerController {
               sinceSeekMs: sinceSeek,
             );
 
-            // 第二实例卡死看门狗（2026-09-25 事故）：应在播放但 position 连续 ≥3s
-            // 不前进（实证：音频流连接停摆 ⇒ 音频时钟冻结、status 停 +buffering ⇒
-            // 静音，而主实例照常播放）⇒ 走 [_recoverAudioStalled] 重挂自愈。
-            if (apPosMs > _lastAudioPosMs) {
+            // 第二实例卡死看门狗（2026-09-25；第六轮加固）：
+            // 只有「**确实是音频单侧卡死**」才计数与触发——必须同时满足：
+            //   !_loading（无媒体加载）、!_isRecovering（主实例未在自愈）、
+            //   !_audioRecovering（自身未在恢复）、isPosAdvancing（主实例正在推进）、
+            //   posMs > 5000（避开起播/回 0 阶段）、音频 status 不含 seeking。
+            // 反例（23:27 事故）：主实例 seek 失败后整媒体重挂期间，视频 pos=0 未推进，
+            // 音频被镜像成 playing 且 pos=0 ⇒ 旧条件误判并连续重挂两次 ⇒ 双重音频。
+            final apStatus = apd.mediaStatus;
+            final audioStallCandidate =
+                !_loading &&
+                !_isRecovering &&
+                !_audioRecovering &&
+                isPosAdvancing &&
+                posMs > 5000 &&
+                !apStatus.test(mdk.MediaStatus.seeking);
+            if (!audioStallCandidate) {
+              _audioStallMs = 0;
+              if (apPosMs > _lastAudioPosMs) {
+                _lastAudioPosMs = apPosMs;
+              }
+            } else if (apPosMs > _lastAudioPosMs) {
               _lastAudioPosMs = apPosMs;
               _audioStallMs = 0;
               _audioRecoverAttempts = 0;
             } else {
               _audioStallMs += 100;
             }
-            if (_audioStallMs >= 3000) {
+            if (_audioStallMs >= 8000) {
               final nowStall = DateTime.now();
               final cooldown = _audioRecoverCooldownUntil;
               if (cooldown == null || nowStall.isAfter(cooldown)) {
@@ -1092,6 +1113,7 @@ class WinWinPlayerController {
                 );
                 SeekProbe.note(
                   'AUDIO-STALL detected pos=$apPosMs video=$posMs '
+                  'adv=${isPosAdvancing ? 1 : 0} status=$apStatus '
                   'attempts=$_audioRecoverAttempts',
                 );
                 unawaited(_recoverAudioStalled(posMs));
@@ -1993,10 +2015,14 @@ class WinWinPlayerController {
     final ap = _audioPlayer;
     final url = _currentAudioUrl;
     if (_disposed || ap == null || url == null || url.isEmpty) return;
+    // 串行化门（第六轮）：恢复进行中绝不重入——23:27 事故中两次重挂叠加
+    // 造成同一实例内两条音频管线并存（双重音频）。
+    if (_audioRecovering) return;
     if (_audioRecoverAttempts >= 3) {
       SeekProbe.note('AUDIO-RECOVER give-up attempts=$_audioRecoverAttempts');
       return;
     }
+    _audioRecovering = true;
     _audioRecoverAttempts++;
     final attempt = _audioRecoverAttempts;
     try {
@@ -2008,13 +2034,19 @@ class WinWinPlayerController {
         ap.setProperty('avio.headers', headers);
       }
       ap.volume = volume.value / 100.0;
-      await Future<void>.delayed(const Duration(milliseconds: 300));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
       if (_disposed) return;
       ap.media = url;
-      final ret = await ap.prepare();
+      // 限时（第六轮）：弱网下 prepare 实测可被拖 49 秒，期间音频状态机混乱；
+      // 12s 未完成即记为超时（-99）并让冷却/重试机制接管。
+      final ret = await ap
+          .prepare()
+          .timeout(const Duration(seconds: 12), onTimeout: () => -99);
       if (_disposed) return;
       if (ret >= 0 && videoPosMs > 0) {
-        await ap.seek(position: videoPosMs);
+        await ap
+            .seek(position: videoPosMs)
+            .timeout(const Duration(seconds: 8), onTimeout: () => -99);
       }
       if (!_disposed && _userIntentPlaying) {
         ap.state = mdk.PlaybackState.playing;
@@ -2024,6 +2056,8 @@ class WinWinPlayerController {
       SeekProbe.note('AUDIO-RECOVER done attempt=$attempt ret=$ret');
     } catch (e) {
       SeekProbe.note('AUDIO-RECOVER failed attempt=$attempt err=$e');
+    } finally {
+      _audioRecovering = false;
     }
   }
 
