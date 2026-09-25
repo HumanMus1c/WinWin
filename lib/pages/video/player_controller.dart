@@ -280,6 +280,12 @@ class WinWinPlayerController {
   /// 上次轮询到的播放进度（毫秒），用于检测进度是否停滞。
   int _lastPolledPosMs = -1;
 
+  /// 重载期间是否正在「持位」显示（第九轮 N1，仅用于证据行去重）。
+  bool _posHoldActive = false;
+
+  /// 镜像补漏（第九轮 N3）上次尝试恢复音频播放的时间。
+  DateTime? _audioUnmuteLastAt;
+
   /// 最近一次 Seek 实际完成返回的时间点，用于在 Seek 后短时间内屏蔽看门狗误重载。
   DateTime? _lastSeekFinishTime;
 
@@ -920,7 +926,22 @@ class WinWinPlayerController {
           completed.value &&
           duration.value.inMilliseconds > 0 &&
           posMs < duration.value.inMilliseconds;
-      if (!completedFrozen && position.value != newPos) {
+      // 重载持位（第九轮 N1）：媒体卸载/重载的瞬态会把底层 position 折叠成 0，
+      // 照直发布会让进度条“归零”（实测 01:41 事故）；此处保持现值，待媒体
+      // buffered（`_pendingSeek` 会补一次恢复 seek）后再跟随。
+      final loadHold =
+          _pendingSeek != null &&
+          player.mediaStatus.test(mdk.MediaStatus.loading);
+      if (loadHold != _posHoldActive) {
+        _posHoldActive = loadHold;
+        SeekProbe.note(
+          'POS-HOLD ${loadHold ? 'begin' : 'end'} uiPos='
+          '${position.value.inMilliseconds} raw=$posMs '
+          'pending=${_pendingSeek?.inMilliseconds ?? -1} '
+          'status=${player.mediaStatus}',
+        );
+      }
+      if (!completedFrozen && !loadHold && position.value != newPos) {
         position.value = newPos;
       }
       // 进度推进检测：若播放进度在前进，清零卡顿计时并解除缓冲态。
@@ -1136,9 +1157,23 @@ class WinWinPlayerController {
                 SeekProbe.note(
                   'DRIFT-HARD-SKIP recovering drift=${apPosMs - posMs}',
                 );
+              } else if (!isPosAdvancing && apPosMs > posMs) {
+                // 第九轮 N2：漂移为正（音频超前）且**视频未推进** ⇒ 是视频在卡顿、
+                // 音频是健康的 ⇒ 绝不能重挂音频（实测 01:41 对健康音频误重挂 3 次）。
+                // 该场景交由主实例卡死看门狗处理。
+                SeekProbe.note(
+                  'DRIFT-HARD-SKIP video-stall drift=${apPosMs - posMs} '
+                  'sinceAdvance=$sinceAdvanceMs',
+                );
               } else if (hardCooldown != null && nowHard.isBefore(hardCooldown)) {
                 SeekProbe.note(
                   'DRIFT-HARD-SKIP cooldown drift=${apPosMs - posMs}',
+                );
+              } else if (_audioRecoverCooldownUntil != null &&
+                  nowHard.isBefore(_audioRecoverCooldownUntil!)) {
+                // 第九轮 N2：一并受 10s 恢复冷却约束，杜绝 3s 一次的重挂循环。
+                SeekProbe.note(
+                  'DRIFT-HARD-SKIP recover-cooldown drift=${apPosMs - posMs}',
                 );
               } else if (sinceAdvanceMs >= 3000) {
                 // 已确认停顿（≥3s 位置无变化）：交接给卡死看门狗（8s 阈值）自愈，
@@ -1186,6 +1221,26 @@ class WinWinPlayerController {
                 );
                 apd.playbackRate = baseRate;
               }
+            }
+          } else if (player.state == mdk.PlaybackState.playing &&
+              apd.state == mdk.PlaybackState.paused &&
+              _userIntentPlaying &&
+              durMs > 0 &&
+              apd.position < durMs - 1500) {
+            // 第九轮 N3：镜像补漏——主实例在播放、用户意图播放，而第二实例被卡在
+            // paused（实测：主实例重载触发的 stopped 把音频置暂停后再未恢复 ⇒ 静音）
+            // ⇒ 恢复之；2s 节流重试，避免日志/状态风暴。
+            final nowUnmute = DateTime.now();
+            final lastUnmute = _audioUnmuteLastAt;
+            if (lastUnmute == null ||
+                nowUnmute.difference(lastUnmute).inMilliseconds >= 2000) {
+              _audioUnmuteLastAt = nowUnmute;
+              SeekProbe.note(
+                'AUDIO-UNMUTE resume pos=${apd.position} video=$posMs',
+              );
+              try {
+                apd.state = mdk.PlaybackState.playing;
+              } catch (_) {}
             }
           }
         } catch (_) {}
@@ -1953,7 +2008,14 @@ class WinWinPlayerController {
     _isRecovering = true;
     _stallRecoveryRetryCount++;
     try {
-      final resumePosMs = player.position;
+      // 恢复位置取 max(底层 position, UI position)（第九轮 N1 定因）：
+      // 媒体卸载/重载的瞬态会把底层 position 折叠成 0（实测 01:41 事故），
+      // 而 UI position 记录着用户意图（seek 目标/最后稳定进度），不能被 0 覆盖。
+      final rawResumePos = player.position;
+      final uiResumePos = position.value.inMilliseconds;
+      final resumePosMs = rawResumePos > uiResumePos
+          ? rawResumePos
+          : uiResumePos;
       final resumeDuration = Duration(
         milliseconds: resumePosMs > 0 ? resumePosMs : 0,
       );
@@ -1997,6 +2059,14 @@ class WinWinPlayerController {
       if (ret >= 0) {
         if (resumePosMs > 0) {
           await player.seek(position: resumePosMs);
+          // 第九轮 N1：若此刻媒体尚未 buffered（弱网重载中），该 seek 会被底层丢弃
+          // ⇒ 登记待恢复位置，由 onMediaStatus.buffered 事件再执行一次（已有机制）。
+          if (!player.mediaStatus.test(mdk.MediaStatus.buffered)) {
+            _pendingSeek = resumeDuration;
+            SeekProbe.note(
+              'RECOVER-PENDING resume=$resumePosMs status=${player.mediaStatus}',
+            );
+          }
         }
       } else {
         if (resumePosMs > 0) {
