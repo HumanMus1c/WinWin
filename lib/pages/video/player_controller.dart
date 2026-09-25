@@ -968,12 +968,12 @@ class WinWinPlayerController {
         'after-buffered',
         'v=$posMs b=${buffered.value.inMilliseconds}',
       );
-      // 采样过滤（2026-09-25）：seek 落地后 1.5s 内的 position 属回跳/追赶瞬态，
-      // 计入统计会污染 stalls/avgRate（实测 stallMs 2.2~2.9s 实为 seek 跳变）。
+      // 采样过滤（2026-09-25）：seek 落地后 3s 内的 position 属回跳/追赶瞬态，
+      // 计入统计会污染 stalls/avgRate（实测落地后 1.6s 的样本仍被算成 2.8s 停顿）。
       final monitorSettled =
           _lastSeekFinishTime == null ||
           DateTime.now().difference(_lastSeekFinishTime!) >
-              const Duration(milliseconds: 1500);
+              const Duration(seconds: 3);
       if (monitorSettled) {
         SeekProbe.monitorTick(posMs, buffered.value.inMilliseconds);
       }
@@ -2121,12 +2121,12 @@ class WinWinPlayerController {
         // 实测（2026-09-24）：单源下 Accurate（flags=2）快退会间歇性不生效——demuxer
         // 仍停在 seek 前位置（target=25000 而 posMin=60262；target=30000 而 posAfter=70884），
         // 观感即「自动回退到原位 + 画面加速追赶」；改用 keyFrame 后与快进走同一定位路径。
-        // 前向 seek（2026-09-25 新增 A/B 开关）：默认 keyFrame 快速定位；配置
-        // accurateForwardSeek=true 时改精确落点（去 KeyFrame，需从关键帧解码到目标）。
+        // P0 A/B（2026-09-25）：accurateSeek=true 时前后向均改精确落点（去 KeyFrame），
+        // 用于验证双实例配置下 Accurate 是否可靠（keyFrame 落点误差 -4.8s~+4.3s，
+        // 观感为「seek 到底后又回退一段」）。
         final bool singleSource = _currentAudioUrl == null;
-        final bool useKeyFrame = isBackward
-            ? singleSource
-            : !SeekProbe.accurateForwardSeek;
+        final bool useKeyFrame =
+            !SeekProbe.accurateSeek && (!isBackward || singleSource);
         const int backwardBit = 0x10000;
         final int flagBits = targetMs == 0
             ? (mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame)
@@ -2542,10 +2542,17 @@ class WinWinPlayerController {
                 if (apOrder.state != mdk.PlaybackState.playing) {
                   apOrder.state = mdk.PlaybackState.playing;
                 }
-                // 解冻后才读第二实例位置：暂停态下紧跟 seek 返回的读数是陈旧值 0
-                //（2026-09-25 修正，此前 AUDIO seek ret 行始终记 pos=0，误导排查）
-                SeekProbe.note(
-                  'AUDIO unfreeze -> ${apOrder.state} pos=${apOrder.position}',
+                // 解冻瞬间的第二实例 position 恒为陈旧值 0（实测多次）：延迟 300ms
+                // 再读，RAW 行（5s 节流）另有独立校准。
+                unawaited(
+                  Future<void>.delayed(const Duration(milliseconds: 300), () {
+                    try {
+                      SeekProbe.note(
+                        'AUDIO settled pos=${apOrder.position} '
+                        'state=${apOrder.state}',
+                      );
+                    } catch (_) {}
+                  }),
                 );
               } catch (_) {}
             }
@@ -2557,6 +2564,7 @@ class WinWinPlayerController {
               // 显式同步 UI 播放态（onStateChanged 冻结抑制未广播该变化）。
               playing.value = false;
             }
+            SeekProbe.resetMonitorWindow();
             SeekProbe.note(
               'UNFREEZE seq=$seq target=$targetMs uiPos=${position.value.inMilliseconds} '
               'state=${player.state} intent=${_userIntentPlaying ? 1 : 0}',

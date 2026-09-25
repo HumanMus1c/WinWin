@@ -217,6 +217,18 @@ abstract final class SeekProbe {
   // ── RAW：常态原始读数（5s 节流；字段由控制器侧组装）──
   static int _rawLastMs = -(1 << 30);
 
+  /// 监控采样窗口重置：seek 落地/解冻时调用，避免「回跳 + 追赶」瞬态样本混入
+  /// stalls/avgRate 统计（实测落地后 1.6s 的样本仍被判为 2.8s 停顿）。
+  static void resetMonitorWindow() {
+    _monT.clear();
+    _monPos.clear();
+    _monStallEpisodes = 0;
+    _monStallMs = 0;
+    _monInStall = false;
+    _monBufMin = 1 << 30;
+    _monBufMax = 0;
+  }
+
   /// RAW 行是否到期。供控制器在**读取底层 FFI 之前**判定，避免每 tick 多读。
   static bool rawDue() {
     if (!enabled) return false;
@@ -351,10 +363,12 @@ abstract final class SeekProbe {
     return (action: 1, rate: rate);
   }
 
-  /// P2 A/B（2026-09-25）：前向 seek 是否改「精确落点」（去掉 KeyFrame）。
-  /// 默认关＝保持 keyFrame 快速定位（落点可能偏差 -3.6s~+3.1s，见复盘 §6.2）；
-  /// 打开后落点准，代价是需从关键帧解码到目标（耗时略增）。
-  static bool accurateForwardSeek = false;
+  /// P0 A/B（2026-09-25）：seek 是否改「精确落点」（去掉 KeyFrame，前后向均生效）。
+  /// 默认关＝保持 keyFrame 快速定位（落点落在最近关键帧，误差 -4.8s~+4.3s，观感为
+  /// 「seek 到底后又回退一段」，见复盘 §8）；打开后落点准，代价是需从关键帧解码到目标。
+  /// 历史实证「Accurate 在**外挂音轨/单源清单**配置下快退间歇不生效」——当前为双实例
+  /// （主实例纯视频 DASH、主媒体 seek）配置，需在新配置下重新 A/B 判定。
+  static bool accurateSeek = false;
 
   /// demux 包缓存范围数（E1 置 0）。
   static String get demuxBufferRanges =>
@@ -452,7 +466,7 @@ abstract final class SeekProbe {
         flushAudioOnSeek = raw['flushAudioOnSeek'] == true;
         reopenOnBackwardSeek = raw['reopenOnBackwardSeek'] == true;
         pollTrace = raw['pollTrace'] == true;
-        accurateForwardSeek = raw['accurateForwardSeek'] == true;
+        accurateSeek = raw['accurateSeek'] == true;
         final slow = int.tryParse('${raw['pollSlowMs']}');
         if (slow != null && slow > 0) pollSlowMs = slow;
       }
