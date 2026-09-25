@@ -286,6 +286,21 @@ class WinWinPlayerController {
   /// 是否正在执行卡顿自愈（防重入）。
   bool _isRecovering = false;
 
+  // ── 第二实例（纯音频）健康监控（2026-09-25 事故新增）──
+  /// 上次采样的第二实例位置与连续未前进时长（ms）。
+  int _lastAudioPosMs = -1;
+  int _audioStallMs = 0;
+
+  /// 第二实例自愈冷却截止时间与累计次数（避免 seek/重挂风暴）。
+  DateTime? _audioRecoverCooldownUntil;
+  int _audioRecoverAttempts = 0;
+
+  /// 漂移硬定位冷却截止时间（R3：避免每秒一次硬定位风暴）。
+  DateTime? _driftHardCooldownUntil;
+
+  /// 当前生效的流请求头（二次挂载/自愈时复用）。
+  String? _streamHeaders;
+
   /// 连续自愈失败重试计数。
   int _stallRecoveryRetryCount = 0;
 
@@ -332,6 +347,58 @@ class WinWinPlayerController {
     return idx < 0 ? 0 : idx;
   }
 
+  /// 通用流属性（主实例与第二实例**必须完全一致**）。
+  ///
+  /// **2026-09-25 事故定因**：第二实例（纯音频）此前只设置了 `avio.headers` /
+  /// `keep_open` / `volume`，缺少下面的网络超时与自动重连属性 ⇒ 音频流连接一旦停摆，
+  /// 既无超时也无重连，永久卡在 `MediaStatus(+buffering)`（音频时钟冻结、静音），
+  /// 而主实例（视频）照常播放 —— 观感即「视频正常、音频突然消失」。
+  /// 故抽为此公共函数、两实例共用；主实例独有项（硬解/渲染/音效/音量）留在 [_createPlayer]。
+  void _applyStreamProperties(mdk.Player p) {
+    p.setProperty('avformat.strict', 'experimental');
+    p.setProperty('avformat.safe', '0');
+    p.setProperty('avformat.rtsp_transport', 'tcp');
+    p.setProperty('avformat.extension_picky', '0');
+    p.setProperty('avformat.allowed_segment_extensions', 'ALL');
+
+    // 网络流断线自动重连与超时配置（对齐 fvp 官方 video_player_mdk.dart）：
+    // B站 CDN 在客户端由于缓冲满暂停读取时可能在 60s 左右主动切断连接。
+    // avio.reconnect: 遇断开自动发起新 Range 请求重连。
+    // reconnect_on_network_error: 偶发网络波动或丢包时重试。
+    // reconnect_on_http_error: 瞬态 4xx/5xx 错误时重试。
+    // avio.timeout / avio.rw_timeout: FFmpeg 设置 5s 超时防死锁（微秒），加快弱网及死链逃生自愈。
+    // 注意：严禁开启 avio.reconnect_streamed 与 reconnect_at_eof，两者专用于不可 seek 的直播流，
+    // 会导致点播快退时 FFmpeg 误判流类型而拒绝发送精准 HTTP Range 偏移，造成网络停滞！
+    p.setProperty('avio.reconnect', '1');
+    p.setProperty('avio.reconnect_delay_max', '5');
+    p.setProperty('avio.reconnect_on_network_error', '1');
+    p.setProperty('avio.reconnect_on_http_error', '4xx,5xx');
+    p.setProperty('avio.timeout', '5000000');
+    p.setProperty('avio.rw_timeout', '5000000');
+
+    // 读缓冲水位：MDK 官方明确「maxMs 越大越好，不影响延迟」（默认 1000/4000ms）。
+    // 实测（2026-09-20）默认水位下自然播放与 seek 后均易因缓冲耗尽停顿（mdk 缓冲期会
+    // 暂停主时钟，观感为长时间卡住 + 音频异常），故把预留量提高到 30s，用内存换停顿时长
+    // 与频率；min 保持 1000ms（缓冲恢复判据，过大会拉长每次停顿后的恢复等待）。
+    p.setBufferRange(min: 1000, max: SeekProbe.bufferMaxMs);
+
+    // 启用解复用器包缓存（MDK 官方推荐 ranges=16）：
+    // 允许在内存中缓存解复用后的物理数据包。当向后或向前短距离 Seek 时，
+    // 解复用器直接从内存命中历史包，无需发起网络 Range 请求，大幅加速出帧并杜绝转圈。
+    p.setProperty('demux.buffer.ranges', SeekProbe.demuxBufferRanges);
+    p.setProperty('demux.buffer.protocols', 'http,https');
+
+    // 保持底层播放内核在视频播放完毕后不释放资源（对标 MDK 官方 keep_open 规范）：
+    // 默认 keep_open=0 时，播放完毕 MDK 会自动调用 set(State::Stopped) 释放解码器和渲染管线，
+    // 导致底层状态被销毁、seek(0) 报错（-3 Unloaded / -6 NotReady）且无法重新拉流。
+    // 设置 keep_open=1 时，播放完毕自动转入 State::Paused 并置位 MediaStatus.end，
+    // 保持解码器与网络上下文活跃，确保重播与 seek(0) 秒开且零死锁，
+    // 且 EOS 时 position 自然收敛到总时长，进度条能走到头。
+    // 注：崩溃排查（docs/进入视频播放页崩溃根因与修复.md）已证实 keep_open='1' 为数值
+    // 字符串，不触发 mdk 0.38.0 的非数值解析崩溃（肇事属性是 avsync.audio，已废弃）。
+    p.setProperty('keep_open', '1');
+  }
+
   /// 创建全局共享的 mdk.Player（仅属性配置，监听器由 [_attachListeners] 挂载）。
   mdk.Player _createPlayer() {
     final player = mdk.Player();
@@ -354,26 +421,9 @@ class WinWinPlayerController {
       player.videoDecoders = const ['FFmpeg', 'dav1d'];
       player.setProperty('video.decoder', 'shader_resource=0');
     }
-    player.setProperty('avformat.strict', 'experimental');
-    player.setProperty('avformat.safe', '0');
-    player.setProperty('avformat.rtsp_transport', 'tcp');
-    player.setProperty('avformat.extension_picky', '0');
-    player.setProperty('avformat.allowed_segment_extensions', 'ALL');
-
-    // 网络流断线自动重连与超时配置（对齐 fvp 官方 video_player_mdk.dart）：
-    // B站 CDN 在客户端由于缓冲满暂停读取时可能在 60s 左右主动切断连接。
-    // avio.reconnect: 遇断开自动发起新 Range 请求重连。
-    // reconnect_on_network_error: 偶发网络波动或丢包时重试。
-    // reconnect_on_http_error: 瞬态 4xx/5xx 错误时重试。
-    // avio.timeout / avio.rw_timeout: FFmpeg 设置 5s 超时防死锁（微秒），加快弱网及死链逃生自愈。
-    // 注意：严禁开启 avio.reconnect_streamed 与 reconnect_at_eof，两者专用于不可 seek 的直播流，
-    // 会导致点播快退时 FFmpeg 误判流类型而拒绝发送精准 HTTP Range 偏移，造成网络停滞！
-    player.setProperty('avio.reconnect', '1');
-    player.setProperty('avio.reconnect_delay_max', '5');
-    player.setProperty('avio.reconnect_on_network_error', '1');
-    player.setProperty('avio.reconnect_on_http_error', '4xx,5xx');
-    player.setProperty('avio.timeout', '5000000');
-    player.setProperty('avio.rw_timeout', '5000000');
+    // 网络自愈 / 解复用缓存 / 读缓冲水位 / keep_open 等通用属性：
+    // 主实例与第二实例（纯音频）必须完全一致（2026-09-25 事故定因，见 [_applyStreamProperties]）。
+    _applyStreamProperties(player);
 
     // 音画同步（A/V Sync）配置，依据 MDK 官方 Global-Options 文档（wiki/Global-Options）：
     // - avsync.audio.adaptive 保持默认 0（不启用）：实测（2026-09-20 实机复测）该选项在
@@ -385,12 +435,6 @@ class WinWinPlayerController {
     // std::invalid_argument 导致 Release 必崩（见 docs/进入视频播放页崩溃根因与修复.md），
     // 已废弃；此处使用官方 int32 全局选项（与 d3d11.sync.cpu 同路径，无崩溃风险）。
     mdk.setGlobalOption('avsync.audio.adaptive', 0);
-
-    // 读缓冲水位：MDK 官方明确「maxMs 越大越好，不影响延迟」（默认 1000/4000ms）。
-    // 实测（2026-09-20）默认水位下自然播放与 seek 后均易因缓冲耗尽停顿（mdk 缓冲期会
-    // 暂停主时钟，观感为长时间卡住 + 音频异常），故把预留量提高到 30s，用内存换停顿时长
-    // 与频率；min 保持 1000ms（缓冲恢复判据，过大会拉长每次停顿后的恢复等待）。
-    player.setBufferRange(min: 1000, max: SeekProbe.bufferMaxMs);
 
     if (kDebugMode) {
       // ===== 音画同步 Seek 取证（临时，取证结束后移除）=====
@@ -404,27 +448,10 @@ class WinWinPlayerController {
       // ==================================================
     }
 
-    // 启用解复用器包缓存（MDK 官方推荐 ranges=16）：
-    // 允许在内存中缓存解复用后的物理数据包。当向后或向前短距离 Seek 时，
-    // 解复用器直接从内存命中历史包，无需发起网络 Range 请求，大幅加速出帧并杜绝转圈。
-    player.setProperty('demux.buffer.ranges', SeekProbe.demuxBufferRanges);
-    player.setProperty('demux.buffer.protocols', 'http,https');
-
     // Windows 平台开启 D3D11 CPU-GPU 纹理同步屏障，杜绝 Flutter Texture 渲染表面的时序撕裂与新旧画面闪烁
     if (Platform.isWindows) {
       mdk.setGlobalOption('d3d11.sync.cpu', 1);
     }
-
-    // 保持底层播放内核在视频播放完毕后不释放资源（对标 MDK 官方 keep_open 规范）：
-    // 默认 keep_open=0 时，播放完毕 MDK 会自动调用 set(State::Stopped) 释放解码器和渲染管线，
-    // 导致底层状态被销毁、seek(0) 报错（-3 Unloaded / -6 NotReady）且无法重新拉流。
-    // 设置 keep_open=1 时，播放完毕自动转入 State::Paused 并置位 MediaStatus.end，
-    // 保持解码器与网络上下文活跃，确保重播与 seek(0) 秒开且零死锁，
-    // 且 EOS 时 position 自然收敛到总时长，进度条能走到头。
-    // 注：本次崩溃排查（docs/进入视频播放页崩溃根因与修复.md）已证实 keep_open='1' 为数值
-    // 字符串，不触发 mdk 0.38.0 的非数值解析崩溃（肇事属性是 avsync.audio，已废弃），
-    // 故在此安全恢复。
-    player.setProperty('keep_open', '1');
 
     final initialFilter = AudioNormalization.parse(
       null,
@@ -442,8 +469,13 @@ class WinWinPlayerController {
   ///
   /// 生命周期与全局静态实例一致（首次进入双播放器模式时创建），监听常驻：
   /// 2026-09-24 事件中第二实例全程零埋点，无法判断其 EOS/暂停是否参与了误判。
+  ///
+  /// 2026-09-25 修复：**必须与主实例应用同一套 [ _applyStreamProperties ]**（网络超时 +
+  /// 自动重连 + 读缓冲 + demux 缓存 + keep_open）—— 此前只设 headers/keep_open/volume，
+  /// 导致音频流连接停摆后无自愈、永久静音（事故复盘见 docs 第五轮）。
   mdk.Player _createAudioPlayer() {
     final p = mdk.Player();
+    _applyStreamProperties(p);
     p.onStateChanged.listen((event) {
       SeekProbe.note(
         'AUDIO state ${event.oldValue} -> ${event.newValue}',
@@ -986,7 +1018,7 @@ class WinWinPlayerController {
           'state=${player.state} status=${player.mediaStatus} '
           'adv=${isPosAdvancing ? 1 : 0} playing=${playing.value ? 1 : 0} '
           'completed=${completed.value ? 1 : 0} '
-          'audio=${ap == null ? '-' : (_audioRemountInFlight ? 'remount' : '${ap.state}@${ap.position}')}',
+          'audio=${ap == null ? '-' : (_audioRemountInFlight ? 'remount' : '${ap.state}@${ap.position} ${ap.mediaStatus}')}',
         );
       }
       final isNearEnd = durMs > 0 && posMs >= durMs - 200;
@@ -1039,16 +1071,61 @@ class WinWinPlayerController {
               apPosMs,
               sinceSeekMs: sinceSeek,
             );
+
+            // 第二实例卡死看门狗（2026-09-25 事故）：应在播放但 position 连续 ≥3s
+            // 不前进（实证：音频流连接停摆 ⇒ 音频时钟冻结、status 停 +buffering ⇒
+            // 静音，而主实例照常播放）⇒ 走 [_recoverAudioStalled] 重挂自愈。
+            if (apPosMs > _lastAudioPosMs) {
+              _lastAudioPosMs = apPosMs;
+              _audioStallMs = 0;
+              _audioRecoverAttempts = 0;
+            } else {
+              _audioStallMs += 100;
+            }
+            if (_audioStallMs >= 3000) {
+              final nowStall = DateTime.now();
+              final cooldown = _audioRecoverCooldownUntil;
+              if (cooldown == null || nowStall.isAfter(cooldown)) {
+                _audioStallMs = 0;
+                _audioRecoverCooldownUntil = nowStall.add(
+                  const Duration(seconds: 10),
+                );
+                SeekProbe.note(
+                  'AUDIO-STALL detected pos=$apPosMs video=$posMs '
+                  'attempts=$_audioRecoverAttempts',
+                );
+                unawaited(_recoverAudioStalled(posMs));
+              }
+            }
+
             // 三态处理（2026-09-25）：action -1＝节流期保持现状（严禁复位速率，
             // 旧实现把节流 0 与死区 0 一起复位，导致修正占空比 ~2%、偏差累积到
             // 0.9~1.5s 后硬跳）；action 1＝比例控速；action 0＝死区内复位。
             if (decision.action == 2) {
-              SeekProbe.note(
-                'DRIFT-HARD drift=${apPosMs - posMs} video=$posMs '
-                'audio=$apPosMs -> audio seek',
-              );
-              unawaited(apd.seek(position: posMs));
-              apd.playbackRate = 1.0;
+              // R3（2026-09-25）：硬定位加冷却；若已判定卡死则交接给看门狗，
+              // 避免「每秒一次硬定位」的 seek 风暴（既刷网络又掩盖真实故障）。
+              final nowHard = DateTime.now();
+              final hardCooldown = _driftHardCooldownUntil;
+              if (hardCooldown != null && nowHard.isBefore(hardCooldown)) {
+                SeekProbe.note(
+                  'DRIFT-HARD-SKIP cooldown drift=${apPosMs - posMs}',
+                );
+              } else if (_audioStallMs >= 1500) {
+                SeekProbe.note(
+                  'DRIFT-HARD-SKIP stall-watchdog drift=${apPosMs - posMs} '
+                  'stallMs=$_audioStallMs',
+                );
+              } else {
+                _driftHardCooldownUntil = nowHard.add(
+                  const Duration(seconds: 3),
+                );
+                SeekProbe.note(
+                  'DRIFT-HARD drift=${apPosMs - posMs} video=$posMs '
+                  'audio=$apPosMs -> audio seek',
+                );
+                unawaited(apd.seek(position: posMs));
+                apd.playbackRate = 1.0;
+              }
             } else if (decision.action == 1) {
               if ((apd.playbackRate - decision.rate).abs() >= 0.005) {
                 SeekProbe.note(
@@ -1529,6 +1606,8 @@ class WinWinPlayerController {
         }
       }
       player.setProperty('avio.headers', headers);
+      // 保存请求头：第二实例自愈（[_recoverAudioStalled]）重挂媒体源时复用。
+      _streamHeaders = headers;
       // Phase 4.7：音频归一化滤镜作为 player 属性在 prepare 前下发，
       // 避免在 media 已打开/播放中切换 avfilter 触发音频轨重初始化干扰状态。
       final filter = AudioNormalization.parse(
@@ -1626,8 +1705,11 @@ class WinWinPlayerController {
         // 方案 3 最小验证：主播放器只放纯视频 URL（不再挂外挂音轨，
         // 回到实测可靠的「主媒体 seek」），音频交给第二实例（音轨即其主媒体）。
         final ap = _audioPlayer ??= _createAudioPlayer();
+        // 流属性与主实例保持一致（网络自愈/读缓冲/demux 缓存/keep_open）。
+        // 2026-09-25 事故定因：第二实例此前缺这些属性 ⇒ 音频连接停摆后无重连、
+        // 无超时，永久卡在 +buffering（观感「音频突然消失」）。
+        _applyStreamProperties(ap);
         ap.setProperty('avio.headers', headers);
-        ap.setProperty('keep_open', '1');
         ap.volume = volume.value / 100.0;
         player.media = videoUrl;
         ap.media = audioUrl;
@@ -1894,6 +1976,54 @@ class WinWinPlayerController {
       );
     } finally {
       _isRecovering = false;
+    }
+  }
+
+  /// 第二实例（纯音频）卡死自愈（2026-09-25 事故新增）。
+  ///
+  /// 实证现场（2026-09-25 22:28:50）：音频流连接停摆 ⇒ 音频时钟冻结（position 不动、
+  /// status 停在 `+buffering`）⇒ 静音，而主实例照常播放；第二实例既无网络自愈属性也
+  /// 无看门狗，卡死后无人救（旧漂移控制只会每秒硬定位一次，反而形成 seek 风暴）。
+  /// 恢复走**与首次加载同源**的已验证路径：
+  ///   stopped（关闭音频设备；按项目 2026-09-24「第五笔」结论，这是唯一能真正重开
+  ///   音频设备的手段）→ 重新应用流属性/请求头/音量 → 重设音频媒体源 → prepare
+  ///   → seek 回视频当前位置 → playing。
+  /// 冷却由调用方保证（10s）；本函数内限制最多 3 次；全程落 `AUDIO-RECOVER` 证据行。
+  Future<void> _recoverAudioStalled(int videoPosMs) async {
+    final ap = _audioPlayer;
+    final url = _currentAudioUrl;
+    if (_disposed || ap == null || url == null || url.isEmpty) return;
+    if (_audioRecoverAttempts >= 3) {
+      SeekProbe.note('AUDIO-RECOVER give-up attempts=$_audioRecoverAttempts');
+      return;
+    }
+    _audioRecoverAttempts++;
+    final attempt = _audioRecoverAttempts;
+    try {
+      SeekProbe.note('AUDIO-RECOVER begin attempt=$attempt video=$videoPosMs');
+      ap.state = mdk.PlaybackState.stopped;
+      _applyStreamProperties(ap);
+      final headers = _streamHeaders;
+      if (headers != null && headers.isNotEmpty) {
+        ap.setProperty('avio.headers', headers);
+      }
+      ap.volume = volume.value / 100.0;
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      if (_disposed) return;
+      ap.media = url;
+      final ret = await ap.prepare();
+      if (_disposed) return;
+      if (ret >= 0 && videoPosMs > 0) {
+        await ap.seek(position: videoPosMs);
+      }
+      if (!_disposed && _userIntentPlaying) {
+        ap.state = mdk.PlaybackState.playing;
+      }
+      _lastAudioPosMs = videoPosMs;
+      _audioStallMs = 0;
+      SeekProbe.note('AUDIO-RECOVER done attempt=$attempt ret=$ret');
+    } catch (e) {
+      SeekProbe.note('AUDIO-RECOVER failed attempt=$attempt err=$e');
     }
   }
 
