@@ -330,12 +330,22 @@ abstract final class SeekProbe {
   static const int driftSeekPeriodMs = 250;
   static const int driftStablePeriodMs = 1000;
 
+  /// 漂移校正决策 —— **控制路径，不依赖探针开关 `enabled`**（2026-09-25 解耦）。
+  ///
+  /// 此前开头是 `if (!enabled) return (action: -1, rate: 1.0)`，导致 `seek_probe.json`
+  /// 缺失或被关闭时**音画同步校正静默失效**（退回 0.9~1.5s 漂移 + `DRIFT-HARD` 硬跳）。
+  /// 现改为：决策/控速逻辑恒运行，探针只负责日志——`note()` 内部仍按 `enabled` 门控。
+  ///
+  /// 返回 record：
+  /// - `action == 2`：偏差 > [driftHardMs]，需硬定位到视频位置；
+  /// - `action == 1`：按 `rate` 调整第二实例速率（比例控制，限幅 ±[maxRateDelta]）；
+  /// - `action == 0`：偏差 ≤ [driftDeadZoneMs]，速率复位 1.0；
+  /// - `action == -1`：节流期，保持现状（严禁复位速率）。
   static ({int action, double rate}) driftDecision(
     int videoPosMs,
     int audioPosMs, {
     required int sinceSeekMs,
   }) {
-    if (!enabled) return (action: -1, rate: 1.0);
     final now = DateTime.now();
     final periodMs = sinceSeekMs < 3000
         ? driftSeekPeriodMs
@@ -347,10 +357,7 @@ abstract final class SeekProbe {
     _driftLastAt = now;
     final drift = audioPosMs - videoPosMs;
     if (drift.abs() > driftHardMs) {
-      SyncTrace.log(
-        'SeekProbe',
-        'DRIFT hard drift=$drift v=$videoPosMs a=$audioPosMs',
-      );
+      note('DRIFT hard drift=$drift v=$videoPosMs a=$audioPosMs');
       return (action: 2, rate: 1.0);
     }
     if (drift.abs() <= driftDeadZoneMs) {

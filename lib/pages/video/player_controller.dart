@@ -2827,6 +2827,22 @@ class WinWinPlayerController {
           SyncTrace.log('PlayerCtrl', 'delayed dispose: fvp dispose returned');
         });
       }
+      // 第二实例（纯音频）与共享主实例同生命周期：refcount 归零时一并释放
+      //（2026-09-25 清理：此前仅被置 stopped，解码器/音频设备虽已释放但对象常驻；
+      //  此处补对象级 dispose，避免跨会话残留）。
+      final audioPlayer = _audioPlayer;
+      _audioPlayer = null;
+      if (audioPlayer != null) {
+        try {
+          audioPlayer.state = mdk.PlaybackState.stopped;
+        } catch (_) {}
+        Future.delayed(_sharedTeardownDelay, () {
+          try {
+            audioPlayer.dispose();
+            SyncTrace.log('PlayerCtrl', 'second instance disposed');
+          } catch (_) {}
+        });
+      }
     } else {
       SyncTrace.log('PlayerCtrl', 'refs remain=$_playerCount, set paused');
       _sharedPlayer?.state = mdk.PlaybackState.paused;
