@@ -968,7 +968,15 @@ class WinWinPlayerController {
         'after-buffered',
         'v=$posMs b=${buffered.value.inMilliseconds}',
       );
-      SeekProbe.monitorTick(posMs, buffered.value.inMilliseconds);
+      // 采样过滤（2026-09-25）：seek 落地后 1.5s 内的 position 属回跳/追赶瞬态，
+      // 计入统计会污染 stalls/avgRate（实测 stallMs 2.2~2.9s 实为 seek 跳变）。
+      final monitorSettled =
+          _lastSeekFinishTime == null ||
+          DateTime.now().difference(_lastSeekFinishTime!) >
+              const Duration(milliseconds: 1500);
+      if (monitorSettled) {
+        SeekProbe.monitorTick(posMs, buffered.value.inMilliseconds);
+      }
       // 常态原始读数（5s 节流）：与零风险心跳互补，给出底层真实 state/status
       // 与第二实例状态——2026-09-24 事件中该行会直接落在「完成态冻结」分支内。
       if (SeekProbe.rawDue()) {
@@ -1025,23 +1033,39 @@ class WinWinPlayerController {
                 : DateTime.now()
                       .difference(_lastSeekFinishTime!)
                       .inMilliseconds;
+            final apPosMs = apd.position;
             final decision = SeekProbe.driftDecision(
               posMs,
-              apd.position,
+              apPosMs,
               sinceSeekMs: sinceSeek,
             );
-            if (decision == 2) {
+            // 三态处理（2026-09-25）：action -1＝节流期保持现状（严禁复位速率，
+            // 旧实现把节流 0 与死区 0 一起复位，导致修正占空比 ~2%、偏差累积到
+            // 0.9~1.5s 后硬跳）；action 1＝比例控速；action 0＝死区内复位。
+            if (decision.action == 2) {
               SeekProbe.note(
-                'DRIFT-HARD video=$posMs audio=${apd.position} -> audio seek',
+                'DRIFT-HARD drift=${apPosMs - posMs} video=$posMs '
+                'audio=$apPosMs -> audio seek',
               );
               unawaited(apd.seek(position: posMs));
               apd.playbackRate = 1.0;
-            } else if (decision == 1) {
-              apd.playbackRate = 1.03;
-            } else if (decision == -1) {
-              apd.playbackRate = 0.97;
-            } else if ((apd.playbackRate - 1.0).abs() > 0.001) {
-              apd.playbackRate = 1.0;
+            } else if (decision.action == 1) {
+              if ((apd.playbackRate - decision.rate).abs() >= 0.005) {
+                SeekProbe.note(
+                  'DRIFT-APPLY rate=${decision.rate.toStringAsFixed(4)} '
+                  'drift=${apPosMs - posMs} video=$posMs audio=$apPosMs '
+                  'sinceSeek=$sinceSeek',
+                );
+              }
+              apd.playbackRate = decision.rate;
+            } else if (decision.action == 0) {
+              if ((apd.playbackRate - 1.0).abs() > 0.001) {
+                SeekProbe.note(
+                  'DRIFT-APPLY rate=1.0000 reset drift=${apPosMs - posMs} '
+                  'video=$posMs audio=$apPosMs',
+                );
+                apd.playbackRate = 1.0;
+              }
             }
           }
         } catch (_) {}
@@ -2097,8 +2121,12 @@ class WinWinPlayerController {
         // 实测（2026-09-24）：单源下 Accurate（flags=2）快退会间歇性不生效——demuxer
         // 仍停在 seek 前位置（target=25000 而 posMin=60262；target=30000 而 posAfter=70884），
         // 观感即「自动回退到原位 + 画面加速追赶」；改用 keyFrame 后与快进走同一定位路径。
+        // 前向 seek（2026-09-25 新增 A/B 开关）：默认 keyFrame 快速定位；配置
+        // accurateForwardSeek=true 时改精确落点（去 KeyFrame，需从关键帧解码到目标）。
         final bool singleSource = _currentAudioUrl == null;
-        final bool useKeyFrame = !isBackward || singleSource;
+        final bool useKeyFrame = isBackward
+            ? singleSource
+            : !SeekProbe.accurateForwardSeek;
         const int backwardBit = 0x10000;
         final int flagBits = targetMs == 0
             ? (mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame)
@@ -2274,30 +2302,6 @@ class WinWinPlayerController {
           } catch (_) {}
         }
 
-        // 方案 3 最小验证：音频实例同步定位（音频侧同样是「主媒体 seek」）。
-        // await 保证两侧都到位后再解冻，避免音频侧起播晚造成的固定滞后。
-        final apSeek = _audioPlayer;
-        if (apSeek != null) {
-          SeekProbe.stage('audio_player_seek', 'target=$targetMs');
-          SeekProbe.note('AUDIO seek seq=$seq -> $targetMs');
-          try {
-            await apSeek
-                .seek(position: targetMs)
-                .timeout(const Duration(seconds: 3));
-          } catch (_) {}
-          try {
-            final apPos = apSeek.position;
-            SeekProbe.note(
-              'AUDIO seek ret seq=$seq pos=$apPos target=$targetMs '
-              'state=${apSeek.state}',
-            );
-            SeekProbe.stage(
-              'audio_player_pos',
-              'pos=$apPos target=$targetMs',
-            );
-          } catch (_) {}
-        }
-
         final seekStartedAt = DateTime.now();
         SeekProbe.note('MAIN seek seq=$seq -> $targetMs flags=$flagBits');
         final res = await player.seek(position: targetMs, flags: flags);
@@ -2316,6 +2320,27 @@ class WinWinPlayerController {
           'MAIN seek ret seq=$seq res=$res posAfter=$posAfterMainSeek '
           'target=$targetMs state=${player.state}',
         );
+
+        // 方案 3：第二实例按**主实例实际落点**齐步（2026-09-25 定因修复）。
+        // 旧实现按「请求目标」定位，而主实例走 keyFrame 会落在偏差 -3.6s~+3.1s 的
+        // 关键帧上 ⇒ 每次 seek 后固定产生 1.5~3.5s 音画差，随即被 DRIFT-HARD 硬拉
+        // （可闻瞬跳）。改用 res 后两侧同点，seek 后无需硬定位。
+        final audioTargetMs = res >= 0 ? res : targetMs;
+        final apSeek = _audioPlayer;
+        if (apSeek != null) {
+          SeekProbe.stage(
+            'audio_player_seek',
+            'target=$audioTargetMs res=$res',
+          );
+          SeekProbe.note(
+            'AUDIO seek seq=$seq -> $audioTargetMs (main landed res=$res)',
+          );
+          try {
+            await apSeek
+                .seek(position: audioTargetMs)
+                .timeout(const Duration(seconds: 3));
+          } catch (_) {}
+        }
 
         if (res < 0) {
           AppLogger.w('PlayerController', 'player.seek error code: $res');
@@ -2516,8 +2541,12 @@ class WinWinPlayerController {
               try {
                 if (apOrder.state != mdk.PlaybackState.playing) {
                   apOrder.state = mdk.PlaybackState.playing;
-                  SeekProbe.note('AUDIO unfreeze -> playing');
                 }
+                // 解冻后才读第二实例位置：暂停态下紧跟 seek 返回的读数是陈旧值 0
+                //（2026-09-25 修正，此前 AUDIO seek ret 行始终记 pos=0，误导排查）
+                SeekProbe.note(
+                  'AUDIO unfreeze -> ${apOrder.state} pos=${apOrder.position}',
+                );
               } catch (_) {}
             }
             if (player.state != mdk.PlaybackState.playing &&

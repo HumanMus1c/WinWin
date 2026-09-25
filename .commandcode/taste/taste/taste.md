@@ -7,6 +7,9 @@
 - Treats a pre-change snapshot (`git stash create` → `refs/snapshots/latest`) as a mandatory step for every change — a stated global rule, not optional — and calls it out when it's skipped. Confidence: 0.85
 - Uses bracketed conventional commit messages: `[type](scope): 中文描述`. Confidence: 0.7
 - Maintains a per-fix document under `docs/` covering five elements: root cause / fix plan / verification / summary / commit records. Confidence: 0.7
+- A fix isn't finished until it's committed to local git and pushed to `origin main`; expects the real commit hash to be backfilled into the docs afterwards, and when the push is blocked by the environment (e.g. proxy down) wants the blocker stated plainly and carried as a pending item to retry, not quietly dropped. Confidence: 0.7
+- Keeps plan/scratchpad documents synced into the global plans directory (`~/.commandcode/plans/`) and has the plan reviewed before committing. Confidence: 0.5
+- Expects the agent to run the whole fix pipeline to completion on a bare "继续" — snapshot, edit, analyze, debug+release builds, docs, commit, push — without pausing for step-by-step approval, reserving the user's involvement for on-device manual verification. Confidence: 0.6
 - Does not weaken security settings to work around failures (e.g. never disables SSL/TLS certificate verification for a failing `git push`); prefers to keep retrying and report the blocker. Confidence: 0.6
 - Communicates in Chinese and expects replies in Chinese. Confidence: 0.9
 - Wants to be able to build/run the app himself: asks for exact, copy-pasteable Debug/Release compile-and-run commands (build output paths, `flutter run -d windows`) instead of relying solely on the agent to drive builds. Confidence: 0.5

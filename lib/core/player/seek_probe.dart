@@ -288,41 +288,73 @@ abstract final class SeekProbe {
     SyncTrace.log('SeekProbe', message);
   }
 
-  /// 方案 3：双实例漂移校正判定（自适应节流 + 仅在超阈值时落盘）。
-  /// seek 后 3s 内每 250ms 检查（快速收敛），稳定后每 5s 一次（长期开销趋近于零）。
-  /// 返回：0=不动，1=音频滞后需加速(+3%)，-1=音频超前需减速(-3%)，2=偏差过大需硬定位。
+  /// 方案 3：双实例漂移校正判定（比例控制 + 三态节流）。
+  ///
+  /// 2026-09-25 定因修复：旧实现把「节流期无决策」与「偏差在死区内」都返回 0，
+  /// 而调用处对 0 的处理是复位 `playbackRate = 1.0` ⇒ 每次修正只生效约一个 tick
+  /// （~100ms）即被复位（稳定期占空比 ~2%，等效修正 ≈0.06%）；实测偏差以
+  /// ~0.78%/s 单向增长到 0.9~1.5s，随后触发硬定位（音频瞬跳 1.5~3.5s，可闻）。
+  /// 现改为三态返回（record）：
+  /// - `action == 2`：偏差 > [driftHardMs]，需硬定位到视频位置；
+  /// - `action == 1`：按 `rate` 调整第二实例速率（比例控制，限幅 ±[maxRateDelta]）；
+  /// - `action == 0`：偏差 ≤ [driftDeadZoneMs]，速率复位 1.0；
+  /// - `action == -1`：**节流期，保持现状**（严禁复位速率）。
   static DateTime? _driftLastAt;
 
-  static int driftDecision(
+  /// 比例增益：1ms 偏差 → 0.00008 速率修正（125ms→1%，375ms 起饱和到 3% 上限）。
+  /// 受底层固有 ~0.8% 速率差限制，残余偏差会稳定在死区附近而非 0。
+  static const double driftGain = 0.00008;
+
+  /// 速率修正限幅（±3%：兼顾收敛速度与听感）。
+  static const double maxRateDelta = 0.03;
+
+  /// 死区（ms）：|drift| ≤ 死区视为已对齐，速率复位。
+  static const int driftDeadZoneMs = 150;
+
+  /// 硬定位阈值（ms）。
+  static const int driftHardMs = 1500;
+
+  /// 决策周期（ms）：seek 后 3s 内 250ms 快速收敛，其后 1s 持续跟踪。
+  static const int driftSeekPeriodMs = 250;
+  static const int driftStablePeriodMs = 1000;
+
+  static ({int action, double rate}) driftDecision(
     int videoPosMs,
     int audioPosMs, {
     required int sinceSeekMs,
   }) {
-    if (!enabled) return 0;
+    if (!enabled) return (action: -1, rate: 1.0);
     final now = DateTime.now();
-    final periodMs = sinceSeekMs < 3000 ? 250 : 5000;
+    final periodMs = sinceSeekMs < 3000
+        ? driftSeekPeriodMs
+        : driftStablePeriodMs;
     final last = _driftLastAt;
     if (last != null && now.difference(last).inMilliseconds < periodMs) {
-      return 0;
+      return (action: -1, rate: 1.0);
     }
     _driftLastAt = now;
     final drift = audioPosMs - videoPosMs;
-    if (drift.abs() > 1500) {
+    if (drift.abs() > driftHardMs) {
       SyncTrace.log(
         'SeekProbe',
         'DRIFT hard drift=$drift v=$videoPosMs a=$audioPosMs',
       );
-      return 2;
+      return (action: 2, rate: 1.0);
     }
-    if (drift.abs() > 250) {
-      SyncTrace.log(
-        'SeekProbe',
-        'DRIFT nudge drift=$drift v=$videoPosMs a=$audioPosMs',
-      );
-      return drift < 0 ? 1 : -1;
+    if (drift.abs() <= driftDeadZoneMs) {
+      return (action: 0, rate: 1.0);
     }
-    return 0;
+    // 音频超前（drift>0）需降速，滞后（drift<0）需提速
+    var rate = 1.0 - drift * driftGain;
+    if (rate > 1.0 + maxRateDelta) rate = 1.0 + maxRateDelta;
+    if (rate < 1.0 - maxRateDelta) rate = 1.0 - maxRateDelta;
+    return (action: 1, rate: rate);
   }
+
+  /// P2 A/B（2026-09-25）：前向 seek 是否改「精确落点」（去掉 KeyFrame）。
+  /// 默认关＝保持 keyFrame 快速定位（落点可能偏差 -3.6s~+3.1s，见复盘 §6.2）；
+  /// 打开后落点准，代价是需从关键帧解码到目标（耗时略增）。
+  static bool accurateForwardSeek = false;
 
   /// demux 包缓存范围数（E1 置 0）。
   static String get demuxBufferRanges =>
@@ -420,6 +452,7 @@ abstract final class SeekProbe {
         flushAudioOnSeek = raw['flushAudioOnSeek'] == true;
         reopenOnBackwardSeek = raw['reopenOnBackwardSeek'] == true;
         pollTrace = raw['pollTrace'] == true;
+        accurateForwardSeek = raw['accurateForwardSeek'] == true;
         final slow = int.tryParse('${raw['pollSlowMs']}');
         if (slow != null && slow > 0) pollSlowMs = slow;
       }
