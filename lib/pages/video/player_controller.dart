@@ -286,10 +286,14 @@ class WinWinPlayerController {
   /// 是否正在执行卡顿自愈（防重入）。
   bool _isRecovering = false;
 
-  // ── 第二实例（纯音频）健康监控（2026-09-25 事故新增）──
-  /// 上次采样的第二实例位置与连续未前进时长（ms）。
+  // ── 第二实例（纯音频）健康监控（2026-09-25 事故新增；第七轮改时间基准）──
+  /// 上次采样的第二实例位置。
   int _lastAudioPosMs = -1;
-  int _audioStallMs = 0;
+
+  /// 第二实例位置**上次发生变化**的时刻：停顿时长 = now - 该时刻。
+  /// 时间基准（而非逐 tick 比较）——mdk 第二实例位置是阶梯式更新（实测 0.5~1s 一跳），
+  /// 逐 tick 比较会把正常播放误判成停顿（第七轮 M2：导致硬定位被永久跳过、音画差 43s）。
+  DateTime? _lastAudioAdvanceAt;
 
   /// 第二实例自愈进行中（串行化门：进行中不再触发、漂移控制也不干预）。
   bool _audioRecovering = false;
@@ -1076,13 +1080,25 @@ class WinWinPlayerController {
               sinceSeekMs: sinceSeek,
             );
 
-            // 第二实例卡死看门狗（2026-09-25；第六轮加固）：
-            // 只有「**确实是音频单侧卡死**」才计数与触发——必须同时满足：
+            // 位置推进判定（第七轮 M2：改时间基准）——position 只要**发生变化**即视为
+            // 在推进；停顿时长 = now - 上次变化时刻（mdk 第二实例位置阶梯式更新，
+            // 逐 tick 比较会把正常播放误判成停顿，曾导致硬定位被永久跳过、音画差 43s）。
+            final nowTick = DateTime.now();
+            if (_lastAudioPosMs < 0 || apPosMs != _lastAudioPosMs) {
+              _lastAudioPosMs = apPosMs;
+              _lastAudioAdvanceAt = nowTick;
+              _audioRecoverAttempts = 0;
+            }
+            final sinceAdvanceMs = _lastAudioAdvanceAt == null
+                ? 1 << 30
+                : nowTick.difference(_lastAudioAdvanceAt!).inMilliseconds;
+
+            // 第二实例卡死看门狗（2026-09-25；第六轮加固条件、第七轮改时间基准）：
+            // 只有「确实是音频单侧卡死」才自愈——必须同时满足：
             //   !_loading（无媒体加载）、!_isRecovering（主实例未在自愈）、
             //   !_audioRecovering（自身未在恢复）、isPosAdvancing（主实例正在推进）、
-            //   posMs > 5000（避开起播/回 0 阶段）、音频 status 不含 seeking。
-            // 反例（23:27 事故）：主实例 seek 失败后整媒体重挂期间，视频 pos=0 未推进，
-            // 音频被镜像成 playing 且 pos=0 ⇒ 旧条件误判并连续重挂两次 ⇒ 双重音频。
+            //   posMs > 5000（避开起播/回 0 阶段）、音频 status 不含 seeking；
+            //   且停顿 ≥8s（弱网正常重缓冲数秒内自愈，且 R1 已补 5s 超时+重连）。
             final apStatus = apd.mediaStatus;
             final audioStallCandidate =
                 !_loading &&
@@ -1091,30 +1107,16 @@ class WinWinPlayerController {
                 isPosAdvancing &&
                 posMs > 5000 &&
                 !apStatus.test(mdk.MediaStatus.seeking);
-            if (!audioStallCandidate) {
-              _audioStallMs = 0;
-              if (apPosMs > _lastAudioPosMs) {
-                _lastAudioPosMs = apPosMs;
-              }
-            } else if (apPosMs > _lastAudioPosMs) {
-              _lastAudioPosMs = apPosMs;
-              _audioStallMs = 0;
-              _audioRecoverAttempts = 0;
-            } else {
-              _audioStallMs += 100;
-            }
-            if (_audioStallMs >= 8000) {
-              final nowStall = DateTime.now();
+            if (audioStallCandidate && sinceAdvanceMs >= 8000) {
               final cooldown = _audioRecoverCooldownUntil;
-              if (cooldown == null || nowStall.isAfter(cooldown)) {
-                _audioStallMs = 0;
-                _audioRecoverCooldownUntil = nowStall.add(
+              if (cooldown == null || nowTick.isAfter(cooldown)) {
+                _audioRecoverCooldownUntil = nowTick.add(
                   const Duration(seconds: 10),
                 );
                 SeekProbe.note(
                   'AUDIO-STALL detected pos=$apPosMs video=$posMs '
-                  'adv=${isPosAdvancing ? 1 : 0} status=$apStatus '
-                  'attempts=$_audioRecoverAttempts',
+                  'adv=${isPosAdvancing ? 1 : 0} sinceAdvance=$sinceAdvanceMs '
+                  'status=$apStatus attempts=$_audioRecoverAttempts',
                 );
                 unawaited(_recoverAudioStalled(posMs));
               }
@@ -1124,29 +1126,39 @@ class WinWinPlayerController {
             // 旧实现把节流 0 与死区 0 一起复位，导致修正占空比 ~2%、偏差累积到
             // 0.9~1.5s 后硬跳）；action 1＝比例控速；action 0＝死区内复位。
             if (decision.action == 2) {
-              // R3（2026-09-25）：硬定位加冷却；若已判定卡死则交接给看门狗，
-              // 避免「每秒一次硬定位」的 seek 风暴（既刷网络又掩盖真实故障）。
+              // R3 + M1（2026-09-25/26）：硬定位**不再直接 seek**——播放态直接 seek 会让
+              // 音频设备里残留的旧材料与新定位材料同时出声（「双重音频」第七轮定因）。
+              // 改走安全重挂序列（stopped 关设备 → setMedia → prepare → seek 回位 →
+              // playing），与首次加载同源、无残留；保留冷却与「交接给看门狗」防风暴语义。
               final nowHard = DateTime.now();
               final hardCooldown = _driftHardCooldownUntil;
-              if (hardCooldown != null && nowHard.isBefore(hardCooldown)) {
+              if (_audioRecovering) {
+                SeekProbe.note(
+                  'DRIFT-HARD-SKIP recovering drift=${apPosMs - posMs}',
+                );
+              } else if (hardCooldown != null && nowHard.isBefore(hardCooldown)) {
                 SeekProbe.note(
                   'DRIFT-HARD-SKIP cooldown drift=${apPosMs - posMs}',
                 );
-              } else if (_audioStallMs >= 1500) {
+              } else if (sinceAdvanceMs >= 3000) {
+                // 已确认停顿（≥3s 位置无变化）：交接给卡死看门狗（8s 阈值）自愈，
+                // 避免在停摆的管线上反复重挂。
                 SeekProbe.note(
                   'DRIFT-HARD-SKIP stall-watchdog drift=${apPosMs - posMs} '
-                  'stallMs=$_audioStallMs',
+                  'sinceAdvance=$sinceAdvanceMs',
                 );
               } else {
                 _driftHardCooldownUntil = nowHard.add(
                   const Duration(seconds: 3),
                 );
-                SeekProbe.note(
-                  'DRIFT-HARD drift=${apPosMs - posMs} video=$posMs '
-                  'audio=$apPosMs -> audio seek',
+                _audioRecoverCooldownUntil = nowHard.add(
+                  const Duration(seconds: 10),
                 );
-                unawaited(apd.seek(position: posMs));
-                apd.playbackRate = 1.0;
+                SeekProbe.note(
+                  'DRIFT-HARD remount drift=${apPosMs - posMs} video=$posMs '
+                  'audio=$apPosMs sinceAdvance=$sinceAdvanceMs',
+                );
+                unawaited(_recoverAudioStalled(posMs));
               }
             } else if (decision.action == 1) {
               if ((apd.playbackRate - decision.rate).abs() >= 0.005) {
@@ -2052,7 +2064,8 @@ class WinWinPlayerController {
         ap.state = mdk.PlaybackState.playing;
       }
       _lastAudioPosMs = videoPosMs;
-      _audioStallMs = 0;
+      // 重置时间基准（第七轮）：重挂后从当前位置重新计时，避免立刻又被判停顿。
+      _lastAudioAdvanceAt = DateTime.now();
       SeekProbe.note('AUDIO-RECOVER done attempt=$attempt ret=$ret');
     } catch (e) {
       SeekProbe.note('AUDIO-RECOVER failed attempt=$attempt err=$e');
