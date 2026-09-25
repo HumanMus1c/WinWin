@@ -363,12 +363,17 @@ abstract final class SeekProbe {
     return (action: 1, rate: rate);
   }
 
-  /// P0 A/B（2026-09-25）：seek 是否改「精确落点」（去掉 KeyFrame，前后向均生效）。
-  /// 默认关＝保持 keyFrame 快速定位（落点落在最近关键帧，误差 -4.8s~+4.3s，观感为
-  /// 「seek 到底后又回退一段」，见复盘 §8）；打开后落点准，代价是需从关键帧解码到目标。
-  /// 历史实证「Accurate 在**外挂音轨/单源清单**配置下快退间歇不生效」——当前为双实例
-  /// （主实例纯视频 DASH、主媒体 seek）配置，需在新配置下重新 A/B 判定。
-  static bool accurateSeek = false;
+  /// seek 定位模式（默认精确落点；配置 `accurateSeek:false` 可回退到 keyFrame 快速定位）。
+  ///
+  /// A/B 实测（2026-09-25 双实例配置，主实例纯视频 DASH + 主媒体 seek）：
+  /// - 默认 keyFrame：33 次 seek 落点误差 **-4950ms ~ +4077ms**（24 次落到目标之前 =
+  ///   用户感知的「到点后又回退一段」），缓存命中时延迟 6~24ms；
+  /// - `accurateSeek=true`：36 次 seek 落点误差 **全部 0ms**（一次 -1ms），延迟
+  ///   16~477ms（平均 107ms，即每次多约 80~100ms 的关键帧→目标解码定位开销）。
+  /// ⇒ 采用精确落点为默认。历史「Accurate 快退间歇不生效」实证来自**外挂音轨 /
+  ///   单源 HLS 清单**配置，在当前双实例配置下不复现（B 组 36 次全部 settled=1、
+  ///   aheadMax=0、无回跳）。
+  static bool accurateSeek = true;
 
   /// demux 包缓存范围数（E1 置 0）。
   static String get demuxBufferRanges =>
