@@ -1967,6 +1967,18 @@ class WinWinPlayerController {
         }
       }
 
+      // 3.1 第二实例归位（第十三轮定因）：双实例模式下音频实例创建时**没有起点**
+      //（`ap.media = audioUrl` 无 start、也没有 prepare 后归位），历史记录续播等
+      //「带起点加载」场景会让音频从 0 起播，与视频差出数分钟（实测 12:16：视频
+      // 662s、音频 0.1s ⇒ DRIFT-HARD 重挂带来 ~30s 静音）。这里复用**已验证安全**的
+      // 用户 seek 归位路径（直接对音频 seek 到主实例实际落点，见 `AUDIO seek seq=`）。
+      if (_dualPlayerAudio &&
+          _audioPlayer != null &&
+          audioUrl != null &&
+          audioUrl.isNotEmpty) {
+        unawaited(_alignSecondInstanceToMain());
+      }
+
       // 创建渲染 Texture（仅首次创建 player 时需要，后续复用单例已存在的
       // texture，避免重复 updateTexture 导致渲染面重建）。
       if (player.textureId.value == null) {
@@ -2191,6 +2203,39 @@ class WinWinPlayerController {
       );
     } finally {
       _isRecovering = false;
+    }
+  }
+
+  /// 将第二实例（音频）对齐到主实例的**实际落点**（第十三轮定因新增）。
+  ///
+  /// 背景：双实例模式下第二实例创建时没有任何起点（`ap.media = audioUrl` 既无 start，
+  /// 也没有 prepare 后的归位动作），而主实例靠「prepare 后 seek(start)」恢复进度 ⇒
+  /// 带起点加载（历史记录续播等）时音频从 0 起播，音画差出数分钟（实测 12:16：视频
+  /// 662s、音频 0.1s），随后 DRIFT-HARD 走重挂序列 ⇒ ~30s 静音。
+  ///
+  /// 这里复用**已验证安全**的用户 seek 归位路径（`SEEK` 流程中的 `AUDIO seek seq=`,
+  /// 2026-09-25 定因后即按主实例实际落点齐步）：直接对音频 seek，不重挂、不暂停主实例。
+  /// 等音频 buffered 最多 3s（弱网下音频流小、通常 0.3s 内就绪）；差异 <1.5s 视为正常
+  /// 缓冲差，不动手（交由既有漂移控制）。
+  Future<void> _alignSecondInstanceToMain() async {
+    final ap = _audioPlayer;
+    if (ap == null || _disposed) return;
+    for (var i = 0; i < 20; i++) {
+      if (_disposed || _audioPlayer != ap) return;
+      if (ap.mediaStatus.test(mdk.MediaStatus.buffered)) break;
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+    final p = _player;
+    if (p == null || _disposed || _audioPlayer != ap) return;
+    final target = p.position;
+    final cur = ap.position;
+    if (target <= 0 || (cur - target).abs() < 1500) return;
+    SeekProbe.note('AUDIO-START-ALIGN video=$target audio=$cur');
+    try {
+      await ap.seek(position: target).timeout(const Duration(seconds: 3));
+      SeekProbe.note('AUDIO-START-ALIGN done pos=${ap.position}');
+    } catch (e) {
+      SeekProbe.note('AUDIO-START-ALIGN failed err=$e');
     }
   }
 
