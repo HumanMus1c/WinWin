@@ -392,7 +392,10 @@ abstract final class SeekProbe {
       'SeekProbe',
       'init enabled=$enabled variant=${variant.name} '
       'autoSeek=$autoSeekEnabled warmup=$autoSeekWarmupSec '
-      'targets=$autoSeekTargets rounds=$autoSeekRounds gap=$roundGapSec',
+      'targets=$autoSeekTargets rounds=$autoSeekRounds gap=$roundGapSec '
+      // 构建身份标记（第十四轮）：分析「修复后仍复现」的反馈前，先核对此标记，
+      // 用于区分「修复未进产物」与「修复未生效」（详见复盘 §18.6/§19）。
+      'build=2026-09-26-r14',
     );
   }
 

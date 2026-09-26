@@ -296,6 +296,13 @@ class WinWinPlayerController {
   /// 折叠保护（第十二轮）：本轮是否已记录过 `POS-COLLAPSE-GUARD`（避免每 tick 刷屏）。
   bool _posCollapseGuardLogged = false;
 
+  // ── 音频轻量归位（第十四轮）──
+  /// 轻量归位的冷却截止时间。
+  DateTime? _audioAlignCooldownUntil;
+
+  /// 本轮（一次大偏差）已尝试的轻量归位次数；不收敛则回退到重挂序列。
+  int _audioAlignAttempts = 0;
+
   /// 最近一次 Seek 实际完成返回的时间点，用于在 Seek 后短时间内屏蔽看门狗误重载。
   DateTime? _lastSeekFinishTime;
 
@@ -1246,6 +1253,25 @@ class WinWinPlayerController {
                   'DRIFT-HARD-SKIP video-stall drift=${apPosMs - posMs} '
                   'sinceAdvance=$sinceAdvanceMs',
                 );
+              } else if (apStatus.test(mdk.MediaStatus.buffered) &&
+                  apd.state == mdk.PlaybackState.playing &&
+                  _audioAlignAttempts < 3 &&
+                  (_audioAlignCooldownUntil == null ||
+                      nowHard.isAfter(_audioAlignCooldownUntil!))) {
+                // 轻量归位（第十四轮定因）：音频**管线健康但位置错**（实测 13:00：视频
+                // 1015000、音频 82，差 1014s）。此前唯一手段是下方重挂序列（stopped →
+                // setMedia → prepare），弱网/大跳下实测耗时 ~30s 且期间无声。改为直接对
+                // 音频 seek 到视频位置——与用户 seek 的归位同源（`AUDIO seek seq=`，
+                // 2026-09-25 已验证安全）。最多 3 次、2s 冷却；不收敛再交回重挂序列。
+                _audioAlignAttempts++;
+                _audioAlignCooldownUntil = nowHard.add(
+                  const Duration(seconds: 2),
+                );
+                SeekProbe.note(
+                  'AUDIO-ALIGN seek video=$posMs audio=$apPosMs '
+                  'drift=${apPosMs - posMs} attempt=$_audioAlignAttempts',
+                );
+                unawaited(_alignAudioInstance(posMs));
               } else if (hardCooldown != null && nowHard.isBefore(hardCooldown)) {
                 SeekProbe.note(
                   'DRIFT-HARD-SKIP cooldown drift=${apPosMs - posMs}',
@@ -1295,6 +1321,8 @@ class WinWinPlayerController {
               final baseRate = playbackSpeed.value > 0
                   ? playbackSpeed.value
                   : 1.0;
+              // 第十四轮：回到死区（音画已对齐）⇒ 归位尝试计数复位。
+              _audioAlignAttempts = 0;
               if ((apd.playbackRate - baseRate).abs() > 0.001) {
                 SeekProbe.note(
                   'DRIFT-APPLY rate=${baseRate.toStringAsFixed(4)} reset '
@@ -2222,8 +2250,13 @@ class WinWinPlayerController {
   /// 等音频 buffered 最多 3s（弱网下音频流小、通常 0.3s 内就绪）；差异 <1.5s 视为正常
   /// 缓冲差，不动手（交由既有漂移控制）。
   Future<void> _alignSecondInstanceToMain() async {
+    // 入口无条件取证（第十四轮）：此前该函数「静默未执行」无法与「未进产物」区分。
+    SeekProbe.note('AUDIO-START-ALIGN enter');
     final ap = _audioPlayer;
-    if (ap == null || _disposed) return;
+    if (ap == null || _disposed) {
+      SeekProbe.note('AUDIO-START-ALIGN bail ap=${ap == null} disposed=$_disposed');
+      return;
+    }
     for (var i = 0; i < 20; i++) {
       if (_disposed || _audioPlayer != ap) return;
       if (ap.mediaStatus.test(mdk.MediaStatus.buffered)) break;
@@ -2240,6 +2273,26 @@ class WinWinPlayerController {
       SeekProbe.note('AUDIO-START-ALIGN done pos=${ap.position}');
     } catch (e) {
       SeekProbe.note('AUDIO-START-ALIGN failed err=$e');
+    }
+  }
+
+  /// 音频轻量归位（第十四轮）：直接对**健康的**第二实例 seek 到视频位置。
+  ///
+  /// 与用户 seek 流程中的归位同源（`AUDIO seek seq=`，2026-09-25 验证安全）：不做重挂
+  /// （重挂实测 ~30s 静音）。仅当管线健康（`buffered` + `playing`）时由漂移分支调用；
+  /// 管线不健康（停摆/缓冲枯竭）仍走 `_recoverAudioStalled` 的重挂序列。
+  Future<void> _alignAudioInstance(int targetMs) async {
+    final ap = _audioPlayer;
+    if (ap == null || _disposed) return;
+    try {
+      final res = await ap
+          .seek(position: targetMs)
+          .timeout(const Duration(seconds: 3));
+      SeekProbe.note(
+        'AUDIO-ALIGN done target=$targetMs res=$res pos=${ap.position}',
+      );
+    } catch (e) {
+      SeekProbe.note('AUDIO-ALIGN failed err=$e');
     }
   }
 
