@@ -366,6 +366,10 @@ class WinWinPlayerController {
   double? _waterRate; // 水位增长率；null=窗口未知
   int _waterLastBufMs = 0; // 最近一次水位读数
 
+  /// 冻结存量门槛（第三轮）：`buffered() < 5000ms` 才允许冻结等待——存量充足时
+  /// 连续播（消耗缓冲，不再「每 2s 推一下、每次只播 ~100ms」式抖动）。
+  static const int _bufferHoldWaterMs = 5000;
+
   /// 音画共同续播的音频位置容差（第二轮收紧：原 1500ms 会以滞后位置恢复出
   /// 「声音小时间维度滞后」，超差改为先暂停态归位再恢复）。
   static const int _audioResumeToleranceMs = 500;
@@ -1356,14 +1360,24 @@ class WinWinPlayerController {
         } else {
           _audioSyncStallMs += 100;
         }
-        final needAudioPause = buffering.value || _audioSyncStallMs >= 400;
+        // 第三轮（T3）：暂停条件与「视频是否真的在健康推进」对齐——
+        //   视频实际停滞 ≥400ms（含冻结）→ 暂停 ✔；
+        //   缓冲态内视频被冻结（paused）或弱网慢速（unhealthy）→ 暂停 ✔；
+        //   推动后（playing、新窗口未建/健康）→ 不打断 ✔（避免 100ms 内又被暂停，
+        //   造成「声音晚到」回归——第二轮「音画同刻续播」的配套修复）；
+        //   有存量正常播（buffering 未解除但速率健康）→ 不打断 ✔。
+        final needAudioPause =
+            _audioSyncStallMs >= 400 ||
+            (buffering.value &&
+                (player.state == mdk.PlaybackState.paused || _flowUnhealthy));
         if (needAudioPause) {
           if (!_audioSyncPaused) {
             _audioSyncPaused = true;
             _syncRealignAttempts = 0;
             SeekProbe.note(
               'AUDIO-SYNC-PAUSE video=$posMs buffering=${buffering.value ? 1 : 0} '
-              'stallMs=$_audioSyncStallMs status=${player.mediaStatus}',
+              'stallMs=$_audioSyncStallMs state=${player.state} '
+              'unhealthy=${_flowUnhealthy ? 1 : 0} status=${player.mediaStatus}',
             );
             try {
               if (apSync.state == mdk.PlaybackState.playing) {
@@ -1667,15 +1681,18 @@ class WinWinPlayerController {
           _userIntentPlaying &&
           !completed.value &&
           !_isSeeking) {
-        // ① 冻结：弱网迹象（流速不健康 / 停滞 ≥1s / 底层空仓）时暂停视频等待数据。
+        final bufferedNow = player.buffered();
+        // ① 冻结：弱网迹象（流速不健康 / 停滞 ≥1s）且**存量不足**时暂停视频等待数据。
+        // 第三轮修正：① 去掉 stalledNow 瞬态项（避免推动后被底层瞬态立即回冻）；
+        //             ② 存量 ≥5s 时保持连续播（消耗缓冲）——不再「一点一点步进」。
         // 注：暂停态下 mdk 仍继续下载缓冲（seek 冻结窗口的既有实证）。
-        final stalledNow = player.mediaStatus.test(mdk.MediaStatus.stalled);
         if (player.state == mdk.PlaybackState.playing &&
-            (_flowUnhealthy || _bufferingStallMs >= 1000 || stalledNow)) {
+            (_flowUnhealthy || _bufferingStallMs >= 1000) &&
+            bufferedNow < _bufferHoldWaterMs) {
           SeekProbe.note(
-            'BUFFER-HOLD-PAUSE pos=$posMs buf=${player.buffered()} '
+            'BUFFER-HOLD-PAUSE pos=$posMs buf=$bufferedNow '
             'rate=${_flowRate?.toStringAsFixed(3) ?? '-'} '
-            'stallMs=$_bufferingStallMs stalled=${stalledNow ? 1 : 0}',
+            'stallMs=$_bufferingStallMs',
           );
           try {
             player.state = mdk.PlaybackState.paused;
@@ -1683,11 +1700,15 @@ class WinWinPlayerController {
         }
         // 水位窗口采样：仅冻结期间有意义（位置不动，水位增长=净下载速率）。
         if (player.state == mdk.PlaybackState.paused) {
-          _sampleWater(player.buffered());
+          _sampleWater(bufferedNow);
         } else {
           _resetWaterWindow();
         }
-        // ② 恢复推动：流量达标才推（节流 2s，杜绝半恢复下反复试探）。
+        // ② 恢复推动：流量达标才推（节流 2s）。第三轮（T1 修复）：推动后**重置
+        // 周期判据**（旧停滞计数/旧流速样本一律作废）——否则推动后 100ms 内即被
+        // 旧判据重新冻结（「每 2s 推一下、每次只播 ~100ms」的「一点一点」根源，
+        // 且永远攒不够健康样本 ⇒ 永远检测不到网络恢复）；重置后天然获得
+        // ≥1.5s「新窗口」宽限，播放可连续延续。
         if (player.state == mdk.PlaybackState.paused && _waterReadyForResume) {
           final nowPush = DateTime.now();
           final lastPush = _bufferSuspendPushAt;
@@ -1695,12 +1716,14 @@ class WinWinPlayerController {
               nowPush.difference(lastPush).inMilliseconds >= 2000) {
             _bufferSuspendPushAt = nowPush;
             SeekProbe.note(
-              'BUFFER-HOLD-RESUME-PUSH pos=$posMs buf=${player.buffered()} '
+              'BUFFER-HOLD-RESUME-PUSH pos=$posMs buf=$bufferedNow '
               'waterRate=${_waterRate?.toStringAsFixed(3) ?? '-'}',
             );
             try {
               player.state = mdk.PlaybackState.playing;
             } catch (_) {}
+            _bufferingStallMs = 0; // 新周期：旧停滞计数作废
+            _resetFlowWindow(); // 新周期：旧流速样本作废（促成 ≥1.5s 宽限）
             // ③ 音画共同续播：同刻恢复音频（消除「视频先无声播放、声音再追赶」）。
             final apPush = _audioPlayer;
             if (apPush != null &&
