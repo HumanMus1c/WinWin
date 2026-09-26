@@ -252,8 +252,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     // 监听播放进度，触发 OP/ED 自动跳过（对标 BiliPai BangumiEpisodeSkipPolicy）
     ctrl.position.addListener(_checkOpEdSkip);
 
-    // 播放结束监听，自动播放下一集（对标 BiliPai playNextEpisode）
-    ctrl.duration.addListener(_checkEpisodeEnd);
+    // 播放结束监听，自动播放下一集（对标 BiliPai playbackEndListener → playNextEpisode）
+    ctrl.completed.addListener(_checkEpisodeCompleted);
 
     // 并行拉取 playInfo（恢复进度与字幕）
     if (cid > 0 && bvid.isNotEmpty) {
@@ -309,7 +309,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
-  /// 检查并跳过 OP/ED
+  /// 检查并跳过 OP/ED（对标 BiliPai `resolveBangumiEpisodeSkipAction`）。
+  ///
+  /// 命中判定为「位置落在区间内」（`start <= pos < end`，区间结束点按播放器时长
+  /// 收敛），跳跃目标是**区间结束点**：跳过的是片头/片尾本身，其后的内容继续
+  /// 播放——下一集改由自然播完（[WinWinPlayerController.completed]）驱动。
   void _checkOpEdSkip() {
     final ctrl = playerController;
     if (ctrl == null) return;
@@ -317,14 +321,18 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     if (skip == null) return;
 
     final posMs = ctrl.position.value.inMilliseconds;
+    final durMs = ctrl.duration.value.inMilliseconds;
     final epId = _currentEpisode.id;
 
     // 片头跳过
     final op = skip.op;
-    if (op != null && op.end > 0 && _lastOpSkippedEpId != epId) {
-      if (posMs >= op.start * 1000 && posMs < op.end * 1000) {
+    if (op != null && _lastOpSkippedEpId != epId) {
+      final opEndMs = _clampSkipEndMs(op.end * 1000, durMs);
+      if (opEndMs > op.start * 1000 &&
+          posMs >= op.start * 1000 &&
+          posMs < opEndMs) {
         _lastOpSkippedEpId = epId;
-        unawaited(ctrl.resumeTo(Duration(milliseconds: op.end * 1000)));
+        unawaited(ctrl.resumeTo(Duration(milliseconds: opEndMs)));
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
           const SnackBar(
             content: Text('已跳过片头'),
@@ -335,15 +343,31 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       }
     }
 
-    // 片尾跳过
+    // 片尾跳过：只跳到片尾结束点，片尾之后的内容（彩蛋/预告等）继续播放。
+    // 历史缺陷（2026-09-26 定因）：此处曾写成「命中 ed.start 即切下一集」，
+    // 把 ed.end 之后的整段内容一并吞掉（实证：凡人修仙传 193 集 ed={1084,1172}s
+    // 而总长 1711s，跳到下一集使 1172~1711s 共 539s 内容被跳过）。
     final ed = skip.ed;
-    if (ed != null && ed.start > 0 && _lastEdSkippedEpId != epId) {
-      if (posMs >= ed.start * 1000) {
+    if (ed != null && _lastEdSkippedEpId != epId) {
+      final edEndMs = _clampSkipEndMs(ed.end * 1000, durMs);
+      if (edEndMs > ed.start * 1000 &&
+          posMs >= ed.start * 1000 &&
+          posMs < edEndMs) {
         _lastEdSkippedEpId = epId;
-        _playNextEpisode();
+        unawaited(ctrl.resumeTo(Duration(milliseconds: edEndMs)));
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(
+            content: Text('已跳过片尾'),
+            duration: Duration(seconds: 1),
+          ),
+        );
       }
     }
   }
+
+  /// 跳过区间结束点：按播放器时长收敛（对标 BiliPai `end.coerceAtMost(durationMs)`）。
+  static int _clampSkipEndMs(int endMs, int durationMs) =>
+      durationMs > 0 && endMs > durationMs ? durationMs : endMs;
 
   /// 自动播放下一集
   void _playNextEpisode() {
@@ -355,14 +379,15 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     }
   }
 
-  void _checkEpisodeEnd() {
+  /// 自然播完 → 自动播放下一集（对标 BiliPai playbackEndListener）。
+  ///
+  /// 历史缺陷（2026-09-26 定因）：此前挂在 `ctrl.duration` 上判断
+  /// `pos >= dur - 800`，而 duration 只在媒体 buffered 时赋值一次（ValueNotifier
+  /// 同值不再通知），回调实际仅加载时执行一次，自然播完从不触发换集。
+  void _checkEpisodeCompleted() {
     final ctrl = playerController;
-    if (ctrl == null) return;
-    final dur = ctrl.duration.value;
-    final pos = ctrl.position.value;
-    if (dur.inSeconds > 0 && pos.inMilliseconds >= dur.inMilliseconds - 800) {
-      _playNextEpisode();
-    }
+    if (ctrl == null || !ctrl.completed.value) return;
+    _playNextEpisode();
   }
 
   // ─────────────────────────── 社区与评论 ───────────────────────────
