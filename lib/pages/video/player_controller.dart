@@ -325,6 +325,41 @@ class WinWinPlayerController {
   DateTime? _audioRecoverCooldownUntil;
   int _audioRecoverAttempts = 0;
 
+  // ── 播放流速滑窗（弱网缓冲态保持，2026-09-26 用户实测修复）──
+  /// 弱网判据：以「media 推进速率 vs 墙钟」替代「位置有无推进」——弱网下视频
+  /// 缓慢步进（远低于可流畅播放速率）时仍应保持缓冲加载态，而非一闪一闪。
+  static const int _flowWindowMs = 2000; // 采样窗口保留时长
+  static const int _flowMinSpanMs = 1500; // 窗口跨度下限（不足视为未知=乐观）
+
+  /// 窗口流速健康阈值系数（rate ≥ 0.75×期望 ⇒ 健康）。
+  static const double _flowHealthyFactor = 0.75;
+
+  /// 窗口流速不健康阈值系数（rate < 0.5×期望 ⇒ 弱网）。
+  static const double _flowUnhealthyFactor = 0.5;
+
+  /// 缓冲态解除门控：连续健康 ≥1.2s 才允许解除（杜绝弱网微推进误解除）。
+  static const int _bufferingClearHealthyMs = 1200;
+
+  /// 缓冲态进入：连续不健康 ≥0.8s（与既有 stalled/停滞路径互补）。
+  static const int _bufferingEnterUnhealthyMs = 800;
+
+  /// 缓冲挂起防死锁：mdk 停在 paused ≥3s 时幂等推动恢复一次。
+  static const int _bufferSuspendPushMs = 3000;
+
+  final List<int> _flowTs = []; // 采样时间（墙钟 ms）
+  final List<int> _flowPos = []; // 采样位置（media ms）
+  double? _flowRate; // 窗口流速 = Δpos/Δt（media ms / wall ms）；null=窗口未知
+  int _flowHealthyMs = 0; // 连续「健康」累计（ms）
+  int _flowUnhealthyMs = 0; // 连续「不健康」累计（ms）
+
+  /// 缓冲挂起（用户意图播放但 mdk 停在 paused）持续时长与上次推动时间。
+  int _bufferSuspendMs = 0;
+  DateTime? _bufferSuspendPushAt;
+
+  /// 音画缓冲同步恢复时的归位节流/计数（与漂移硬定位的归位独立）。
+  DateTime? _syncRealignAt;
+  int _syncRealignAttempts = 0;
+
   /// 漂移硬定位冷却截止时间（R3：避免每秒一次硬定位风暴）。
   DateTime? _driftHardCooldownUntil;
 
@@ -346,8 +381,13 @@ class WinWinPlayerController {
   /// 当前生效的视频播放直链。
   String? _currentVideoUrl;
 
-  /// 当前生效的音频播放直链。
+  /// 当前生效的音频播放直链（主实例外挂音轨/单源模式用；双播放器模式下恒为 null）。
   String? _currentAudioUrl;
+
+  /// 第二实例（纯音频播放器）当前使用的音频直链（2026-09-26 修复）。
+  /// 双播放器模式下 `_currentAudioUrl` 恒为 null，此前 `_recoverAudioStalled`
+  /// 依赖它 ⇒ 音频自愈是死代码；本字段独立维护第二实例的 URL。
+  String? _audioPlayerUrl;
 
   // ── 心跳上报（Phase 4.2 & PGC/番剧支持）──
   /// 心跳定时器：每 5 秒上报一次播放进度。
@@ -566,6 +606,16 @@ class WinWinPlayerController {
     if (p != null && p.state == mdk.PlaybackState.playing) {
       p.state = mdk.PlaybackState.paused;
     }
+    // 第二实例兜底暂停（2026-09-26 修复）：主实例已 paused 时 onStateChanged 镜像
+    // 不触发（state 无变化）；若音频因错位/鬼影仍在播放，会出现「视频播完后
+    // 声音还在响」。直接补一刀暂停（paused 即静音，保留 keep_open 语义）。
+    final apEnded = _audioPlayer;
+    if (apEnded != null && apEnded.state == mdk.PlaybackState.playing) {
+      try {
+        apEnded.state = mdk.PlaybackState.paused;
+        SeekProbe.note('ENDED-AUDIO-PAUSE pos=${apEnded.position}');
+      } catch (_) {}
+    }
     SeekProbe.note(
       'ENDED source=$source pos=$rawPosMs dur=$durMs state=${p?.state}',
     );
@@ -611,11 +661,32 @@ class WinWinPlayerController {
           }
           // pause-during-seek 冻结窗口：seek 流程内部切换的 paused 态不向 UI 广播
           // （播放按钮/弹幕保持播放中，加载态由 buffering 转圈承载），seek 结束统一恢复。
+          // 缓冲挂起抑制（2026-09-26 用户实测）：弱网下 mdk 会把 state 转 paused
+          // （数据不足时暂停推进等待缓冲），此时若广播 playing=false，UI 会
+          // 「转圈消失＋出现中央大播放按钮」——与缓冲中语义矛盾。故与 seek 冻结
+          // 同源：缓冲态/流速不健康/位置停滞等弱网迹象期间不广播暂停；
+          // 片尾（completed 或位置判定）与用户暂停（_userIntentPlaying=false）照常广播。
           // 若用户在冻结窗口内主动暂停（_userIntentPlaying=false），则正常广播暂停态。
           final inSeekFreeze =
               _isSeeking || _nativeSeekInFlight || _queuedSeekTargetMs != null;
-          if (isPlaying || !inSeekFreeze || !_userIntentPlaying) {
+          final inBufferSuspend =
+              !isPlaying &&
+              !completed.value &&
+              _userIntentPlaying &&
+              (buffering.value || _flowUnhealthy || _bufferingStallMs > 0);
+          if (isPlaying ||
+              !(inSeekFreeze || inBufferSuspend) ||
+              !_userIntentPlaying) {
             playing.value = isPlaying;
+          } else if (inBufferSuspend) {
+            // 取证：缓冲挂起期间被抑制的暂停广播（用于回溯 UI 状态）
+            SeekProbe.note(
+              'STATE-SUSPEND-SUPPRESS ${event.oldValue} -> ${event.newValue} '
+              'uiPos=${position.value.inMilliseconds} '
+              'buffering=${buffering.value ? 1 : 0} '
+              'stallMs=$_bufferingStallMs '
+              'rate=${_flowRate?.toStringAsFixed(3) ?? '-'}',
+            );
           }
           if (isPlaying) {
             completed.value = false;
@@ -731,14 +802,28 @@ class WinWinPlayerController {
             }
           } else if (!isStalled && wasStalled) {
             _bufferingDebounceTimer?.cancel();
-            buffering.value = false;
-            _bufferingStallMs = 0;
+            // 流速门控（2026-09-26）：弱网下 stalled 位会随零星数据到达反复
+            // 置位/复位，此处不再无条件解除缓冲态——仅当窗口未知（起播/seek 后）
+            // 或流速连续健康 ≥1.2s 才解除，否则保持转圈到网络真正恢复。
+            if (_flowAllowsBufferingClear) {
+              buffering.value = false;
+              _bufferingStallMs = 0;
+            } else {
+              SeekProbe.note(
+                'BUFFER-HOLD stall-clear vetoed rate=${_flowRate?.toStringAsFixed(3) ?? '-'} '
+                'healthyMs=$_flowHealthyMs',
+              );
+            }
           }
           if (!oldValue.test(mdk.MediaStatus.buffered) &&
               newValue.test(mdk.MediaStatus.buffered)) {
             _bufferingDebounceTimer?.cancel();
-            buffering.value = false;
-            _bufferingStallMs = 0;
+            // 同上：buffered 就绪事件受流速门控（起播/换源后窗口未知 ⇒ 立即放行，
+            // 不影响正常加载解除）；其余副作用照常执行。
+            if (_flowAllowsBufferingClear) {
+              buffering.value = false;
+              _bufferingStallMs = 0;
+            }
             _stallRecoveryRetryCount = 0;
             AppLogger.i(
               'PlayerController',
@@ -808,6 +893,8 @@ class WinWinPlayerController {
     _seekTargetMs = null;
     _seekStartTime = null;
     _lastSeekFinishTime = null;
+    // 页面不可见/退出：流速窗口作废（重新可见后按新样本重新判定）。
+    _resetFlowWindow();
     // 方案 3：页面不可见时同步第二实例；退出（dispose）则直接停止，杜绝声音残留。
     final apDetach = _audioPlayer;
     if (apDetach != null) {
@@ -827,6 +914,67 @@ class WinWinPlayerController {
     final player = _player;
     if (_disposed || player == null) return;
     textureId.value = player.textureId.value;
+  }
+
+  // ── 播放流速滑窗（弱网缓冲态保持，2026-09-26）──
+
+  /// 重置流速窗口（不可采样 / 位置回退 / 切倍速 / 换源时调用）。
+  /// 重置后窗口「未知」——缓冲态解除按乐观放行，避免起播/seek 后误转圈。
+  void _resetFlowWindow() {
+    _flowTs.clear();
+    _flowPos.clear();
+    _flowRate = null;
+    _flowHealthyMs = 0;
+    _flowUnhealthyMs = 0;
+  }
+
+  /// 期望流速（media ms / wall ms）：倍速下进度推进应随基速放大。
+  double get _expectedFlowRate {
+    final s = playbackSpeed.value;
+    return (s >= 0.25 && s <= 4.0) ? s : 1.0;
+  }
+
+  /// 缓冲态解除门控：窗口未知（起播/seek 后）乐观放行；否则需连续健康 ≥1.2s。
+  bool get _flowAllowsBufferingClear =>
+      _flowRate == null || _flowHealthyMs >= _bufferingClearHealthyMs;
+
+  /// 弱网（流速低于期望 50%）：进入缓冲态、音频同步暂停的判据之一。
+  bool get _flowUnhealthy =>
+      _flowRate != null && _flowRate! < _flowUnhealthyFactor * _expectedFlowRate;
+
+  /// 每 tick 采样流速并累计健康/不健康时长。
+  void _sampleFlow(int posMs) {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (_flowPos.isNotEmpty && posMs < _flowPos.last) {
+      _resetFlowWindow(); // 位置回退（seek/瞬态）：样本作废，未知=乐观
+    }
+    _flowTs.add(nowMs);
+    _flowPos.add(posMs);
+    while (_flowTs.length > 1 && nowMs - _flowTs.first > _flowWindowMs) {
+      _flowTs.removeAt(0);
+      _flowPos.removeAt(0);
+    }
+    final spanMs = _flowTs.last - _flowTs.first;
+    if (spanMs >= _flowMinSpanMs) {
+      final dPosMs = _flowPos.last - _flowPos.first;
+      _flowRate = dPosMs / spanMs;
+    } else {
+      _flowRate = null;
+    }
+    final rate = _flowRate;
+    if (rate == null) return; // 未知：不累计（累计值保留，交由 _resetFlowWindow 清）
+    final expected = _expectedFlowRate;
+    if (rate >= _flowHealthyFactor * expected) {
+      _flowHealthyMs += 100;
+      _flowUnhealthyMs = 0;
+    } else if (rate < _flowUnhealthyFactor * expected) {
+      _flowUnhealthyMs += 100;
+      _flowHealthyMs = 0;
+    } else {
+      // 灰色地带（能勉强播但不流畅）：保持现状语义——不计入健康，
+      // 也不判弱网进入；已进入的缓冲态由恢复门控决定何时解除。
+      _flowUnhealthyMs = 0;
+    }
   }
 
   /// mdk 没有 position/duration 流，用 100ms 轮询更新 ValueNotifier。
@@ -987,10 +1135,27 @@ class WinWinPlayerController {
       // 进度推进检测：若播放进度在前进，清零卡顿计时并解除缓冲态。
       // 每轮无条件更新 _lastPolledPosMs 为最新采样位置，杜绝快退时高位死锁。
       final isPosAdvancing = _lastPolledPosMs >= 0 && posMs > _lastPolledPosMs;
+      // 流速采样（弱网缓冲态保持判据，2026-09-26）：用户意图播放期间持续采样
+      // （不依赖 playing.value——缓冲挂起时它被抑制保持，仍需继续采样）；
+      // 暂停/seek/自愈/完成时重置窗口（未知=乐观）。
+      final canFlowSample =
+          _userIntentPlaying &&
+          !completed.value &&
+          !_isSeeking &&
+          !_nativeSeekInFlight &&
+          _queuedSeekTargetMs == null &&
+          !_isRecovering;
+      if (canFlowSample) {
+        _sampleFlow(posMs);
+      } else {
+        _resetFlowWindow();
+      }
       _lastPolledPosMs = posMs;
       if (isPosAdvancing) {
         _bufferingStallMs = 0;
-        if (buffering.value) {
+        // 弱网门控：仅有微小推进（流速不健康）时保持缓冲态，直到网络恢复到
+        // 可流畅加载（连续健康 ≥1.2s）才解除——杜绝转圈一闪一闪。
+        if (buffering.value && _flowAllowsBufferingClear) {
           buffering.value = false;
         }
       }
@@ -1118,10 +1283,14 @@ class WinWinPlayerController {
       // 4. Seek 落地后 3 秒保护期内绝对禁止触发重载，防止高码率流首次缓冲网络延迟被误杀；
       // 5. 达到 10 秒真卡死门限且底层无任何缓冲水位（buffered <= 0）时，才触发自愈。
       SeekProbe.markPhase('watchdog');
-      // ===== 音画缓冲同步（第十一轮 定因）=====
+      // ===== 音画缓冲同步（第十一轮定因；2026-09-26 弱网主控改造）=====
       // 两个实例各自缓冲：弱网时**视频先耗尽缓冲进入 loading，而音频（小流、缓冲充裕）
-      // 仍继续播放** ⇒ 弱网恢复后音画错位（用户实测）。对策：视频停顿/缓冲时把音频
-      // **同步暂停**（门限 400ms 防抖，略过网络微抖动），视频恢复推进后立即恢复。
+      // 仍继续播放** ⇒ 弱网恢复后音画错位（用户实测）。对策（本轮改造）：
+      // **以视频缓冲态（buffering）为主控**——视频处于缓冲态或位置停滞 ≥400ms 时
+      // 音频同步暂停；网络恢复到可流畅加载（缓冲解除＋流速连续健康）后共同恢复。
+      // 旧版两处缺陷（用户实测 2026-09-26）：① 整块被 `player.state==playing` 硬门控，
+      // mdk 状态一变就「清标记但不暂停音频」⇒ 音频脱控继续播；② 恢复条件是「位置有
+      // 微小推进」，弱网缓慢步进下音频反复 resume/pause（一卡一卡）。
       // 注：反向（音频先停）不暂停视频——画面不应因音频抖动而冻结，该场景仍由
       // 漂移看门狗（`AUDIO-STALL` → `AUDIO-RECOVER`）兜底。
       final apSync = _audioPlayer;
@@ -1131,34 +1300,66 @@ class WinWinPlayerController {
           _queuedSeekTargetMs == null &&
           !_audioRecovering &&
           !_isRecovering &&
-          _userIntentPlaying &&
-          player.state == mdk.PlaybackState.playing) {
+          !_audioRemountInFlight &&
+          _userIntentPlaying) {
         if (isPosAdvancing) {
           _audioSyncStallMs = 0;
-          if (_audioSyncPaused) {
-            _audioSyncPaused = false;
+        } else {
+          _audioSyncStallMs += 100;
+        }
+        final needAudioPause = buffering.value || _audioSyncStallMs >= 400;
+        if (needAudioPause) {
+          if (!_audioSyncPaused) {
+            _audioSyncPaused = true;
+            _syncRealignAttempts = 0;
             SeekProbe.note(
-              'AUDIO-SYNC-RESUME video=$posMs audio=${apSync.position}',
+              'AUDIO-SYNC-PAUSE video=$posMs buffering=${buffering.value ? 1 : 0} '
+              'stallMs=$_audioSyncStallMs status=${player.mediaStatus}',
             );
+            try {
+              if (apSync.state == mdk.PlaybackState.playing) {
+                apSync.state = mdk.PlaybackState.paused;
+              }
+            } catch (_) {}
+          }
+        } else if (_audioSyncPaused &&
+            !buffering.value &&
+            _flowAllowsBufferingClear) {
+          // 网络恢复到可流畅加载：位置容差内直接恢复；超差先暂停态安全归位
+          // （杜绝播放态直接 seek 的「双重音频」，M1 第七轮定因）。
+          var apPosMs = -1;
+          try {
+            apPosMs = apSync.position;
+          } catch (_) {}
+          if (apPosMs < 0 || (apPosMs - posMs).abs() <= 1500) {
+            _audioSyncPaused = false;
+            _syncRealignAttempts = 0;
+            SeekProbe.note('AUDIO-SYNC-RESUME video=$posMs audio=$apPosMs');
             try {
               if (apSync.state != mdk.PlaybackState.playing) {
                 apSync.state = mdk.PlaybackState.playing;
               }
             } catch (_) {}
-          }
-        } else {
-          _audioSyncStallMs += 100;
-          if (_audioSyncStallMs >= 400 &&
-              !_audioSyncPaused &&
-              apSync.state == mdk.PlaybackState.playing) {
-            _audioSyncPaused = true;
-            SeekProbe.note(
-              'AUDIO-SYNC-PAUSE video=$posMs stallMs=$_audioSyncStallMs '
-              'status=${player.mediaStatus} audio=${apSync.position}',
-            );
-            try {
-              apSync.state = mdk.PlaybackState.paused;
-            } catch (_) {}
+          } else {
+            final nowSync = DateTime.now();
+            final lastAlign = _syncRealignAt;
+            if (_syncRealignAttempts >= 3) {
+              _syncRealignAttempts = 0;
+              _syncRealignAt = nowSync;
+              SeekProbe.note(
+                'AUDIO-SYNC-REALIGN give-up video=$posMs audio=$apPosMs',
+              );
+              unawaited(_recoverAudioStalled(posMs));
+            } else if (lastAlign == null ||
+                nowSync.difference(lastAlign).inMilliseconds >= 2000) {
+              _syncRealignAt = nowSync;
+              _syncRealignAttempts++;
+              SeekProbe.note(
+                'AUDIO-SYNC-REALIGN video=$posMs audio=$apPosMs '
+                'drift=${apPosMs - posMs} attempt=$_syncRealignAttempts',
+              );
+              unawaited(_alignAudioInstance(posMs));
+            }
           }
         }
       } else if (_audioSyncPaused) {
@@ -1371,7 +1572,7 @@ class WinWinPlayerController {
       if (_userIntentPlaying && playing.value && !_isSeeking) {
         if (isPosAdvancing) {
           _bufferingStallMs = 0;
-          if (buffering.value) {
+          if (buffering.value && _flowAllowsBufferingClear) {
             buffering.value = false;
           }
         } else if (!isSeekRecent) {
@@ -1387,6 +1588,46 @@ class WinWinPlayerController {
             }
           }
         }
+        // 弱网流速门控（2026-09-26）：位置虽在缓慢步进（isPosAdvancing=true），
+        // 但流速低于期望 50% 持续 ≥0.8s ⇒ 进入/保持缓冲态，直到网络恢复到
+        // 可流畅加载（连续健康 ≥1.2s）才解除——与事件路径互补。
+        if (!isSeekRecent &&
+            !buffering.value &&
+            _flowUnhealthy &&
+            _flowUnhealthyMs >= _bufferingEnterUnhealthyMs) {
+          buffering.value = true;
+          SeekProbe.note(
+            'FLOW-BUFFERING enter rate=${_flowRate!.toStringAsFixed(3)} '
+            'pos=$posMs status=${player.mediaStatus}',
+          );
+        }
+      }
+
+      // 缓冲挂起防死锁（2026-09-26 用户实测：弱网下 mdk state 转 paused 后位置
+      // 不再推进，流速判定将永远「不健康」⇒ 必须主动推动恢复，否则死锁在缓冲态）。
+      // 节流 3s、幂等；推动无效由下方 10s 看门狗（已放宽 paused 条件）重挂兜底。
+      if (buffering.value &&
+          _userIntentPlaying &&
+          !completed.value &&
+          !_isSeeking &&
+          player.state == mdk.PlaybackState.paused) {
+        _bufferSuspendMs += 100;
+        final nowPush = DateTime.now();
+        final lastPush = _bufferSuspendPushAt;
+        if (_bufferSuspendMs >= _bufferSuspendPushMs &&
+            (lastPush == null ||
+                nowPush.difference(lastPush).inMilliseconds >= 3000)) {
+          _bufferSuspendPushAt = nowPush;
+          SeekProbe.note(
+            'BUFFER-SUSPEND-PUSH pos=$posMs buf=${player.buffered()} '
+            'status=${player.mediaStatus}',
+          );
+          try {
+            player.state = mdk.PlaybackState.playing;
+          } catch (_) {}
+        }
+      } else {
+        _bufferSuspendMs = 0;
       }
 
       if (_userIntentPlaying &&
@@ -1394,7 +1635,10 @@ class WinWinPlayerController {
           !_isRecovering &&
           !_isSeeking &&
           !isSeekRecent) {
-        if (_bufferingStallMs >= 10000 && player.buffered() <= 0) {
+        // 10s 真卡死：无缓冲水位，或 mdk 停在 paused 且推动无效（2026-09-26 放宽）。
+        if (_bufferingStallMs >= 10000 &&
+            (player.buffered() <= 0 ||
+                player.state == mdk.PlaybackState.paused)) {
           _bufferingStallMs = 0;
           AppLogger.w(
             'PlayerController',
@@ -1646,6 +1890,9 @@ class WinWinPlayerController {
       qn: qn,
       maxQn: qn,
       start: remembered,
+      // 2026-09-26：保留用户的播放/暂停意图（此前默认 true，暂停中切画质会强制起播；
+      // 且与 `_userIntentPlaying = autoplay` 的新语义联动）。
+      autoplay: _userIntentPlaying,
       isInitialRequest: false,
     );
     // 持久化画质偏好。
@@ -1687,6 +1934,11 @@ class WinWinPlayerController {
       // 第十二轮：新一次加载是干净起点，清掉上一次可能遗留的待恢复位置
       //（本次起点由 `start:` 参数显式指定），避免陈旧 `_pendingSeek` 让 POS-HOLD 常驻。
       _pendingSeek = null;
+      // 2026-09-26：弱网缓冲同步状态同样是干净起点（旧标记不得跨源残留）。
+      _audioSyncPaused = false;
+      _audioSyncStallMs = 0;
+      _bufferSuspendMs = 0;
+      _syncRealignAttempts = 0;
 
       // 1. PlayUrlCache：先查缓存，命中且未过期则跳过 HTTP。
       final cacheKey = (epId != null && epId! > 0) ? 'ep_$epId' : bvid;
@@ -1790,10 +2042,14 @@ class WinWinPlayerController {
       _currentVideoUrl = videoUrl;
       _currentAudioUrl = audioUrl;
 
-      _userIntentPlaying = true;
+      // autoplay=false（之前已暂停的场景）时意图同步为暂停（2026-09-26）：否则
+      // 流速/看门狗会把「等待用户播放」误判为弱网缓冲并自动推动起播。
+      _userIntentPlaying = autoplay;
       _lastPolledPosMs = (start ?? Duration.zero).inMilliseconds;
       _bufferingStallMs = 0;
       _stallRecoveryRetryCount = 0;
+      // 换源后流速窗口作废（媒体时间轴与期望都变了）——未知=乐观，不影响加载解除。
+      _resetFlowWindow();
 
       _playUrl = playUrl;
       _currentQn = video?.id ?? playUrl.quality ?? qn;
@@ -1917,11 +2173,18 @@ class WinWinPlayerController {
         _currentAudioUrl = null;
         _videoCdnCandidates = [manifestUrl];
         _audioCdnCandidates = const [];
+        // 2026-09-26：单源模式不使用第二实例——停掉旧音频并清空专属 URL 槽，
+        // 杜绝旧音残留（此前该分支完全不触碰第二实例）。
+        _audioPlayerUrl = null;
+        _stopAudioInstance('manifest-mode');
         player.media = manifestUrl;
       } else if (_dualPlayerAudio && audioUrl != null && audioUrl.isNotEmpty) {
         // 方案 3 最小验证：主播放器只放纯视频 URL（不再挂外挂音轨，
         // 回到实测可靠的「主媒体 seek」），音频交给第二实例（音轨即其主媒体）。
         final ap = _audioPlayer ??= _createAudioPlayer();
+        // 2026-09-26：换源先 stopped 旧音频（同 URL setMedia 可能不重载 ⇒ 旧音残留；
+        // stopped 是唯一能真正关闭音频设备、清掉陈旧队列材料的手段，第四/五笔结论）。
+        _stopAudioInstance('switch-source');
         // 流属性与主实例保持一致（网络自愈/读缓冲/demux 缓存/keep_open）。
         // 2026-09-25 事故定因：第二实例此前缺这些属性 ⇒ 音频连接停摆后无重连、
         // 无超时，永久卡在 +buffering（观感「音频突然消失」）。
@@ -1936,11 +2199,17 @@ class WinWinPlayerController {
         _currentVideoUrl = videoUrl;
         // 主播放器无外挂音轨：置空以避免双轨补救逻辑（重挂舞步/自愈）误触发。
         _currentAudioUrl = null;
+        // 第二实例专属 URL 槽（音频自愈/重挂的 URL 来源，2026-09-26 修复）。
+        _audioPlayerUrl = audioUrl;
         SeekProbe.note(
           'DUAL-PLAYER main=video-only second=audio-only '
           'videoUrl=$videoUrl audioUrl=$audioUrl',
         );
       } else {
+        // 2026-09-26：本次不走双轨（外挂音轨/durl 兜底）——停掉旧音频实例，
+        // 杜绝上一源的双轨残留继续出声。
+        _audioPlayerUrl = null;
+        _stopAudioInstance('external-track-mode');
         player.media = videoUrl;
         // DASH 分离音轨：以外部音轨方式挂载（prepare 之前）。
         // 参照 fvp setExternalAudio → setMedia(url, MediaType.audio) 用法：
@@ -2099,13 +2368,14 @@ class WinWinPlayerController {
         upgradeAlreadyAttempted: false,
       );
       if (!shouldUpgrade) return;
-      // 二次拉流 qn=125（HDR）。保留当前进度。
+      // 二次拉流 qn=125（HDR）。保留当前进度与播放意图（2026-09-26：改用
+      // `_userIntentPlaying`，避免缓冲挂起抑制期的 playing 值偏差）。
       final remembered = position.value;
       await _openWithQuality(
         qn: 125,
         maxQn: 125,
         start: remembered,
-        autoplay: playing.value,
+        autoplay: _userIntentPlaying,
         isInitialRequest: false,
       );
       if (kDebugMode) {
@@ -2165,13 +2435,22 @@ class WinWinPlayerController {
       );
 
       // 1. 若有多条可用 CDN 镜像，轮换切换到下一条线路（参照 BiliPai PlaybackStallRecoveryPolicy）
+      // 双播放器模式判定（2026-09-26 修复）：双轨下 `_currentAudioUrl` 恒为 null
+      // （主实例无外挂音轨）。旧实现会在此把音频直链写进 `_currentAudioUrl`，
+      // 随后 `player.setMedia(audioUrl)` 把音轨挂上**主实例** ⇒ 与第二实例形成
+      // 双重音频（用户实测「额外一条鬼影音频」）。双轨模式改更新专属 URL 槽。
+      final dualAudioMode = _dualPlayerAudio && _audioPlayer != null;
       if (_videoCdnCandidates.length > 1) {
         _currentCdnIndex = (_currentCdnIndex + 1) % _videoCdnCandidates.length;
         _currentVideoUrl = _videoCdnCandidates[_currentCdnIndex];
         if (_audioCdnCandidates.isNotEmpty) {
-          _currentAudioUrl =
-              _audioCdnCandidates[_currentCdnIndex %
-                  _audioCdnCandidates.length];
+          final nextAudioUrl = _audioCdnCandidates[_currentCdnIndex %
+              _audioCdnCandidates.length];
+          if (dualAudioMode) {
+            _audioPlayerUrl = nextAudioUrl;
+          } else {
+            _currentAudioUrl = nextAudioUrl;
+          }
         }
         AppLogger.w(
           'PlayerController',
@@ -2180,15 +2459,17 @@ class WinWinPlayerController {
       }
 
       final videoUrl = _currentVideoUrl;
-      final audioUrl = _currentAudioUrl;
+      // 双轨模式下 audioUrl 取第二实例专属槽；非双轨沿用主实例外挂音轨槽。
+      final audioUrl = dualAudioMode ? _audioPlayerUrl : _currentAudioUrl;
       if (videoUrl == null || videoUrl.isEmpty) {
         AppLogger.e('PlayerController', 'No valid video url to recover stream');
         return;
       }
 
       // 2. 重新挂载媒体源并触发底层 Range 重连
+      // 双轨模式绝不向主实例挂外挂音轨（音频由第二实例专属播放）。
       player.media = videoUrl;
-      if (audioUrl != null && audioUrl.isNotEmpty) {
+      if (!dualAudioMode && audioUrl != null && audioUrl.isNotEmpty) {
         player.setMedia(audioUrl, mdk.MediaType.audio);
         player.activeAudioTracks = const [0];
       }
@@ -2222,6 +2503,8 @@ class WinWinPlayerController {
       buffering.value = false;
       _bufferingStallMs = 0;
       _lastPolledPosMs = resumePosMs;
+      // 媒体已重挂：流速窗口作废（旧样本属旧时间轴）。
+      _resetFlowWindow();
       AppLogger.w(
         'PlayerController',
         'Stream stall recovery successfully executed at ${resumeDuration.inSeconds}s',
@@ -2276,24 +2559,52 @@ class WinWinPlayerController {
     }
   }
 
-  /// 音频轻量归位（第十四轮）：直接对**健康的**第二实例 seek 到视频位置。
-  ///
-  /// 与用户 seek 流程中的归位同源（`AUDIO seek seq=`，2026-09-25 验证安全）：不做重挂
-  /// （重挂实测 ~30s 静音）。仅当管线健康（`buffered` + `playing`）时由漂移分支调用；
-  /// 管线不健康（停摆/缓冲枯竭）仍走 `_recoverAudioStalled` 的重挂序列。
+  /// 音频轻量归位（第十四轮；2026-09-26 弱网修复加固）：直接对**健康的**第二实例
+  /// seek 到视频位置；进函数先把在播的音频**暂停**（静音）再 seek——与项目「验证
+  /// 安全」的音频 seek 归位路径同源（用户 seek 的 `AUDIO seek seq=` 全程在冻结/
+  /// 暂停态执行）；杜绝 M1 第七轮定因「播放态直接 seek ⇒ 旧材料与新定位材料同时
+  /// 出声」的双重音频（用户实测「额外一条鬼影音频」的来源之一）。
+  /// 归位成功后按条件立即恢复；缓冲同步暂停（`_audioSyncPaused`）期间不抢回。
   Future<void> _alignAudioInstance(int targetMs) async {
     final ap = _audioPlayer;
     if (ap == null || _disposed) return;
     try {
+      if (ap.state == mdk.PlaybackState.playing) {
+        ap.state = mdk.PlaybackState.paused; // 暂停态 seek：规避双重音频
+      }
       final res = await ap
           .seek(position: targetMs)
           .timeout(const Duration(seconds: 3));
       SeekProbe.note(
         'AUDIO-ALIGN done target=$targetMs res=$res pos=${ap.position}',
       );
+      if (!_disposed &&
+          _userIntentPlaying &&
+          !_audioSyncPaused &&
+          !_isSeeking &&
+          !_nativeSeekInFlight &&
+          _queuedSeekTargetMs == null &&
+          ap.state == mdk.PlaybackState.paused) {
+        ap.state = mdk.PlaybackState.playing;
+        SeekProbe.note('AUDIO-ALIGN resume pos=${ap.position} video=$targetMs');
+      }
     } catch (e) {
       SeekProbe.note('AUDIO-ALIGN failed err=$e');
     }
+  }
+
+  /// 停掉第二实例（纯音频播放器）——换源到不使用它的模式时调用，杜绝旧音残留
+  /// （2026-09-26 弱网修复：非双轨分支此前完全不触碰音频实例，快速切源时旧音频
+  /// 会继续出声，也是「额外音频」来源之一）。
+  void _stopAudioInstance(String reason) {
+    final ap = _audioPlayer;
+    if (ap == null) return;
+    try {
+      if (ap.state != mdk.PlaybackState.stopped) {
+        ap.state = mdk.PlaybackState.stopped;
+        SeekProbe.note('AUDIO-STOP reason=$reason');
+      }
+    } catch (_) {}
   }
 
   /// 第二实例（纯音频）卡死自愈（2026-09-25 事故新增）。
@@ -2308,7 +2619,10 @@ class WinWinPlayerController {
   /// 冷却由调用方保证（10s）；本函数内限制最多 3 次；全程落 `AUDIO-RECOVER` 证据行。
   Future<void> _recoverAudioStalled(int videoPosMs) async {
     final ap = _audioPlayer;
-    final url = _currentAudioUrl;
+    // 2026-09-26 修复：双播放器模式下 `_currentAudioUrl` 恒为 null（主实例无外挂
+    // 音轨），此前此处因此直接 return ⇒ 音频自愈实际是**死代码**（弱网下音频卡死
+    // 后无人救）。改用第二实例专属 URL `_audioPlayerUrl`（非双轨模式回退旧字段）。
+    final url = _audioPlayerUrl ?? _currentAudioUrl;
     if (_disposed || ap == null || url == null || url.isEmpty) return;
     // 串行化门（第六轮）：恢复进行中绝不重入——23:27 事故中两次重挂叠加
     // 造成同一实例内两条音频管线并存（双重音频）。
@@ -2338,21 +2652,33 @@ class WinWinPlayerController {
           .prepare()
           .timeout(const Duration(seconds: 12), onTimeout: () => -99);
       if (_disposed) return;
-      if (ret >= 0 && videoPosMs > 0) {
-        await ap
+      // 失败不误播（2026-09-26 修复）：prepare/seek 超时或失败时**绝不放行播放**
+      // ——否则音频会从 0（未定位）起播，成为「从头播放的鬼影音频」（用户实测）。
+      var canPlay = ret >= 0;
+      if (canPlay && videoPosMs > 0) {
+        final sret = await ap
             .seek(position: videoPosMs)
             .timeout(const Duration(seconds: 8), onTimeout: () => -99);
+        if (sret < 0) canPlay = false;
       }
       // 重挂后恢复基速与音量（否则以 1x 起播并迅速积累音画差，倍速下尤其明显）。
       ap.playbackRate = playbackSpeed.value > 0 ? playbackSpeed.value : 1.0;
       ap.volume = volume.value / 100.0;
-      if (!_disposed && _userIntentPlaying) {
+      if (!_disposed && _userIntentPlaying && canPlay) {
         ap.state = mdk.PlaybackState.playing;
+      } else if (!canPlay) {
+        // 保持静默：交由冷却后的重试或既有归位/恢复路径接管。
+        try {
+          ap.state = mdk.PlaybackState.paused;
+        } catch (_) {}
       }
-      _lastAudioPosMs = videoPosMs;
+      _lastAudioPosMs = canPlay ? videoPosMs : -1;
       // 重置时间基准（第七轮）：重挂后从当前位置重新计时，避免立刻又被判停顿。
       _lastAudioAdvanceAt = DateTime.now();
-      SeekProbe.note('AUDIO-RECOVER done attempt=$attempt ret=$ret');
+      SeekProbe.note(
+        'AUDIO-RECOVER done attempt=$attempt ret=$ret '
+        'canPlay=${canPlay ? 1 : 0} url=${_audioPlayerUrl != null ? 'player' : 'legacy'}',
+      );
     } catch (e) {
       SeekProbe.note('AUDIO-RECOVER failed attempt=$attempt err=$e');
     } finally {
@@ -2993,6 +3319,8 @@ class WinWinPlayerController {
             // 该轮询落在 seek 后瞬态窗口内（与历史上「瞬态读取 position 死锁」同类），
             // 已回滚；后续若再做就绪门控必须走事件驱动、且避开瞬态。
             buffering.value = false;
+            // seek 落地后媒体时间轴已重定位：流速窗口作废（旧样本属 seek 前时间轴）。
+            _resetFlowWindow();
             if (_seekWindowMuted) {
               player.mute = false;
               _seekWindowMuted = false;
@@ -3223,6 +3551,8 @@ class WinWinPlayerController {
     // 第二实例必须同速（2026-09-26 自审修正）：否则倍速下音频恒为 1x，音画差快速
     // 增长并触发无谓的硬定位/重挂；漂移微调也以基速为基准（见漂移块 baseRate）。
     _audioPlayer?.playbackRate = v;
+    // 倍速改变后流速期望同步变化：旧样本作废重采（否则误判不健康/卡在缓冲态）。
+    _resetFlowWindow();
     final engine = danmakuEngine;
     if (engine != null) {
       try {
