@@ -293,6 +293,9 @@ class WinWinPlayerController {
   /// 视频连续未推进的时长（ms，用于音画缓冲同步的防抖门限）。
   int _audioSyncStallMs = 0;
 
+  /// 折叠保护（第十二轮）：本轮是否已记录过 `POS-COLLAPSE-GUARD`（避免每 tick 刷屏）。
+  bool _posCollapseGuardLogged = false;
+
   /// 最近一次 Seek 实际完成返回的时间点，用于在 Seek 后短时间内屏蔽看门狗误重载。
   DateTime? _lastSeekFinishTime;
 
@@ -936,8 +939,10 @@ class WinWinPlayerController {
       // 重载持位（第九轮 N1）：媒体卸载/重载的瞬态会把底层 position 折叠成 0，
       // 照直发布会让进度条“归零”（实测 01:41 事故）；此处保持现值，待媒体
       // buffered（`_pendingSeek` 会补一次恢复 seek）后再跟随。
+      // 第十二轮补强：自愈进行中（`_isRecovering`）也持位——弱网下 setMedia 之后
+      // prepare 可能挂起数十秒，提前登记的 `_pendingSeek` 需要立刻生效。
       final loadHold =
-          _pendingSeek != null &&
+          (_pendingSeek != null || _isRecovering) &&
           player.mediaStatus.test(mdk.MediaStatus.loading);
       if (loadHold != _posHoldActive) {
         _posHoldActive = loadHold;
@@ -948,7 +953,28 @@ class WinWinPlayerController {
           'status=${player.mediaStatus}',
         );
       }
-      if (!completedFrozen && !loadHold && position.value != newPos) {
+      // 折叠保护（第十二轮）：非 seek / 非加载窗口内，进度**大幅回退**（>5s）只能是
+      // 瞬态（媒体卸载、重载、底层 PTS 重置），一律不发布——否则进度条会「跳 0」。
+      final collapseGuard =
+          !_isSeeking &&
+          !_nativeSeekInFlight &&
+          _queuedSeekTargetMs == null &&
+          position.value.inMilliseconds - posMs > 5000;
+      if (collapseGuard) {
+        if (!_posCollapseGuardLogged) {
+          _posCollapseGuardLogged = true;
+          SeekProbe.note(
+            'POS-COLLAPSE-GUARD uiPos=${position.value.inMilliseconds} '
+            'raw=$posMs status=${player.mediaStatus}',
+          );
+        }
+      } else {
+        _posCollapseGuardLogged = false;
+      }
+      if (!completedFrozen &&
+          !loadHold &&
+          !collapseGuard &&
+          position.value != newPos) {
         position.value = newPos;
       }
       // 进度推进检测：若播放进度在前进，清零卡顿计时并解除缓冲态。
@@ -1626,6 +1652,9 @@ class WinWinPlayerController {
       completed.value = false;
       _reportedEnd = false;
       _bufferingStallMs = 0;
+      // 第十二轮：新一次加载是干净起点，清掉上一次可能遗留的待恢复位置
+      //（本次起点由 `start:` 参数显式指定），避免陈旧 `_pendingSeek` 让 POS-HOLD 常驻。
+      _pendingSeek = null;
 
       // 1. PlayUrlCache：先查缓存，命中且未过期则跳过 HTTP。
       final cacheKey = (epId != null && epId! > 0) ? 'ep_$epId' : bvid;
@@ -2077,6 +2106,14 @@ class WinWinPlayerController {
       final resumeDuration = Duration(
         milliseconds: resumePosMs > 0 ? resumePosMs : 0,
       );
+      // 提前登记待恢复位置（第十二轮定因）：重挂的 setMedia 会让底层 position 折叠成 0，
+      // 而 prepare 在弱网下可挂起数十秒——期间轮询会把 0 发布出去，进度条「跳 0 再跳回」
+      // （用户实测 12:04 事故：折叠 0 持续 20s）。提前置 `_pendingSeek` 后 POS-HOLD 立即
+      // 生效，且 media buffered 事件还会补一次恢复 seek（双保险）。
+      if (resumePosMs > 0) {
+        _pendingSeek = resumeDuration;
+        SeekProbe.note('RECOVER-RESUME-PENDING resume=$resumePosMs');
+      }
 
       AppLogger.w(
         'PlayerController',
