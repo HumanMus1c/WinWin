@@ -54,19 +54,16 @@ class RetryInterceptor extends Interceptor {
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.sendTimeout:
         case DioExceptionType.unknown:
-          if ((err.requestOptions.extra['_rt'] ??= 0) < _count &&
-              err.error
-                  is! TransportConnectionException // 网络中断, 此时请求可能已经被服务器所接收
-                  ) {
-            Future.delayed(
-              Duration(
-                milliseconds: ++err.requestOptions.extra['_rt'] * _delay,
-              ),
-              () => _client
-                  .fetch(err.requestOptions)
-                  .then(handler.resolve)
-                  .onError<DioException>((error, _) => handler.reject(error)),
-            );
+          _retry(err, handler);
+          return;
+        case DioExceptionType.receiveTimeout:
+          // 2026-09-26（首页弱网失败复盘·第十轮）：上游参考实现未重试
+          // receiveTimeout，弱网首屏一次超时即失败；此处仅对**幂等请求**
+          // （GET/HEAD）补上重试——非幂等请求可能已被服务器接收
+          //（与下方 TransportConnectionException 的排除同理），避免重复副作用。
+          final method = err.requestOptions.method.toUpperCase();
+          if (method == 'GET' || method == 'HEAD') {
+            _retry(err, handler);
           } else {
             handler.next(err);
           }
@@ -74,6 +71,24 @@ class RetryInterceptor extends Interceptor {
         default:
           return handler.next(err);
       }
+    }
+  }
+
+  /// 按 `_count` / `_delay` 线性退避重试；超过次数或不可重试条件则原样抛出。
+  void _retry(DioException err, ErrorInterceptorHandler handler) {
+    if ((err.requestOptions.extra['_rt'] ??= 0) < _count &&
+        err.error
+            is! TransportConnectionException // 网络中断, 此时请求可能已经被服务器所接收
+            ) {
+      Future.delayed(
+        Duration(milliseconds: ++err.requestOptions.extra['_rt'] * _delay),
+        () => _client
+            .fetch(err.requestOptions)
+            .then(handler.resolve)
+            .onError<DioException>((error, _) => handler.reject(error)),
+      );
+    } else {
+      handler.next(err);
     }
   }
 

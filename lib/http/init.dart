@@ -33,8 +33,11 @@ class Request {
     final client = Dio(
       BaseOptions(
         baseUrl: HttpString.apiBaseUrl,
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
+        // 与参考实现 PiliPlus 一致（lib/http/init.dart:207-209 = 10s；WinWin 原为 30s）：
+        // 弱网下 30s 等待过久，且 receiveTimeout 不在重试类型内会一次即失败
+        //（2026-09-26 首页弱网失败复盘，见第十轮）。
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
         validateStatus: (_) => true,
       ),
     );

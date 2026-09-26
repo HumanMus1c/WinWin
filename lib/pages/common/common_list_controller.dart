@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import 'package:winwin/http/dio_error_message.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/common/common_controller.dart';
 
@@ -26,7 +27,9 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
       res = await customGetData();
     } catch (e) {
       // Never let a thrown exception strand the UI in Loading state.
-      res = Error(e.toString());
+      // 友好文案（复盘第十轮）：避免把 Dio 原文（如 "DioException [receive timeout]…"）
+      // 直接显示给用户。
+      res = Error(dioErrorMessage(e));
     }
     if (res case Success(:final response)) {
       if (!customHandleResponse(isRefresh, res)) {
