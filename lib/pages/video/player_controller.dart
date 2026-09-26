@@ -378,6 +378,23 @@ class WinWinPlayerController {
   DateTime? _syncRealignAt;
   int _syncRealignAttempts = 0;
 
+  /// 归位稳定性检查（第四轮，日志分析修复）：连续超差次数——避免把「推动后
+  /// 正在追赶的滞后」或单 tick 抖动当作错位而执行 seek（22:40:18 实证：687ms
+  /// 的起播追赶差被立即归位）。
+  int _syncRealignStreak = 0;
+
+  /// 起播对齐（[_alignSecondInstanceToMain]）进行中（第四轮）：期间漂移硬定位/
+  /// 归位/镜像补漏一律让位，避免三机制在同一窗口叠加操作音频实例
+  /// （22:55:19 实证：START-ALIGN + DRIFT-ALIGN + UNMUTE 在 400ms 内叠加）。
+  bool _audioStartAligning = false;
+
+  /// 最近一次有效的音频位置（第四轮，日志分析修复）。
+  ///
+  /// 实证（22:40:16）：音频实例被缓冲同步暂停数秒后，`position` 读数会返回陈旧
+  /// 值 0（与主实例历史的「媒体卸载折叠 0」同类）——被当作真实位置参与判定时会
+  /// 连环误触发归位（REALIGN）直至 give-up 误重挂（AUDIO-RECOVER）。
+  int _lastValidAudioPosMs = -1;
+
   /// 漂移硬定位冷却截止时间（R3：避免每秒一次硬定位风暴）。
   DateTime? _driftHardCooldownUntil;
 
@@ -863,6 +880,8 @@ class WinWinPlayerController {
             if (pending != null && pending > Duration.zero) {
               _pendingSeek = null;
               unawaited(player.seek(position: pending.inMilliseconds));
+              // 第四轮（P3）：补偿 seek 同样纳入起播保护窗（见 _openWithQuality）。
+              _lastSeekFinishTime = DateTime.now();
             }
             // 触发待执行的 HDR 自动升级：首播 SDR buffered 稳定后再二次拉流，
             // 避免与首播的 setMedia/prepare/纹理创建并发竞态。
@@ -1391,25 +1410,52 @@ class WinWinPlayerController {
           // 网络恢复到可流畅加载：位置容差内直接恢复；超差先暂停态安全归位
           // （杜绝播放态直接 seek 的「双重音频」，M1 第七轮定因）。
           // 第二轮收紧：容差 1500→500ms——原值会以「滞后位置」恢复出声音小滞后。
+          // 第四轮（P1）：位置读数经 `_sanitizeAudioPos` 防护（陈旧 0 替换为上次
+          // 有效值）——杜绝假 0 引发的归位连环与误重挂（22:40:16 实证）。
           var apPosMs = -1;
           try {
-            apPosMs = apSync.position;
+            apPosMs = _sanitizeAudioPos(apSync.position);
           } catch (_) {}
           if (apPosMs < 0 ||
               (apPosMs - posMs).abs() <= _audioResumeToleranceMs) {
             _audioSyncPaused = false;
             _syncRealignAttempts = 0;
+            _syncRealignStreak = 0;
             SeekProbe.note('AUDIO-SYNC-RESUME video=$posMs audio=$apPosMs');
             try {
               if (apSync.state != mdk.PlaybackState.playing) {
                 apSync.state = mdk.PlaybackState.playing;
               }
             } catch (_) {}
+          } else if (_audioStartAligning) {
+            // 起播对齐独占（P4）：让位，待 START-ALIGN 完成后复查。
           } else {
+            // 超差（位置可信）——第四轮（P2）稳定性检查：
+            // ① 连续 ≥3 次检查（≈300ms）都超差才动手（滤除追赶瞬态与单 tick 抖动）；
+            // ② 推动后 3s 内不归位（给音频起播追赶窗口，交给漂移控制）。
+            _syncRealignStreak++;
             final nowSync = DateTime.now();
+            final sincePushMs = _bufferSuspendPushAt == null
+                ? (1 << 30)
+                : nowSync
+                      .difference(_bufferSuspendPushAt!)
+                      .inMilliseconds;
             final lastAlign = _syncRealignAt;
-            if (_syncRealignAttempts >= 3) {
+            if (sincePushMs < 3000) {
+              if (_syncRealignStreak == 1 || _syncRealignStreak % 25 == 0) {
+                SeekProbe.note(
+                  'AUDIO-SYNC-REALIGN hold push-grace video=$posMs '
+                  'audio=$apPosMs drift=${apPosMs - posMs}',
+                );
+              }
+            } else if (_syncRealignStreak < 3) {
+              SeekProbe.note(
+                'AUDIO-SYNC-REALIGN observe streak=$_syncRealignStreak '
+                'video=$posMs audio=$apPosMs drift=${apPosMs - posMs}',
+              );
+            } else if (_syncRealignAttempts >= 3) {
               _syncRealignAttempts = 0;
+              _syncRealignStreak = 0;
               _syncRealignAt = nowSync;
               SeekProbe.note(
                 'AUDIO-SYNC-REALIGN give-up video=$posMs audio=$apPosMs',
@@ -1441,14 +1487,20 @@ class WinWinPlayerController {
           _queuedSeekTargetMs == null &&
           !_audioRecovering) {
         try {
-          if (player.state == mdk.PlaybackState.playing &&
+          // 第四轮（P1）：位置读数防护（陈旧 0 → 上次有效值）；尚无有效值（-1）时
+          // 跳过本 tick 判定（不更新推进基准、不触发硬定位/看门狗）。
+          var apPosMs = -1;
+          try {
+            apPosMs = _sanitizeAudioPos(apd.position);
+          } catch (_) {}
+          if (apPosMs >= 0 &&
+              player.state == mdk.PlaybackState.playing &&
               apd.state == mdk.PlaybackState.playing) {
             final sinceSeek = _lastSeekFinishTime == null
                 ? 1 << 30
                 : DateTime.now()
                       .difference(_lastSeekFinishTime!)
                       .inMilliseconds;
-            final apPosMs = apd.position;
             final decision = SeekProbe.driftDecision(
               posMs,
               apPosMs,
@@ -1510,6 +1562,12 @@ class WinWinPlayerController {
               if (_audioRecovering) {
                 SeekProbe.note(
                   'DRIFT-HARD-SKIP recovering drift=${apPosMs - posMs}',
+                );
+              } else if (_audioStartAligning) {
+                // 第四轮（P4）：起播对齐独占——让位，START-ALIGN 会完成对齐，
+                // 避免两个归位机制在同一窗口叠加操作音频实例。
+                SeekProbe.note(
+                  'DRIFT-HARD-SKIP start-aligning drift=${apPosMs - posMs}',
                 );
               } else if (!isPosAdvancing && apPosMs > posMs) {
                 // 第九轮 N2：漂移为正（音频超前）且**视频未推进** ⇒ 是视频在卡顿、
@@ -1603,6 +1661,8 @@ class WinWinPlayerController {
               // 第十一轮：音画缓冲同步主动暂停的音频不得被此处抢回播放
               //（否则与 AUDIO-SYNC-PAUSE 相互打架）。
               !_audioSyncPaused &&
+              // 第四轮（P4）：起播对齐独占——让位（START-ALIGN 完成后会主动恢复）。
+              !_audioStartAligning &&
               // 第十三轮补：镜像补漏只修「暂停镜像漏了」的小偏差；若音频已被甩开
               //（实测 12:44：AUDIO-UNMUTE resume pos=20 video=992000，差 992s），
               // 抢回播放只会把错位变成可闻的错位——交由归位/重挂路径处理。
@@ -1685,8 +1745,11 @@ class WinWinPlayerController {
         // ① 冻结：弱网迹象（流速不健康 / 停滞 ≥1s）且**存量不足**时暂停视频等待数据。
         // 第三轮修正：① 去掉 stalledNow 瞬态项（避免推动后被底层瞬态立即回冻）；
         //             ② 存量 ≥5s 时保持连续播（消耗缓冲）——不再「一点一点步进」。
+        // 第四轮（P3）：起播/seek 后 3s 保护窗内不冻结（起播瞬态由 isSeekRecent 覆盖，
+        // 杜绝「暂停→恢复→暂停→冻结→推动恢复」的起播抖动，22:55:19 实证）。
         // 注：暂停态下 mdk 仍继续下载缓冲（seek 冻结窗口的既有实证）。
-        if (player.state == mdk.PlaybackState.playing &&
+        if (!isSeekRecent &&
+            player.state == mdk.PlaybackState.playing &&
             (_flowUnhealthy || _bufferingStallMs >= 1000) &&
             bufferedNow < _bufferHoldWaterMs) {
           SeekProbe.note(
@@ -2065,6 +2128,9 @@ class WinWinPlayerController {
       _audioSyncStallMs = 0;
       _resetWaterWindow();
       _syncRealignAttempts = 0;
+      _syncRealignStreak = 0;
+      // 第四轮（P1）：音频位置防护缓存同步作废（换源后音频实例时间轴重置）。
+      _lastValidAudioPosMs = -1;
 
       // 1. PlayUrlCache：先查缓存，命中且未过期则跳过 HTTP。
       final cacheKey = (epId != null && epId! > 0) ? 'ep_$epId' : bvid;
@@ -2386,6 +2452,9 @@ class WinWinPlayerController {
           // prepare 成功加载首帧：立即 seek 恢复进度。
           await player.seek(position: startMs);
           if (_disposed) return;
+          // 第四轮（P3）：起播定位等同一次 seek 完成——打上「seek recent」标记，
+          // 复用其 3s 瞬态保护（缓冲冻结/进入判定在此期间让位，杜绝起播抖动）。
+          _lastSeekFinishTime = DateTime.now();
         } else {
           // ret == -1（already loading）：media 正在加载，无法立即 seek。
           // 暂存进度，等 onMediaStatus.buffered 事件触发后 seek。
@@ -2647,6 +2716,23 @@ class WinWinPlayerController {
     }
   }
 
+  /// 音频 position 读数防护（第四轮，日志分析修复）。
+  ///
+  /// 陈旧读数（`raw < 1000ms 且视频位置 > 5000ms 且非起播对齐窗口`）一律替换为
+  /// **上次有效位置**——判定相当于「位置未变」（保持现状），不再产生假漂移；
+  /// 尚无有效值（-1）时返回 -1，调用方应跳过本 tick 判定。
+  int _sanitizeAudioPos(int rawPosMs) {
+    if (rawPosMs < 0) return _lastValidAudioPosMs;
+    if (rawPosMs < 1000 &&
+        position.value.inMilliseconds > 5000 &&
+        !_audioStartAligning) {
+      SeekProbe.note('AUDIO-POS-SANITIZE raw=$rawPosMs stale→$_lastValidAudioPosMs');
+      return _lastValidAudioPosMs;
+    }
+    _lastValidAudioPosMs = rawPosMs;
+    return rawPosMs;
+  }
+
   /// 将第二实例（音频）对齐到主实例的**实际落点**（第十三轮定因新增）。
   ///
   /// 背景：双实例模式下第二实例创建时没有任何起点（`ap.media = audioUrl` 既无 start，
@@ -2666,22 +2752,41 @@ class WinWinPlayerController {
       SeekProbe.note('AUDIO-START-ALIGN bail ap=${ap == null} disposed=$_disposed');
       return;
     }
-    for (var i = 0; i < 20; i++) {
-      if (_disposed || _audioPlayer != ap) return;
-      if (ap.mediaStatus.test(mdk.MediaStatus.buffered)) break;
-      await Future<void>.delayed(const Duration(milliseconds: 150));
-    }
-    final p = _player;
-    if (p == null || _disposed || _audioPlayer != ap) return;
-    final target = p.position;
-    final cur = ap.position;
-    if (target <= 0 || (cur - target).abs() < 1500) return;
-    SeekProbe.note('AUDIO-START-ALIGN video=$target audio=$cur');
+    // 第四轮（P4）：起播对齐期间**独占**音频实例——漂移硬定位/缓冲同步归位/
+    // 镜像补漏一律让位，避免三机制在同一窗口叠加操作（22:55:19 实证）。
+    _audioStartAligning = true;
     try {
-      await ap.seek(position: target).timeout(const Duration(seconds: 3));
-      SeekProbe.note('AUDIO-START-ALIGN done pos=${ap.position}');
-    } catch (e) {
-      SeekProbe.note('AUDIO-START-ALIGN failed err=$e');
+      for (var i = 0; i < 20; i++) {
+        if (_disposed || _audioPlayer != ap) return;
+        if (ap.mediaStatus.test(mdk.MediaStatus.buffered)) break;
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+      }
+      final p = _player;
+      if (p == null || _disposed || _audioPlayer != ap) return;
+      final target = p.position;
+      final cur = ap.position;
+      if (target <= 0 || (cur - target).abs() < 1500) return;
+      SeekProbe.note('AUDIO-START-ALIGN video=$target audio=$cur');
+      try {
+        await ap.seek(position: target).timeout(const Duration(seconds: 3));
+        SeekProbe.note('AUDIO-START-ALIGN done pos=${ap.position}');
+      } catch (e) {
+        SeekProbe.note('AUDIO-START-ALIGN failed err=$e');
+      }
+      // 第四轮（P4）：对齐完成后按条件主动恢复播放（替代 UNMUTE 在起播窗口的
+      // 职责——对齐已完成，此时恢复不引入双重音频风险）。
+      if (!_disposed &&
+          _userIntentPlaying &&
+          !_audioSyncPaused &&
+          !_isSeeking &&
+          !_nativeSeekInFlight &&
+          _queuedSeekTargetMs == null &&
+          ap.state == mdk.PlaybackState.paused) {
+        ap.state = mdk.PlaybackState.playing;
+        SeekProbe.note('AUDIO-START-ALIGN resume pos=${ap.position}');
+      }
+    } finally {
+      _audioStartAligning = false;
     }
   }
 
