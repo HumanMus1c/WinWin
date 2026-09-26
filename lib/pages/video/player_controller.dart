@@ -286,6 +286,13 @@ class WinWinPlayerController {
   /// 镜像补漏（第九轮 N3）上次尝试恢复音频播放的时间。
   DateTime? _audioUnmuteLastAt;
 
+  // ── 音画缓冲同步（第十一轮）──
+  /// 视频停顿期间已把音频同步暂停的标记。
+  bool _audioSyncPaused = false;
+
+  /// 视频连续未推进的时长（ms，用于音画缓冲同步的防抖门限）。
+  int _audioSyncStallMs = 0;
+
   /// 最近一次 Seek 实际完成返回的时间点，用于在 Seek 后短时间内屏蔽看门狗误重载。
   DateTime? _lastSeekFinishTime;
 
@@ -1078,6 +1085,54 @@ class WinWinPlayerController {
       // 4. Seek 落地后 3 秒保护期内绝对禁止触发重载，防止高码率流首次缓冲网络延迟被误杀；
       // 5. 达到 10 秒真卡死门限且底层无任何缓冲水位（buffered <= 0）时，才触发自愈。
       SeekProbe.markPhase('watchdog');
+      // ===== 音画缓冲同步（第十一轮 定因）=====
+      // 两个实例各自缓冲：弱网时**视频先耗尽缓冲进入 loading，而音频（小流、缓冲充裕）
+      // 仍继续播放** ⇒ 弱网恢复后音画错位（用户实测）。对策：视频停顿/缓冲时把音频
+      // **同步暂停**（门限 400ms 防抖，略过网络微抖动），视频恢复推进后立即恢复。
+      // 注：反向（音频先停）不暂停视频——画面不应因音频抖动而冻结，该场景仍由
+      // 漂移看门狗（`AUDIO-STALL` → `AUDIO-RECOVER`）兜底。
+      final apSync = _audioPlayer;
+      if (apSync != null &&
+          !_isSeeking &&
+          !_nativeSeekInFlight &&
+          _queuedSeekTargetMs == null &&
+          !_audioRecovering &&
+          !_isRecovering &&
+          _userIntentPlaying &&
+          player.state == mdk.PlaybackState.playing) {
+        if (isPosAdvancing) {
+          _audioSyncStallMs = 0;
+          if (_audioSyncPaused) {
+            _audioSyncPaused = false;
+            SeekProbe.note(
+              'AUDIO-SYNC-RESUME video=$posMs audio=${apSync.position}',
+            );
+            try {
+              if (apSync.state != mdk.PlaybackState.playing) {
+                apSync.state = mdk.PlaybackState.playing;
+              }
+            } catch (_) {}
+          }
+        } else {
+          _audioSyncStallMs += 100;
+          if (_audioSyncStallMs >= 400 &&
+              !_audioSyncPaused &&
+              apSync.state == mdk.PlaybackState.playing) {
+            _audioSyncPaused = true;
+            SeekProbe.note(
+              'AUDIO-SYNC-PAUSE video=$posMs stallMs=$_audioSyncStallMs '
+              'status=${player.mediaStatus} audio=${apSync.position}',
+            );
+            try {
+              apSync.state = mdk.PlaybackState.paused;
+            } catch (_) {}
+          }
+        }
+      } else if (_audioSyncPaused) {
+        // 其它流程（seek/自愈/用户暂停）接管：解除标记，恢复交由常规镜像处理。
+        _audioSyncPaused = false;
+        _audioSyncStallMs = 0;
+      }
       // 方案 3（docs 2.9）：双实例漂移校正——音频侧滞后则提速 3%、超前则减速 3%，
       // 偏差 >1.5s 直接硬定位；seek 期与任一实例非播放态一律跳过（避开瞬态）。
       final apd = _audioPlayer;
@@ -1225,6 +1280,9 @@ class WinWinPlayerController {
           } else if (player.state == mdk.PlaybackState.playing &&
               apd.state == mdk.PlaybackState.paused &&
               _userIntentPlaying &&
+              // 第十一轮：音画缓冲同步主动暂停的音频不得被此处抢回播放
+              //（否则与 AUDIO-SYNC-PAUSE 相互打架）。
+              !_audioSyncPaused &&
               durMs > 0 &&
               apd.position < durMs - 1500) {
             // 第九轮 N3：镜像补漏——主实例在播放、用户意图播放，而第二实例被卡在
