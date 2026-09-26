@@ -1309,6 +1309,10 @@ class WinWinPlayerController {
               // 第十一轮：音画缓冲同步主动暂停的音频不得被此处抢回播放
               //（否则与 AUDIO-SYNC-PAUSE 相互打架）。
               !_audioSyncPaused &&
+              // 第十三轮补：镜像补漏只修「暂停镜像漏了」的小偏差；若音频已被甩开
+              //（实测 12:44：AUDIO-UNMUTE resume pos=20 video=992000，差 992s），
+              // 抢回播放只会把错位变成可闻的错位——交由归位/重挂路径处理。
+              (apd.position - posMs).abs() < 1500 &&
               durMs > 0 &&
               apd.position < durMs - 1500) {
             // 第九轮 N3：镜像补漏——主实例在播放、用户意图播放，而第二实例被卡在
