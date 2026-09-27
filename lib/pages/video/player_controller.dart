@@ -411,6 +411,11 @@ class WinWinPlayerController {
   /// 重挂放弃（≥3 次失败）后是否已记录日志（第五轮 F1：避免每 10s 空转重复打印）。
   bool _stallRecoveryGiveUpLogged = false;
 
+  /// 重挂失败冷却截止时间（第六轮 Hotfix）：`RECOVER hold` 后 30s 内不再触发重挂
+  /// ——避免上一轮重挂的「未收敛瞬态」（stopped/loading）中再次 setMedia 触发 mdk
+  /// 死锁（09-27 16:23 实证：UI isolate 永久阻塞）。
+  DateTime? _stallRecoveryCooldownUntil;
+
   /// 视频可用 CDN 候选 URL 列表（已过滤 MCDN/PCDN）。
   List<String> _videoCdnCandidates = const [];
 
@@ -1837,9 +1842,14 @@ class WinWinPlayerController {
         // 水位」单一判据；真死链（水位 0 且停滞 10s）仍会重挂兜底。
         // 第五轮（F1）：失败重挂按 `_stallRecoveryRetryCount` 限次（≤3）——超限
         // 停手保持转圈等待网络恢复/用户操作，避免每 10s 空转重挂。
+        // 第六轮 Hotfix：失败后 30s 冷却期内不触发（避免在未收敛瞬态中 setMedia 死锁）。
         if (_bufferingStallMs >= 10000 && player.buffered() <= 0) {
           _bufferingStallMs = 0;
-          if (_stallRecoveryRetryCount >= 3) {
+          final recoverCooldown = _stallRecoveryCooldownUntil;
+          if (recoverCooldown != null &&
+              DateTime.now().isBefore(recoverCooldown)) {
+            SeekProbe.note('RECOVER-SKIP cooldown until=$recoverCooldown');
+          } else if (_stallRecoveryRetryCount >= 3) {
             if (!_stallRecoveryGiveUpLogged) {
               _stallRecoveryGiveUpLogged = true;
               AppLogger.w(
@@ -2626,6 +2636,22 @@ class WinWinPlayerController {
     final player = _player;
     if (_disposed || player == null || _isRecovering || !ready.value) return;
 
+    // ===== 瞬态守卫（第六轮 Hotfix，16:23 死锁实证）=====
+    // 上一轮重挂失败（prepare 超时）后，播放器可能停留在「未收敛瞬态」
+    // （`+loading` / `+seeking` / state=stopped）——此时再执行 setMedia 会让
+    // mdk 死锁、UI isolate 永久阻塞（与 2026-09-20「归位瞬态 setMedia 死锁」
+    // 同类；09-27 16:23 实测：第二次重挂触发后日志/心跳全停、程序无响应）。
+    // 守卫在**任何同步 position 读取之前**执行；瞬态期间跳过重挂，等媒体
+    // 加载完成（loading 位消除）或 seeking 结束后由看门狗自然重试。
+    final preStatus = player.mediaStatus;
+    if (preStatus.test(mdk.MediaStatus.loading) ||
+        preStatus.test(mdk.MediaStatus.seeking)) {
+      SeekProbe.note(
+        'RECOVER-SKIP transient state=${player.state} status=$preStatus',
+      );
+      return;
+    }
+
     // 已播放完毕或已处于片尾边界，严禁触发流自愈（杜绝 EOF seek 音频回绕片头）。
     final durMs = duration.value.inMilliseconds;
     final curPosMs = player.position;
@@ -2745,6 +2771,8 @@ class WinWinPlayerController {
         buffering.value = false;
         _bufferingStallMs = 0;
         _lastPolledPosMs = resumePosMs;
+        // 第六轮：重挂成功 ⇒ 解除失败冷却。
+        _stallRecoveryCooldownUntil = null;
         // 媒体已重挂：流速窗口作废（旧样本属旧时间轴）。
         _resetFlowWindow();
         SeekProbe.note('RECOVER done ret=$ret resume=$resumePosMs');
@@ -2757,11 +2785,16 @@ class WinWinPlayerController {
         // 会 `playing` + `buffering=false`，UI 显示播放中但画面不动，更隐蔽）。
         // 由 10s 看门狗按 `_stallRecoveryRetryCount`（≤3 次）继续重试；超限后
         // 停手，保持转圈等待网络恢复/用户操作。
+        // 第六轮 Hotfix：失败后设置 30s 冷却——期间底层可能停留在未收敛瞬态，
+        // 必须避免在瞬态中再次 setMedia（16:23 死锁实证）。
+        _stallRecoveryCooldownUntil = DateTime.now().add(
+          const Duration(seconds: 30),
+        );
         buffering.value = true;
         _bufferingStallMs = 0;
         SeekProbe.note(
           'RECOVER hold ret=$ret resume=$resumePosMs '
-          'attempts=$_stallRecoveryRetryCount',
+          'attempts=$_stallRecoveryRetryCount cooldown=30s',
         );
         AppLogger.w(
           'PlayerController',
