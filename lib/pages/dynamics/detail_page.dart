@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
@@ -418,7 +419,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                       (context, index) {
                         final reply = _replies[index];
                         final member = reply.member;
-                        final content = reply.content?.message ?? '';
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: Style.sm),
@@ -458,9 +458,9 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                       ),
                                     ),
                                     const SizedBox(height: 3),
-                                    Text(
-                                      content,
-                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                    ReplyContentView(
+                                      content: reply.content,
+                                      textStyle: theme.textTheme.bodyMedium?.copyWith(
                                         height: 1.4,
                                       ),
                                     ),

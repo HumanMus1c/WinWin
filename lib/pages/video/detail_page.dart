@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
+import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/common/widgets/video_card/video_card_h.dart';
@@ -1614,9 +1615,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       ],
                     ),
                     const SizedBox(height: Style.xs),
-                    Text(
-                      reply.content?.message ?? '',
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                    ReplyContentView(
+                      content: reply.content,
+                      textStyle: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 14.5,
                         height: 1.55,
                         color: theme.colorScheme.onSurface,
@@ -1912,9 +1913,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           // 第 2 行：回复正文（独立行展示，字体加大更清晰，行高宽松舒适）
           Padding(
             padding: const EdgeInsets.only(left: 36, top: 4, bottom: 4),
-            child: Text(
-              sub.content?.message ?? '',
-              style: theme.textTheme.bodyMedium?.copyWith(
+            child: ReplyContentView(
+              content: sub.content,
+              textStyle: theme.textTheme.bodyMedium?.copyWith(
                 fontSize: 13.5,
                 height: 1.5,
                 color: theme.colorScheme.onSurface,

@@ -20,6 +20,10 @@ abstract final class ImageUtils {
     // 如果已有 @ 格式的 CDN 参数，直接返回 https 链接
     if (url.contains('@')) return url;
 
+    // GIF 动图保持原样直连：B站 CDN 的 @…webp 转码会将其转为静态首帧，丢失动画
+    final path = url.split('?').first.toLowerCase();
+    if (path.endsWith('.gif')) return url;
+
     // 非 B站图片 CDN 域名（如部分外链）不附加规则
     if (!url.contains('.hdslb.com')) return url;
 

@@ -121,9 +121,117 @@ class ReplyMember {
 class ReplyContent {
   String? message;
 
+  /// 评论正文表情转义映射（键为 `[xxx]` 表情代码，评论无表情则不下发）。
+  Map<String, ReplyEmote>? emote;
+
+  /// 评论附带图片列表（含 GIF 动图）。
+  List<ReplyPicture>? pictures;
+
+  /// 图片展示倍率（1.5 表示大图模式）。
+  double? pictureScale;
+
   ReplyContent.fromJson(Map<String, dynamic> json) {
     message = json['message']?.toString();
+
+    final emoteJson = json['emote'];
+    if (emoteJson is Map && emoteJson.isNotEmpty) {
+      final emoteMap = <String, ReplyEmote>{};
+      emoteJson.forEach((key, value) {
+        if (value is Map) {
+          emoteMap[key.toString()] =
+              ReplyEmote.fromJson(value.cast<String, dynamic>());
+        }
+      });
+      if (emoteMap.isNotEmpty) emote = emoteMap;
+    }
+
+    final picturesJson = json['pictures'];
+    if (picturesJson is List && picturesJson.isNotEmpty) {
+      final picList = picturesJson
+          .whereType<Map>()
+          .map((e) => ReplyPicture.fromJson(e.cast<String, dynamic>()))
+          .where((p) => p.imgSrc?.isNotEmpty == true)
+          .toList();
+      if (picList.isNotEmpty) pictures = picList;
+    }
+
+    final scale = json['picture_scale'];
+    pictureScale = scale is num ? scale.toDouble() : null;
   }
+}
+
+/// 评论正文表情（`content.emote` 中单个表情代码的渲染信息）。
+class ReplyEmote {
+  /// 表情转义符（如 `[doge]`）。
+  final String? text;
+
+  /// 静态表情图 URL。
+  final String? url;
+
+  /// 动图版本 URL（部分表情下发，优先使用）。
+  final String? gifUrl;
+
+  /// 表情尺寸档位（meta.size：1=小，2=大）。
+  final int size;
+
+  const ReplyEmote({
+    this.text,
+    this.url,
+    this.gifUrl,
+    this.size = 1,
+  });
+
+  factory ReplyEmote.fromJson(Map<String, dynamic> json) {
+    final meta = json['meta'];
+    return ReplyEmote(
+      text: json['text']?.toString(),
+      url: json['url']?.toString(),
+      gifUrl: json['gif_url']?.toString(),
+      size: _asInt(meta is Map ? meta['size'] : null) ?? 1,
+    );
+  }
+
+  /// 优先使用动图版本，回退静态图。
+  String? get displayUrl => gifUrl?.isNotEmpty == true ? gifUrl : url;
+}
+
+/// 评论附带图片（`content.pictures`，含 GIF 动图）。
+class ReplyPicture {
+  final String? imgSrc;
+  final double? imgWidth;
+  final double? imgHeight;
+
+  /// 图片体积（KB）。
+  final double? imgSize;
+
+  /// 右上角角标图片 URL（如"大专属"标记）。
+  final String? topRightIcon;
+
+  /// 是否以动图形式播放缩略图（B 站评论 GIF 标记）。
+  final bool playGifThumbnail;
+
+  const ReplyPicture({
+    this.imgSrc,
+    this.imgWidth,
+    this.imgHeight,
+    this.imgSize,
+    this.topRightIcon,
+    this.playGifThumbnail = false,
+  });
+
+  factory ReplyPicture.fromJson(Map<String, dynamic> json) => ReplyPicture(
+        imgSrc: json['img_src']?.toString(),
+        imgWidth: json['img_width'] is num
+            ? (json['img_width'] as num).toDouble()
+            : null,
+        imgHeight: json['img_height'] is num
+            ? (json['img_height'] as num).toDouble()
+            : null,
+        imgSize:
+            json['img_size'] is num ? (json['img_size'] as num).toDouble() : null,
+        topRightIcon: json['top_right_icon']?.toString(),
+        playGifThumbnail: json['play_gif_thumbnail'] == true,
+      );
 }
 
 class ReplyCursor {

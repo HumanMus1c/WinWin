@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/core/account/login_guard.dart';
@@ -1431,9 +1432,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       ],
                     ),
                     const SizedBox(height: Style.xs),
-                    Text(
-                      reply.content?.message ?? '',
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                    ReplyContentView(
+                      content: reply.content,
+                      textStyle: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 14.5,
                         height: 1.55,
                         color: theme.colorScheme.onSurface,
@@ -1700,9 +1701,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           // 第 2 行：回复正文
           Padding(
             padding: const EdgeInsets.only(left: 36, top: 4, bottom: 4),
-            child: Text(
-              sub.content?.message ?? '',
-              style: theme.textTheme.bodyMedium?.copyWith(
+            child: ReplyContentView(
+              content: sub.content,
+              textStyle: theme.textTheme.bodyMedium?.copyWith(
                 fontSize: 13.5,
                 height: 1.5,
                 color: theme.colorScheme.onSurface,
