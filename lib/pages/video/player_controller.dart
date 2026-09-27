@@ -898,7 +898,9 @@ class WinWinPlayerController {
             final pending = _pendingSeek;
             if (pending != null && pending > Duration.zero) {
               _pendingSeek = null;
-              unawaited(player.seek(position: pending.inMilliseconds));
+              // 精确落点定位（_seekPrecise）：与交互式 seek 同源 flags，
+              // 杜绝 fvp 默认 keyFrame 关键帧定位导致落点前跳（历史续播「跳几秒」根因）。
+              unawaited(_seekPrecise(pending.inMilliseconds));
               // 第四轮（P3）：补偿 seek 同样纳入起播保护窗（见 _openWithQuality）。
               _lastSeekFinishTime = DateTime.now();
             }
@@ -2078,7 +2080,10 @@ class WinWinPlayerController {
       if (_disposed || error.value != null) return;
       if (!ready.value || duration.value <= Duration.zero) return;
     }
-    await player.seek(position: position.inMilliseconds);
+    // 精确落点定位（_seekPrecise）：与交互式 seek 同源 flags。此前裸 seek 走 fvp
+    // 默认 keyFrame 关键帧定位，落点越过目标最多约 4s——「返回上一级后重进，
+    // 历史续播点向前跳几秒」的根因（保存侧值本身误差 ≤1s 向下取整）。
+    await _seekPrecise(position.inMilliseconds);
     // 第五轮（F4）：起播 seek 纳入「seek recent」3s 保护窗（与 _openWithQuality 一致）
     // ——杜绝起播瞬态被缓冲冻结/进入判定误触发（09-27 14:32/14:53 三次实证：
     // resumeTo 路径的起播会被冻结 1.3~1.6s）。
@@ -2501,8 +2506,9 @@ class WinWinPlayerController {
       final startMs = (start ?? Duration.zero).inMilliseconds;
       if (startMs > 0) {
         if (ret >= 0) {
-          // prepare 成功加载首帧：立即 seek 恢复进度。
-          await player.seek(position: startMs);
+          // prepare 成功加载首帧：立即精确落点定位恢复进度（_seekPrecise，同源 flags）。
+          // （didPopNext 恢复路径同样不得走 fvp 默认 keyFrame 关键帧定位。）
+          await _seekPrecise(startMs);
           if (_disposed) return;
           // 第四轮（P3）：起播定位等同一次 seek 完成——打上「seek recent」标记，
           // 复用其 3s 瞬态保护（缓冲冻结/进入判定在此期间让位，杜绝起播抖动）。
@@ -2747,9 +2753,12 @@ class WinWinPlayerController {
       if (_disposed) return;
       if (ret >= 0) {
         if (resumePosMs > 0) {
-          final sret = await player
-              .seek(position: resumePosMs)
-              .timeout(const Duration(seconds: 10), onTimeout: () => -99);
+          // 精确落点定位（_seekPrecise）：自愈重挂后的恢复同样不得走 keyFrame 默认定位
+          // （弱网重挂恢复后落点前跳与历史续播为同一缺陷类）。超时语义与原实现一致（-99）。
+          final sret = await _seekPrecise(
+            resumePosMs,
+            timeout: const Duration(seconds: 10),
+          );
           if (sret < 0) {
             // seek 失败/超时：不得放行播放（否则可能从 0 起播）。
             canPlay = false;
@@ -3211,6 +3220,79 @@ class WinWinPlayerController {
     });
   }
 
+  /// seek flags 位决策（单一事实来源：交互式 seek 与起播/续播/自愈定位共用）。
+  ///
+  /// 精准分流规则：
+  /// 1. 若定位到片头 0ms，使用 fromStart | keyFrame 极速出首个物理关键帧（对标 MDK 最佳实践），
+  ///    杜绝无 keyFrame 导致解码器从文件头逐帧解码引发数秒卡顿；
+  /// 2. 若向已播放过时间点快退（targetMs < currentPosMs），严禁传 inCache（MDK 官方规范明确要求
+  ///    inCache 的目标位置必须落在 (position, position + buffered] 正向区间内）。
+  ///    快退改用 Accurate（去 KeyFrame，MDK 文档：Accurate seek implies Backward，
+  ///    内部完整反向定位）；实证（2026-09-19）：fast keyFrame|Backward 快退仍不驱动
+  ///    外部音轨 demuxer，导致音频时钟不归位、视频高速追赶旧位置；
+  /// 3. 若向后快进且落在正向已缓冲水位内，使用 fromStart | keyFrame | inCache 从内存秒开；
+  /// 4. 若向后快进超出缓冲水位，使用 fromStart | keyFrame 从网络直接 Range 命中。
+  ///
+  /// 单源模式（HLS 合成清单，无外挂音轨）：快退同样使用 keyFrame 定位。
+  /// 实测（2026-09-24）：单源下 Accurate（flags=2）快退会间歇性不生效——demuxer
+  /// 仍停在 seek 前位置（target=25000 而 posMin=60262；target=30000 而 posAfter=70884），
+  /// 观感即「自动回退到原位 + 画面加速追赶」；改用 keyFrame 后与快进走同一定位路径。
+  /// P0 A/B（2026-09-25）：accurateSeek=true 时前后向均改精确落点（去 KeyFrame），
+  /// 用于验证双实例配置下 Accurate 是否可靠（keyFrame 落点误差 -4.8s~+4.3s，
+  /// 观感为「seek 到底后又回退一段」）。
+  int _seekFlagBits({
+    required int targetMs,
+    required int currentPosMs,
+    required int bufMax,
+  }) {
+    final isForwardInCache =
+        targetMs >= currentPosMs &&
+        targetMs <= currentPosMs + bufMax &&
+        bufMax > 0;
+    final isBackward = targetMs < currentPosMs;
+    final bool singleSource = _currentAudioUrl == null;
+    final bool useKeyFrame =
+        !SeekProbe.accurateSeek && (!isBackward || singleSource);
+    const int backwardBit = 0x10000;
+    return targetMs == 0
+        ? (mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame)
+        : (mdk.SeekFlag.fromStart |
+              (useKeyFrame ? mdk.SeekFlag.keyFrame : 0) |
+              (isBackward && SeekProbe.backwardKeyFrame ? backwardBit : 0) |
+              (isForwardInCache ? mdk.SeekFlag.inCache : 0));
+  }
+
+  /// 非交互式定位（起播/续播/自愈恢复共用）：主实例按 [_seekFlagBits] 决策执行一次 seek。
+  ///
+  /// 此前这些路径直接 `player.seek(position:)`，而 fvp 默认 flags 为
+  /// `keyFrame | fromStart | inCache`（关键帧定位，落点误差实测 -4950ms~+4077ms：
+  /// 「keyFrame 定位落点越过目标最多约 4s，进度条/时间显示会向前偏移」）——
+  /// 即「返回上一级后重进，历史续播点向前跳跃几秒」的根因；交互式 seek 已于
+  /// 2026-09-25 A/B 切换精确落点（36 次落点误差 ~0ms），本方法把起播/续播/自愈
+  /// 路径一并统一到同一策略。返回 [mdk.Player.seek] 的结果（负数为失败，-99 为超时）。
+  Future<int> _seekPrecise(int targetMs, {Duration? timeout}) async {
+    final player = _player;
+    if (player == null || _disposed) return -99;
+    final currentPosMs = player.position;
+    final bufMax = player.buffered();
+    final flagBits = _seekFlagBits(
+      targetMs: targetMs,
+      currentPosMs: currentPosMs,
+      bufMax: bufMax,
+    );
+    SeekProbe.note(
+      'START-SEEK target=$targetMs flags=$flagBits '
+      'pos=$currentPosMs buffered=$bufMax state=${player.state}',
+    );
+    final future = player.seek(
+      position: targetMs,
+      flags: mdk.SeekFlag(flagBits),
+    );
+    return timeout == null
+        ? future
+        : future.timeout(timeout, onTimeout: () => -99);
+  }
+
   /// 取证探针：自动执行脚本化 seek 序列（诊断专用，随 [SeekProbe] 一并移除）。
   /// 支持单会话多轮：每轮开始前重读配置，可热切换 variant（无需重启应用）。
   void _maybeStartSeekProbe() {
@@ -3252,16 +3334,6 @@ class WinWinPlayerController {
     SeekProbe.note('PROC seq=$seq target=$targetMs enter');
     unawaited(() async {
       try {
-        // 精准分流 SeekFlags：
-        // 1. 若定位到片头 0ms，使用 fromStart | keyFrame 极速出首个物理关键帧（对标 MDK 最佳实践），
-        //    杜绝无 keyFrame 导致解码器从文件头逐帧解码引发数秒卡顿；
-        // 2. 若向已播放过时间点快退（targetMs < currentPosMs），严禁传 inCache（MDK 官方规范明确要求
-        //    inCache 的目标位置必须落在 (position, position + buffered] 正向区间内）。
-        //    快退改用 Accurate（去 KeyFrame，MDK 文档：Accurate seek implies Backward，
-        //    内部完整反向定位）；实证（2026-09-19）：fast keyFrame|Backward 快退仍不驱动
-        //    外部音轨 demuxer，导致音频时钟不归位、视频高速追赶旧位置；
-        // 3. 若向后快进且落在正向已缓冲水位内，使用 fromStart | keyFrame | inCache 从内存秒开；
-        // 4. 若向后快进超出缓冲水位，使用 fromStart | keyFrame 从网络直接 Range 命中。
         final currentPosMs = player.position;
         final bufMax = player.buffered();
         final isForwardInCache =
@@ -3272,23 +3344,12 @@ class WinWinPlayerController {
         final bool isDualTrack =
             _currentAudioUrl != null && _currentAudioUrl!.isNotEmpty;
 
-        // 单源模式（HLS 合成清单，无外挂音轨）：快退同样使用 keyFrame 定位。
-        // 实测（2026-09-24）：单源下 Accurate（flags=2）快退会间歇性不生效——demuxer
-        // 仍停在 seek 前位置（target=25000 而 posMin=60262；target=30000 而 posAfter=70884），
-        // 观感即「自动回退到原位 + 画面加速追赶」；改用 keyFrame 后与快进走同一定位路径。
-        // P0 A/B（2026-09-25）：accurateSeek=true 时前后向均改精确落点（去 KeyFrame），
-        // 用于验证双实例配置下 Accurate 是否可靠（keyFrame 落点误差 -4.8s~+4.3s，
-        // 观感为「seek 到底后又回退一段」）。
-        final bool singleSource = _currentAudioUrl == null;
-        final bool useKeyFrame =
-            !SeekProbe.accurateSeek && (!isBackward || singleSource);
-        const int backwardBit = 0x10000;
-        final int flagBits = targetMs == 0
-            ? (mdk.SeekFlag.fromStart | mdk.SeekFlag.keyFrame)
-            : (mdk.SeekFlag.fromStart |
-                  (useKeyFrame ? mdk.SeekFlag.keyFrame : 0) |
-                  (isBackward && SeekProbe.backwardKeyFrame ? backwardBit : 0) |
-                  (isForwardInCache ? mdk.SeekFlag.inCache : 0));
+        // flags 决策统一走 _seekFlagBits（单一事实来源，与起播/续播/自愈路径同源）。
+        final int flagBits = _seekFlagBits(
+          targetMs: targetMs,
+          currentPosMs: currentPosMs,
+          bufMax: bufMax,
+        );
         final flags = mdk.SeekFlag(flagBits);
 
         final mi = player.mediaInfo;

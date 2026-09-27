@@ -481,7 +481,10 @@ abstract final class SeekProbe {
         flushAudioOnSeek = raw['flushAudioOnSeek'] == true;
         reopenOnBackwardSeek = raw['reopenOnBackwardSeek'] == true;
         pollTrace = raw['pollTrace'] == true;
-        accurateSeek = raw['accurateSeek'] == true;
+        // 默认精确落点（与 accurateSeek 字段注释一致）：仅显式配置 false 才回退
+        // keyFrame 快速定位。旧写法 `== true` 会让「存在配置文件但未写该键」的
+        // 用户静默回退 keyFrame（落点前跳/回退几秒），与声明的默认值矛盾。
+        accurateSeek = raw['accurateSeek'] != false;
         final slow = int.tryParse('${raw['pollSlowMs']}');
         if (slow != null && slow > 0) pollSlowMs = slow;
       }
