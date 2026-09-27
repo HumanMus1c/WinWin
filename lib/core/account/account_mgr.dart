@@ -196,9 +196,10 @@ class AccountManager extends Interceptor {
     } else {
       dioError(err).then((res) {
         try {
-          if (Get.isSnackbarOpen) {
-            Get.closeCurrentSnackbar();
-          }
+          // 注：不调用 Get.closeCurrentSnackbar()——GetX 的 SnackbarController
+          // 在内部状态不一致时会对未初始化的 late _controller 抛「异步」异常，
+          // 外层 try-catch 无法捕获（28 条崩溃日志实证，堆栈止于 _removeEntry）。
+          // Get.snackbar 自带队列管理，行为可接受。
           Get.snackbar('请求错误', '$res\n$url');
         } catch (_) {
           // 桌面端无 GetX Overlay 时静默，避免二次崩溃

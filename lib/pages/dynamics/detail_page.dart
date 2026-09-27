@@ -18,6 +18,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/id_utils.dart';
+import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
 /// 动态详情页面。
@@ -1056,9 +1057,11 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Image.network(
-              node.emojiUrl!,
+              ImageUtils.thumbnailUrl(node.emojiUrl, type: 'emote'),
               width: 20,
               height: 20,
+              cacheWidth: 64,
+              cacheHeight: 64,
               errorBuilder: (_, _, _) => Text(text),
             ),
           ),

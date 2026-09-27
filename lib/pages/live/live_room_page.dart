@@ -19,6 +19,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
 /// 桌面原生直播间播放页面。
@@ -1981,9 +1982,10 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           child: Padding(
             padding: const EdgeInsets.only(left: 4, top: 2, bottom: 2),
             child: Image.network(
-              item.emoteUrl!,
+              ImageUtils.thumbnailUrl(item.emoteUrl, height: 128),
               height: 44,
               fit: BoxFit.contain,
+              cacheHeight: 128,
               errorBuilder: (_, _, _) => const SizedBox.shrink(),
             ),
           ),
@@ -2066,10 +2068,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
               child: Image.network(
-                emoteUrl,
+                ImageUtils.thumbnailUrl(emoteUrl, type: 'emote'),
                 width: 20,
                 height: 20,
                 fit: BoxFit.contain,
+                cacheWidth: 64,
+                cacheHeight: 64,
                 errorBuilder: (_, _, _) =>
                     Text(emoteCode, style: defaultStyle),
               ),
@@ -2262,10 +2266,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       padding: const EdgeInsets.all(4),
                       child: url != null
                           ? Image.network(
-                              url,
+                              ImageUtils.thumbnailUrl(url, type: 'emote'),
                               width: 28,
                               height: 28,
                               fit: BoxFit.contain,
+                              cacheWidth: 64,
+                              cacheHeight: 64,
                               errorBuilder: (_, _, _) => Center(
                                 child: Text(
                                   code,

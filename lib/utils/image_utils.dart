@@ -56,4 +56,12 @@ abstract final class ImageUtils {
   static int cacheSize(double px, BuildContext context) {
     return (px * MediaQuery.devicePixelRatioOf(context)).round();
   }
+
+  /// 图片解码尺寸上限（对齐 NetworkImgLayer 策略）：显示尺寸 × DPR，clamp 到 [64, max]。
+  ///
+  /// 就地补全裸用 CachedNetworkImage/Image 的点时使用，防止原图（可达 1000+px）
+  /// 按原始分辨率解码造成大量内存占用（参见 2026-09-27 启动期高内存复盘）。
+  static int decodeClamp(double px, BuildContext context, {int max = 1080}) {
+    return cacheSize(px, context).clamp(64, max);
+  }
 }

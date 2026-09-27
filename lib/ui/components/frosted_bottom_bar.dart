@@ -11,6 +11,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
 
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/utils/image_utils.dart';
 
 /// 顶层导航页面枚举。
 enum AppPage { home, dynamic, history, whisper, profile }
@@ -92,8 +93,10 @@ class NavDestinationIcon extends StatelessWidget {
               ),
               child: ClipOval(
                 child: CachedNetworkImage(
-                  imageUrl: account.face,
+                  imageUrl: ImageUtils.thumbnailUrl(account.face, type: 'avatar'),
                   fit: BoxFit.cover,
+                  memCacheWidth: ImageUtils.decodeClamp(size, context, max: 256),
+                  memCacheHeight: ImageUtils.decodeClamp(size, context, max: 256),
                   placeholder: (_, _) => const ColoredBox(
                     color: Colors.grey,
                     child: SizedBox.expand(),

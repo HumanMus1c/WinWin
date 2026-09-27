@@ -230,6 +230,9 @@ class AppNavRail extends StatelessWidget {
                           style: TextStyle(
                             color: color,
                             fontSize: 11,
+                            // 固定行高：中文字体默认行高较大（≈2.0×），会使
+                            // 56px 导航项底部溢出 2px，并随字体/风格切换漂移。
+                            height: 1.25,
                             fontWeight:
                                 selected ? FontWeight.w600 : FontWeight.normal,
                           ),

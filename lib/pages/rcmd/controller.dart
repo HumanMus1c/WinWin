@@ -61,6 +61,18 @@ class RcmdController extends CommonListController {
           }
         }
       }
+      return;
+    }
+    // append 路径（无限 feed 下滚加载）：裁剪历史头部控制常驻规模。
+    // 触发时机为滚到底加载更多（视口在列表尾部），裁头部不影响视口内容；
+    // 用户回滚到顶部时看到的是更新的推荐批次（有限 feed 的固有取舍）。
+    const int maxItems = 300;
+    if (loadingState.value case Success(:final response)) {
+      final list = response;
+      if (list == null) return;
+      final overflow = list.length + dataList.length - maxItems;
+      if (overflow <= 0) return;
+      list.removeRange(0, overflow);
     }
   }
 

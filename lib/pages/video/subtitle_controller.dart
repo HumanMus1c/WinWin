@@ -65,8 +65,27 @@ class SubtitleController extends ChangeNotifier {
   bool _loaded = false;
   bool get isLoaded => _loaded;
 
-  /// 字幕 URL → 已解析 cue 列表 的内存缓存。
+  /// 字幕 URL → 已解析 cue 列表 的内存缓存（LRU：上限 [_maxCacheEntries] 条）。
   static final Map<String, List<SubtitleCue>> _cache = {};
+
+  /// 缓存条目上限：跨视频浏览会持续累积字幕 cue，需淘汰最久未用项防无界增长。
+  static const int _maxCacheEntries = 8;
+
+  /// LRU 读：命中时把条目移到末尾（最近使用）。
+  static List<SubtitleCue>? _cacheGet(String url) {
+    final v = _cache.remove(url);
+    if (v != null) _cache[url] = v;
+    return v;
+  }
+
+  /// LRU 写：超限时淘汰最久未用（Map 插入序首位）。
+  static void _cachePut(String url, List<SubtitleCue> cues) {
+    _cache.remove(url);
+    _cache[url] = cues;
+    while (_cache.length > _maxCacheEntries) {
+      _cache.remove(_cache.keys.first);
+    }
+  }
 
   /// 设置可用字幕列表（来自 playInfo 接口）。
   /// 根据 [SubtitlePreference] 和用户开关状态自动选择默认字幕。
@@ -130,7 +149,7 @@ class SubtitleController extends ChangeNotifier {
     final url = item.fullUrl;
     if (url.isEmpty) return;
     // 先查内存缓存。
-    final cached = _cache[url];
+    final cached = _cacheGet(url);
     if (cached != null) {
       _cues = cached;
       _loaded = true;
@@ -148,7 +167,7 @@ class SubtitleController extends ChangeNotifier {
       } else {
         parsed = const [];
       }
-      _cache[url] = parsed;
+      _cachePut(url, parsed);
       _cues = parsed;
       _loaded = true;
       notifyListeners();

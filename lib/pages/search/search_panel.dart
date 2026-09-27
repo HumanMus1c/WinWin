@@ -13,6 +13,7 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
 /// 搜索面板 — 单个 Tab 对应的结果列表。
@@ -266,10 +267,12 @@ class _SearchPanelState extends State<SearchPanel>
             children: [
               ClipOval(
                 child: CachedNetworkImage(
-                  imageUrl: item.upic ?? '',
+                  imageUrl: ImageUtils.thumbnailUrl(item.upic, type: 'avatar'),
                   width: 48,
                   height: 48,
                   fit: BoxFit.cover,
+                  memCacheWidth: ImageUtils.decodeClamp(48, context, max: 256),
+                  memCacheHeight: ImageUtils.decodeClamp(48, context, max: 256),
                   placeholder: (_, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
                   ),
@@ -388,8 +391,13 @@ class _SearchPanelState extends State<SearchPanel>
                     fit: StackFit.expand,
                     children: [
                       CachedNetworkImage(
-                        imageUrl: item.cover ?? '',
+                        imageUrl: ImageUtils.thumbnailUrl(item.cover,
+                            width: 144, height: 81),
                         fit: BoxFit.cover,
+                        memCacheWidth:
+                            ImageUtils.decodeClamp(144, context, max: 1080),
+                        memCacheHeight:
+                            ImageUtils.decodeClamp(81, context, max: 1080),
                         placeholder: (_, _) => Container(
                           color: theme.colorScheme.surfaceContainer,
                         ),
@@ -496,8 +504,13 @@ class _SearchPanelState extends State<SearchPanel>
                   width: 80,
                   height: 114,
                   child: CachedNetworkImage(
-                    imageUrl: item.cover ?? '',
+                    imageUrl: ImageUtils.thumbnailUrl(item.cover,
+                        width: 80, height: 114),
                     fit: BoxFit.cover,
+                    memCacheWidth:
+                        ImageUtils.decodeClamp(80, context, max: 1080),
+                    memCacheHeight:
+                        ImageUtils.decodeClamp(114, context, max: 1080),
                     placeholder: (_, _) => Container(
                       color: theme.colorScheme.surfaceContainer,
                     ),
@@ -590,8 +603,13 @@ class _SearchPanelState extends State<SearchPanel>
                     width: 120,
                     height: 94,
                     child: CachedNetworkImage(
-                      imageUrl: item.imageUrls!.first,
+                      imageUrl: ImageUtils.thumbnailUrl(item.imageUrls!.first,
+                          width: 120, height: 94),
                       fit: BoxFit.cover,
+                      memCacheWidth:
+                          ImageUtils.decodeClamp(120, context, max: 1080),
+                      memCacheHeight:
+                          ImageUtils.decodeClamp(94, context, max: 1080),
                       placeholder: (_, _) => Container(
                         color: theme.colorScheme.surfaceContainer,
                       ),

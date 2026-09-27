@@ -10,6 +10,7 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/date_utils.dart';
 import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
 /// 用户合集/系列视频列表详情页面。
@@ -133,10 +134,15 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(Style.radiusSm),
                           child: CachedNetworkImage(
-                            imageUrl: widget.cover!,
+                            imageUrl: ImageUtils.thumbnailUrl(widget.cover,
+                                width: 110, height: 70),
                             width: 110,
                             height: 70,
                             fit: BoxFit.cover,
+                            memCacheWidth:
+                                ImageUtils.decodeClamp(110, context, max: 1080),
+                            memCacheHeight:
+                                ImageUtils.decodeClamp(70, context, max: 1080),
                             errorBuilder: (_, _, _) => const ColoredBox(color: Colors.grey),
                           ),
                         ),

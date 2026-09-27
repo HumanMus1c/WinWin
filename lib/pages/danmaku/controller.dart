@@ -60,6 +60,10 @@ class WinWinDanmakuController {
   /// 段长度：6 分钟 = 360000ms（B 站约定）。
   static const int segmentLength = 60 * 6 * 1000;
 
+  /// 滑动窗口保留段数：仅保留最近 N 段历史分桶（覆盖常规快退/回拖），
+  /// 更早分桶在每段加载完成时淘汰，避免长视频弹幕常驻内存无界增长。
+  static const int _retainSegments = 2;
+
   /// 进度 → 段号（0-based）。
   static int calcSegment(int progress) => progress ~/ segmentLength;
 
@@ -106,6 +110,7 @@ class WinWinDanmakuController {
           _closed = true;
         }
         handleDanmaku(response.elems);
+        _evictSegmentsBefore(segmentIndex - _retainSegments);
         danmakuLoadedSignal.value++;
         AppLogger.d('DanmakuCtrl', 'segment $segmentIndex loaded: ${response.elems.length} elems, closed=$_closed');
       case Error():
@@ -148,6 +153,15 @@ class WinWinDanmakuController {
       final int pos = e.progress ~/ 100;
       (_dmSegMap[pos] ??= <DanmakuElem>[]).add(e);
     }
+  }
+
+  /// 淘汰 [keepFromSeg] 之前的弹幕分桶，并同步解除对应段的请求标记
+  /// （否则快退回到旧区段时会被 `_requestedSeg` 拦截、不再重新拉取）。
+  void _evictSegmentsBefore(int keepFromSeg) {
+    if (keepFromSeg <= 0) return;
+    final cutoffMs = keepFromSeg * segmentLength;
+    _dmSegMap.removeWhere((bucket, _) => bucket * 100 < cutoffMs);
+    _requestedSeg.removeWhere((seg) => seg < keepFromSeg);
   }
 
   /// 取 [startMs] 到 [endMs] 区间内所有 100ms 分桶应上屏的弹幕。

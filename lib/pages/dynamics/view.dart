@@ -25,6 +25,7 @@ import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/id_utils.dart';
+import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
 /// 推送动态页。
@@ -1765,9 +1766,11 @@ class _DynCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Image.network(
-              node.emojiUrl!,
+              ImageUtils.thumbnailUrl(node.emojiUrl, type: 'emote'),
               width: 20,
               height: 20,
+              cacheWidth: ImageUtils.decodeClamp(20, context, max: 128),
+              cacheHeight: ImageUtils.decodeClamp(20, context, max: 128),
               errorBuilder: (_, _, _) => Text(text),
             ),
           ),

@@ -7,6 +7,7 @@ import 'package:winwin/http/msg.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
+import 'package:winwin/utils/image_utils.dart';
 
 /// 消息流加载器（游标分页）：回复我 / 艾特我 / 点赞我 共用此签名。
 typedef MsgFeedLoader = Future<LoadingState<Map<String, dynamic>>> Function({
@@ -232,7 +233,7 @@ class MsgFeedAvatar extends StatelessWidget {
     return ClipOval(
       child: src != null && src!.isNotEmpty
           ? CachedNetworkImage(
-              imageUrl: src!,
+              imageUrl: ImageUtils.thumbnailUrl(src, type: 'avatar'),
               width: size,
               height: size,
               fit: BoxFit.cover,

@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:winwin/http/init.dart';
+import 'package:winwin/utils/image_utils.dart';
 
 /// 弹出多图画廊全屏浏览弹窗。
 ///
@@ -621,7 +622,12 @@ class _GalleryItemViewState extends State<_GalleryItemView>
             ? widget.thumbnailUrl!
             : widget.rawUrl;
 
-    final provider = CachedNetworkImageProvider(resolveUrl);
+    // 尺寸探测只需比例：限制解码尺寸，避免为解析尺寸而整图解码（等比缩放不影响比例）。
+    final provider = CachedNetworkImageProvider(
+      resolveUrl,
+      maxWidth: 256,
+      maxHeight: 256,
+    );
     final stream = provider.resolve(ImageConfiguration.empty);
     late ImageStreamListener listener;
     listener = ImageStreamListener(
@@ -744,6 +750,13 @@ class _GalleryItemViewState extends State<_GalleryItemView>
               child: CachedNetworkImage(
                 imageUrl: widget.rawUrl,
                 fit: BoxFit.contain,
+                // 全屏大图按屏幕尺寸限制解码（而非原图），并为 6× 放大保留余量。
+                memCacheWidth: ImageUtils.decodeClamp(
+                    containerSize.width, context,
+                    max: 2048),
+                memCacheHeight: ImageUtils.decodeClamp(
+                    containerSize.height, context,
+                    max: 2048),
                 fadeInDuration: const Duration(milliseconds: 180),
                 fadeOutDuration: Duration.zero,
                 placeholder: (context, _) {
@@ -753,6 +766,12 @@ class _GalleryItemViewState extends State<_GalleryItemView>
                     return CachedNetworkImage(
                       imageUrl: widget.thumbnailUrl!,
                       fit: BoxFit.contain,
+                      memCacheWidth: ImageUtils.decodeClamp(
+                          containerSize.width, context,
+                          max: 1080),
+                      memCacheHeight: ImageUtils.decodeClamp(
+                          containerSize.height, context,
+                          max: 1080),
                       fadeInDuration: Duration.zero,
                       fadeOutDuration: Duration.zero,
                       placeholder: (context, _) => const SizedBox.shrink(),

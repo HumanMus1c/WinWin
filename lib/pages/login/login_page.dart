@@ -834,6 +834,8 @@ class _QRLoginTabState extends State<_QRLoginTab> {
                   'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${Uri.encodeComponent(_qrUrl!)}',
                   width: 240,
                   height: 240,
+                  cacheWidth: 480,
+                  cacheHeight: 480,
                   errorBuilder: (_, _, _) => const SizedBox(
                     width: 240,
                     height: 240,

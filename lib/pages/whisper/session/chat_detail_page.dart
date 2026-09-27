@@ -15,6 +15,7 @@ import 'package:winwin/pages/whisper/session/session_settings_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/id_utils.dart';
+import 'package:winwin/utils/image_utils.dart';
 
 /// 聊天详情入口（阶段 D）。
 ///
@@ -459,10 +460,19 @@ class _ChatBubble extends StatelessWidget {
   void _previewImage(BuildContext context, String url) {
     showDialog<void>(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: InteractiveViewer(child: Image.network(url)),
-      ),
+      builder: (ctx) {
+        final size = MediaQuery.sizeOf(ctx);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: InteractiveViewer(
+            child: Image.network(
+              url,
+              cacheWidth: ImageUtils.decodeClamp(size.width, ctx, max: 2048),
+              cacheHeight: ImageUtils.decodeClamp(size.height, ctx, max: 2048),
+            ),
+          ),
+        );
+      },
     );
   }
 

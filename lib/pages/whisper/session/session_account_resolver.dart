@@ -20,6 +20,24 @@ abstract final class SessionAccountResolver {
   /// 特别关注 mid 全集缓存（来自 /x/relation/tag?tagid=-10，null=未拉取）。
   static Set<int>? _specialMids;
 
+  /// 缓存容量上限：会话用户/特别关注缓存随浏览历史单调增长，需淘汰最久未插入项。
+  static const int _maxAccountCache = 500;
+  static const int _maxSpecialCache = 500;
+
+  static void _putAccount(int mid, String name, String face) {
+    _cache[mid] = (name: name, face: face);
+    while (_cache.length > _maxAccountCache) {
+      _cache.remove(_cache.keys.first);
+    }
+  }
+
+  static void _putSpecial(int mid, bool value) {
+    _specialCache[mid] = value;
+    while (_specialCache.length > _maxSpecialCache) {
+      _specialCache.remove(_specialCache.keys.first);
+    }
+  }
+
   /// 头像 URL 归一化：`//` 协议相对地址补 https，http 升级为 https。
   static String normalizeAvatarUrl(String? raw) {
     final value = raw?.trim() ?? '';
@@ -93,7 +111,7 @@ abstract final class SessionAccountResolver {
           final name = card['name']?.toString() ?? '';
           final face = normalizeAvatarUrl(card['face']?.toString());
           if (name.isEmpty && face.isEmpty) continue;
-          _cache[mid] = (name: name, face: face);
+          _putAccount(mid, name, face);
         }
       }
     }
@@ -107,7 +125,7 @@ abstract final class SessionAccountResolver {
         final name = response['name']?.toString() ?? '';
         final face = normalizeAvatarUrl(response['face']?.toString());
         if (name.isNotEmpty || face.isNotEmpty) {
-          _cache[mid] = (name: name, face: face);
+          _putAccount(mid, name, face);
         }
       }
     }
@@ -181,7 +199,7 @@ abstract final class SessionAccountResolver {
     }
     _specialMids = mids;
     for (final mid in mids) {
-      _specialCache[mid] = true;
+      _putSpecial(mid, true);
     }
     return mids;
   }
@@ -207,7 +225,7 @@ abstract final class SessionAccountResolver {
       var updated = false;
       for (final mid in pending) {
         final special = mids.contains(mid);
-        _specialCache[mid] = special;
+        _putSpecial(mid, special);
         if (special) updated = true;
       }
       return updated;
@@ -232,7 +250,7 @@ abstract final class SessionAccountResolver {
       );
       for (final r in results) {
         if (r == null) continue;
-        _specialCache[r.mid] = r.special;
+        _putSpecial(r.mid, r.special);
         if (r.special) updated = true;
       }
     }

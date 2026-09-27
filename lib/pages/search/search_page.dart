@@ -14,6 +14,7 @@ import 'package:winwin/pages/search/services/search_history_service.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/image_utils.dart';
 
 /// 搜索页面 — 搜索框 + 热搜 + 历史 + 联想建议。
 ///
@@ -324,8 +325,13 @@ class _SearchPageState extends State<SearchPage> {
                       height: 24,
                       child: user.face.isNotEmpty
                           ? CachedNetworkImage(
-                              imageUrl: user.face,
+                              imageUrl: ImageUtils.thumbnailUrl(user.face,
+                                  type: 'avatar'),
                               fit: BoxFit.cover,
+                              memCacheWidth:
+                                  ImageUtils.decodeClamp(24, context, max: 256),
+                              memCacheHeight:
+                                  ImageUtils.decodeClamp(24, context, max: 256),
                               placeholder: (_, _) => Container(
                                 color: cs.surfaceContainerHigh,
                               ),

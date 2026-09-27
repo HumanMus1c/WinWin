@@ -23,6 +23,7 @@ import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 import 'package:winwin/ui/profile/widgets/profile_sections.dart';
+import 'package:winwin/utils/image_utils.dart';
 
 /// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术按 [UiStyle] 三风格切换。
 ///
@@ -270,7 +271,12 @@ class _UserInfoSection extends StatelessWidget {
                     clipBehavior: Clip.antiAlias,
                     child: isLogin && (info?.face?.isNotEmpty ?? false)
                         ? CachedNetworkImage(
-                            imageUrl: info!.face!,
+                            imageUrl: ImageUtils.thumbnailUrl(info!.face!,
+                                type: 'avatar'),
+                            memCacheWidth:
+                                ImageUtils.decodeClamp(55, context, max: 256),
+                            memCacheHeight:
+                                ImageUtils.decodeClamp(55, context, max: 256),
                             placeholder: (_, _) => const ColoredBox(
                               color: Colors.grey,
                               child: SizedBox.expand(),

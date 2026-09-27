@@ -21,6 +21,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
 import 'package:winwin/models/fav/fav_models.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
+import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/pages/article/article_page.dart';
 import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/dynamics/detail_page.dart';
@@ -753,8 +754,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       children: [
         if (topPhoto != null && topPhoto.isNotEmpty)
           CachedNetworkImage(
-            imageUrl: topPhoto,
+            imageUrl: ImageUtils.thumbnailUrl(topPhoto, type: 'background'),
             fit: BoxFit.cover,
+            memCacheWidth: ImageUtils.decodeClamp(
+                MediaQuery.sizeOf(context).width, context,
+                max: 2048),
             errorBuilder: (_, _, _) => _defaultHeaderGradient(theme),
           )
         else
@@ -837,8 +841,13 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     clipBehavior: Clip.antiAlias,
                     child: (card?.face?.isNotEmpty ?? false)
                         ? CachedNetworkImage(
-                            imageUrl: card!.face!,
+                            imageUrl: ImageUtils.thumbnailUrl(card!.face,
+                                type: 'avatar'),
                             fit: BoxFit.cover,
+                            memCacheWidth:
+                                ImageUtils.decodeClamp(78, context, max: 256),
+                            memCacheHeight:
+                                ImageUtils.decodeClamp(78, context, max: 256),
                             placeholder: (_, _) => const SkeletonBox(),
                             errorBuilder: (_, _, _) => const Icon(Icons.person, size: 40),
                           )
@@ -1170,8 +1179,13 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 clipBehavior: Clip.antiAlias,
                 child: (items[i].face?.isNotEmpty ?? false)
                     ? CachedNetworkImage(
-                        imageUrl: items[i].face!,
+                        imageUrl: ImageUtils.thumbnailUrl(items[i].face,
+                            type: 'avatar'),
                         fit: BoxFit.cover,
+                        memCacheWidth:
+                            ImageUtils.decodeClamp(22, context, max: 256),
+                        memCacheHeight:
+                            ImageUtils.decodeClamp(22, context, max: 256),
                         errorBuilder: (_, _, _) => const ColoredBox(color: Colors.grey),
                       )
                     : const ColoredBox(color: Colors.grey),
@@ -2419,9 +2433,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Image.network(
-              node.emojiUrl!,
+              ImageUtils.thumbnailUrl(node.emojiUrl, type: 'emote'),
               width: 20,
               height: 20,
+              cacheWidth: ImageUtils.decodeClamp(20, context, max: 128),
+              cacheHeight: ImageUtils.decodeClamp(20, context, max: 128),
               errorBuilder: (_, _, _) => Text(text),
             ),
           ),
