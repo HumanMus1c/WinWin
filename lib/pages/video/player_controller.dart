@@ -395,6 +395,10 @@ class WinWinPlayerController {
   /// 连环误触发归位（REALIGN）直至 give-up 误重挂（AUDIO-RECOVER）。
   int _lastValidAudioPosMs = -1;
 
+  /// 上一次被防护的原始读数（第五轮：同值不重复打印 `AUDIO-POS-SANITIZE`，
+  /// 避免 100ms 一条刷屏；恢复有效后置 -2）。
+  int _lastSanitizeRaw = -2;
+
   /// 漂移硬定位冷却截止时间（R3：避免每秒一次硬定位风暴）。
   DateTime? _driftHardCooldownUntil;
 
@@ -403,6 +407,9 @@ class WinWinPlayerController {
 
   /// 连续自愈失败重试计数。
   int _stallRecoveryRetryCount = 0;
+
+  /// 重挂放弃（≥3 次失败）后是否已记录日志（第五轮 F1：避免每 10s 空转重复打印）。
+  bool _stallRecoveryGiveUpLogged = false;
 
   /// 视频可用 CDN 候选 URL 列表（已过滤 MCDN/PCDN）。
   List<String> _videoCdnCandidates = const [];
@@ -860,6 +867,7 @@ class WinWinPlayerController {
               _bufferingStallMs = 0;
             }
             _stallRecoveryRetryCount = 0;
+            _stallRecoveryGiveUpLogged = false; // 第五轮：媒体就绪 ⇒ 恢复重试额度
             AppLogger.i(
               'PlayerController',
               'onMediaStatus: buffered (duration=${player.mediaInfo.duration}ms)',
@@ -1827,13 +1835,25 @@ class WinWinPlayerController {
           !isSeekRecent) {
         // 10s 真卡死（第二轮回调）：paused 现为缓冲冻结的常态，故恢复「无缓冲
         // 水位」单一判据；真死链（水位 0 且停滞 10s）仍会重挂兜底。
+        // 第五轮（F1）：失败重挂按 `_stallRecoveryRetryCount` 限次（≤3）——超限
+        // 停手保持转圈等待网络恢复/用户操作，避免每 10s 空转重挂。
         if (_bufferingStallMs >= 10000 && player.buffered() <= 0) {
           _bufferingStallMs = 0;
-          AppLogger.w(
-            'PlayerController',
-            'Buffering stall detected (10s) at ${posMs}ms, triggering stream recovery',
-          );
-          unawaited(_recoverStalledStream());
+          if (_stallRecoveryRetryCount >= 3) {
+            if (!_stallRecoveryGiveUpLogged) {
+              _stallRecoveryGiveUpLogged = true;
+              AppLogger.w(
+                'PlayerController',
+                'Stream stall recovery give-up after $_stallRecoveryRetryCount attempts — keep buffering until network/user action',
+              );
+            }
+          } else {
+            AppLogger.w(
+              'PlayerController',
+              'Buffering stall detected (10s) at ${posMs}ms, triggering stream recovery',
+            );
+            unawaited(_recoverStalledStream());
+          }
         }
       } else if (!_userIntentPlaying || isSeekRecent) {
         _bufferingStallMs = 0;
@@ -2043,6 +2063,10 @@ class WinWinPlayerController {
       if (!ready.value || duration.value <= Duration.zero) return;
     }
     await player.seek(position: position.inMilliseconds);
+    // 第五轮（F4）：起播 seek 纳入「seek recent」3s 保护窗（与 _openWithQuality 一致）
+    // ——杜绝起播瞬态被缓冲冻结/进入判定误触发（09-27 14:32/14:53 三次实证：
+    // resumeTo 路径的起播会被冻结 1.3~1.6s）。
+    _lastSeekFinishTime = DateTime.now();
   }
 
   /// 通过 VideoLoadPolicy 解析首次加载画质。
@@ -2102,6 +2126,15 @@ class WinWinPlayerController {
     if (_loading) return;
     _loading = true;
     try {
+      // 第五轮（F2「跳 2 秒」修复）：加载期间**冻结画面位置**——HTTP 拉流+prepare 的
+      // 1~3s 内若播放继续推进，「用户看到的位置」与「恢复起点」会差 1~3 秒
+      // （09-27 14:31 切画质实证：最后画面 200.2s → 恢复起播 205.0s）。
+      // 立即暂停后，加载完成时按下方 `autoplay` 逻辑恢复播放。
+      if (player.state == mdk.PlaybackState.playing) {
+        try {
+          player.state = mdk.PlaybackState.paused;
+        } catch (_) {}
+      }
       // 不手动 state = stopped：native setMedia(url 变化) 会自动停止旧播放并
       // 重置轨道（见 generated_bindings.dart 中 setMedia 注释）。手动 stopped
       // 反而可能导致 native loaded 标志未清除，prepare 误判 "already loaded"
@@ -2669,14 +2702,25 @@ class WinWinPlayerController {
         player.activeAudioTracks = const [0];
       }
 
-      final ret = await player.prepare();
+      // 第五轮（F1 防卡死）：prepare/seek 加超时——弱网下实测 prepare 可挂 ~2 分钟、
+      // 随后 seek 卡死（09-27 14:39 实证：卡在 stopped/loading ≥4 分 43 秒，期间任何
+      // 自愈都被 `_isRecovering` 门禁排除 ⇒ 无逃生路径）。超时记为 -99 返回。
+      var canPlay = true;
+      final ret = await player
+          .prepare()
+          .timeout(const Duration(seconds: 15), onTimeout: () => -99);
       if (_disposed) return;
       if (ret >= 0) {
         if (resumePosMs > 0) {
-          await player.seek(position: resumePosMs);
-          // 第九轮 N1：若此刻媒体尚未 buffered（弱网重载中），该 seek 会被底层丢弃
-          // ⇒ 登记待恢复位置，由 onMediaStatus.buffered 事件再执行一次（已有机制）。
-          if (!player.mediaStatus.test(mdk.MediaStatus.buffered)) {
+          final sret = await player
+              .seek(position: resumePosMs)
+              .timeout(const Duration(seconds: 10), onTimeout: () => -99);
+          if (sret < 0) {
+            // seek 失败/超时：不得放行播放（否则可能从 0 起播）。
+            canPlay = false;
+          } else if (!player.mediaStatus.test(mdk.MediaStatus.buffered)) {
+            // 第九轮 N1：若此刻媒体尚未 buffered（弱网重载中），该 seek 会被底层丢弃
+            // ⇒ 登记待恢复位置，由 onMediaStatus.buffered 事件再执行一次（已有机制）。
             _pendingSeek = resumeDuration;
             SeekProbe.note(
               'RECOVER-PENDING resume=$resumePosMs status=${player.mediaStatus}',
@@ -2684,26 +2728,46 @@ class WinWinPlayerController {
           }
         }
       } else {
+        // prepare 失败/超时：同样不放行播放。
+        canPlay = false;
         if (resumePosMs > 0) {
           _pendingSeek = resumeDuration;
         }
       }
 
-      // 重挂后恢复基速（2026-09-26 自审修正）：否则倍速会在自愈后丢失，
-      // UI 显示 2x 而实播 1x ⇒ 音画差还会反向拉开。
-      player.playbackRate = playbackSpeed.value > 0
-          ? playbackSpeed.value
-          : 1.0;
-      player.state = mdk.PlaybackState.playing;
-      buffering.value = false;
-      _bufferingStallMs = 0;
-      _lastPolledPosMs = resumePosMs;
-      // 媒体已重挂：流速窗口作废（旧样本属旧时间轴）。
-      _resetFlowWindow();
-      AppLogger.w(
-        'PlayerController',
-        'Stream stall recovery successfully executed at ${resumeDuration.inSeconds}s',
-      );
+      if (canPlay) {
+        // 重挂后恢复基速（2026-09-26 自审修正）：否则倍速会在自愈后丢失，
+        // UI 显示 2x 而实播 1x ⇒ 音画差还会反向拉开。
+        player.playbackRate = playbackSpeed.value > 0
+            ? playbackSpeed.value
+            : 1.0;
+        player.state = mdk.PlaybackState.playing;
+        buffering.value = false;
+        _bufferingStallMs = 0;
+        _lastPolledPosMs = resumePosMs;
+        // 媒体已重挂：流速窗口作废（旧样本属旧时间轴）。
+        _resetFlowWindow();
+        SeekProbe.note('RECOVER done ret=$ret resume=$resumePosMs');
+        AppLogger.w(
+          'PlayerController',
+          'Stream stall recovery successfully executed at ${resumeDuration.inSeconds}s',
+        );
+      } else {
+        // 第五轮（F1）：失败路径**保持缓冲态**（转圈）——不得假装在播（旧逻辑
+        // 会 `playing` + `buffering=false`，UI 显示播放中但画面不动，更隐蔽）。
+        // 由 10s 看门狗按 `_stallRecoveryRetryCount`（≤3 次）继续重试；超限后
+        // 停手，保持转圈等待网络恢复/用户操作。
+        buffering.value = true;
+        _bufferingStallMs = 0;
+        SeekProbe.note(
+          'RECOVER hold ret=$ret resume=$resumePosMs '
+          'attempts=$_stallRecoveryRetryCount',
+        );
+        AppLogger.w(
+          'PlayerController',
+          'Stream stall recovery deferred (ret=$ret, attempts=$_stallRecoveryRetryCount) — keep buffering',
+        );
+      }
     } catch (e, s) {
       AppLogger.e(
         'PlayerController',
@@ -2716,19 +2780,31 @@ class WinWinPlayerController {
     }
   }
 
-  /// 音频 position 读数防护（第四轮，日志分析修复）。
+  /// 音频 position 读数防护（第四轮，日志分析修复；第五轮修正误伤）。
   ///
-  /// 陈旧读数（`raw < 1000ms 且视频位置 > 5000ms 且非起播对齐窗口`）一律替换为
-  /// **上次有效位置**——判定相当于「位置未变」（保持现状），不再产生假漂移；
-  /// 尚无有效值（-1）时返回 -1，调用方应跳过本 tick 判定。
+  /// 陈旧读数（`raw < 1000ms 且视频位置 > 5000ms 且**音频暂停态**且非起播对齐窗口`）
+  /// 一律替换为**上次有效位置**——判定相当于「位置未变」（保持现状），不再产生假
+  /// 漂移；尚无有效值（-1）时返回 -1，调用方应跳过本 tick 判定。
+  /// 第五轮（F3）：增加「暂停态」条件——playing 状态下的小位置是**真实值**
+  /// （音频从 0 起播待对齐），必须交漂移判定正常处理（09-27 14:53 实证：25 条误防护
+  /// 使 1163s 错位的对齐延后约 2s）。
   int _sanitizeAudioPos(int rawPosMs) {
     if (rawPosMs < 0) return _lastValidAudioPosMs;
+    final ap = _audioPlayer;
     if (rawPosMs < 1000 &&
         position.value.inMilliseconds > 5000 &&
-        !_audioStartAligning) {
-      SeekProbe.note('AUDIO-POS-SANITIZE raw=$rawPosMs stale→$_lastValidAudioPosMs');
+        !_audioStartAligning &&
+        ap != null &&
+        ap.state == mdk.PlaybackState.paused) {
+      if (_lastSanitizeRaw != rawPosMs) {
+        _lastSanitizeRaw = rawPosMs;
+        SeekProbe.note(
+          'AUDIO-POS-SANITIZE raw=$rawPosMs stale→$_lastValidAudioPosMs',
+        );
+      }
       return _lastValidAudioPosMs;
     }
+    _lastSanitizeRaw = -2;
     _lastValidAudioPosMs = rawPosMs;
     return rawPosMs;
   }
@@ -2763,7 +2839,17 @@ class WinWinPlayerController {
       }
       final p = _player;
       if (p == null || _disposed || _audioPlayer != ap) return;
-      final target = p.position;
+      // 第五轮（F5）：主实例起播定位可能尚未生效（position 仍为 0——09-27 14:53:10
+      // 实证：以 target=0 提前放弃对齐，音频滞留 0 起播，靠兜底机制救回）。
+      // 等待其就绪（最多约 2s、每 150ms 重读）再判定是否放弃。
+      var target = p.position;
+      for (var i = 0; i < 14 && target <= 0; i++) {
+        if (_disposed || _audioPlayer != ap) return;
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+        final p2 = _player;
+        if (p2 == null) return;
+        target = p2.position;
+      }
       final cur = ap.position;
       if (target <= 0 || (cur - target).abs() < 1500) return;
       SeekProbe.note('AUDIO-START-ALIGN video=$target audio=$cur');
