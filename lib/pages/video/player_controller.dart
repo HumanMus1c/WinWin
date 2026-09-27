@@ -871,8 +871,14 @@ class WinWinPlayerController {
               buffering.value = false;
               _bufferingStallMs = 0;
             }
-            _stallRecoveryRetryCount = 0;
-            _stallRecoveryGiveUpLogged = false; // 第五轮：媒体就绪 ⇒ 恢复重试额度
+            // 第七轮：仅「非重挂期间」的媒体就绪才重置重试额度——重挂自身的
+            // setMedia 也会触发 buffered 事件，旧写法导致失败计数被清零
+            //（`attempts=0` 实证）、「≤3 次停手」护栏失效（此前由 30s 冷却兜底）；
+            // 重挂成功路径另有显式重置。
+            if (!_isRecovering) {
+              _stallRecoveryRetryCount = 0;
+              _stallRecoveryGiveUpLogged = false;
+            }
             AppLogger.i(
               'PlayerController',
               'onMediaStatus: buffered (duration=${player.mediaInfo.duration}ms)',
@@ -2282,7 +2288,10 @@ class WinWinPlayerController {
       _userIntentPlaying = autoplay;
       _lastPolledPosMs = (start ?? Duration.zero).inMilliseconds;
       _bufferingStallMs = 0;
+      // 第七轮：换源是新开始——重挂重试额度/放弃标记/失败冷却一并复位。
       _stallRecoveryRetryCount = 0;
+      _stallRecoveryGiveUpLogged = false;
+      _stallRecoveryCooldownUntil = null;
       // 换源后流速窗口作废（媒体时间轴与期望都变了）——未知=乐观，不影响加载解除。
       _resetFlowWindow();
 
@@ -2773,6 +2782,9 @@ class WinWinPlayerController {
         _lastPolledPosMs = resumePosMs;
         // 第六轮：重挂成功 ⇒ 解除失败冷却。
         _stallRecoveryCooldownUntil = null;
+        // 第七轮：重挂成功 ⇒ 显式重置重试额度（buffered 事件在重挂期间不再代劳）。
+        _stallRecoveryRetryCount = 0;
+        _stallRecoveryGiveUpLogged = false;
         // 媒体已重挂：流速窗口作废（旧样本属旧时间轴）。
         _resetFlowWindow();
         SeekProbe.note('RECOVER done ret=$ret resume=$resumePosMs');
