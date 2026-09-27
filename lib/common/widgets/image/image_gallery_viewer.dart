@@ -24,25 +24,62 @@ void showImageGallery(
   if (imageUrls.isEmpty) return;
   final validIndex = initialIndex.clamp(0, imageUrls.length - 1);
   Navigator.of(context).push(
-    PageRouteBuilder<void>(
-      opaque: false,
-      barrierDismissible: true,
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 280),
-      reverseTransitionDuration: const Duration(milliseconds: 240),
-      pageBuilder: (context, _, _) => ImageGalleryViewer(
+    _ImageGalleryRoute(
+      builder: (context) => ImageGalleryViewer(
         imageUrls: imageUrls,
         thumbnailUrls: thumbnailUrls,
         initialIndex: validIndex,
       ),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: animation.drive(CurveTween(curve: Curves.easeOutCubic)),
-          child: child,
-        );
-      },
     ),
   );
+}
+
+/// 图片画廊专用路由：以 [PopupRoute]（而非 PageRoute）承载。
+///
+/// 项目的 [RouteObserver] 类型为 `RouteObserver<PageRoute<dynamic>>`，仅当新压栈
+/// 路由同为 PageRoute 时才向前一页派发 `didPushNext`。画廊改由 PopupRoute 承载后
+/// 不再触发播放页的"离页暂停 / 卸载监听"逻辑，预览图片不会打断视频播放；
+/// 关闭画廊时同理不触发 `didPopNext` 的重新加载与弹幕重建。
+class _ImageGalleryRoute extends PopupRoute<void> {
+  _ImageGalleryRoute({required this.builder});
+
+  final WidgetBuilder builder;
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 280);
+
+  @override
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 240);
+
+  @override
+  Color? get barrierColor => Colors.transparent;
+
+  @override
+  bool get barrierDismissible => true;
+
+  @override
+  String get barrierLabel => '关闭图片预览';
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) =>
+      builder(context);
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return FadeTransition(
+      opacity: animation.drive(CurveTween(curve: Curves.easeOutCubic)),
+      child: child,
+    );
+  }
 }
 
 /// 多图画廊全屏查看组件（全面对标 PiliPlus GalleryViewer 手势体验）。
@@ -86,7 +123,6 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
   late int _currentIndex;
   final FocusNode _focusNode = FocusNode();
 
-  bool _showControls = true;
   bool _isZoomed = false;
 
   // 滑动关闭手势状态（基于 ValueNotifier，拖拽时无需触发 setState 导致整树高频重构）
@@ -363,9 +399,6 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
             }
           },
           onTapOutside: () => Navigator.of(context).pop(),
-          onToggleControls: () {
-            setState(() => _showControls = !_showControls);
-          },
           onLongPress: () => _showActionMenu(context, rawUrl),
         );
       },
@@ -409,7 +442,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   ),
 
               // 桌面端左翻页箭头
-              if (_showControls && total > 1 && _currentIndex > 0)
+              if (total > 1 && _currentIndex > 0)
                 Positioned(
                   left: 24,
                   top: 0,
@@ -430,7 +463,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                 ),
 
               // 桌面端右翻页箭头
-              if (_showControls && total > 1 && _currentIndex < total - 1)
+              if (total > 1 && _currentIndex < total - 1)
                 Positioned(
                   right: 24,
                   top: 0,
@@ -451,108 +484,107 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                 ),
 
               // 顶部导航栏（图片序号指示器、保存、复制、关闭）
-              if (_showControls)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.7),
-                          Colors.transparent,
-                        ],
-                      ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.7),
+                        Colors.transparent,
+                      ],
                     ),
-                    child: SafeArea(
-                      child: Row(
-                        children: [
-                          // 序号指示器
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
+                  ),
+                  child: SafeArea(
+                    child: Row(
+                      children: [
+                        // 序号指示器
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 0.5,
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                width: 0.5,
+                          ),
+                          child: Text(
+                            '${_currentIndex + 1} / $total',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        // 保存到本地
+                        IconButton(
+                          style: IconButton.styleFrom(
+                            backgroundColor:
+                                Colors.black.withValues(alpha: 0.4),
+                            foregroundColor: Colors.white,
+                            hoverColor: Colors.black.withValues(alpha: 0.6),
+                          ),
+                          icon: const Icon(Icons.download_rounded, size: 18),
+                          tooltip: '保存图片',
+                          onPressed: () {
+                            final curUrl =
+                                getRawUrl(widget.imageUrls[_currentIndex]);
+                            _saveImage(context, curUrl);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        // 复制图片链接
+                        IconButton(
+                          style: IconButton.styleFrom(
+                            backgroundColor:
+                                Colors.black.withValues(alpha: 0.4),
+                            foregroundColor: Colors.white,
+                            hoverColor: Colors.black.withValues(alpha: 0.6),
+                          ),
+                          icon: const Icon(Icons.copy_rounded, size: 18),
+                          tooltip: '复制图片链接',
+                          onPressed: () {
+                            final curUrl =
+                                getRawUrl(widget.imageUrls[_currentIndex]);
+                            Clipboard.setData(ClipboardData(text: curUrl));
+                            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                              const SnackBar(
+                                content: Text('已复制图片链接到剪贴板'),
+                                duration: Duration(seconds: 1),
                               ),
-                            ),
-                            child: Text(
-                              '${_currentIndex + 1} / $total',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1,
-                              ),
-                            ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        // 关闭按钮
+                        IconButton(
+                          style: IconButton.styleFrom(
+                            backgroundColor:
+                                Colors.black.withValues(alpha: 0.4),
+                            foregroundColor: Colors.white,
+                            hoverColor: Colors.black.withValues(alpha: 0.6),
                           ),
-                          const Spacer(),
-                          // 保存到本地
-                          IconButton(
-                            style: IconButton.styleFrom(
-                              backgroundColor:
-                                  Colors.black.withValues(alpha: 0.4),
-                              foregroundColor: Colors.white,
-                              hoverColor: Colors.black.withValues(alpha: 0.6),
-                            ),
-                            icon: const Icon(Icons.download_rounded, size: 18),
-                            tooltip: '保存图片',
-                            onPressed: () {
-                              final curUrl =
-                                  getRawUrl(widget.imageUrls[_currentIndex]);
-                              _saveImage(context, curUrl);
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          // 复制图片链接
-                          IconButton(
-                            style: IconButton.styleFrom(
-                              backgroundColor:
-                                  Colors.black.withValues(alpha: 0.4),
-                              foregroundColor: Colors.white,
-                              hoverColor: Colors.black.withValues(alpha: 0.6),
-                            ),
-                            icon: const Icon(Icons.copy_rounded, size: 18),
-                            tooltip: '复制图片链接',
-                            onPressed: () {
-                              final curUrl =
-                                  getRawUrl(widget.imageUrls[_currentIndex]);
-                              Clipboard.setData(ClipboardData(text: curUrl));
-                              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                                const SnackBar(
-                                  content: Text('已复制图片链接到剪贴板'),
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          // 关闭按钮
-                          IconButton(
-                            style: IconButton.styleFrom(
-                              backgroundColor:
-                                  Colors.black.withValues(alpha: 0.4),
-                              foregroundColor: Colors.white,
-                              hoverColor: Colors.black.withValues(alpha: 0.6),
-                            ),
-                            icon: const Icon(Icons.close_rounded, size: 20),
-                            tooltip: '关闭 (Esc)',
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ],
-                      ),
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          tooltip: '关闭 (Esc)',
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+              ),
               ],
             ),
           );
@@ -573,7 +605,6 @@ class _GalleryItemView extends StatefulWidget {
     this.thumbnailUrl,
     required this.onZoomChanged,
     required this.onTapOutside,
-    required this.onToggleControls,
     required this.onLongPress,
   });
 
@@ -581,7 +612,6 @@ class _GalleryItemView extends StatefulWidget {
   final String? thumbnailUrl;
   final ValueChanged<bool> onZoomChanged;
   final VoidCallback onTapOutside;
-  final VoidCallback onToggleControls;
   final VoidCallback onLongPress;
 
   @override
@@ -732,11 +762,9 @@ class _GalleryItemViewState extends State<_GalleryItemView>
           onLongPress: widget.onLongPress,
           onSecondaryTapUp: (_) => widget.onLongPress(),
           onTapUp: (details) {
-            // 精确判断是否点击在图片实际显示区域以外
+            // 精确判断是否点击在图片实际显示区域以外（仅图片外黑边点击关闭）
             if (!_isZoomed && !renderedRect.contains(details.localPosition)) {
               widget.onTapOutside();
-            } else {
-              widget.onToggleControls();
             }
           },
           child: Center(
