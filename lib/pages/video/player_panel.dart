@@ -34,6 +34,27 @@ Duration _clampDuration(Duration value, Duration min, Duration max) {
   return value;
 }
 
+/// 控制条深色弹出菜单样式（MenuAnchor）：对齐原 PopupMenuButton 的
+/// `0xE61A1A1A + white12 描边 + radiusSm` 视觉。
+MenuStyle _darkMenuStyle() => MenuStyle(
+  backgroundColor: const WidgetStatePropertyAll(Color(0xE61A1A1A)),
+  elevation: const WidgetStatePropertyAll(8),
+  shape: WidgetStatePropertyAll(
+    RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(Style.radiusSm),
+      side: const BorderSide(color: Colors.white12),
+    ),
+  ),
+  padding: const WidgetStatePropertyAll(
+    EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+  ),
+);
+
+/// 深色菜单项 hover 高亮（白色 12%，对齐控制条 HoverContainer）。
+const ButtonStyle _darkMenuItemStyle = ButtonStyle(
+  overlayColor: WidgetStatePropertyAll(Color(0x1FFFFFFF)),
+);
+
 /// BiliPai 风格的播放器面板。
 ///
 /// 主体为 mdk 注册的 Flutter `Texture`（黑色背景、按视频帧宽高比居中，
@@ -1310,18 +1331,13 @@ class _PlayerPanelState extends State<PlayerPanel> {
         final labels = c.qualityLabels;
         final current = c.currentQualityIndex;
         if (labels.isEmpty) return const SizedBox.shrink();
-        return PopupMenuButton<int>(
-          tooltip: '画质',
-          onSelected: c.switchQuality,
-          color: const Color(0xE61A1A1A),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Style.radiusSm),
-            side: const BorderSide(color: Colors.white12),
-          ),
-          itemBuilder: (context) => [
+        return MenuAnchor(
+          style: _darkMenuStyle(),
+          menuChildren: [
             for (int i = 0; i < labels.length; i++)
-              PopupMenuItem<int>(
-                value: i,
+              MenuItemButton(
+                style: _darkMenuItemStyle,
+                onPressed: () => c.switchQuality(i),
                 child: Text(
                   labels[i],
                   style: TextStyle(
@@ -1333,22 +1349,28 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ),
               ),
           ],
-          child: HoverContainer(
-            borderRadius: 6.0,
-            padding: const EdgeInsets.symmetric(
-              horizontal: Style.sm,
-              vertical: 6,
-            ),
-            hoverColor: Colors.white.withValues(alpha: 0.12),
-            child: ContrastText(
-              (current >= 0 && current < labels.length)
-                  ? labels[current]
-                  : '画质',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.85),
-                fontSize: 12,
+          builder: (context, controller, child) => Tooltip(
+            message: '画质',
+            child: HoverContainer(
+              onTap: () => controller.isOpen
+                  ? controller.close()
+                  : controller.open(),
+              borderRadius: 6.0,
+              padding: const EdgeInsets.symmetric(
+                horizontal: Style.sm,
+                vertical: 6,
               ),
-              shadows: ContrastStyle.glyphShadows,
+              hoverColor: Colors.white.withValues(alpha: 0.12),
+              child: ContrastText(
+                (current >= 0 && current < labels.length)
+                    ? labels[current]
+                    : '画质',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: 12,
+                ),
+                shadows: ContrastStyle.glyphShadows,
+              ),
             ),
           ),
         );
@@ -1477,168 +1499,153 @@ class _PlayerPanelState extends State<PlayerPanel> {
         final codec = c.audioCodecLabel;
         if (codec == null) return const SizedBox.shrink();
         final tracks = c.audioTracks;
-        return PopupMenuButton<String>(
-          tooltip: '音频设置',
-          color: const Color(0xE61A1A1A),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Style.radiusSm),
-            side: const BorderSide(color: Colors.white12),
-          ),
-          onSelected: (value) {
-            if (value.startsWith('__norm:')) {
-              final mode = value.substring('__norm:'.length);
-              c.setAudioNormalize(mode);
-              setState(() {});
-            } else {
-              final idx = int.tryParse(value);
-              if (idx != null) c.switchAudioTrack(idx);
-            }
-          },
-          itemBuilder: (context) {
-            final active = c.activeAudioTrackIndices;
-            final activeIndex = active.isNotEmpty ? active.first : -1;
-            final currentNorm = Pref.audioNormalization;
-            return [
-              if (tracks.length > 1) ...[
-                for (final t in tracks)
-                  PopupMenuItem<String>(
-                    value: t.index.toString(),
-                    child: Row(
-                      children: [
-                        Icon(
-                          t.index == activeIndex
-                              ? AppIcons.check(context)
-                              : AppIcons.radio(context, selected: false),
-                          size: 18,
-                          color: t.index == activeIndex ? biliBlue : null,
-                        ),
-                        const SizedBox(width: Style.xs),
-                        Flexible(
-                          child: Text(
-                            t.title,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: t.index == activeIndex
-                                  ? biliBlue
-                                  : Colors.white70,
-                              fontWeight: t.index == activeIndex
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ),
-                      ],
+        final active = c.activeAudioTrackIndices;
+        final activeIndex = active.isNotEmpty ? active.first : -1;
+        final currentNorm = Pref.audioNormalization;
+        return MenuAnchor(
+          style: _darkMenuStyle(),
+          menuChildren: [
+            if (tracks.length > 1) ...[
+              for (final t in tracks)
+                MenuItemButton(
+                  style: _darkMenuItemStyle,
+                  onPressed: () => c.switchAudioTrack(t.index),
+                  leadingIcon: Icon(
+                    t.index == activeIndex
+                        ? AppIcons.check(context)
+                        : AppIcons.radio(context, selected: false),
+                    size: 18,
+                    color: t.index == activeIndex ? biliBlue : null,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Text(
+                      t.title,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: t.index == activeIndex
+                            ? biliBlue
+                            : Colors.white70,
+                        fontWeight: t.index == activeIndex
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
                     ),
                   ),
-                const PopupMenuDivider(),
-              ],
-              PopupMenuItem<String>(
-                enabled: false,
-                height: 28,
-                child: Text(
-                  '音频响度均衡',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.5),
-                  ),
+                ),
+              const Divider(height: 1, indent: 8, endIndent: 8),
+            ],
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 6,
+              ),
+              child: Text(
+                '音频响度均衡',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.white.withValues(alpha: 0.5),
                 ),
               ),
-              PopupMenuItem<String>(
-                value: '__norm:2',
-                child: Row(
-                  children: [
-                    Icon(
-                      AppIcons.radio(context, selected: currentNorm == '2'),
-                      size: 16,
-                      color: currentNorm == '2' ? biliBlue : null,
-                    ),
-                    const SizedBox(width: Style.xs),
-                    Text(
-                      '智能响度均衡 (loudnorm)',
-                      style: TextStyle(
-                        color: currentNorm == '2' ? biliBlue : Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: '__norm:1',
-                child: Row(
-                  children: [
-                    Icon(
-                      AppIcons.radio(context, selected: currentNorm == '1'),
-                      size: 16,
-                      color: currentNorm == '1' ? biliBlue : null,
-                    ),
-                    const SizedBox(width: Style.xs),
-                    Text(
-                      '动态压缩 (dynaudnorm)',
-                      style: TextStyle(
-                        color: currentNorm == '1' ? biliBlue : Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: '__norm:0',
-                child: Row(
-                  children: [
-                    Icon(
-                      AppIcons.radio(context, selected: currentNorm == '0'),
-                      size: 16,
-                      color: currentNorm == '0' ? biliBlue : null,
-                    ),
-                    const SizedBox(width: Style.xs),
-                    Text(
-                      '禁用',
-                      style: TextStyle(
-                        color: currentNorm == '0' ? biliBlue : Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ];
-          },
-          child: HoverContainer(
-            borderRadius: 6.0,
-            padding: const EdgeInsets.symmetric(
-              horizontal: Style.sm,
-              vertical: 6,
             ),
-            hoverColor: Colors.white.withValues(alpha: 0.12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ContrastText(
-                  codec,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 12,
-                  ),
-                  shadows: ContrastStyle.glyphShadows,
+            MenuItemButton(
+              style: _darkMenuItemStyle,
+              onPressed: () {
+                c.setAudioNormalize('2');
+                setState(() {});
+              },
+              leadingIcon: Icon(
+                AppIcons.radio(context, selected: currentNorm == '2'),
+                size: 16,
+                color: currentNorm == '2' ? biliBlue : null,
+              ),
+              child: Text(
+                '智能响度均衡 (loudnorm)',
+                style: TextStyle(
+                  color: currentNorm == '2' ? biliBlue : Colors.white70,
                 ),
-                if (c.audioNormalizeEnabled) ...[
-                  const SizedBox(width: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 1,
+              ),
+            ),
+            MenuItemButton(
+              style: _darkMenuItemStyle,
+              onPressed: () {
+                c.setAudioNormalize('1');
+                setState(() {});
+              },
+              leadingIcon: Icon(
+                AppIcons.radio(context, selected: currentNorm == '1'),
+                size: 16,
+                color: currentNorm == '1' ? biliBlue : null,
+              ),
+              child: Text(
+                '动态压缩 (dynaudnorm)',
+                style: TextStyle(
+                  color: currentNorm == '1' ? biliBlue : Colors.white70,
+                ),
+              ),
+            ),
+            MenuItemButton(
+              style: _darkMenuItemStyle,
+              onPressed: () {
+                c.setAudioNormalize('0');
+                setState(() {});
+              },
+              leadingIcon: Icon(
+                AppIcons.radio(context, selected: currentNorm == '0'),
+                size: 16,
+                color: currentNorm == '0' ? biliBlue : null,
+              ),
+              child: Text(
+                '禁用',
+                style: TextStyle(
+                  color: currentNorm == '0' ? biliBlue : Colors.white70,
+                ),
+              ),
+            ),
+          ],
+          builder: (context, controller, child) => Tooltip(
+            message: '音频设置',
+            child: HoverContainer(
+              onTap: () => controller.isOpen
+                  ? controller.close()
+                  : controller.open(),
+              borderRadius: 6.0,
+              padding: const EdgeInsets.symmetric(
+                horizontal: Style.sm,
+                vertical: 6,
+              ),
+              hoverColor: Colors.white.withValues(alpha: 0.12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ContrastText(
+                    codec,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 12,
                     ),
-                    decoration: BoxDecoration(
-                      color: biliPink.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: const ContrastText(
-                      '均衡',
-                      style: TextStyle(color: biliPink, fontSize: 10),
-                      shadows: ContrastStyle.glyphShadows,
-                    ),
+                    shadows: ContrastStyle.glyphShadows,
                   ),
+                  if (c.audioNormalizeEnabled) ...[
+                    const SizedBox(width: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: biliPink.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: const ContrastText(
+                        '均衡',
+                        style: TextStyle(color: biliPink, fontSize: 10),
+                        shadows: ContrastStyle.glyphShadows,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );
@@ -2124,19 +2131,16 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return ValueListenableBuilder<double>(
       valueListenable: c.playbackSpeed,
       builder: (context, speed, _) {
-        return PopupMenuButton<double>(
-          tooltip: '倍速',
-          onSelected: c.setPlaybackSpeed,
-          color: const Color(0xE61A1A1A),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Style.radiusSm),
-            side: const BorderSide(color: Colors.white12),
-          ),
-          itemBuilder: (context) => [
+        return MenuAnchor(
+          style: _darkMenuStyle(),
+          menuChildren: [
             for (final v in c.speedList)
-              CheckedPopupMenuItem<double>(
-                value: v,
-                checked: v == speed,
+              MenuItemButton(
+                style: _darkMenuItemStyle,
+                onPressed: () => c.setPlaybackSpeed(v),
+                leadingIcon: v == speed
+                    ? Icon(AppIcons.check(context), size: 18, color: biliBlue)
+                    : const SizedBox(width: 18),
                 child: Text(
                   '${v.toStringAsFixed(1)}x',
                   style: TextStyle(
@@ -2148,23 +2152,29 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ),
               ),
           ],
-          child: HoverContainer(
-            borderRadius: 6.0,
-            padding: const EdgeInsets.symmetric(
-              horizontal: Style.sm,
-              vertical: 6,
-            ),
-            hoverColor: Colors.white.withValues(alpha: 0.12),
-            child: ContrastText(
-              speed == 1.0 ? '倍速' : '${speed.toStringAsFixed(1)}x',
-              style: TextStyle(
-                color: speed == 1.0
-                    ? Colors.white.withValues(alpha: 0.85)
-                    : const Color(0xFF00AEEC),
-                fontSize: 12,
-                fontWeight: speed == 1.0 ? FontWeight.normal : FontWeight.bold,
+          builder: (context, controller, child) => Tooltip(
+            message: '倍速',
+            child: HoverContainer(
+              onTap: () => controller.isOpen
+                  ? controller.close()
+                  : controller.open(),
+              borderRadius: 6.0,
+              padding: const EdgeInsets.symmetric(
+                horizontal: Style.sm,
+                vertical: 6,
               ),
-              shadows: ContrastStyle.glyphShadows,
+              hoverColor: Colors.white.withValues(alpha: 0.12),
+              child: ContrastText(
+                speed == 1.0 ? '倍速' : '${speed.toStringAsFixed(1)}x',
+                style: TextStyle(
+                  color: speed == 1.0
+                      ? Colors.white.withValues(alpha: 0.85)
+                      : const Color(0xFF00AEEC),
+                  fontSize: 12,
+                  fontWeight: speed == 1.0 ? FontWeight.normal : FontWeight.bold,
+                ),
+                shadows: ContrastStyle.glyphShadows,
+              ),
             ),
           ),
         );

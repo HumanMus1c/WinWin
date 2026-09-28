@@ -606,30 +606,42 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
             label: '手机号',
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            prefix: PopupMenuButton<String>(
-              tooltip: '选择国际冠码，当前为+$_countryId',
-              onSelected: (v) => setState(() => _countryId = v),
-              initialValue: _countryId,
-              itemBuilder: (_) => _countryCodes.map((item) {
-                return PopupMenuItem<String>(
-                  value: item.$1,
+            prefix: MenuAnchor(
+              menuChildren: [
+                for (final item in _countryCodes)
+                  MenuItemButton(
+                    onPressed: () => setState(() => _countryId = item.$1),
+                    leadingIcon: item.$1 == _countryId
+                        ? const Icon(Icons.check, size: 18)
+                        : const SizedBox(width: 18),
+                    child: SizedBox(
+                      width: 150,
+                      child: Row(
+                        children: [
+                          Text(item.$2),
+                          const Spacer(),
+                          Text('+${item.$1}'),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+              builder: (context, controller, child) => Tooltip(
+                message: '选择国际冠码，当前为+$_countryId',
+                child: InkWell(
+                  onTap: () => controller.isOpen
+                      ? controller.close()
+                      : controller.open(),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(item.$2),
-                      const Spacer(),
-                      Text('+${item.$1}'),
+                      Icon(Icons.phone, color: cs.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text('+$_countryId'),
+                      const Icon(Icons.arrow_drop_down),
                     ],
                   ),
-                );
-              }).toList(),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.phone, color: cs.onSurfaceVariant),
-                  const SizedBox(width: 4),
-                  Text('+$_countryId'),
-                  const Icon(Icons.arrow_drop_down),
-                ],
+                ),
               ),
             ),
           ),

@@ -539,6 +539,24 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     _player?.volume = val;
   }
 
+  static const ButtonStyle _menuItemStyle = ButtonStyle(
+    overlayColor: WidgetStatePropertyAll(Color(0x1FFFFFFF)),
+  );
+
+  static MenuStyle _menuStyle() => MenuStyle(
+    backgroundColor: const WidgetStatePropertyAll(Color(0xE61E1E1E)),
+    elevation: const WidgetStatePropertyAll(8),
+    shape: WidgetStatePropertyAll(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: Colors.white12),
+      ),
+    ),
+    padding: const WidgetStatePropertyAll(
+      EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+    ),
+  );
+
   Future<void> _changeQuality(int qn) async {
     if (_currentQn == qn) return;
     setState(() {
@@ -1351,65 +1369,68 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             const Spacer(),
 
             // 5. 画质/清晰度切换菜单
-            PopupMenuButton<int>(
-              tooltip: '画质清晰度',
-              color: const Color(0xE61E1E1E),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: const BorderSide(color: Colors.white12),
-              ),
-              onSelected: _changeQuality,
-              itemBuilder: (context) {
-                return availableQn.map((qn) {
-                  final isSelected = _currentQn == qn;
-                  return PopupMenuItem<int>(
-                    value: qn,
+            MenuAnchor(
+              style: _menuStyle(),
+              menuChildren: [
+                for (final qn in availableQn)
+                  MenuItemButton(
+                    style: _menuItemStyle,
+                    onPressed: () => _changeQuality(qn),
+                    leadingIcon: Icon(
+                      _currentQn == qn
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      size: 16,
+                      color: _currentQn == qn
+                          ? Colors.lightBlueAccent
+                          : Colors.white54,
+                    ),
+                    child: Text(
+                      LiveQuality.descFromCode(qn),
+                      style: TextStyle(
+                        color: _currentQn == qn
+                            ? Colors.lightBlueAccent
+                            : Colors.white,
+                        fontSize: 13,
+                        fontWeight: _currentQn == qn
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+              ],
+              builder: (context, controller, child) => Tooltip(
+                message: '画质清晰度',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: () => controller.isOpen
+                      ? controller.close()
+                      : controller.open(),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          isSelected
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                          size: 16,
-                          color: isSelected ? Colors.lightBlueAccent : Colors.white54,
-                        ),
-                        const SizedBox(width: 8),
                         Text(
-                          LiveQuality.descFromCode(qn),
-                          style: TextStyle(
-                            color: isSelected
-                                ? Colors.lightBlueAccent
-                                : Colors.white,
-                            fontSize: 13,
-                            fontWeight:
-                                isSelected ? FontWeight.w600 : FontWeight.normal,
+                          currentQnText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
                           ),
+                        ),
+                        const Icon(
+                          Icons.arrow_drop_down,
+                          color: Colors.white70,
+                          size: 16,
                         ),
                       ],
                     ),
-                  );
-                }).toList();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      currentQnText,
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                    const Icon(
-                      Icons.arrow_drop_down,
-                      color: Colors.white70,
-                      size: 16,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1417,117 +1438,124 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
             // 6. 推流线路切换菜单
             if (_streamLines.isNotEmpty)
-              PopupMenuButton<int>(
-                tooltip: '推流线路/CDN',
-                color: const Color(0xE61E1E1E),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: const BorderSide(color: Colors.white12),
-                ),
-                onSelected: _switchLine,
-                itemBuilder: (context) {
-                  return List.generate(_streamLines.length, (idx) {
-                    final line = _streamLines[idx];
-                    final isSelected = _currentStreamIndex == idx;
-                    return PopupMenuItem<int>(
-                      value: idx,
+              MenuAnchor(
+                style: _menuStyle(),
+                menuChildren: [
+                  for (int idx = 0; idx < _streamLines.length; idx++)
+                    MenuItemButton(
+                      style: _menuItemStyle,
+                      onPressed: () => _switchLine(idx),
+                      leadingIcon: Icon(
+                        _currentStreamIndex == idx
+                            ? Icons.check
+                            : Icons.radio_button_unchecked,
+                        size: 16,
+                        color: _currentStreamIndex == idx
+                            ? Colors.lightBlueAccent
+                            : Colors.white54,
+                      ),
+                      child: Text(
+                        _streamLines[idx].title,
+                        style: TextStyle(
+                          color: _currentStreamIndex == idx
+                              ? Colors.lightBlueAccent
+                              : Colors.white,
+                          fontSize: 13,
+                          fontWeight: _currentStreamIndex == idx
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                ],
+                builder: (context, controller, child) => Tooltip(
+                  message: '推流线路/CDN',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: () => controller.isOpen
+                        ? controller.close()
+                        : controller.open(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            isSelected
-                                ? Icons.check
-                                : Icons.radio_button_unchecked,
-                            size: 16,
-                            color: isSelected ? Colors.lightBlueAccent : Colors.white54,
-                          ),
-                          const SizedBox(width: 8),
                           Text(
-                            line.title,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? Colors.lightBlueAccent
-                                  : Colors.white,
-                              fontSize: 13,
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
+                            '线路 ${_currentStreamIndex + 1}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
                             ),
+                          ),
+                          const Icon(
+                            Icons.arrow_drop_down,
+                            color: Colors.white70,
+                            size: 16,
                           ),
                         ],
                       ),
-                    );
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '线路 ${_currentStreamIndex + 1}',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const Icon(
-                        Icons.arrow_drop_down,
-                        color: Colors.white70,
-                        size: 16,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             const SizedBox(width: 6),
 
             // 7. 画面比例模式切换
-            PopupMenuButton<int>(
-              tooltip: '画面比例',
-              color: const Color(0xE61E1E1E),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: const BorderSide(color: Colors.white12),
-              ),
-              onSelected: (mode) => setState(() => _aspectRatioMode = mode),
-              itemBuilder: (context) {
-                const modes = ['16:9', '4:3', '原始比例', '铺满拉伸'];
-                return List.generate(modes.length, (idx) {
-                  final isSelected = _aspectRatioMode == idx;
-                  return PopupMenuItem<int>(
-                    value: idx,
-                    child: Row(
-                      children: [
-                        Icon(
-                          isSelected
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                          size: 16,
-                          color: isSelected ? Colors.lightBlueAccent : Colors.white54,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          modes[idx],
-                          style: TextStyle(
-                            color: isSelected
-                                ? Colors.lightBlueAccent
-                                : Colors.white,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
+            MenuAnchor(
+              style: _menuStyle(),
+              menuChildren: [
+                for (final (idx, mode) in const [
+                  '16:9',
+                  '4:3',
+                  '原始比例',
+                  '铺满拉伸',
+                ].indexed)
+                  MenuItemButton(
+                    style: _menuItemStyle,
+                    onPressed: () => setState(() => _aspectRatioMode = idx),
+                    leadingIcon: Icon(
+                      _aspectRatioMode == idx
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      size: 16,
+                      color: _aspectRatioMode == idx
+                          ? Colors.lightBlueAccent
+                          : Colors.white54,
                     ),
-                  );
-                });
-              },
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(Icons.aspect_ratio, color: Colors.white70, size: 20),
+                    child: Text(
+                      mode,
+                      style: TextStyle(
+                        color: _aspectRatioMode == idx
+                            ? Colors.lightBlueAccent
+                            : Colors.white,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+              ],
+              builder: (context, controller, child) => Tooltip(
+                message: '画面比例',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: () => controller.isOpen
+                      ? controller.close()
+                      : controller.open(),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      Icons.aspect_ratio,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 6),

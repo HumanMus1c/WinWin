@@ -630,31 +630,48 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     ),
                     onPressed: () => _copyToClipboard('https://space.bilibili.com/${widget.mid}', '主页链接已复制'),
                   ),
-                PopupMenuButton<String>(
-                  icon: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      shape: BoxShape.circle,
+                MenuAnchor(
+                  alignmentOffset: const Offset(-100, 0),
+                  menuChildren: [
+                    MenuItemButton(
+                      onPressed: () =>
+                          _copyToClipboard(widget.mid.toString(), 'UID 已复制'),
+                      child: const Text('复制 UID'),
                     ),
-                    child: Icon(AppIcons.more(context), color: Colors.white, size: 20),
-                  ),
-                  onSelected: (val) {
-                    if (val == 'copy_uid') {
-                      _copyToClipboard(widget.mid.toString(), 'UID 已复制');
-                    } else if (val == 'copy_link') {
-                      _copyToClipboard('https://space.bilibili.com/${widget.mid}', '主页链接已复制');
-                    } else if (val == 'report') {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('已收到举报请求')),
-                      );
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'copy_uid', child: Text('复制 UID')),
-                    const PopupMenuItem(value: 'copy_link', child: Text('复制主页链接')),
-                    if (!isOwner) const PopupMenuItem(value: 'report', child: Text('举报该用户')),
+                    MenuItemButton(
+                      onPressed: () => _copyToClipboard(
+                        'https://space.bilibili.com/${widget.mid}',
+                        '主页链接已复制',
+                      ),
+                      child: const Text('复制主页链接'),
+                    ),
+                    if (!isOwner)
+                      MenuItemButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('已收到举报请求')),
+                          );
+                        },
+                        child: const Text('举报该用户'),
+                      ),
                   ],
+                  builder: (context, controller, child) => IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        AppIcons.more(context),
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    onPressed: () => controller.isOpen
+                        ? controller.close()
+                        : controller.open(),
+                  ),
                 ),
                 const SizedBox(width: Style.sm),
               ],
