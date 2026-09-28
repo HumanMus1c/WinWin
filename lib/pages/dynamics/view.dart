@@ -3,6 +3,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
+import 'package:winwin/common/widgets/dyn/dyn_action_bar.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
@@ -17,7 +18,6 @@ import 'package:winwin/pages/dynamics/detail_page.dart';
 import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
-import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
@@ -127,6 +127,10 @@ class _DynTabPageState extends State<_DynTabPage>
   bool _hasMore = true;
   bool _loading = false;
 
+  /// 点赞状态记忆（跨瀑布流滚动重建保留，刷新时清空）。
+  final Map<String, bool> _likedState = {};
+  final Map<String, int> _likeCountState = {};
+
   bool get _isVideoTab => widget.type == 'video';
   bool get _isPgcTab => widget.type == 'pgc';
 
@@ -184,6 +188,8 @@ class _DynTabPageState extends State<_DynTabPage>
     if (refresh) {
       _offset = null;
       _items.clear();
+      _likedState.clear();
+      _likeCountState.clear();
       setState(() => _state = LoadingState.loading());
     }
     await ensureBootstrap();
@@ -308,7 +314,7 @@ class _DynTabPageState extends State<_DynTabPage>
         if (index == _items.length - 1) {
           _onScroll();
         }
-        return _DynCard(item: _items[index]);
+        return _buildDynCard(_items[index]);
       },
     );
   }
@@ -324,7 +330,19 @@ class _DynTabPageState extends State<_DynTabPage>
         if (index == _items.length - 1) {
           _onScroll();
         }
-        return _DynCard(item: _items[index]);
+        return _buildDynCard(_items[index]);
+      },
+    );
+  }
+
+  Widget _buildDynCard(DynItemModel item) {
+    return _DynCard(
+      item: item,
+      liked: _likedState[item.id],
+      likeCount: _likeCountState[item.id],
+      onLikeChanged: (liked, count) {
+        _likedState[item.id] = liked;
+        _likeCountState[item.id] = count;
       },
     );
   }
@@ -821,9 +839,21 @@ class _DynPgcCard extends StatelessWidget {
 
 /// 全部 Tab 综合动态卡片：作者 + 正文/富文本 + 视频/图文/Opus/专栏/追番/转发/直播/商品 + 互动统计。
 class _DynCard extends StatelessWidget {
-  const _DynCard({required this.item});
+  const _DynCard({
+    required this.item,
+    this.liked,
+    this.likeCount,
+    this.onLikeChanged,
+  });
 
   final DynItemModel item;
+
+  /// 外部点赞态/点赞数覆盖（列表页跨滚动重建记忆）。
+  final bool? liked;
+  final int? likeCount;
+
+  /// 点赞成功回写（供列表页记忆）。
+  final void Function(bool liked, int likeCount)? onLikeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -960,7 +990,23 @@ class _DynCard extends StatelessWidget {
                 const SizedBox(height: Style.sm),
                 const Divider(height: 1, thickness: 0.5),
                 const SizedBox(height: Style.xs),
-                _buildStatRow(context, item.stat!),
+                DynActionBar(
+                  item: item,
+                  liked: liked,
+                  likeCount: likeCount,
+                  onChanged: onLikeChanged,
+                  onComment: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DynamicDetailPage(
+                          item: item,
+                          focusComment: true,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
             ],
           ),
@@ -1718,33 +1764,6 @@ class _DynCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  /// 底部互动统计行（转发/评论/点赞）。
-  Widget _buildStatRow(BuildContext context, DynStat stat) {
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildStatItem(AppIcons.reply(context), stat.repost ?? 0, cs.outline),
-        _buildStatItem(AppIcons.whisper(context), stat.comment ?? 0, cs.outline),
-        _buildStatItem(AppIcons.like(context), stat.like ?? 0, cs.outline),
-      ],
-    );
-  }
-
-  Widget _buildStatItem(IconData icon, int count, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 4),
-        Text(
-          count > 0 ? NumUtils.formatNum(count) : '0',
-          style: TextStyle(fontSize: 12, color: color),
-        ),
-      ],
     );
   }
 

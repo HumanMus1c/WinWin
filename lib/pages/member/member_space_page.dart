@@ -8,6 +8,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
+import 'package:winwin/common/widgets/dyn/dyn_action_bar.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/common/widgets/medal_widget.dart';
@@ -111,6 +112,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   // 用户动态数据
   final List<DynItemModel> _dynamics = [];
   bool _loadingDynamics = false;
+
+  /// 点赞状态记忆（跨瀑布流滚动重建保留）。
+  final Map<String, bool> _likedState = {};
+  final Map<String, int> _likeCountState = {};
   bool _dynamicEnd = false;
   bool _dynamicFailed = false;
   String? _dynamicOffset;
@@ -1866,38 +1871,36 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 const SizedBox(height: Style.sm),
                 _buildGoodsCard(context, item.additional!),
               ],
-              // 底部互动行
+              // 底部互动行（转发/评论/点赞，均可交互）
               if (item.stat != null) ...[
                 const SizedBox(height: Style.sm),
                 const Divider(height: 1, thickness: 0.5),
                 const SizedBox(height: Style.xs),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _statActionItem(Icons.reply_outlined, item.stat!.repost ?? 0, cs.outline),
-                    _statActionItem(Icons.chat_bubble_outline, item.stat!.comment ?? 0, cs.outline),
-                    _statActionItem(Icons.thumb_up_outlined, item.stat!.like ?? 0, cs.outline),
-                  ],
+                DynActionBar(
+                  item: item,
+                  liked: _likedState[item.id],
+                  likeCount: _likeCountState[item.id],
+                  onChanged: (liked, count) {
+                    _likedState[item.id] = liked;
+                    _likeCountState[item.id] = count;
+                  },
+                  onComment: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DynamicDetailPage(
+                          item: item,
+                          focusComment: true,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _statActionItem(IconData icon, int count, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 4),
-        Text(
-          count > 0 ? NumUtils.formatNum(count) : '0',
-          style: TextStyle(fontSize: 12, color: color),
-        ),
-      ],
     );
   }
 

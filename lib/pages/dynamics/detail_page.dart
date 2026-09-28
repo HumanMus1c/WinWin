@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
+import 'package:winwin/common/widgets/dyn/dyn_action_bar.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
@@ -36,10 +37,14 @@ class DynamicDetailPage extends StatefulWidget {
     super.key,
     this.item,
     this.dynamicId,
+    this.focusComment = false,
   }) : assert(item != null || dynamicId != null, 'item 或 dynamicId 必须提供一个');
 
   final DynItemModel? item;
   final String? dynamicId;
+
+  /// 进入页面后自动聚焦评论输入框（列表页点击"评论"按钮进入时为 true）。
+  final bool focusComment;
 
   @override
   State<DynamicDetailPage> createState() => _DynamicDetailPageState();
@@ -51,6 +56,13 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   final List<ReplyItemModel> _replies = [];
   bool _loadingReplies = false;
   bool _repliesLoaded = false;
+
+  /// 评论加载错误提示（区别于"真·空评论"，失败不再伪装成空态）。
+  String? _replyError;
+
+  /// 评论区定位（oid/type 取自动态 basic.comment_id_str / comment_type）。
+  int? _commentOid;
+  int? _commentType;
 
   final TextEditingController _commentCtrl = TextEditingController();
   final FocusNode _commentFocus = FocusNode();
@@ -66,6 +78,11 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       _loadReplies();
     } else {
       _loadDetail();
+    }
+    if (widget.focusComment) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _commentFocus.requestFocus();
+      });
     }
   }
 
@@ -92,46 +109,101 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     }
   }
 
+  /// 解析评论区 oid/type：取自动态 `basic` 字段
+  /// （1=视频→aid、11=图片→相簿 id、17=动态→动态 id）；
+  /// 缺失时重新拉取动态详情兜底（对标 PiliPlus DynamicDetailController）。
+  Future<({int oid, int type})?> _resolveCommentTarget() async {
+    if (_commentOid != null && _commentType != null) {
+      return (oid: _commentOid!, type: _commentType!);
+    }
+
+    final item = widget.item ??
+        switch (_state) {
+          Success(:final response) => response,
+          _ => null,
+        };
+    var type = item?.commentType;
+    var idStr = item?.commentIdStr;
+
+    if ((type == null || type == 0 || idStr == null || idStr.isEmpty) &&
+        _effectiveId.isNotEmpty) {
+      final res = await DynHttp.dynamicDetail(dynamicId: _effectiveId);
+      if (!mounted) return null;
+      if (res case Success(:final response)) {
+        type = response.commentType;
+        idStr = response.commentIdStr;
+      }
+    }
+
+    final oid = int.tryParse(idStr ?? '');
+    if (oid == null || oid <= 0 || type == null || type == 0) return null;
+    _commentOid = oid;
+    _commentType = type;
+    return (oid: oid, type: type);
+  }
+
   Future<void> _loadReplies() async {
-    final numericId = int.tryParse(_effectiveId);
-    if (numericId == null || numericId <= 0) return;
+    setState(() {
+      _loadingReplies = true;
+      _replyError = null;
+    });
 
-    setState(() => _loadingReplies = true);
-    // B站动态评论区 type 一般为 11（图文/文字）或 17
-    final res = await VideoHttp.replyMain(
-      oid: numericId,
-      type: 11,
-    );
-
+    final target = await _resolveCommentTarget();
     if (!mounted) return;
-    if (res case Success(:final response)) {
+    if (target == null) {
       setState(() {
-        _replies.addAll(response.replies);
-        _repliesLoaded = true;
         _loadingReplies = false;
-      });
-    } else {
-      setState(() {
         _repliesLoaded = true;
-        _loadingReplies = false;
+        _replyError = '无法定位评论区';
       });
+      return;
+    }
+
+    final res = await VideoHttp.replyMain(oid: target.oid, type: target.type);
+    if (!mounted) return;
+    switch (res) {
+      case Success(:final response):
+        setState(() {
+          _replies.addAll(response.replies);
+          _repliesLoaded = true;
+          _loadingReplies = false;
+        });
+      case Error(:final errMsg):
+        setState(() {
+          _repliesLoaded = true;
+          _loadingReplies = false;
+          _replyError = errMsg ?? '评论加载失败';
+        });
+      case Loading():
+        break;
     }
   }
 
-  /// 发送一级评论（type=11 动态评论）。
+  /// 重试加载评论（清空现有列表与错误态）。
+  Future<void> _retryReplies() async {
+    _replies.clear();
+    await _loadReplies();
+  }
+
+  /// 发送一级评论（oid/type 与评论区一致：视频 1 / 图文 11 / 转发 17）。
   Future<void> _sendComment() async {
     final message = _commentCtrl.text.trim();
     if (message.isEmpty || _sendingComment) return;
-    final numericId = int.tryParse(_effectiveId);
-    if (numericId == null || numericId <= 0) return;
     if (!await LoginGuard.requireLogin(context)) return;
     if (!mounted) return;
 
+    final target = await _resolveCommentTarget();
+    if (!mounted) return;
+    if (target == null) {
+      _toast('无法定位评论区');
+      return;
+    }
+
     setState(() => _sendingComment = true);
     final res = await VideoHttp.replyAdd(
-      oid: numericId,
+      oid: target.oid,
       message: message,
-      type: 11,
+      type: target.type,
     );
     if (!mounted) return;
     setState(() => _sendingComment = false);
@@ -208,11 +280,17 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(child: _buildDetailContent(response, cs, theme)),
-              SimpleCommentInputBar(
-                controller: _commentCtrl,
-                focusNode: _commentFocus,
-                sending: _sendingComment,
-                onSend: _sendComment,
+              // 输入栏与正文居中列（maxWidth 820）对齐，不再横向撑满全屏。
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 820),
+                  child: SimpleCommentInputBar(
+                    controller: _commentCtrl,
+                    focusNode: _commentFocus,
+                    sending: _sendingComment,
+                    onSend: _sendComment,
+                  ),
+                ),
               ),
             ],
           ),
@@ -400,30 +478,16 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                     ),
                   ),
 
-                // 互动统计行
+                // 互动统计行（转发/评论/点赞，均可交互）
                 if (item.stat != null)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: Style.sm),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildStatItem(
-                            AppIcons.reply(context),
-                            item.stat!.repost ?? 0,
-                            cs.outline,
-                          ),
-                          _buildStatItem(
-                            AppIcons.whisper(context),
-                            item.stat!.comment ?? 0,
-                            cs.outline,
-                          ),
-                          _buildStatItem(
-                            AppIcons.like(context),
-                            item.stat!.like ?? 0,
-                            cs.outline,
-                          ),
-                        ],
+                      child: DynActionBar(
+                        item: item,
+                        iconSize: 16,
+                        textSize: 13,
+                        onComment: () => _commentFocus.requestFocus(),
                       ),
                     ),
                   ),
@@ -461,6 +525,28 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                     child: Padding(
                       padding: EdgeInsets.all(Style.lg),
                       child: Center(child: CircularProgressIndicator()),
+                    ),
+                  )
+                else if (_replyError != null)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(Style.xl),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '评论加载失败：$_replyError',
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                            const SizedBox(height: Style.md),
+                            FilledButton.tonal(
+                              onPressed: _retryReplies,
+                              child: const Text('重试'),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   )
                 else if (_replies.isEmpty && _repliesLoaded)
@@ -1085,20 +1171,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
           ],
         ],
       ),
-    );
-  }
-
-  Widget _buildStatItem(IconData icon, int count, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 4),
-        Text(
-          count > 0 ? NumUtils.formatNum(count) : '0',
-          style: TextStyle(fontSize: 13, color: color),
-        ),
-      ],
     );
   }
 

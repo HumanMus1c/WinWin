@@ -200,11 +200,17 @@ class _ArticlePageState extends State<ArticlePage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(child: _buildArticleContent(response, cs, theme)),
-              SimpleCommentInputBar(
-                controller: _commentCtrl,
-                focusNode: _commentFocus,
-                sending: _sendingComment,
-                onSend: _sendComment,
+              // 输入栏与正文居中列（maxWidth 860）对齐，不再横向撑满全屏。
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 860),
+                  child: SimpleCommentInputBar(
+                    controller: _commentCtrl,
+                    focusNode: _commentFocus,
+                    sending: _sendingComment,
+                    onSend: _sendComment,
+                  ),
+                ),
               ),
             ],
           ),

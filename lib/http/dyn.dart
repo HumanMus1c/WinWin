@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 
 import 'package:winwin/common/constants.dart';
+import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
+import 'package:winwin/http/constants.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/dynamics/dyn_type.dart';
@@ -107,6 +110,94 @@ abstract final class DynHttp {
       return Error('获取用户动态失败：$e');
     }
   }
+
+  /// 动态点赞/取消点赞（`/x/dynamic/feed/dyn/thumb`，对标 PiliPlus
+  /// `DynamicsHttp.thumbDynamic`）。
+  ///
+  /// [up]：1=点赞，2=取消点赞。需要登录态（csrf）。
+  static Future<LoadingState<void>> thumbDynamic({
+    required String dynIdStr,
+    required int up,
+  }) async {
+    try {
+      final res = await Request().post<dynamic>(
+        Api.thumbDynamic,
+        queryParameters: {'csrf': Accounts.main.csrf},
+        data: {
+          'dyn_id_str': dynIdStr,
+          'up': up,
+          'spmid': '333.1365.0.0',
+        },
+        options: Options(
+          contentType: Headers.jsonContentType,
+          headers: {'referer': HttpString.dynamicShareBaseUrl},
+          extra: {'account': Accounts.main},
+        ),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0) {
+        return const Success(null);
+      }
+      return Error(data['message']?.toString() ?? '操作失败');
+    } on DioException catch (e) {
+      return Error('操作失败：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('操作失败：$e');
+    }
+  }
+
+  /// 转发动态（`/x/dynamic/feed/create/dyn`，scene=4 转发现场）。
+  ///
+  /// [dynIdStr] 为被转发动态 id；[text] 为可选转发理由。
+  /// 参数对标 PiliPlus `DynamicsHttp.createDynamic`。需要登录态（csrf）。
+  static Future<LoadingState<void>> repostDynamic({
+    required String dynIdStr,
+    String? text,
+  }) async {
+    try {
+      final uploadId =
+          '${Accounts.main.mid}_${DateTime.now().millisecondsSinceEpoch ~/ 1000}_${Random().nextInt(9000) + 1000}';
+      final res = await Request().post<dynamic>(
+        Api.createDynamic,
+        queryParameters: {
+          'platform': 'web',
+          'csrf': Accounts.main.csrf,
+          'x-bili-device-req-json': '{"platform": "web", "device": "pc"}',
+          'x-bili-web-req-json': '{"spm_id": "333.999"}',
+        },
+        data: {
+          'dyn_req': {
+            'content': {
+              'contents': [
+                if (text != null && text.trim().isNotEmpty)
+                  {'raw_text': text.trim(), 'type': 1, 'biz_id': ''},
+              ],
+            },
+            'scene': 4,
+            'upload_id': uploadId,
+            'meta': {
+              'app_meta': {'from': 'create.dynamic.web', 'mobi_app': 'web'},
+            },
+          },
+          'web_repost_src': {'dyn_id_str': dynIdStr},
+        },
+        options: Options(
+          contentType: Headers.jsonContentType,
+          headers: {'referer': HttpString.dynamicShareBaseUrl},
+          extra: {'account': Accounts.main},
+        ),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == 0) {
+        return const Success(null);
+      }
+      return Error(data['message']?.toString() ?? '转发失败');
+    } on DioException catch (e) {
+      return Error('转发失败：${e.message ?? e.type.name}');
+    } catch (e) {
+      return Error('转发失败：$e');
+    }
+  }
 }
 
 /// 动态流分页数据。
@@ -167,6 +258,10 @@ class DynItemModel {
   final DynAdditional? additional;
   /// 互动数据（点赞、转发、评论）。
   final DynStat? stat;
+  /// 评论区业务类型（`basic.comment_type`：1=视频、11=图片、17=动态）。
+  final int? commentType;
+  /// 评论区 oid 字符串（`basic.comment_id_str`，随类型为 aid/相簿 id/动态 id）。
+  final String? commentIdStr;
   /// 发布时间（Unix 时间戳，秒）。
   final int? pubTs;
   /// 转发动态的原动态（嵌套一层）。
@@ -193,6 +288,8 @@ class DynItemModel {
     this.richTextNodes = const [],
     this.additional,
     this.stat,
+    this.commentType,
+    this.commentIdStr,
     this.pubTs,
     this.orig,
     this.majorType,
@@ -247,6 +344,9 @@ class DynItemModel {
       none != null;
 
   factory DynItemModel.fromJson(Map<String, dynamic> json) {
+    final basic = json['basic'] is Map
+        ? Map<String, dynamic>.from(json['basic'] as Map)
+        : <String, dynamic>{};
     final modules = json['modules'] is Map
         ? Map<String, dynamic>.from(json['modules'] as Map)
         : <String, dynamic>{};
@@ -310,6 +410,8 @@ class DynItemModel {
       additional:
           additional != null ? DynAdditional.fromJson(additional) : null,
       stat: moduleStat != null ? DynStat.fromJson(moduleStat) : null,
+      commentType: _asInt(basic['comment_type']),
+      commentIdStr: basic['comment_id_str']?.toString(),
       pubTs: _asInt(moduleAuthor['pub_ts']),
       orig: origItem,
     );
@@ -839,13 +941,19 @@ class DynStat {
   final int? comment;
   final int? like;
 
-  DynStat({this.repost, this.comment, this.like});
+  /// 是否已点赞（`module_stat.like.status`）。
+  final bool liked;
+
+  DynStat({this.repost, this.comment, this.like, this.liked = false});
 
   factory DynStat.fromJson(Map<String, dynamic> json) {
+    final likeMap = json['like'] as Map<String, dynamic>?;
+    final likeStatus = likeMap?['status'];
     return DynStat(
       repost: _asInt((json['repost'] as Map<String, dynamic>?)?['count']),
       comment: _asInt((json['comment'] as Map<String, dynamic>?)?['count']),
-      like: _asInt((json['like'] as Map<String, dynamic>?)?['count']),
+      like: _asInt(likeMap?['count']),
+      liked: likeStatus == true || likeStatus == 1,
     );
   }
 }
