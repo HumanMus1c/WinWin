@@ -281,7 +281,11 @@ abstract final class SeekProbe {
   static bool get convergeBeforeUnfreeze => variant == SeekVariant.converge;
 
   /// 读缓冲上限（ms）：用于 A/B 验证缓冲水位对卡顿的影响。
-  static int bufferMaxMs = 30000;
+  ///
+  /// 2026-09-28 实机验证：30s → 15s 后播放/seek 无体感差异，而 4K 播放
+  /// 内存降低约 50MB（缓冲数据量 ≈ 码率 × 时长），故默认值取 15000。
+  /// 仍可经 seek_probe.json 覆盖（诊断用）。
+  static int bufferMaxMs = 15000;
 
   /// seek 前是否强制重建音轨（实测会破坏音频时钟→极慢播放，默认关闭）。
   static bool flushAudioOnSeek = false;
@@ -382,9 +386,14 @@ abstract final class SeekProbe {
   ///   aheadMax=0、无回跳）。
   static bool accurateSeek = true;
 
-  /// demux 包缓存范围数（E1 置 0）。
-  static String get demuxBufferRanges =>
-      variant == SeekVariant.noCache ? '0' : '16';
+  /// demux 包缓存范围数。
+  ///
+  /// 2026-09-28 内存调查：mdk 的该缓存会"download data only once"——把已下载的
+  /// 媒体数据保留在内存中以加速 seek；其淘汰依赖"多种范围的重叠合并 + LRU"，
+  /// 连续单向播放时范围数少，数据会持续累积。实测播放 4K 视频约 3MB/s（≈码率）
+  /// 持续增长（16 分钟 +1GB，播完即停），为本轮定位的内存泄漏源。
+  /// 关闭（官方默认值 0）验证内存稳定性。
+  static const String demuxBufferRanges = '0';
 
   static Future<void> init() async {
     await _loadConfig();

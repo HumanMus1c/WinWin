@@ -36,9 +36,11 @@ final RouteObserver<PageRoute<dynamic>> routeObserver =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 性能优化：为网格/瀑布流海量封面扩大图片内存缓存容量（256MB / 1000 items）
-  // 避免高频滑动时的 cache eviction 与频繁重新解码。
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 256 << 20;
+  // 图片内存缓存容量：128MB / 1000 items。
+  // 原为 256MB；2026-09-27/28 内存调查确认"解码位图在重度浏览后会常驻放大"，
+  // 实测峰值用量约 86MB（191 张），128MB 上限足以覆盖正常滚动窗口，
+  // 同时避免缓存上限本身抬高常驻内存水位（Flutter 默认 100MB）。
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 128 << 20;
   PaintingBinding.instance.imageCache.maximumSize = 1000;
 
   // Phase 4.6：初始化桌面伪 PiP 窗口管理器。
