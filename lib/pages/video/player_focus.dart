@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/pages/video/player_controller.dart';
@@ -89,6 +90,8 @@ class _PlayerFocusState extends State<PlayerFocus> {
 
   bool _handleKey(KeyEvent event) {
     if (!widget.enabled) return false;
+    // 输入框（发弹幕 / 评论等）聚焦时不拦截快捷键；Esc 交由全局层“取消聚焦”。
+    if (isTextInputFocused()) return false;
     final c = widget.controller;
     final key = event.logicalKey;
 

@@ -9,6 +9,7 @@ import 'package:fvp/mdk.dart' as mdk;
 import 'package:window_manager/window_manager.dart' hide calcWindowPosition;
 
 import 'core/bootstrap.dart';
+import 'core/input/app_escape_scope.dart';
 import 'core/log/app_logger.dart';
 import 'core/log/sync_trace.dart';
 import 'core/player/seek_probe.dart';
@@ -32,6 +33,13 @@ import 'utils/json_file_handler.dart';
 /// 在页面被覆盖时暂停播放器、返回时恢复播放。
 final RouteObserver<PageRoute<dynamic>> routeObserver =
     RouteObserver<PageRoute<dynamic>>();
+
+/// 根 Navigator 引用：供全局 Esc 路由器（[AppEscapeScope]）执行 maybePop。
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
+/// 全局 Esc 路由器的路由栈观察器（判断栈顶是否为弹层路由）。
+final AppEscapeNavigatorObserver appEscapeObserver =
+    AppEscapeNavigatorObserver();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -199,10 +207,17 @@ class WinWinApp extends StatelessWidget {
                     theme: AppTheme.lightFor(uiStyle, fontFamily: fontFamily),
                     darkTheme: AppTheme.darkFor(uiStyle, fontFamily: fontFamily),
                     themeMode: themeMode,
-                    navigatorObservers: [routeObserver],
+                    navigatorKey: appNavigatorKey,
+                    navigatorObservers: [routeObserver, appEscapeObserver],
+                    // 全局 Esc 分层路由：返回上一级 / 取消输入聚焦 /
+                    // 关闭对话框与二级浮层（详见 AppEscapeScope）。
                     builder: (context, child) => UiStyleScope(
                       style: uiStyle,
-                      child: child ?? const SizedBox.shrink(),
+                      child: AppEscapeScope(
+                        navigatorKey: appNavigatorKey,
+                        observer: appEscapeObserver,
+                        child: child ?? const SizedBox.shrink(),
+                      ),
                     ),
                     home: AgreementGate(
                       bootstrapError: bootstrapError,

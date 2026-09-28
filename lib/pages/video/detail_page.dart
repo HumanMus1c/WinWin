@@ -1153,17 +1153,14 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           height: kToolbarHeight,
           child: Row(
             children: [
-              IconButton(
-                icon: Icon(
-                  AppIcons.back(context),
-                  color: overVideo ? Colors.white : barContrast.contentColor,
-                  shadows: overVideo ? ContrastStyle.glyphShadows : null,
-                ),
-                onPressed: () {
+              AppBackButton(
+                color: overVideo ? Colors.white : barContrast.contentColor,
+                shadows: overVideo ? ContrastStyle.glyphShadows : null,
+                size: 24,
+                onBeforePop: () {
                   SyncTrace.log('DetailPage', 'back button pressed');
                   playerController?.pause();
                   playerController?.detachListeners();
-                  Navigator.pop(context);
                 },
               ),
               Expanded(

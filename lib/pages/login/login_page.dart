@@ -11,6 +11,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/login.dart';
 import 'package:winwin/models/common/account_type.dart';
 import 'package:winwin/pages/login/geetest_webview_dialog.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
@@ -95,10 +96,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('登录'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leading: const AppBackButton(),
       ),
       body: Column(
         children: [

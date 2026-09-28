@@ -10,6 +10,8 @@ import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/input/app_escape_scope.dart';
+import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -682,6 +684,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   void _handleKey(KeyEvent event) {
     if (event is! KeyDownEvent) return;
+    // 输入框（评论框 / 弹幕框等）聚焦时不拦截快捷键；Esc 交由全局层“取消聚焦”。
+    if (isTextInputFocused()) return;
     final ctrl = playerController;
     if (ctrl == null) return;
 
@@ -704,6 +708,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       case LogicalKeyboardKey.keyW:
         _toggleInAppFullscreen();
       case LogicalKeyboardKey.escape:
+        // 二级浮层（表情面板 / 弹幕样式…）优先关闭，本次 Esc 不再级联。
+        if (EscapeLayerRegistry.instance.closeTopmost()) return;
         _handleEscape();
     }
   }
@@ -824,16 +830,13 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           height: kToolbarHeight,
           child: Row(
             children: [
-              IconButton(
-                icon: Icon(
-                  AppIcons.back(context),
-                  color: overVideo ? Colors.white : barContrast.contentColor,
-                  shadows: overVideo ? ContrastStyle.glyphShadows : null,
-                ),
-                onPressed: () {
+              AppBackButton(
+                color: overVideo ? Colors.white : barContrast.contentColor,
+                shadows: overVideo ? ContrastStyle.glyphShadows : null,
+                size: 24,
+                onBeforePop: () {
                   playerController?.pause();
                   playerController?.detachListeners();
-                  Navigator.maybePop(context);
                 },
               ),
               Expanded(

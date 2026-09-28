@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/image_utils.dart';
 
@@ -50,6 +51,9 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
 
   final GlobalKey _anchorKey = GlobalKey();
   OverlayEntry? _overlay;
+
+  /// 表情面板的 Esc 登记注销回调。
+  VoidCallback? _escUnregister;
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 180),
@@ -94,6 +98,8 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
   void _removePanel() {
     _overlay?.remove();
     _overlay = null;
+    _escUnregister?.call();
+    _escUnregister = null;
   }
 
   /// 首次打开时后台预取全部表情图，再次打开即命中缓存、零 pop-in。
@@ -184,6 +190,11 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
     );
 
     Overlay.of(context).insert(_overlay!);
+    _escUnregister = EscapeLayerRegistry.instance.register(() {
+      if (_overlay == null) return false;
+      _removePanel();
+      return true;
+    });
     _controller.forward(from: 0);
     _precacheEmotes();
   }

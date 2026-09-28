@@ -584,42 +584,62 @@ abstract final class AppIcons {
 
 /// 全局通用的自适应返回按钮。
 ///
-/// 根据当前主题的 [UiStyle] 自动渲染 M3 箭头或 Miuix 返回箭头，并适配点击热区与视觉回弹。
+/// 根据当前主题的 [UiStyle] 自动渲染 M3 箭头或 Miuix 返回箭头；全屏对话框
+/// 路由（fullscreenDialog，如登录页）自动切换为“关闭”图标与提示。
+/// 默认点击行为统一为 [Navigator.maybePop]（与键盘 Esc 的全局返回语义一致），
+/// 需要前置副作用（如暂停播放器）时用 [onBeforePop]，完全自定义时用 [onPressed]。
 class AppBackButton extends StatelessWidget {
   const AppBackButton({
     super.key,
     this.color,
     this.onPressed,
-    this.tooltip = '返回',
+    this.onBeforePop,
+    this.tooltip,
     this.size = 20,
     this.padding = const EdgeInsets.all(8),
+    this.shadows,
   });
 
   final Color? color;
+
+  /// 完全自定义点击行为（提供后不再自动返回，由调用方自行处理）。
   final VoidCallback? onPressed;
-  final String tooltip;
+
+  /// 返回前的副作用回调（在统一 [Navigator.maybePop] 之前执行，例如
+  /// 视频/番剧播放页暂停并解绑播放器）。
+  final VoidCallback? onBeforePop;
+
+  /// 悬浮提示；缺省时普通页面为“返回”、全屏对话框页为“关闭”。
+  final String? tooltip;
+
   final double size;
   final EdgeInsetsGeometry padding;
+
+  /// 覆盖在视频/封面等媒体内容上时的字形阴影（对比度增强）。
+  final List<Shadow>? shadows;
 
   @override
   Widget build(BuildContext context) {
     final style = InheritedUiStyle.of(context);
-    final iconData = AppIcons.backOf(style);
+    final route = ModalRoute.of(context);
+    final isClose = route is PageRoute<dynamic> && route.fullscreenDialog;
+    final iconData = isClose ? AppIcons.clearOf(style) : AppIcons.backOf(style);
     final theme = Theme.of(context);
     final effectiveColor = color ?? theme.colorScheme.onSurface;
 
     return IconButton(
-      icon: Icon(iconData, size: size),
+      icon: Icon(iconData, size: size, shadows: shadows),
       color: effectiveColor,
-      tooltip: tooltip,
+      tooltip: tooltip ?? (isClose ? '关闭' : '返回'),
       padding: padding,
       constraints: const BoxConstraints(),
       onPressed: () {
         if (onPressed != null) {
           onPressed!();
-        } else {
-          Navigator.maybePop(context);
+          return;
         }
+        onBeforePop?.call();
+        Navigator.maybePop(context);
       },
     );
   }

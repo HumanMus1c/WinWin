@@ -575,7 +575,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         Loading() => _buildSpaceContent(null),
         Error(:final errMsg) => Scaffold(
             appBar: AppBar(
-              leading: const BackButton(),
+              leading: const AppBackButton(),
               title: const Text('个人空间'),
             ),
             body: _buildError(errMsg, _loadAll),
@@ -606,6 +606,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               elevation: 0,
               scrolledUnderElevation: 2,
               leading: IconButton(
+                tooltip: '返回',
                 icon: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(

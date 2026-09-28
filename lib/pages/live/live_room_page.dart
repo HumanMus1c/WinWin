@@ -10,6 +10,8 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/input/app_escape_scope.dart';
+import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/window/desktop_fullscreen.dart';
 import 'package:winwin/http/live.dart';
@@ -602,8 +604,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    // 当弹幕输入框正在编辑时，不拦截快捷键
-    if (_danmakuInputFocusNode.hasFocus) return KeyEventResult.ignored;
+    // 输入框（弹幕框 / 表情等）聚焦时不拦截快捷键；Esc 交由全局层“取消聚焦”。
+    if (isTextInputFocused()) return KeyEventResult.ignored;
 
     if (event.logicalKey == LogicalKeyboardKey.space) {
       _togglePlay();
@@ -626,6 +628,10 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.escape) {
+      // 二级浮层（表情面板等）优先关闭，本次 Esc 不再级联。
+      if (EscapeLayerRegistry.instance.closeTopmost()) {
+        return KeyEventResult.handled;
+      }
       _handleEscape();
       return KeyEventResult.handled;
     }
@@ -1065,9 +1071,10 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         ),
         child: Row(
           children: [
-            IconButton(
-              icon: Icon(AppIcons.back(context), color: Colors.white),
+            AppBackButton(
+              color: Colors.white,
               tooltip: '退出全屏 (Esc)',
+              size: 24,
               onPressed: _handleEscape,
             ),
             const SizedBox(width: 8),

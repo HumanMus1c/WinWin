@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/progress_bar/audio_video_progress_bar.dart';
+import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -78,6 +79,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
   bool _volumePopupOpen = false;
   bool _chapterPanelOpen = false;
 
+  /// 二级浮层的 Esc 登记注销回调（章节面板 / 音量弹层）。
+  VoidCallback? _chapterEscUnregister;
+  VoidCallback? _volumeEscUnregister;
+
   // ── Phase 4.3 手势反馈状态 ──
   /// 双击快进/快退波纹反馈：(isForward, deltaSec)，null 表示无反馈。
   final ValueNotifier<({bool isForward, int deltaSec})?> _doubleTapFeedback =
@@ -104,12 +109,48 @@ class _PlayerPanelState extends State<PlayerPanel> {
     _hideTimer?.cancel();
     _feedbackTimer?.cancel();
     _dragFeedbackTimer?.cancel();
+    _chapterEscUnregister?.call();
+    _chapterEscUnregister = null;
+    _volumeEscUnregister?.call();
+    _volumeEscUnregister = null;
     _sliderHoverNotifier.dispose();
     _controlsVisible.dispose();
     _doubleTapFeedback.dispose();
     _longPressSpeedFeedback.dispose();
     _dragSeekFeedback.dispose();
     super.dispose();
+  }
+
+  /// 章节面板开关（唯一出口）：同步全局 Esc 登记表。
+  void _setChapterPanelOpen(bool open) {
+    if (_chapterPanelOpen == open) return;
+    setState(() => _chapterPanelOpen = open);
+    if (open) {
+      _chapterEscUnregister = EscapeLayerRegistry.instance.register(() {
+        if (!_chapterPanelOpen) return false;
+        _setChapterPanelOpen(false);
+        return true;
+      });
+    } else {
+      _chapterEscUnregister?.call();
+      _chapterEscUnregister = null;
+    }
+  }
+
+  /// 音量弹层开关（唯一出口）：同步全局 Esc 登记表。
+  void _setVolumePopupOpen(bool open) {
+    if (_volumePopupOpen == open) return;
+    setState(() => _volumePopupOpen = open);
+    if (open) {
+      _volumeEscUnregister = EscapeLayerRegistry.instance.register(() {
+        if (!_volumePopupOpen) return false;
+        _setVolumePopupOpen(false);
+        return true;
+      });
+    } else {
+      _volumeEscUnregister?.call();
+      _volumeEscUnregister = null;
+    }
   }
 
   // ── Phase 4.3 手势反馈 ──
@@ -219,7 +260,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     _hideTimer?.cancel();
     _controlsVisible.value = false;
     if (_volumePopupOpen) {
-      setState(() => _volumePopupOpen = false);
+      _setVolumePopupOpen(false);
     }
   }
 
@@ -231,7 +272,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
   }
 
   void _toggleVolumePopup() {
-    setState(() => _volumePopupOpen = !_volumePopupOpen);
+    _setVolumePopupOpen(!_volumePopupOpen);
     _onPointerActivity();
   }
 
@@ -350,10 +391,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
       onToggleFullscreen: widget.onToggleFullscreen,
       onToggleInAppFullscreen: widget.onToggleInAppFullscreen,
       onEscape: () {
-        if (_chapterPanelOpen) {
-          setState(() => _chapterPanelOpen = false);
-          return;
-        }
+        // 二级浮层（章节面板 / 音量弹层 / 弹幕样式…）优先关闭，本次 Esc 不再级联。
+        if (EscapeLayerRegistry.instance.closeTopmost()) return;
         widget.onEscape?.call();
       },
       onToggleDanmaku: _toggleDanmaku,
@@ -996,7 +1035,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 padding: EdgeInsets.zero,
                 child: HoverContainer(
                   onTap: () {
-                    setState(() => _chapterPanelOpen = !_chapterPanelOpen);
+                    _setChapterPanelOpen(!_chapterPanelOpen);
                     _onPointerActivity();
                   },
                   borderRadius: 4.0,
@@ -1708,7 +1747,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               : Colors.white.withValues(alpha: 0.15),
           child: HoverContainer(
             onTap: () {
-              setState(() => _chapterPanelOpen = !_chapterPanelOpen);
+              _setChapterPanelOpen(!_chapterPanelOpen);
               _onPointerActivity();
             },
             borderRadius: Style.radiusFull,
@@ -1766,7 +1805,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () {
-                      setState(() => _chapterPanelOpen = false);
+                      _setChapterPanelOpen(false);
                       _onPointerActivity();
                     },
                     child: AnimatedContainer(
@@ -1859,9 +1898,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                       const Spacer(),
                                       HoverContainer(
                                         onTap: () {
-                                          setState(
-                                            () => _chapterPanelOpen = false,
-                                          );
+                                          _setChapterPanelOpen(false);
                                         },
                                         borderRadius: 6.0,
                                         padding: const EdgeInsets.all(4),

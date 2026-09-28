@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/http/danmaku.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/video/player_controller.dart';
@@ -101,6 +102,9 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
   final FocusNode _focusNode = FocusNode();
   OverlayEntry? _settingsOverlay;
 
+  /// 内联样式浮层的 Esc 登记注销回调。
+  VoidCallback? _settingsEscUnregister;
+
   /// 弹窗模式的设置区折叠态（对标 BiliPai showSettings，默认收起）。
   bool _showSettings = false;
 
@@ -115,7 +119,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
 
   @override
   void dispose() {
-    _settingsOverlay?.remove();
+    _closeInlineSettings();
     _textController.dispose();
     _mode.dispose();
     _color.dispose();
@@ -123,6 +127,14 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
     _sending.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  /// 关闭内联弹幕样式浮层（唯一出口）：移除 Overlay 并注销 Esc 登记。
+  void _closeInlineSettings() {
+    _settingsOverlay?.remove();
+    _settingsOverlay = null;
+    _settingsEscUnregister?.call();
+    _settingsEscUnregister = null;
   }
 
   bool get _canSend =>
@@ -455,8 +467,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
   void _showInlineSettings(BuildContext buttonContext) {
     // 如果已有 overlay，先移除并返回（点击切换开/关）
     if (_settingsOverlay != null) {
-      _settingsOverlay?.remove();
-      _settingsOverlay = null;
+      _closeInlineSettings();
       return;
     }
     
@@ -479,10 +490,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
             // 透明遮罩，点击外部关闭
             GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onTap: () {
-                _settingsOverlay?.remove();
-                _settingsOverlay = null;
-              },
+              onTap: _closeInlineSettings,
               child: Container(color: Colors.transparent),
             ),
             // 设置面板（灰色半透明毛玻璃高质感容器）
@@ -582,6 +590,11 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
       },
     );
     Overlay.of(buttonContext).insert(_settingsOverlay!);
+    _settingsEscUnregister = EscapeLayerRegistry.instance.register(() {
+      if (_settingsOverlay == null) return false;
+      _closeInlineSettings();
+      return true;
+    });
   }
 
 
