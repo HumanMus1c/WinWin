@@ -182,6 +182,11 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
             widget.controller.danmakuOpacity.value = v;
             GStorage.setting.put(SettingBoxKey.danmakuOpacity, v);
           },
+          onReset: () {
+            setState(() => _opacity = 1.0);
+            widget.controller.danmakuOpacity.value = 1.0;
+            GStorage.setting.put(SettingBoxKey.danmakuOpacity, 1.0);
+          },
         ),
         _SliderRow(
           label: '字号缩放',
@@ -197,6 +202,16 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
                 : SettingBoxKey.danmakuFontScale,
             v,
           ),
+          onReset: () {
+            final d = widget.fullscreen ? 1.7 : 1.4;
+            setState(() => _fontScale = d);
+            _put(
+              widget.fullscreen
+                  ? SettingBoxKey.danmakuFontScaleFS
+                  : SettingBoxKey.danmakuFontScale,
+              d,
+            );
+          },
         ),
         _SliderRow(
           label: '显示区域',
@@ -207,6 +222,10 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           valueLabel: '${(_area * 100).round()}%',
           onChanged: (v) => setState(() => _area = v),
           onChangeEnd: (v) => _put(SettingBoxKey.danmakuShowArea, v),
+          onReset: () {
+            setState(() => _area = 1.0);
+            _put(SettingBoxKey.danmakuShowArea, 1.0);
+          },
         ),
         _SliderRow(
           label: '滚动时长',
@@ -217,6 +236,10 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           valueLabel: '${_duration.toStringAsFixed(1)}s',
           onChanged: (v) => setState(() => _duration = v),
           onChangeEnd: (v) => _put(SettingBoxKey.danmakuDuration, v),
+          onReset: () {
+            setState(() => _duration = 7.0);
+            _put(SettingBoxKey.danmakuDuration, 7.0);
+          },
         ),
         _SliderRow(
           label: '静态时长',
@@ -227,6 +250,10 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           valueLabel: '${_staticDuration.toStringAsFixed(1)}s',
           onChanged: (v) => setState(() => _staticDuration = v),
           onChangeEnd: (v) => _put(SettingBoxKey.danmakuStaticDuration, v),
+          onReset: () {
+            setState(() => _staticDuration = 4.0);
+            _put(SettingBoxKey.danmakuStaticDuration, 4.0);
+          },
         ),
         _SliderRow(
           label: '描边宽度',
@@ -237,6 +264,10 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           valueLabel: _strokeWidth.toStringAsFixed(1),
           onChanged: (v) => setState(() => _strokeWidth = v),
           onChangeEnd: (v) => _put(SettingBoxKey.danmakuStrokeWidth, v),
+          onReset: () {
+            setState(() => _strokeWidth = 2.5);
+            _put(SettingBoxKey.danmakuStrokeWidth, 2.5);
+          },
         ),
         _SliderRow(
           label: '字体粗细',
@@ -247,6 +278,10 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           valueLabel: 'w${_fontWeight * 100}',
           onChanged: (v) => setState(() => _fontWeight = v.round()),
           onChangeEnd: (v) => _put(SettingBoxKey.danmakuFontWeight, v.round()),
+          onReset: () {
+            setState(() => _fontWeight = 6);
+            _put(SettingBoxKey.danmakuFontWeight, 6);
+          },
         ),
         _SliderRow(
           label: '行高',
@@ -257,6 +292,10 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           valueLabel: _lineHeight.toStringAsFixed(2),
           onChanged: (v) => setState(() => _lineHeight = v),
           onChangeEnd: (v) => _put(SettingBoxKey.danmakuLineHeight, v),
+          onReset: () {
+            setState(() => _lineHeight = 1.6);
+            _put(SettingBoxKey.danmakuLineHeight, 1.6);
+          },
         ),
         _SliderRow(
           label: '智能云屏蔽',
@@ -267,6 +306,10 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           valueLabel: '$_weight',
           onChanged: (v) => setState(() => _weight = v.round()),
           onChangeEnd: (v) => _put(SettingBoxKey.danmakuWeight, v.round()),
+          onReset: () {
+            setState(() => _weight = 0);
+            _put(SettingBoxKey.danmakuWeight, 0);
+          },
         ),
         const SizedBox(height: Style.sm),
         _buildBlockTypeChips(theme),
@@ -365,7 +408,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
   }
 }
 
-/// 通用滑块行：label + value + Slider。
+/// 通用滑块行：label + value + 恢复默认 + Slider。
 class _SliderRow extends StatelessWidget {
   const _SliderRow({
     required this.label,
@@ -376,6 +419,7 @@ class _SliderRow extends StatelessWidget {
     required this.valueLabel,
     required this.onChanged,
     required this.onChangeEnd,
+    this.onReset,
   });
 
   final String label;
@@ -386,6 +430,9 @@ class _SliderRow extends StatelessWidget {
   final String valueLabel;
   final ValueChanged<double> onChanged;
   final ValueChanged<double> onChangeEnd;
+
+  /// 恢复默认值；非空时行尾显示重置按钮。
+  final VoidCallback? onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -406,6 +453,21 @@ class _SliderRow extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              if (onReset != null) ...[
+                const SizedBox(width: 2),
+                IconButton(
+                  tooltip: '恢复默认',
+                  icon: Icon(AppIcons.refresh(context), size: 15),
+                  color: Theme.of(context).colorScheme.outline,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
+                  onPressed: onReset,
+                ),
+              ],
             ],
           ),
           Slider(

@@ -165,19 +165,25 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
             // ── AI 偏好策略 ──
             Text('AI 字幕策略', style: theme.textTheme.labelLarge),
             const SizedBox(height: Style.xs),
-            for (final pref in SubtitlePreference.values)
-              RadioListTile<SubtitlePreference>(
-                value: pref,
-                groupValue: _aiPref,
-                activeColor: biliPink,
-                dense: true,
-                title: Text(_aiPrefLabel(pref)),
-                onChanged: (v) {
-                  if (v == null) return;
-                  setState(() => _aiPref = v);
-                  _put(SettingBoxKey.subtitlePreferenceV2, v.value);
-                },
+            RadioGroup<SubtitlePreference>(
+              groupValue: _aiPref,
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _aiPref = v);
+                _put(SettingBoxKey.subtitlePreferenceV2, v.value);
+              },
+              child: Column(
+                children: [
+                  for (final pref in SubtitlePreference.values)
+                    RadioListTile<SubtitlePreference>(
+                      value: pref,
+                      activeColor: biliPink,
+                      dense: true,
+                      title: Text(_aiPrefLabel(pref)),
+                    ),
+                ],
               ),
+            ),
             const Divider(height: Style.lg),
 
             // ── 样式设置 ──
@@ -197,6 +203,16 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                     : SettingBoxKey.subtitleFontScale,
                 v,
               ),
+              onReset: () {
+                final d = widget.fullscreen ? 1.5 : 1.0;
+                setState(() => _fontScale = d);
+                _put(
+                  widget.fullscreen
+                      ? SettingBoxKey.subtitleFontScaleFS
+                      : SettingBoxKey.subtitleFontScale,
+                  d,
+                );
+              },
             ),
             _SliderRow(
               label: '背景不透明度',
@@ -208,6 +224,10 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
               onChanged: (v) => setState(() => _bgOpacity = v),
               onChangeEnd: (v) =>
                   _put(SettingBoxKey.subtitleBgOpacity, v),
+              onReset: () {
+                setState(() => _bgOpacity = 0.67);
+                _put(SettingBoxKey.subtitleBgOpacity, 0.67);
+              },
             ),
             _SliderRow(
               label: '描边宽度',
@@ -219,6 +239,10 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
               onChanged: (v) => setState(() => _strokeWidth = v),
               onChangeEnd: (v) =>
                   _put(SettingBoxKey.subtitleStrokeWidth, v),
+              onReset: () {
+                setState(() => _strokeWidth = 2.0);
+                _put(SettingBoxKey.subtitleStrokeWidth, 2.0);
+              },
             ),
             _SliderRow(
               label: '左右边距',
@@ -233,6 +257,10 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                 SettingBoxKey.subtitlePaddingH,
                 v.round(),
               ),
+              onReset: () {
+                setState(() => _padH = 24);
+                _put(SettingBoxKey.subtitlePaddingH, 24);
+              },
             ),
             _SliderRow(
               label: '底部边距',
@@ -247,6 +275,10 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                 SettingBoxKey.subtitlePaddingB,
                 v.round(),
               ),
+              onReset: () {
+                setState(() => _padB = 24);
+                _put(SettingBoxKey.subtitlePaddingB, 24);
+              },
             ),
             // 字重选择
             Padding(
@@ -255,20 +287,23 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                 children: [
                   Text('字重', style: theme.textTheme.bodyMedium),
                   const Spacer(),
-                  DropdownButton<int>(
-                    value: _fontWeight,
-                    items: const [
-                      DropdownMenuItem(value: 0, child: Text('w100')),
-                      DropdownMenuItem(value: 1, child: Text('w200')),
-                      DropdownMenuItem(value: 2, child: Text('w300')),
-                      DropdownMenuItem(value: 3, child: Text('w400')),
-                      DropdownMenuItem(value: 4, child: Text('w500')),
-                      DropdownMenuItem(value: 5, child: Text('w600')),
-                      DropdownMenuItem(value: 6, child: Text('w700')),
-                      DropdownMenuItem(value: 7, child: Text('w800')),
-                      DropdownMenuItem(value: 8, child: Text('w900')),
+                  DropdownMenu<int>(
+                    width: 116,
+                    requestFocusOnTap: false,
+                    initialSelection: _fontWeight,
+                    textStyle: theme.textTheme.bodyMedium,
+                    inputDecorationTheme: const InputDecorationTheme(
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    dropdownMenuEntries: [
+                      for (var i = 0; i < 9; i++)
+                        DropdownMenuEntry(value: i, label: 'w${(i + 1) * 100}'),
                     ],
-                    onChanged: (v) {
+                    onSelected: (v) {
                       if (v == null) return;
                       setState(() => _fontWeight = v);
                       _put(SettingBoxKey.subtitleFontWeight, v);
@@ -357,7 +392,7 @@ class _SubtitleOptionTile extends StatelessWidget {
   }
 }
 
-/// 通用滑块行：label + value + Slider。
+/// 通用滑块行：label + value + 恢复默认 + Slider。
 class _SliderRow extends StatelessWidget {
   const _SliderRow({
     required this.label,
@@ -368,6 +403,7 @@ class _SliderRow extends StatelessWidget {
     required this.valueLabel,
     required this.onChanged,
     required this.onChangeEnd,
+    this.onReset,
   });
 
   final String label;
@@ -378,6 +414,9 @@ class _SliderRow extends StatelessWidget {
   final String valueLabel;
   final ValueChanged<double> onChanged;
   final ValueChanged<double> onChangeEnd;
+
+  /// 恢复默认值；非空时行尾显示重置按钮。
+  final VoidCallback? onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -398,6 +437,21 @@ class _SliderRow extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              if (onReset != null) ...[
+                const SizedBox(width: 2),
+                IconButton(
+                  tooltip: '恢复默认',
+                  icon: Icon(AppIcons.refresh(context), size: 15),
+                  color: Theme.of(context).colorScheme.outline,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
+                  onPressed: onReset,
+                ),
+              ],
             ],
           ),
           Slider(
