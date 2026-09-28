@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
+import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
@@ -102,6 +103,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 评论输入框。
   final TextEditingController _commentCtrl = TextEditingController();
+  final FocusNode _commentFocus = FocusNode();
   bool _sendingComment = false;
   /// 回复目标（null=发表一级评论，否则为根评论 rpid + 被回复用户名）。
   int? _replyRoot;
@@ -180,6 +182,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     SyncTrace.log('DetailPage', 'dispose after playerController.dispose');
     scrollController.dispose();
     _commentCtrl.dispose();
+    _commentFocus.dispose();
     disposeInteractionEventBus();
     super.dispose();
     SyncTrace.log('DetailPage', 'dispose done');
@@ -2038,9 +2041,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         top: false,
         child: Row(
           children: [
+            // 官方表情面板按钮（输入框左侧，直播互动条同款）
+            OfficialEmotePickerButton(
+              controller: _commentCtrl,
+              focusNode: _commentFocus,
+              enabled: enabled,
+            ),
+            const SizedBox(width: Style.sm),
             Expanded(
               child: TextField(
                 controller: _commentCtrl,
+                focusNode: _commentFocus,
                 enabled: enabled,
                 onTap: () async {
                   // 点击输入框时检查登录态。

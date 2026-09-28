@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
@@ -89,6 +90,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   final Map<int, bool> _subLoading = {};
 
   final TextEditingController _commentCtrl = TextEditingController();
+  final FocusNode _commentFocus = FocusNode();
   bool _sendingComment = false;
   int? _replyRoot;
   String? _replyHint;
@@ -181,6 +183,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     playerController?.dispose();
     _scrollController.dispose();
     _commentCtrl.dispose();
+    _commentFocus.dispose();
     _keyboardFocusNode.dispose();
     super.dispose();
   }
@@ -1878,9 +1881,17 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         top: false,
         child: Row(
           children: [
+            // 官方表情面板按钮（输入框左侧，直播互动条同款）
+            OfficialEmotePickerButton(
+              controller: _commentCtrl,
+              focusNode: _commentFocus,
+              enabled: enabled,
+            ),
+            const SizedBox(width: Style.sm),
             Expanded(
               child: TextField(
                 controller: _commentCtrl,
+                focusNode: _commentFocus,
                 enabled: enabled && !_sendingComment,
                 decoration: InputDecoration(
                   isDense: true,

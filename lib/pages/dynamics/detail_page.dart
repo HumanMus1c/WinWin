@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -50,6 +52,10 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   bool _loadingReplies = false;
   bool _repliesLoaded = false;
 
+  final TextEditingController _commentCtrl = TextEditingController();
+  final FocusNode _commentFocus = FocusNode();
+  bool _sendingComment = false;
+
   String get _effectiveId => widget.item?.id ?? widget.dynamicId ?? '';
 
   @override
@@ -61,6 +67,13 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     } else {
       _loadDetail();
     }
+  }
+
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    _commentFocus.dispose();
+    super.dispose();
   }
 
   Future<void> _loadDetail() async {
@@ -103,6 +116,44 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         _loadingReplies = false;
       });
     }
+  }
+
+  /// 发送一级评论（type=11 动态评论）。
+  Future<void> _sendComment() async {
+    final message = _commentCtrl.text.trim();
+    if (message.isEmpty || _sendingComment) return;
+    final numericId = int.tryParse(_effectiveId);
+    if (numericId == null || numericId <= 0) return;
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+
+    setState(() => _sendingComment = true);
+    final res = await VideoHttp.replyAdd(
+      oid: numericId,
+      message: message,
+      type: 11,
+    );
+    if (!mounted) return;
+    setState(() => _sendingComment = false);
+    switch (res) {
+      case Success(:final response):
+        setState(() {
+          _replies.insert(0, response);
+          _repliesLoaded = true;
+        });
+        _commentCtrl.clear();
+        _toast('发送成功');
+      case Error(:final errMsg):
+        _toast(errMsg ?? '发送失败');
+      case Loading():
+        break;
+    }
+  }
+
+  void _toast(String msg) {
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+    );
   }
 
   @override
@@ -153,7 +204,18 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
               ],
             ),
           ),
-        Success(:final response) => _buildDetailContent(response, cs, theme),
+        Success(:final response) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _buildDetailContent(response, cs, theme)),
+              SimpleCommentInputBar(
+                controller: _commentCtrl,
+                focusNode: _commentFocus,
+                sending: _sendingComment,
+                onSend: _sendComment,
+              ),
+            ],
+          ),
       },
     );
   }

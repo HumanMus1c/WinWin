@@ -508,15 +508,17 @@ abstract final class VideoHttp {
   /// 发表评论（`/x/v2/reply/add`）。
   ///
   /// [root]/[parent] 为 0 或 null 时发表一级评论，否则发表二级回复。
+  /// [type] 业务类型：1=视频/番剧（默认），11/17=动态，12=专栏。
   /// 需要登录态（csrf）。
   static Future<LoadingState<ReplyItemModel>> replyAdd({
     required int oid,
     required String message,
+    int type = 1,
     int? root,
     int? parent,
   }) async {
     final data = {
-      'type': 1,
+      'type': type,
       'oid': oid,
       if (root != null && root != 0) 'root': root,
       if (parent != null && parent != 0) 'parent': parent,

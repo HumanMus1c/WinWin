@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fvp/mdk.dart' as mdk;
 
+import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
@@ -2117,8 +2118,13 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 1. 哔哩哔哩官方表情快捷选择器（严格 40x40 圆形图标，消除外层边距偏差）
-          _buildEmotePickerButton(cs, barItemHeight),
+          // 1. 哔哩哔哩官方表情快捷选择器（共享组件，严格 40x40 圆形图标）
+          OfficialEmotePickerButton(
+            controller: _danmakuInputCtrl,
+            focusNode: _danmakuInputFocusNode,
+            size: barItemHeight,
+            onInserted: () => setState(() {}),
+          ),
           const SizedBox(width: 8),
 
           // 2. 弹幕输入框（外层 Container 严格限定为 40px 胶囊容器，保证与发送按钮完全等高且绝不缩瘪）
@@ -2212,101 +2218,4 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     );
   }
 
-  /// 官方表情弹层选择器按钮（严格限定 size 宽高）
-  Widget _buildEmotePickerButton(ColorScheme cs, [double size = 40.0]) {
-    return PopupMenuButton<String>(
-      tooltip: '选择官方表情',
-      padding: EdgeInsets.zero,
-      color: const Color(0xF01E1E1E),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Colors.white12),
-      ),
-      offset: const Offset(0, -220),
-      onSelected: (code) {
-        final currentText = _danmakuInputCtrl.text;
-        final selection = _danmakuInputCtrl.selection;
-        final newText = (selection.start >= 0 && selection.end >= 0)
-            ? currentText.replaceRange(selection.start, selection.end, code)
-            : '$currentText$code';
-        _danmakuInputCtrl.text = newText;
-        _danmakuInputCtrl.selection = TextSelection.collapsed(
-          offset: selection.start >= 0
-              ? selection.start + code.length
-              : newText.length,
-        );
-        setState(() {});
-        _danmakuInputFocusNode.requestFocus();
-      },
-      itemBuilder: (context) {
-        return [
-          PopupMenuItem<String>(
-            enabled: false,
-            padding: const EdgeInsets.all(8),
-            child: SizedBox(
-              width: 260,
-              height: 200,
-              child: GridView.builder(
-                shrinkWrap: true,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 6,
-                  mainAxisSpacing: 6,
-                  crossAxisSpacing: 6,
-                ),
-                itemCount: BilibiliEmotes.popularEmotes.length,
-                itemBuilder: (context, i) {
-                  final code = BilibiliEmotes.popularEmotes[i];
-                  final url = BilibiliEmotes.defaultEmotes[code];
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(6),
-                    onTap: () {
-                      Navigator.pop(context, code);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: url != null
-                          ? Image.network(
-                              ImageUtils.thumbnailUrl(url, type: 'emote'),
-                              width: 28,
-                              height: 28,
-                              fit: BoxFit.contain,
-                              cacheWidth: 64,
-                              cacheHeight: 64,
-                              errorBuilder: (_, _, _) => Center(
-                                child: Text(
-                                  code,
-                                  style: const TextStyle(fontSize: 10),
-                                ),
-                              ),
-                            )
-                          : Center(
-                              child: Text(
-                                code,
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                            ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ];
-      },
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: cs.surface.withValues(alpha: 0.75),
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: Icon(
-          Icons.sentiment_satisfied_alt_outlined,
-          color: cs.outline,
-          size: 20,
-        ),
-      ),
-    );
-  }
 }

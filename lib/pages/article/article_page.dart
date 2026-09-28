@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/article.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -45,6 +47,10 @@ class _ArticlePageState extends State<ArticlePage> {
   bool _loadingReplies = false;
   bool _repliesLoaded = false;
 
+  final TextEditingController _commentCtrl = TextEditingController();
+  final FocusNode _commentFocus = FocusNode();
+  bool _sendingComment = false;
+
   String get _cleanId =>
       widget.id.toLowerCase().replaceAll(RegExp(r'^cv'), '');
 
@@ -52,6 +58,13 @@ class _ArticlePageState extends State<ArticlePage> {
   void initState() {
     super.initState();
     _loadArticle();
+  }
+
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    _commentFocus.dispose();
+    super.dispose();
   }
 
   Future<void> _loadArticle() async {
@@ -90,6 +103,44 @@ class _ArticlePageState extends State<ArticlePage> {
         _loadingReplies = false;
       });
     }
+  }
+
+  /// 发送一级评论（type=12 专栏评论）。
+  Future<void> _sendComment() async {
+    final message = _commentCtrl.text.trim();
+    if (message.isEmpty || _sendingComment) return;
+    final numericId = int.tryParse(_cleanId);
+    if (numericId == null || numericId <= 0) return;
+    if (!await LoginGuard.requireLogin(context)) return;
+    if (!mounted) return;
+
+    setState(() => _sendingComment = true);
+    final res = await VideoHttp.replyAdd(
+      oid: numericId,
+      message: message,
+      type: 12,
+    );
+    if (!mounted) return;
+    setState(() => _sendingComment = false);
+    switch (res) {
+      case Success(:final response):
+        setState(() {
+          _replies.insert(0, response);
+          _repliesLoaded = true;
+        });
+        _commentCtrl.clear();
+        _toast('发送成功');
+      case Error(:final errMsg):
+        _toast(errMsg ?? '发送失败');
+      case Loading():
+        break;
+    }
+  }
+
+  void _toast(String msg) {
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+    );
   }
 
   @override
@@ -145,7 +196,18 @@ class _ArticlePageState extends State<ArticlePage> {
               ],
             ),
           ),
-        Success(:final response) => _buildArticleContent(response, cs, theme),
+        Success(:final response) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _buildArticleContent(response, cs, theme)),
+              SimpleCommentInputBar(
+                controller: _commentCtrl,
+                focusNode: _commentFocus,
+                sending: _sendingComment,
+                onSend: _sendComment,
+              ),
+            ],
+          ),
       },
     );
   }
