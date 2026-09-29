@@ -1,5 +1,5 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
@@ -23,25 +23,18 @@ List<SettingsModel> get styleSettings => [
         getSubtitle: () =>
             '当前风格：${UiStyleNotifier.instance.value.label}（切换即时生效）',
         onTap: (context, setState) async {
-          final res = await showDialog<UiStyle>(
-            context: context,
-            builder: (context) => SelectDialog<UiStyle>(
-              title: '界面风格',
-              value: UiStyleNotifier.instance.value,
-              values: UiStyle.values.map((e) => (e, e.label)).toList(),
-              subtitleBuilder: (_, index) {
-                final desc = switch (UiStyle.values[index]) {
-                  UiStyle.material3 => 'M3 原生控件 + 标准 tonal elevation',
-                  UiStyle.miuix => '扁平控件 + 0 elevation + 1.15× 圆角',
-                };
-                return Text(
-                  desc,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                );
-              },
-            ),
+          final res = await showSelectDialog<UiStyle>(
+            context,
+            title: '界面风格',
+            value: UiStyleNotifier.instance.value,
+            values: UiStyle.values.map((e) => (e, e.label)).toList(),
+            subtitleBuilder: (_, index) {
+              final desc = switch (UiStyle.values[index]) {
+                UiStyle.material3 => 'M3 原生控件 + 标准 tonal elevation',
+                UiStyle.miuix => '扁平控件 + 0 elevation + 1.15× 圆角',
+              };
+              return Text(desc);
+            },
           );
           if (res != null) {
             await UiStyleNotifier.instance.setStyle(res);
@@ -70,15 +63,11 @@ List<SettingsModel> get styleSettings => [
         getSubtitle: () =>
             '当前模式：${ThemeModeType.fromMode(ThemeNotifier.instance.value).label}',
         onTap: (context, setState) async {
-          final res = await showDialog<ThemeModeType>(
-            context: context,
-            builder: (context) => SelectDialog<ThemeModeType>(
-              title: '主题模式',
-              value: ThemeModeType.fromMode(ThemeNotifier.instance.value),
-              values: ThemeModeType.values
-                  .map((e) => (e, e.label))
-                  .toList(),
-            ),
+          final res = await showSelectDialog<ThemeModeType>(
+            context,
+            title: '主题模式',
+            value: ThemeModeType.fromMode(ThemeNotifier.instance.value),
+            values: ThemeModeType.values.map((e) => (e, e.label)).toList(),
           );
           if (res != null) {
             await ThemeNotifier.instance.setMode(res.toThemeMode());

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
@@ -32,13 +32,11 @@ List<SettingsModel> get videoSettings => [
         leading: const Icon(Icons.video_settings_outlined),
         getSubtitle: () => '当前画质：${_videoQualityDesc(Pref.defaultVideoQa)}',
         onTap: (context, setState) async {
-          final res = await showDialog<int>(
-            context: context,
-            builder: (context) => SelectDialog<int>(
-              title: '默认画质',
-              value: Pref.defaultVideoQa,
-              values: _videoQualityValues,
-            ),
+          final res = await showSelectDialog<int>(
+            context,
+            title: '默认画质',
+            value: Pref.defaultVideoQa,
+            values: _videoQualityValues,
           );
           if (res != null) {
             await GStorage.setting.put(SettingBoxKey.defaultVideoQa, res);
@@ -51,13 +49,11 @@ List<SettingsModel> get videoSettings => [
         leading: const Icon(Icons.music_video_outlined),
         getSubtitle: () => '当前音质：${_audioQualityDesc(Pref.defaultAudioQa)}',
         onTap: (context, setState) async {
-          final res = await showDialog<int>(
-            context: context,
-            builder: (context) => SelectDialog<int>(
-              title: '默认音质',
-              value: Pref.defaultAudioQa,
-              values: _audioQualityValues,
-            ),
+          final res = await showSelectDialog<int>(
+            context,
+            title: '默认音质',
+            value: Pref.defaultAudioQa,
+            values: _audioQualityValues,
           );
           if (res != null) {
             await GStorage.setting.put(SettingBoxKey.defaultAudioQa, res);
@@ -71,17 +67,15 @@ List<SettingsModel> get videoSettings => [
         getSubtitle: () =>
             '当前配置：${AudioNormalization.getTitleFromConfig(Pref.audioNormalization)}',
         onTap: (context, setState) async {
-          final res = await showDialog<String>(
-            context: context,
-            builder: (context) => SelectDialog<String>(
-              title: '音频响度均衡',
-              value: Pref.audioNormalization,
-              values: const [
-                ('0', '禁用'),
-                ('2', '智能响度均衡 (loudnorm) - 推荐'),
-                ('1', '动态压缩 (dynaudnorm)'),
-              ],
-            ),
+          final res = await showSelectDialog<String>(
+            context,
+            title: '音频响度均衡',
+            value: Pref.audioNormalization,
+            values: const [
+              ('0', '禁用'),
+              ('2', '智能响度均衡 (loudnorm) - 推荐'),
+              ('1', '动态压缩 (dynaudnorm)'),
+            ],
           );
           if (res != null) {
             Pref.audioNormalization = res;
@@ -95,13 +89,11 @@ List<SettingsModel> get videoSettings => [
         getSubtitle: () =>
             '当前使用：${Pref.defaultCDNService.desc}，如遇缓冲频繁请尝试切换',
         onTap: (context, setState) async {
-          final res = await showDialog<CDNService>(
-            context: context,
-            builder: (context) => SelectDialog<CDNService>(
-              title: 'CDN 服务节点',
-              value: Pref.defaultCDNService,
-              values: CDNService.values.map((i) => (i, i.desc)).toList(),
-            ),
+          final res = await showSelectDialog<CDNService>(
+            context,
+            title: 'CDN 服务节点',
+            value: Pref.defaultCDNService,
+            values: CDNService.values.map((i) => (i, i.desc)).toList(),
           );
           if (res != null) {
             Pref.defaultCDNService = res;
@@ -114,19 +106,17 @@ List<SettingsModel> get videoSettings => [
         leading: const Icon(Icons.memory),
         getSubtitle: () => '当前模式：${Pref.hardwareDecoding}',
         onTap: (context, setState) async {
-          final res = await showDialog<String>(
-            context: context,
-            builder: (context) => SelectDialog<String>(
-              title: '硬件解码模式',
-              value: Pref.hardwareDecoding,
-              values: const [
-                ('auto', '自动选择'),
-                ('auto-copy', '自动选择（复制）'),
-                ('d3d11va', 'D3D11 (Windows)'),
-                ('dxva2', 'DXVA2'),
-                ('no', '软解'),
-              ],
-            ),
+          final res = await showSelectDialog<String>(
+            context,
+            title: '硬件解码模式',
+            value: Pref.hardwareDecoding,
+            values: const [
+              ('auto', '自动选择'),
+              ('auto-copy', '自动选择（复制）'),
+              ('d3d11va', 'D3D11 (Windows)'),
+              ('dxva2', 'DXVA2'),
+              ('no', '软解'),
+            ],
           );
           if (res != null) {
             await GStorage.setting.put(SettingBoxKey.hardwareDecoding, res);
@@ -139,18 +129,16 @@ List<SettingsModel> get videoSettings => [
         leading: const Icon(Icons.sync),
         getSubtitle: () => '当前模式：${Pref.videoSync}',
         onTap: (context, setState) async {
-          final res = await showDialog<String>(
-            context: context,
-            builder: (context) => SelectDialog<String>(
-              title: '视频同步模式',
-              value: Pref.videoSync,
-              values: const [
-                ('audio', '音频同步（默认）'),
-                ('display-resample', '显示同步+重采样'),
-                ('display-desync', '显示同步（不重采样）'),
-                ('display-vdrop', '显示同步+丢帧'),
-              ],
-            ),
+          final res = await showSelectDialog<String>(
+            context,
+            title: '视频同步模式',
+            value: Pref.videoSync,
+            values: const [
+              ('audio', '音频同步（默认）'),
+              ('display-resample', '显示同步+重采样'),
+              ('display-desync', '显示同步（不重采样）'),
+              ('display-vdrop', '显示同步+丢帧'),
+            ],
           );
           if (res != null) {
             await GStorage.setting.put(SettingBoxKey.videoSync, res);

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
@@ -23,19 +23,17 @@ List<SettingsModel> get extraSettings => [
         leading: const Icon(Icons.refresh),
         getSubtitle: () => '当前：${Pref.retryCount} 次',
         onTap: (context, setState) async {
-          final res = await showDialog<int>(
-            context: context,
-            builder: (context) => SelectDialog<int>(
-              title: '重试次数',
-              value: Pref.retryCount,
-              values: const [
-                (0, '不重试'),
-                (1, '1 次'),
-                (2, '2 次'),
-                (3, '3 次'),
-                (5, '5 次'),
-              ],
-            ),
+          final res = await showSelectDialog<int>(
+            context,
+            title: '重试次数',
+            value: Pref.retryCount,
+            values: const [
+              (0, '不重试'),
+              (1, '1 次'),
+              (2, '2 次'),
+              (3, '3 次'),
+              (5, '5 次'),
+            ],
           );
           if (res != null) {
             await GStorage.setting.put(SettingBoxKey.retryCount, res);
@@ -48,19 +46,17 @@ List<SettingsModel> get extraSettings => [
         leading: const Icon(Icons.timer),
         getSubtitle: () => '当前：${Pref.retryDelay} ms',
         onTap: (context, setState) async {
-          final res = await showDialog<int>(
-            context: context,
-            builder: (context) => SelectDialog<int>(
-              title: '重试间隔',
-              value: Pref.retryDelay,
-              values: const [
-                (200, '200 ms'),
-                (500, '500 ms'),
-                (1000, '1 秒'),
-                (2000, '2 秒'),
-                (3000, '3 秒'),
-              ],
-            ),
+          final res = await showSelectDialog<int>(
+            context,
+            title: '重试间隔',
+            value: Pref.retryDelay,
+            values: const [
+              (200, '200 ms'),
+              (500, '500 ms'),
+              (1000, '1 秒'),
+              (2000, '2 秒'),
+              (3000, '3 秒'),
+            ],
           );
           if (res != null) {
             await GStorage.setting.put(SettingBoxKey.retryDelay, res);
