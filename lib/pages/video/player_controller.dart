@@ -359,16 +359,38 @@ class WinWinPlayerController {
   static const int _waterWindowMs = 2000;
   static const int _waterMinSpanMs = 1500;
   static const double _waterReadyFactor = 0.75;
-  static const int _waterFullMs = 20000; // ≈ 缓冲上限（30000）的 2/3
+
+  /// 水位「接近上限」阈值：按实际缓存上限（cache-secs = Pref.bufferSec×倍速）
+  /// 的 85% 动态推导（下限 5s）。旧实现写死 20000ms（按 30s 上限校准），默认
+  /// 配置 bufferSec=16s 时水位永远到不了 20s ⇒「缓存已满」分支不可达、冻结后
+  /// 永不恢复（2026-09-29 12:32 实机死锁实证）。
+  int get _waterFullMs {
+    final capMs = (Pref.bufferSec * playbackSpeed.value * 1000).round();
+    final derived = (capMs * 0.85).round();
+    return derived < _bufferHoldWaterMs ? _bufferHoldWaterMs : derived;
+  }
 
   final List<int> _waterTs = []; // 采样时间（墙钟 ms）
   final List<int> _waterBuf = []; // 采样水位（相对当前位置的已缓冲 ms）
   double? _waterRate; // 水位增长率；null=窗口未知
   int _waterLastBufMs = 0; // 最近一次水位读数
 
+  /// 本次「缓冲冻结」起始时间（null=当前未冻结）；配合超时兜底与卡死告警。
+  DateTime? _holdFrozenAt;
+  bool _holdStuckLogged = false;
+
   /// 冻结存量门槛（第三轮）：`buffered() < 5000ms` 才允许冻结等待——存量充足时
   /// 连续播（消耗缓冲，不再「每 2s 推一下、每次只播 ~100ms」式抖动）。
   static const int _bufferHoldWaterMs = 5000;
+
+  /// 冻结超时兜底（2026-09-29 死锁修复）：冻结 ≥3s 且存量 ≥5s 时无条件推回
+  /// 播放——水位/接近上限判据全部失效（缓存有量却不再增长）时仍可自愈；
+  /// 与第三轮「存量 ≥5s 连续播」理念一致，不会引入「推一下播一点」的抖动。
+  static const int _holdTimeoutEscapeMs = 3000;
+
+  /// 冻结持续 ≥10s 时补一条 [W] 运行日志（每次冻结一条，不刷屏；
+  /// 此前冻结仅 trace 可见、runtime.log 无感）。
+  static const int _holdStuckLogMs = 10000;
 
   /// 音画共同续播的音频位置容差（第二轮收紧：原 1500ms 会以滞后位置恢复出
   /// 「声音小时间维度滞后」，超差改为先暂停态归位再恢复）。
@@ -1783,17 +1805,42 @@ class WinWinPlayerController {
           } catch (_) {}
         }
         // 水位窗口采样：仅冻结期间有意义（位置不动，水位增长=净下载速率）。
-        if (player.state == mdk.PlaybackState.paused) {
+        // `_holdFrozenAt` 按「进入暂停等待」统一计时（含引擎自发暂停），
+        // 供超时兜底与卡死告警使用（2026-09-29）。
+        final isHoldPaused = player.state == mdk.PlaybackState.paused;
+        final frozenMs = isHoldPaused && _holdFrozenAt != null
+            ? DateTime.now().difference(_holdFrozenAt!).inMilliseconds
+            : 0;
+        if (isHoldPaused) {
+          _holdFrozenAt ??= DateTime.now();
           _sampleWater(bufferedNow);
         } else {
           _resetWaterWindow();
+          _holdFrozenAt = null;
+          _holdStuckLogged = false;
+        }
+        // 冻结卡死告警（诊断可见性）：此前冻结仅 trace 可见、运行日志无感。
+        if (isHoldPaused && frozenMs >= _holdStuckLogMs && !_holdStuckLogged) {
+          _holdStuckLogged = true;
+          AppLogger.w(
+            'PlayerController',
+            'Buffer hold stuck ${frozenMs}ms at ${posMs}ms '
+            '(buf=$bufferedNow waterRate=${_waterRate?.toStringAsFixed(3) ?? '-'} '
+            'nearFull=$_waterFullMs) — keep waiting',
+          );
         }
         // ② 恢复推动：流量达标才推（节流 2s）。第三轮（T1 修复）：推动后**重置
         // 周期判据**（旧停滞计数/旧流速样本一律作废）——否则推动后 100ms 内即被
         // 旧判据重新冻结（「每 2s 推一下、每次只播 ~100ms」的「一点一点」根源，
         // 且永远攒不够健康样本 ⇒ 永远检测不到网络恢复）；重置后天然获得
         // ≥1.5s「新窗口」宽限，播放可连续延续。
-        if (player.state == mdk.PlaybackState.paused && _waterReadyForResume) {
+        // 超时兜底：水位/接近上限判据全部失效（缓存有量却不再增长）时，
+        // 冻结 ≥3s 且存量 ≥5s 即无条件推回播放（2026-09-29 死锁修复）。
+        final holdTimeoutEscape =
+            isHoldPaused &&
+            frozenMs >= _holdTimeoutEscapeMs &&
+            bufferedNow >= _bufferHoldWaterMs;
+        if (isHoldPaused && (_waterReadyForResume || holdTimeoutEscape)) {
           final nowPush = DateTime.now();
           final lastPush = _bufferSuspendPushAt;
           if (lastPush == null ||
@@ -1801,11 +1848,15 @@ class WinWinPlayerController {
             _bufferSuspendPushAt = nowPush;
             SeekProbe.note(
               'BUFFER-HOLD-RESUME-PUSH pos=$posMs buf=$bufferedNow '
-              'waterRate=${_waterRate?.toStringAsFixed(3) ?? '-'}',
+              'waterRate=${_waterRate?.toStringAsFixed(3) ?? '-'} '
+              'via=${_waterReadyForResume ? 'water' : 'timeout'} '
+              'frozenMs=$frozenMs',
             );
             try {
               player.state = mdk.PlaybackState.playing;
             } catch (_) {}
+            _holdFrozenAt = null;
+            _holdStuckLogged = false;
             _bufferingStallMs = 0; // 新周期：旧停滞计数作废
             _resetFlowWindow(); // 新周期：旧流速样本作废（促成 ≥1.5s 宽限）
             // ③ 音画共同续播：同刻恢复音频（消除「视频先无声播放、声音再追赶」）。
@@ -1839,6 +1890,8 @@ class WinWinPlayerController {
         }
       } else {
         _resetWaterWindow();
+        _holdFrozenAt = null;
+        _holdStuckLogged = false;
       }
 
       if (_userIntentPlaying &&
