@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:winwin/plugin/canvas_danmaku/models/danmaku_content_item.dart';
 
 abstract final class DmUtils {

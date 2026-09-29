@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 桌面级微交互装饰组件（自适应悬停高光与聚焦环）。
 ///

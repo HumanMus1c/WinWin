@@ -4,7 +4,7 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:catcher_2/catcher_2.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:fvp/mdk.dart' as mdk;
 import 'package:window_manager/window_manager.dart' hide calcWindowPosition;
 
@@ -227,12 +227,21 @@ class WinWinApp extends StatelessWidget {
                     navigatorObservers: [routeObserver, appEscapeObserver],
                     // 全局 Esc 分层路由：返回上一级 / 取消输入聚焦 /
                     // 关闭对话框与二级浮层（详见 AppEscapeScope）。
+                    //
+                    // MaterialUiCompatibilityBridge：为仍从 context 读取设计状态的
+                    // 三方 SDK 子树（如 flutter_inappwebview 的极验弹窗）注入
+                    // ThemeData / MaterialLocalizations，使其在 material_ui 应用树中
+                    // 正常取到主题。该桥接不解析跨包 API 签名类型错配，故本项目自有
+                    // 代码已全量迁移（见 docs/material_ui全库迁移与SelectDialog现代化复盘）。
                     builder: (context, child) => UiStyleScope(
                       style: uiStyle,
-                      child: AppEscapeScope(
-                        navigatorKey: appNavigatorKey,
-                        observer: appEscapeObserver,
-                        child: child ?? const SizedBox.shrink(),
+                      // ignore: deprecated_member_use
+                      child: MaterialUiCompatibilityBridge(
+                        child: AppEscapeScope(
+                          navigatorKey: appNavigatorKey,
+                          observer: appEscapeObserver,
+                          child: child ?? const SizedBox.shrink(),
+                        ),
                       ),
                     ),
                     home: AgreementGate(

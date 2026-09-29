@@ -20,6 +20,10 @@ dependencies:
   hive_ce: ^2.19.3
   path_provider: ^2.1.5
   cookie_jar: ^4.0.8
+  # 官方 Cupertino 独立包：SDK 内设计库已在 Flutter 3.44 冻结，
+  # 并在后续 stable 排期正式弃用（AppIcons 的 CupertinoIcons 依赖此包）。
+  # 锁定 1.0.0 = 与 SDK 3.47 冻结代码等价的零行为变化替换；升级 1.x 单独评估。
+  cupertino_ui: 1.0.0
   cached_network_image_ce: ^4.1.1
   fvp: ^0.38.1
   protobuf: ^6.0.0
@@ -40,6 +44,10 @@ dependencies:
   catcher_2: ^2.1.9
   # 字体导入：桌面端文件选择器，用于导入 .ttf/.otf 自定义字体文件。
   file_picker: ^12.2.0
+  # 官方 Material 独立包：SDK 内的 package:flutter/material.dart 已冻结，
+  # 新特性（M3 Expressive 等）只在此包迭代。全库导入已迁至 material_ui。
+  # 锁定 1.0.0 = 与 SDK 3.47 冻结代码等价的零行为变化替换；升级 1.x 单独评估。
+  material_ui: 1.0.0
   # 动态页多列瀑布流排版：解决异质卡片在标准网格中的行间留白浪费问题。
   flutter_staggered_grid_view: ^0.7.0
 

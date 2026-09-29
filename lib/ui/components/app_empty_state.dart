@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 统一空状态组件（移植自 BiliPai v0.2.3-beta.3 `AppEmptyState`）。
 ///

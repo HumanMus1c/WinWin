@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 
 /// 视频详情页头部 Sliver（Phase 7.6.1）。

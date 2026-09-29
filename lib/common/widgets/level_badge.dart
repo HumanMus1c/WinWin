@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/level_icon.dart';
 import 'package:winwin/theme/app_shapes.dart';

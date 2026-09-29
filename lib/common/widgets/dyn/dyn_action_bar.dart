@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/dyn/dyn_repost_dialog.dart';
 import 'package:winwin/core/account/login_guard.dart';

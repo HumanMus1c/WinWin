@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/models/search/search_type.dart';
 import 'package:winwin/pages/search/search_panel.dart';

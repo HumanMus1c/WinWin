@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';

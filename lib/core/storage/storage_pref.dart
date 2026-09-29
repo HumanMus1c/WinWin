@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
 
-import 'package:flutter/material.dart' show ThemeMode, ValueNotifier;
+import 'package:material_ui/material_ui.dart' show ThemeMode, ValueNotifier;
 import 'package:hive_ce/hive.dart';
 
 import 'package:winwin/core/account/login_utils.dart' show LoginUtils;

@@ -1,7 +1,7 @@
 import 'dart:async' show unawaited;
 import 'dart:ui' show ImageFilter;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/emote/emote_store.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';

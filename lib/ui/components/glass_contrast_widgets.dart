@@ -1,5 +1,5 @@
 import 'dart:ui';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 高对比度阴影与排版视觉常量规范。
 class ContrastStyle {

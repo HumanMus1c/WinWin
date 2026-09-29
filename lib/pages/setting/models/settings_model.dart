@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/pages/setting/widgets/set_switch_item.dart';

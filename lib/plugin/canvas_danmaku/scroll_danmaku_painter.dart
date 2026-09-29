@@ -1,6 +1,6 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:winwin/plugin/canvas_danmaku/base_danmaku_painter.dart';
 import 'package:winwin/plugin/canvas_danmaku/models/danmaku_item.dart';
 

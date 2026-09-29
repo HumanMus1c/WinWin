@@ -1,7 +1,7 @@
 import 'package:winwin/plugin/canvas_danmaku/models/danmaku_content_item.dart';
 import 'package:winwin/plugin/canvas_danmaku/models/danmaku_item.dart';
 import 'package:winwin/plugin/canvas_danmaku/models/danmaku_option.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class DanmakuController<T> {
   final bool Function(DanmakuContentItem<T>) addDanmaku;
