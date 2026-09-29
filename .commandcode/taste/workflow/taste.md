@@ -6,3 +6,5 @@
 - Batches git pushes: commits locally throughout the work, then pushes to `origin/main` once at the end of the session ("推送按惯例在会话末尾统一执行"). Confidence: 0.6
 - For multi-round work, records a plan file under `~/.commandcode/plans` and surfaces it in the Plans panel, and tracks steps with a todo list (P0 → P1 → P2 sequencing). Confidence: 0.5
 - Executes approved changes step by step, in priority order, returning to the user for confirmation before starting. Confidence: 0.5
+- Wants generated artifacts surfaced in the OS file explorer (open Explorer and select the file via `explorer.exe /select,"<path>"`) rather than only reported as a text path. Confidence: 0.45
+- When comparing UI/visual design options, asks for an interactive single-file HTML demo that reproduces every candidate style (each with a manual trigger / static on-page preview) so the options can be seen and contrasted before any code is touched, rather than judging from written descriptions. Confidence: 0.5

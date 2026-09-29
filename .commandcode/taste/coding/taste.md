@@ -4,3 +4,5 @@
 - When introducing a new widget, aligns with patterns already used elsewhere in the same repo (对齐项目已有范式) instead of inventing a new approach. Confidence: 0.5
 - When a legacy API has no clean modern equivalent, prefers keeping it and documenting the rationale rather than forcing a hacky migration (recorded, not silently degraded). Confidence: 0.5
 - Preserves existing visual/interaction semantics (colors, tooltips, selected-state highlighting) when refactoring widgets. Confidence: 0.5
+- When an official/built-in SDK capability can achieve the goal, prefers it over introducing a third-party dependency — e.g. chose theming Flutter's built-in SnackBar (`snackBarTheme`, floating dark card) and converged all call sites on one helper, rather than adopting toastification/motion_toast. Confidence: 0.5
+- When a UI direction was picked from an earlier demo/proposal, expects the real implementation to reproduce the agreed behavior including its interaction details (e.g. tap-anywhere-to-close on the card), not a visually similar but behaviorally reduced version. Confidence: 0.45
