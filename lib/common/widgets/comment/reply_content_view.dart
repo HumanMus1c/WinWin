@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/core/emote/emote_store.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
@@ -11,7 +12,8 @@ import 'package:winwin/utils/image_utils.dart';
 /// 将评论正文按官方表情转义符（`[xxx]`）拆分为图文混排 Span。
 ///
 /// 表情 URL 优先取评论接口 `content.emote` 映射（含动图 gif_url），
-/// 未命中时回退内置对照表 [BilibiliEmotes.defaultEmotes]；
+/// 其次回退 [EmoteStore] 官方缓存（与表情面板同源），最后回退内置对照表
+/// [BilibiliEmotes.defaultEmotes]；
 /// 仍未命中则保留原文。表情尺寸 = 20px × 尺寸档位（meta.size，上限 40px）。
 List<InlineSpan> buildReplyEmoteSpans(
   BuildContext context,
@@ -33,7 +35,8 @@ List<InlineSpan> buildReplyEmoteSpans(
     final emote = emotes?[emoteCode];
     final emoteUrl = emote?.displayUrl?.isNotEmpty == true
         ? emote!.displayUrl
-        : BilibiliEmotes.getEmoteUrl(emoteCode);
+        : (EmoteStore.instance.urlOf(emoteCode) ??
+              BilibiliEmotes.getEmoteUrl(emoteCode));
 
     if (emoteUrl != null && emoteUrl.isNotEmpty) {
       final emoteSize = (20.0 * (emote?.size ?? 1)).clamp(20.0, 40.0);

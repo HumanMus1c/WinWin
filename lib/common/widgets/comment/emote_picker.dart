@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import 'package:winwin/core/emote/emote_store.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/image_utils.dart';
@@ -46,7 +47,9 @@ class OfficialEmotePickerButton extends StatefulWidget {
 class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
     with SingleTickerProviderStateMixin {
   static const double _panelWidth = 320;
-  static const double _estimatedPanelHeight = 240;
+
+  /// 面板高度估算（头部 + 分包 Tab + 网格最大高度 + 内边距），用于上下翻转判定。
+  static const double _estimatedPanelHeight = 340;
   static const double _edgeMargin = 8;
 
   final GlobalKey _anchorKey = GlobalKey();
@@ -199,6 +202,7 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
       return true;
     });
     _controller.forward(from: 0);
+    EmoteStore.instance.ensureLoaded();
     _precacheEmotes();
   }
 
@@ -264,69 +268,10 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
                         : Colors.black.withValues(alpha: 0.08),
                   ),
                   const SizedBox(height: 10),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 7,
-                      mainAxisSpacing: 6,
-                      crossAxisSpacing: 6,
-                    ),
-                    itemCount: BilibiliEmotes.popularEmotes.length,
-                    itemBuilder: (ctx, i) {
-                      final code = BilibiliEmotes.popularEmotes[i];
-                      final url = BilibiliEmotes.defaultEmotes[code];
-                      final cacheSize =
-                          ImageUtils.decodeClamp(28, ctx, max: 128);
-                      return Tooltip(
-                        message: code,
-                        waitDuration: const Duration(milliseconds: 600),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(6),
-                          onTap: () {
-                            _insert(code);
-                            _removePanel();
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: url != null
-                                ? Image.network(
-                                    ImageUtils.thumbnailUrl(url, type: 'emote'),
-                                    width: 28,
-                                    height: 28,
-                                    fit: BoxFit.contain,
-                                    cacheWidth: cacheSize,
-                                    cacheHeight: cacheSize,
-                                    gaplessPlayback: true,
-                                    frameBuilder:
-                                        (_, child, frame, wasSynchronouslyLoaded) {
-                                      if (wasSynchronouslyLoaded) return child;
-                                      return AnimatedOpacity(
-                                        opacity: frame == null ? 0 : 1,
-                                        duration:
-                                            const Duration(milliseconds: 150),
-                                        curve: Curves.easeOut,
-                                        child: child,
-                                      );
-                                    },
-                                    errorBuilder: (_, _, _) => Center(
-                                      child: Text(
-                                        code,
-                                        style: const TextStyle(fontSize: 10),
-                                      ),
-                                    ),
-                                  )
-                                : Center(
-                                    child: Text(
-                                      code,
-                                      style: const TextStyle(fontSize: 10),
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      );
+                  _EmoteGridArea(
+                    onPick: (code) {
+                      _insert(code);
+                      _removePanel();
                     },
                   ),
                 ],
@@ -367,6 +312,200 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
                   : cs.outline.withValues(alpha: 0.4),
               size: 20,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 表情网格区（2026-09-29）：优先展示官方分包（[EmoteStore]），
+/// 不可用时回退内置静态表；服务端数据到达后原地切换（静态优先，不闪加载态）。
+class _EmoteGridArea extends StatefulWidget {
+  const _EmoteGridArea({required this.onPick});
+
+  final void Function(String code) onPick;
+
+  @override
+  State<_EmoteGridArea> createState() => _EmoteGridAreaState();
+}
+
+class _EmoteGridAreaState extends State<_EmoteGridArea> {
+  static const double _tileSize = 28;
+  static const double _maxGridHeight = 236;
+
+  int _packageIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    EmoteStore.instance.ensureLoaded();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: EmoteStore.instance,
+      builder: (context, _) {
+        final packages = EmoteStore.instance.packages;
+        if (packages.isEmpty) return _buildStaticGrid(context);
+        final index = _packageIndex.clamp(0, packages.length - 1);
+        final selected = packages[index];
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (packages.length > 1) ...[
+              SizedBox(
+                height: 28,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: packages.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 6),
+                  itemBuilder: (ctx, i) => _buildPackageTab(ctx, i, index),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            _buildGrid(
+              context,
+              itemCount: selected.emote.length,
+              builder: (ctx, i) {
+                final e = selected.emote[i];
+                if (e.isText || e.url.isEmpty) {
+                  return _buildTextTile(e.text);
+                }
+                return _buildImageTile(
+                  ctx,
+                  url: e.url,
+                  label: e.text,
+                  tooltip: e.text,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPackageTab(BuildContext context, int i, int activeIndex) {
+    final theme = Theme.of(context);
+    final active = i == activeIndex;
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () => setState(() => _packageIndex = i),
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          color: active
+              ? theme.colorScheme.primary.withValues(alpha: 0.16)
+              : null,
+        ),
+        child: Text(
+          EmoteStore.instance.packages[i].text,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            color: active
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStaticGrid(BuildContext context) {
+    return _buildGrid(
+      context,
+      itemCount: BilibiliEmotes.popularEmotes.length,
+      builder: (ctx, i) {
+        final code = BilibiliEmotes.popularEmotes[i];
+        final url = BilibiliEmotes.defaultEmotes[code];
+        if (url == null) return _buildTextTile(code);
+        return _buildImageTile(ctx, url: url, label: code, tooltip: code);
+      },
+    );
+  }
+
+  Widget _buildGrid(
+    BuildContext context, {
+    required int itemCount,
+    required NullableIndexedWidgetBuilder builder,
+  }) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: _maxGridHeight),
+      child: GridView.builder(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 7,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
+        ),
+        itemCount: itemCount,
+        itemBuilder: builder,
+      ),
+    );
+  }
+
+  Widget _buildImageTile(
+    BuildContext context, {
+    required String url,
+    required String label,
+    required String tooltip,
+  }) {
+    final cacheSize = ImageUtils.decodeClamp(_tileSize, context, max: 128);
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 600),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => widget.onPick(label),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Image.network(
+            ImageUtils.thumbnailUrl(url, type: 'emote'),
+            width: _tileSize,
+            height: _tileSize,
+            fit: BoxFit.contain,
+            cacheWidth: cacheSize,
+            cacheHeight: cacheSize,
+            gaplessPlayback: true,
+            frameBuilder: (_, child, frame, wasSynchronouslyLoaded) {
+              if (wasSynchronouslyLoaded) return child;
+              return AnimatedOpacity(
+                opacity: frame == null ? 0 : 1,
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeOut,
+                child: child,
+              );
+            },
+            errorBuilder: (_, _, _) => Center(
+              child: Text(label, style: const TextStyle(fontSize: 10)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextTile(String text) {
+    return Tooltip(
+      message: text,
+      waitDuration: const Duration(milliseconds: 600),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => widget.onPick(text),
+        child: Center(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.clip,
+            style: const TextStyle(fontSize: 10),
           ),
         ),
       ),

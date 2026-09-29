@@ -196,6 +196,11 @@ abstract final class Api {
   //https://api.bilibili.com/x/emote/user/panel/web?business=reply
   static const String myEmote = '/x/emote/user/panel/web';
 
+  // 表情包明细（免登录可用）
+  // business:reply（回复）dynamic（动态）；ids 为包 id（逗号分隔）
+  // https://api.bilibili.com/x/emote/package?business=reply&ids=1
+  static const String emotePackage = '/x/emote/package';
+
   // 获取用户信息
   static const String userInfo = '/x/web-interface/nav';
 

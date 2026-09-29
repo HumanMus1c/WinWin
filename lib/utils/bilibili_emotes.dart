@@ -54,10 +54,9 @@ abstract final class BilibiliEmotes {
     '[热]': 'https://i0.hdslb.com/bfs/emote/4e58a2a6f5f1580ac33df2d2cf7ecad7d9ab3635.png',
     '[生病]': 'https://i0.hdslb.com/bfs/emote/0f25ce04ae1d7baf98650986454c634f6612cb76.png',
     '[生气]': 'https://i0.hdslb.com/bfs/emote/3195714219c4b582a4fb02033dd1519913d0246d.png',
-    '[再见]': 'https://i0.hdslb.com/bfs/emote/14b2d6a505b262d4999ab46014e262b9a7008cf3.png',
+    '[再见]': 'https://i0.hdslb.com/bfs/emote/fc510306bae26c9aec7e287cdf201ded27b065b9.png',
     '[蹲蹲]': 'https://i0.hdslb.com/bfs/emote/878f1dfac79622050f730d1fee5f7b1a55951c74.png',
-    '[保佑]': 'https://i0.hdslb.com/bfs/emote/13db09b531495c64390be107127e974e6efebff6.png',
-    '[2333]': 'https://i0.hdslb.com/bfs/emote/a9638c4149fa8a5991873fb2ef4ea42c55db70f6.png',
+    '[保佑]': 'https://i0.hdslb.com/bfs/emote/fafe8d3de0dc139ebe995491d2dac458a865fb30.png',
   };
 
   /// 常用快捷选择表情列表（用于弹幕输入框表情选择器）。

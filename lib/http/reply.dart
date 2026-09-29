@@ -3,6 +3,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/models/common/emote_package.dart';
 
 /// 评论 HTTP（移植自 PiliPlus `lib/http/reply.dart`）。
 ///
@@ -12,7 +13,7 @@ import 'package:winwin/http/loading_state.dart';
 /// - 评论举报（report）
 /// - 评论互动状态（replyInteraction）
 /// - 评论主体操作（replySubjectModify）
-/// - 表情包列表（getEmoteList）
+/// - 表情包列表/明细（getEmoteList / getEmotePackagesByIds）
 ///
 /// 评论列表/楼中楼/点赞/发表评论已在 `VideoHttp` 中实现，此处不重复。
 abstract final class ReplyHttp {
@@ -151,10 +152,10 @@ abstract final class ReplyHttp {
     }
   }
 
-  /// 获取表情包列表。
+  /// 获取我的表情包列表（登录态；游客 `packages` 为 null）。
   ///
   /// [business]: 'reply'（回复）或 'dynamic'（动态）。
-  static Future<LoadingState<List<Map<String, dynamic>>?>> getEmoteList({
+  static Future<LoadingState<List<EmotePackage>?>> getEmoteList({
     String? business,
   }) async {
     final res = await Request().get(
@@ -165,16 +166,38 @@ abstract final class ReplyHttp {
       },
     );
     if (res.data['code'] == 0) {
-      final packages = res.data['data']?['packages'];
-      return Success(
-        packages is List
-            ? packages
-                .map((e) => e is Map ? e.cast<String, dynamic>() : <String, dynamic>{})
-                .toList()
-            : null,
-      );
+      return Success(_parseEmotePackages(res.data['data']?['packages']));
     } else {
       return Error(res.data['message']?.toString() ?? '');
     }
+  }
+
+  /// 按表情包 id 拉取明细（**免登录可用**：未登录/面板接口失败时的兜底数据源）。
+  static Future<LoadingState<List<EmotePackage>?>> getEmotePackagesByIds(
+    List<int> ids, {
+    String? business,
+  }) async {
+    if (ids.isEmpty) return const Success(null);
+    final res = await Request().get(
+      Api.emotePackage,
+      queryParameters: {
+        'business': business ?? 'reply',
+        'ids': ids.join(','),
+      },
+    );
+    if (res.data['code'] == 0) {
+      return Success(_parseEmotePackages(res.data['data']?['packages']));
+    } else {
+      return Error(res.data['message']?.toString() ?? '');
+    }
+  }
+
+  static List<EmotePackage>? _parseEmotePackages(Object? packages) {
+    if (packages is! List) return null;
+    final list = packages
+        .whereType<Map>()
+        .map((e) => EmotePackage.fromJson(e.cast<String, dynamic>()))
+        .toList(growable: false);
+    return list.isEmpty ? null : list;
   }
 }
