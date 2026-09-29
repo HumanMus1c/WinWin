@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fvp/mdk.dart' as mdk;
 
@@ -20,6 +21,7 @@ import 'package:winwin/core/policy/video_load_policy.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/grpc/bilibili/community/service/dm/v1.pb.dart'
     hide SubtitleItem;
+import 'package:winwin/http/dio_error_message.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
 import 'package:winwin/http/video.dart';
@@ -297,6 +299,19 @@ class WinWinPlayerController {
   /// UI 观察口：true=闸门进行中（面板借此保持封面遮盖）。
   final ValueNotifier<bool> startupGate = ValueNotifier<bool>(false);
 
+  // ── 弱网加载容错（2026-09-29）──
+  /// 加载失败自动重试定时器（重试期间保持封面+转圈，不闪错误）。
+  Timer? _loadRetryTimer;
+
+  /// 已用自动重试次数（成功后/新的显式加载时清零）。
+  int _loadRetryAttempt = 0;
+
+  /// 本次加载失败是否属「可重试」（网络类/瞬态）；服务端明确不可播置 false。
+  bool _loadFailureRetryable = false;
+
+  /// 最近一次 [load] 的起点（重试时复用，保住 didPopNext 等带起点加载的进度）。
+  Duration? _lastLoadStart;
+
   // ── 音画缓冲同步（第十一轮）──
   /// 视频停顿期间已把音频同步暂停的标记。
   bool _audioSyncPaused = false;
@@ -405,6 +420,10 @@ class WinWinPlayerController {
 
   /// 启动闸门兜底超时（挂闸起算）：超时强制放闸按现状起播（2026-09-29）。
   static const int _startupGateTimeoutMs = 3000;
+
+  /// 弱网加载失败自动重试用（2026-09-29）：上限次数与退避间隔（ms）。
+  static const int _maxLoadRetries = 4;
+  static const List<int> _loadRetryDelaysMs = [1500, 3000, 5000, 8000];
 
   /// 音画共同续播的音频位置容差（第二轮收紧：原 1500ms 会以滞后位置恢复出
   /// 「声音小时间维度滞后」，超差改为先暂停态归位再恢复）。
@@ -2099,6 +2118,13 @@ class WinWinPlayerController {
     bool autoplay = true,
     bool gateForResume = false,
   }) async {
+    // 新的显式加载请求取代任何未决的自动重试，并重置重试计数；
+    // 记录起点供重试复用；autoplay=false 时同步暂停意图（与 _openWithQuality 内一致）。
+    _loadRetryTimer?.cancel();
+    _loadRetryTimer = null;
+    _loadRetryAttempt = 0;
+    _lastLoadStart = start;
+    if (!autoplay) _userIntentPlaying = false;
     // 幂等：网络栈未初始化时兜底（main 中未等待 bootstrap）。
     await ensureBootstrap();
     // 首次加载：用 VideoLoadPolicy 决策初始画质；
@@ -2119,6 +2145,49 @@ class WinWinPlayerController {
       gateForResume: gateForResume,
     );
     _isInitialLoad = false;
+    // 弱网容错：网络类失败自动退避重试（期间保持缓冲态，不闪错误）。
+    _maybeScheduleLoadRetry();
+  }
+
+  /// 弱网加载容错：网络类失败自动退避重试（2026-09-29）。
+  ///
+  /// 重试等待期间清空 [error]——面板据此保持「封面+转圈」缓冲态，不闪加载错误；
+  /// 任一次成功即正常起播（续播定位不受影响）。重试耗尽保留最终友好错误（含重试按钮）。
+  /// 服务端明确不可播（未获取到可播放的视频流）不重试，快速失败。
+  /// 仅作用于 [load] 路径；[switchQuality] 的画质回滚语义独立，不在此列。
+  void _maybeScheduleLoadRetry() {
+    if (_disposed || _loading) return;
+    final err = error.value;
+    if (err == null || !_loadFailureRetryable) {
+      _loadRetryAttempt = 0;
+      return;
+    }
+    if (_loadRetryAttempt >= _maxLoadRetries) {
+      _loadRetryAttempt = 0;
+      AppLogger.w('PlayerController', 'load retries exhausted: $err');
+      return;
+    }
+    final delayMs = _loadRetryDelaysMs[_loadRetryAttempt];
+    _loadRetryAttempt++;
+    // 保持缓冲态：清掉错误，让面板继续显示封面+转圈（弱网不闪加载错误）。
+    error.value = null;
+    SeekProbe.note('LOAD-RETRY #$_loadRetryAttempt delay=${delayMs}ms err=$err');
+    AppLogger.w(
+      'PlayerController',
+      'load failed, auto-retry #$_loadRetryAttempt in ${delayMs}ms: $err',
+    );
+    _loadRetryTimer?.cancel();
+    _loadRetryTimer = Timer(Duration(milliseconds: delayMs), () {
+      if (_disposed) return;
+      _openWithQuality(
+        qn: _currentQn > 0 ? _currentQn : 80,
+        maxQn: _currentQn > 0 ? _currentQn : 80,
+        start: _lastLoadStart,
+        autoplay: _userIntentPlaying,
+        isInitialRequest: false,
+        gateForResume: false,
+      ).whenComplete(_maybeScheduleLoadRetry);
+    });
   }
 
   /// 异步恢复到指定播放进度（playInfo 与 [load] 并行返回续播位置时调用）。
@@ -2130,28 +2199,27 @@ class WinWinPlayerController {
     final player = _player;
     if (player == null || _disposed || position <= Duration.zero) return;
     if (!ready.value || duration.value <= Duration.zero) {
-      // 仍在加载：监听就绪信号。error 非空表示加载失败，放弃恢复。
+      // 仍在加载：监听就绪信号。不再因瞬时 error 提前放弃——弱网自动重试
+      // （2026-09-29）期间 error 会被清空并重试，过早放弃会丢失续播定位；
+      // 兜底超时放宽到 30s（覆盖重试窗口），超时后仍按失败处理。
       final done = Completer<void>();
       void check() {
-        if ((ready.value && duration.value > Duration.zero) ||
-            error.value != null) {
+        if (ready.value && duration.value > Duration.zero) {
           if (!done.isCompleted) done.complete();
         }
       }
 
       ready.addListener(check);
       duration.addListener(check);
-      error.addListener(check);
       try {
-        // 兜底超时：load 被防抖吞掉等极端情况下不悬挂监听。
+        // 兜底超时：load 被防抖吞掉/持续失败等极端情况下不悬挂监听。
         await done.future.timeout(
-          const Duration(seconds: 15),
+          const Duration(seconds: 30),
           onTimeout: () {},
         );
       } finally {
         ready.removeListener(check);
         duration.removeListener(check);
-        error.removeListener(check);
       }
       if (_disposed) return;
       if (error.value != null ||
@@ -2266,6 +2334,8 @@ class WinWinPlayerController {
     // mdk 状态错乱（快速点击重试、连续切换画质时的崩溃根因）。
     if (_loading) return;
     _loading = true;
+    // 每次加载尝试都是干净起点：可重试性由本次失败点决定（2026-09-29 弱网容错）。
+    _loadFailureRetryable = false;
     try {
       if (gateForResume) {
         _startupGateActive = true;
@@ -2352,6 +2422,7 @@ class WinWinPlayerController {
         playUrl = result.dataOrNull;
         if (playUrl == null) {
           error.value = '获取播放地址失败';
+          _loadFailureRetryable = true; // 网络类失败：自动重试
           return;
         }
         // 写入缓存（按 VideoLoadPolicy.shouldCachePlayUrlResult 判定）。
@@ -2627,6 +2698,7 @@ class WinWinPlayerController {
           'prepare failed: ret=$ret, aborting load',
         );
         error.value = '播放失败（错误码 $ret）';
+        _loadFailureRetryable = true; // 瞬态媒体打开失败：自动重试
         return;
       }
       // prepare 成功后再次清空 error（覆盖 setMedia 旧 media 卸载期间
@@ -2671,6 +2743,7 @@ class WinWinPlayerController {
         if (_disposed) return;
         if (tex < 0) {
           error.value = '视频渲染面创建失败';
+          _loadFailureRetryable = true; // 瞬态渲染面失败：自动重试
           return;
         }
       }
@@ -2720,7 +2793,14 @@ class WinWinPlayerController {
       //   _pendingHdrUpgrade = playUrl;
       // }
     } catch (e) {
-      if (!_disposed) error.value = '播放失败：$e';
+      if (!_disposed) {
+        AppLogger.e('PlayerController', 'load failed: $e');
+        // 弱网友好文案（2026-09-29）：不再原样拼 DioException 英文长文。
+        error.value = e is DioException
+            ? '播放失败：${dioErrorMessage(e)}'
+            : '播放失败，请稍后重试';
+        _loadFailureRetryable = true; // 网络类异常：自动重试
+      }
     } finally {
       _loading = false;
     }
@@ -4154,6 +4234,8 @@ class WinWinPlayerController {
     _heartBeatTimer = null;
     _startupGateTimer?.cancel();
     _startupGateTimer = null;
+    _loadRetryTimer?.cancel();
+    _loadRetryTimer = null;
     sponsorBlock?.dispose();
     sponsorBlock = null;
     danmaku?.dispose();

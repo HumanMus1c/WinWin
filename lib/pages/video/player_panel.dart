@@ -737,41 +737,32 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     videoWidget = const SizedBox.expand();
                   }
 
-                  // 启动闸门：续播定位完成前遮盖画面（封面/黑屏置顶），
-                  // 杜绝历史续播先闪 0 位画面（2026-09-29）。
-                  if (gateHeld) {
-                    return Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        videoWidget,
-                        if (coverUrl != null && coverUrl.isNotEmpty)
-                          NetworkImgLayer(
+                  // 封面作为「第一帧占位」常驻置顶（2026-09-29）：
+                  // - 启动闸门 / 无首帧（加载、缓冲、弱网重试）期间不透明度 1 遮盖
+                  //   （杜绝灰屏与 0 位闪帧）；无封面时黑底兜底；
+                  // - 首帧就绪后 240ms 淡出完成过渡（替代硬切）。
+                  final coverVisible = gateHeld || !hasFrame;
+                  final hasCover = coverUrl != null && coverUrl.isNotEmpty;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      videoWidget,
+                      if (hasCover)
+                        AnimatedOpacity(
+                          opacity: coverVisible ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 240),
+                          curve: Curves.easeOut,
+                          child: NetworkImgLayer(
                             src: coverUrl,
                             width: double.infinity,
                             height: double.infinity,
                             borderRadius: BorderRadius.zero,
-                          )
-                        else
-                          const ColoredBox(color: Colors.black),
-                      ],
-                    );
-                  }
-
-                  if (!hasFrame && coverUrl != null && coverUrl.isNotEmpty) {
-                    return Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        NetworkImgLayer(
-                          src: coverUrl,
-                          width: double.infinity,
-                          height: double.infinity,
-                          borderRadius: BorderRadius.zero,
-                        ),
-                        videoWidget,
-                      ],
-                    );
-                  }
-                  return videoWidget;
+                          ),
+                        )
+                      else if (coverVisible)
+                        const ColoredBox(color: Colors.black),
+                    ],
+                  );
                 },
               );
             },
