@@ -266,7 +266,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       unawaited(_applyPlayInfo(ctrl, cid, bvid, aid: ep.aid, startPos: startPos));
     }
 
-    ctrl.load(start: startPos);
+    // startPos 未知时挂「启动闸门」：续播点（playInfo）返回前不起播，
+    // 杜绝先闪 0 位画面/声音（2026-09-29）；已知起点直载无需闸门。
+    ctrl.load(start: startPos, gateForResume: startPos == null);
     if (mounted) setState(() {});
   }
 
@@ -287,9 +289,16 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         }
         if (startPos == null && response.lastPlayTime > 0) {
           ctrl.resumeTo(Duration(milliseconds: response.lastPlayTime));
+        } else {
+          // 无续播点 / 已知起点直载：放闸起播（非闸门场景为 no-op）。
+          ctrl.releaseStartupGate(reason: 'no-history');
         }
+      } else {
+        ctrl.releaseStartupGate(reason: 'info-error');
       }
-    } catch (_) {}
+    } catch (_) {
+      ctrl.releaseStartupGate(reason: 'info-exception');
+    }
   }
 
   /// 切换到指定分集（即时无缝切换）

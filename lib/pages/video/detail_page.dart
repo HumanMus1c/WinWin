@@ -307,7 +307,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           // 不再串行等待 —— 首帧关键路径少一次 HTTP 往返。
           // playInfo 返回后通过 resumeTo 恢复进度（race-free，见控制器）。
           unawaited(_applyPlayInfo(ctrl, cid, detailDurSec, aid: aid));
-          ctrl.load();
+          // 挂「启动闸门」：续播点（playInfo）返回前不起播，杜绝先闪 0 位画面/声音。
+          ctrl.load(gateForResume: true);
         }
         // 互动初始态（来自 req_user 或并发拉取云端 videoRelation 真实姿态）。
         hasLike = response.reqUser?.like ?? false;
@@ -368,12 +369,20 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           final lastSec = response.lastPlayTime ~/ 1000;
           if (detailDurSec <= 0 || lastSec < detailDurSec - 10) {
             ctrl.resumeTo(Duration(milliseconds: response.lastPlayTime));
+          } else {
+            // 已接近播完：不续播——放闸从 0 起播（与既有行为一致）。
+            ctrl.releaseStartupGate(reason: 'near-end');
           }
+        } else {
+          // 无续播点：放闸从 0 起播。
+          ctrl.releaseStartupGate(reason: 'no-history');
         }
       } else if (infoRes case Error(:final errMsg)) {
+        ctrl.releaseStartupGate(reason: 'info-error');
         AppLogger.w('VideoDetailPage', '_applyPlayInfo failed: $errMsg (bvid=${widget.bvid}, cid=$cid)');
       }
     } catch (e, s) {
+      ctrl.releaseStartupGate(reason: 'info-exception');
       AppLogger.e('VideoDetailPage', '_applyPlayInfo exception: $e (bvid=${widget.bvid}, cid=$cid)', error: e, stackTrace: s);
     }
   }

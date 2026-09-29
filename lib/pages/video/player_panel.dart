@@ -713,42 +713,67 @@ class _PlayerPanelState extends State<PlayerPanel> {
           return ValueListenableBuilder<Size?>(
             valueListenable: c.videoSize,
             builder: (context, size, _) {
-              final hasFrame =
-                  texId != null &&
-                  texId >= 0 &&
-                  size != null &&
-                  size.width > 0 &&
-                  size.height > 0;
+              return ValueListenableBuilder<bool>(
+                valueListenable: c.startupGate,
+                builder: (context, gateHeld, _) {
+                  final hasFrame =
+                      texId != null &&
+                      texId >= 0 &&
+                      size != null &&
+                      size.width > 0 &&
+                      size.height > 0;
 
-              Widget videoWidget;
-              if (hasFrame) {
-                videoWidget = Center(
-                  child: AspectRatio(
-                    aspectRatio: size.width / size.height,
-                    child: Texture(textureId: texId),
-                  ),
-                );
-              } else if (texId != null && texId >= 0) {
-                videoWidget = Texture(textureId: texId);
-              } else {
-                videoWidget = const SizedBox.expand();
-              }
+                  Widget videoWidget;
+                  if (hasFrame) {
+                    videoWidget = Center(
+                      child: AspectRatio(
+                        aspectRatio: size.width / size.height,
+                        child: Texture(textureId: texId),
+                      ),
+                    );
+                  } else if (texId != null && texId >= 0) {
+                    videoWidget = Texture(textureId: texId);
+                  } else {
+                    videoWidget = const SizedBox.expand();
+                  }
 
-              if (!hasFrame && coverUrl != null && coverUrl.isNotEmpty) {
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    NetworkImgLayer(
-                      src: coverUrl,
-                      width: double.infinity,
-                      height: double.infinity,
-                      borderRadius: BorderRadius.zero,
-                    ),
-                    videoWidget,
-                  ],
-                );
-              }
-              return videoWidget;
+                  // 启动闸门：续播定位完成前遮盖画面（封面/黑屏置顶），
+                  // 杜绝历史续播先闪 0 位画面（2026-09-29）。
+                  if (gateHeld) {
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        videoWidget,
+                        if (coverUrl != null && coverUrl.isNotEmpty)
+                          NetworkImgLayer(
+                            src: coverUrl,
+                            width: double.infinity,
+                            height: double.infinity,
+                            borderRadius: BorderRadius.zero,
+                          )
+                        else
+                          const ColoredBox(color: Colors.black),
+                      ],
+                    );
+                  }
+
+                  if (!hasFrame && coverUrl != null && coverUrl.isNotEmpty) {
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        NetworkImgLayer(
+                          src: coverUrl,
+                          width: double.infinity,
+                          height: double.infinity,
+                          borderRadius: BorderRadius.zero,
+                        ),
+                        videoWidget,
+                      ],
+                    );
+                  }
+                  return videoWidget;
+                },
+              );
             },
           );
         },

@@ -286,6 +286,17 @@ class WinWinPlayerController {
   /// 镜像补漏（第九轮 N3）上次尝试恢复音频播放的时间。
   DateTime? _audioUnmuteLastAt;
 
+  // ── 启动闸门（2026-09-29 历史续播闪帧修复）──
+  /// 闸门进行中：初次加载且续播点未定时不起播（意图仍为播放），避免 0 位
+  /// 画面/声音先闪一下再定位到历史点；释放见 [releaseStartupGate]。
+  bool _startupGateActive = false;
+
+  /// 闸门兜底超时定时器（挂闸起算，防异常路径下不起播）。
+  Timer? _startupGateTimer;
+
+  /// UI 观察口：true=闸门进行中（面板借此保持封面遮盖）。
+  final ValueNotifier<bool> startupGate = ValueNotifier<bool>(false);
+
   // ── 音画缓冲同步（第十一轮）──
   /// 视频停顿期间已把音频同步暂停的标记。
   bool _audioSyncPaused = false;
@@ -391,6 +402,9 @@ class WinWinPlayerController {
   /// 冻结持续 ≥10s 时补一条 [W] 运行日志（每次冻结一条，不刷屏；
   /// 此前冻结仅 trace 可见、runtime.log 无感）。
   static const int _holdStuckLogMs = 10000;
+
+  /// 启动闸门兜底超时（挂闸起算）：超时强制放闸按现状起播（2026-09-29）。
+  static const int _startupGateTimeoutMs = 3000;
 
   /// 音画共同续播的音频位置容差（第二轮收紧：原 1500ms 会以滞后位置恢复出
   /// 「声音小时间维度滞后」，超差改为先暂停态归位再恢复）。
@@ -1840,7 +1854,9 @@ class WinWinPlayerController {
             isHoldPaused &&
             frozenMs >= _holdTimeoutEscapeMs &&
             bufferedNow >= _bufferHoldWaterMs;
-        if (isHoldPaused && (_waterReadyForResume || holdTimeoutEscape)) {
+        if (isHoldPaused &&
+            !_startupGateActive &&
+            (_waterReadyForResume || holdTimeoutEscape)) {
           final nowPush = DateTime.now();
           final lastPush = _bufferSuspendPushAt;
           if (lastPush == null ||
@@ -2075,8 +2091,14 @@ class WinWinPlayerController {
   /// （根据登录态/VIP/自动最高画质偏好），不再写死 80。
   /// [start] 指定起始播放位置（用于页面返回后恢复进度）；
   /// [autoplay] 为 false 时加载完成后保持暂停（用于之前已暂停的场景）。
+  /// [gateForResume] 为 true 时挂「启动闸门」：续播点（playInfo）返回前不起播，
+  /// 直至 [resumeTo] 定位完成 / 决策落地 / 超时才放闸（杜绝 0 位闪帧）。
   /// 失败时写入 [error]，不抛异常。
-  Future<void> load({Duration? start, bool autoplay = true}) async {
+  Future<void> load({
+    Duration? start,
+    bool autoplay = true,
+    bool gateForResume = false,
+  }) async {
     // 幂等：网络栈未初始化时兜底（main 中未等待 bootstrap）。
     await ensureBootstrap();
     // 首次加载：用 VideoLoadPolicy 决策初始画质；
@@ -2094,6 +2116,7 @@ class WinWinPlayerController {
       start: start,
       autoplay: autoplay,
       isInitialRequest: _isInitialLoad,
+      gateForResume: gateForResume,
     );
     _isInitialLoad = false;
   }
@@ -2130,8 +2153,14 @@ class WinWinPlayerController {
         duration.removeListener(check);
         error.removeListener(check);
       }
-      if (_disposed || error.value != null) return;
-      if (!ready.value || duration.value <= Duration.zero) return;
+      if (_disposed) return;
+      if (error.value != null ||
+          !ready.value ||
+          duration.value <= Duration.zero) {
+        // 放弃恢复：放闸按现状起播（与原行为一致）。
+        releaseStartupGate(reason: 'resume-abort');
+        return;
+      }
     }
     // 精确落点定位（_seekPrecise）：与交互式 seek 同源 flags。此前裸 seek 走 fvp
     // 默认 keyFrame 关键帧定位，落点越过目标最多约 4s——「返回上一级后重进，
@@ -2141,6 +2170,43 @@ class WinWinPlayerController {
     // ——杜绝起播瞬态被缓冲冻结/进入判定误触发（09-27 14:32/14:53 三次实证：
     // resumeTo 路径的起播会被冻结 1.3~1.6s）。
     _lastSeekFinishTime = DateTime.now();
+    // 启动闸门放闸：定位完成，按用户意图从目标点起播（2026-09-29 闪帧修复）。
+    releaseStartupGate(reason: 'seek-done');
+  }
+
+  /// 释放「启动闸门」（2026-09-29 历史续播闪帧修复）。
+  ///
+  /// 闸门期间：不起播并遮盖画面（面板按 [startupGate] 保持封面）、音频静音，
+  /// 避免历史续播场景先闪 0 位画面/声音再定位。释放后按用户意图起播；
+  /// [play] 为 false（用户暂停/接管场景）时仅解除遮盖与静音，不主动起播。
+  void releaseStartupGate({bool play = true, String reason = 'decision'}) {
+    if (!_startupGateActive) return;
+    _startupGateActive = false;
+    startupGate.value = false;
+    _startupGateTimer?.cancel();
+    _startupGateTimer = null;
+    SeekProbe.note(
+      'STARTUP-GATE release reason=$reason play=$play '
+      'intent=${_userIntentPlaying ? 1 : 0}',
+    );
+    // 解除音频静音（闸门期间音量置 0 的对应恢复）。
+    final ap = _audioPlayer;
+    if (ap != null) {
+      try {
+        ap.volume = volume.value / 100.0;
+      } catch (_) {}
+    }
+    final player = _player;
+    if (player == null || _disposed) return;
+    if (play &&
+        _userIntentPlaying &&
+        !completed.value &&
+        ready.value &&
+        player.state == mdk.PlaybackState.paused) {
+      try {
+        player.state = mdk.PlaybackState.playing;
+      } catch (_) {}
+    }
   }
 
   /// 通过 VideoLoadPolicy 解析首次加载画质。
@@ -2192,6 +2258,7 @@ class WinWinPlayerController {
     Duration? start,
     bool autoplay = true,
     bool isInitialRequest = false,
+    bool gateForResume = false,
   }) async {
     final player = _player;
     if (player == null || _disposed) return;
@@ -2200,6 +2267,16 @@ class WinWinPlayerController {
     if (_loading) return;
     _loading = true;
     try {
+      if (gateForResume) {
+        _startupGateActive = true;
+        startupGate.value = true;
+        _startupGateTimer?.cancel();
+        _startupGateTimer = Timer(
+          const Duration(milliseconds: _startupGateTimeoutMs),
+          () => releaseStartupGate(reason: 'timeout'),
+        );
+        SeekProbe.note('STARTUP-GATE arm');
+      }
       // 第五轮（F2「跳 2 秒」修复）：加载期间**冻结画面位置**——HTTP 拉流+prepare 的
       // 1~3s 内若播放继续推进，「用户看到的位置」与「恢复起点」会差 1~3 秒
       // （09-27 14:31 切画质实证：最后画面 200.2s → 恢复起播 205.0s）。
@@ -2492,7 +2569,8 @@ class WinWinPlayerController {
         // 无超时，永久卡在 +buffering（观感「音频突然消失」）。
         _applyStreamProperties(ap);
         ap.setProperty('avio.headers', headers);
-        ap.volume = volume.value / 100.0;
+        // 启动闸门期间音频静音（双保险：闸门释放时由 releaseStartupGate 恢复）。
+        ap.volume = _startupGateActive ? 0.0 : volume.value / 100.0;
         // 倍速同样下发（2026-09-26 自审修正）：切画质/换视频后第二实例不能回落到 1x。
         ap.playbackRate = playbackSpeed.value > 0 ? playbackSpeed.value : 1.0;
         player.media = videoUrl;
@@ -2598,7 +2676,8 @@ class WinWinPlayerController {
       }
 
       if (_disposed) return;
-      player.state = autoplay
+      // 启动闸门期间不起播（续播定位完成/决策落地后由 releaseStartupGate 起播）。
+      player.state = autoplay && !_startupGateActive
           ? mdk.PlaybackState.playing
           : mdk.PlaybackState.paused;
       ready.value = true;
@@ -2970,6 +3049,7 @@ class WinWinPlayerController {
       // 职责——对齐已完成，此时恢复不引入双重音频风险）。
       if (!_disposed &&
           _userIntentPlaying &&
+          !_startupGateActive &&
           !_audioSyncPaused &&
           !_isSeeking &&
           !_nativeSeekInFlight &&
@@ -3004,6 +3084,7 @@ class WinWinPlayerController {
       );
       if (!_disposed &&
           _userIntentPlaying &&
+          !_startupGateActive &&
           !_audioSyncPaused &&
           !_isSeeking &&
           !_nativeSeekInFlight &&
@@ -3128,6 +3209,7 @@ class WinWinPlayerController {
     if (isEffectivelyPlaying) {
       _userIntentPlaying = false;
       _bufferingStallMs = 0;
+      releaseStartupGate(play: false, reason: 'user-toggle');
       player.state = mdk.PlaybackState.paused;
     } else {
       // 若处于播放完成状态（或停留在片尾），点击重播从头开始播放（对标 PiliPlus onDoubleTapCenter）
@@ -3139,6 +3221,7 @@ class WinWinPlayerController {
       }
       _userIntentPlaying = true;
       _bufferingStallMs = 0;
+      releaseStartupGate(play: false, reason: 'user-toggle');
       player.state = mdk.PlaybackState.playing;
     }
   }
@@ -3172,6 +3255,7 @@ class WinWinPlayerController {
     if (player == null || _disposed) return;
     _userIntentPlaying = false;
     _bufferingStallMs = 0;
+    releaseStartupGate(play: false, reason: 'user-pause');
     if (player.state == mdk.PlaybackState.playing) {
       player.state = mdk.PlaybackState.paused;
     }
@@ -3194,6 +3278,7 @@ class WinWinPlayerController {
     }
     _userIntentPlaying = true;
     _bufferingStallMs = 0;
+    releaseStartupGate(play: false, reason: 'user-play');
     if (player.state == mdk.PlaybackState.paused ||
         player.state == mdk.PlaybackState.stopped) {
       player.state = mdk.PlaybackState.playing;
@@ -3225,6 +3310,7 @@ class WinWinPlayerController {
     _reportedEnd = false;
     _userIntentPlaying = true;
     _bufferingStallMs = 0;
+    releaseStartupGate(play: false, reason: 'user-seek');
     if (clampedMs == 0) {
       _maxContinuousBufferedMs = 0;
     }
@@ -4066,6 +4152,8 @@ class WinWinPlayerController {
     _seekDebounceTimer = null;
     _heartBeatTimer?.cancel();
     _heartBeatTimer = null;
+    _startupGateTimer?.cancel();
+    _startupGateTimer = null;
     sponsorBlock?.dispose();
     sponsorBlock = null;
     danmaku?.dispose();
