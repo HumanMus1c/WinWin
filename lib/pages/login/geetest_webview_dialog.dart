@@ -187,7 +187,6 @@ class _GeetestWebViewState extends State<_GeetestWebView> {
   Widget build(BuildContext context) {
     return InAppWebView(
       initialSettings: InAppWebViewSettings(
-        clearCache: true,
         javaScriptEnabled: true,
         useHybridComposition: false,
         algorithmicDarkeningAllowed: true,
@@ -198,7 +197,6 @@ class _GeetestWebViewState extends State<_GeetestWebView> {
         allowContentAccess: false,
         useOnDownloadStart: false,
         thirdPartyCookiesEnabled: false,
-        saveFormData: false,
         safeBrowsingEnabled: false,
         isFraudulentWebsiteWarningEnabled: false,
         domStorageEnabled: false,
