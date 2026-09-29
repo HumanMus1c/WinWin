@@ -4,11 +4,11 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
-import 'package:get/get.dart' hide Response;
 
 import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/api_type.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/browser_ua.dart';
 import 'package:winwin/http/constants.dart';
@@ -195,15 +195,10 @@ class AccountManager extends Interceptor {
       // skip
     } else {
       dioError(err).then((res) {
-        try {
-          // 注：不调用 Get.closeCurrentSnackbar()——GetX 的 SnackbarController
-          // 在内部状态不一致时会对未初始化的 late _controller 抛「异步」异常，
-          // 外层 try-catch 无法捕获（28 条崩溃日志实证，堆栈止于 _removeEntry）。
-          // Get.snackbar 自带队列管理，行为可接受。
-          Get.snackbar('请求错误', '$res\n$url');
-        } catch (_) {
-          // 桌面端无 GetX Overlay 时静默，避免二次崩溃
-        }
+        // 2026-09-29 起改用应用级 Material SnackBar：原 Get.snackbar 在纯
+        // MaterialApp 架构下（无 GetX Overlay）既不显示，又会经
+        // SnackbarController 抛出无法捕获的异步异常（15 条崩溃报告实证）。
+        showAppSnackBar('请求错误：$res\n$url');
       });
     }
   }

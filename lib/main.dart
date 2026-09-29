@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:fvp/mdk.dart' as mdk;
 import 'package:window_manager/window_manager.dart' hide calcWindowPosition;
 
+import 'core/app_messenger.dart';
 import 'core/bootstrap.dart';
 import 'core/input/app_escape_scope.dart';
 import 'core/log/app_logger.dart';
@@ -78,7 +79,14 @@ void main() async {
     }
     switch (level) {
       case mdk.LogLevel.error:
-        AppLogger.e('fvp', msg);
+        // mdk 已知无害噪声：请求的状态变换与当前一致（如播放完成后再 pause）。
+        // 2026-09 日志审计实测 24 次均无功能影响；降级为调试级避免污染
+        // release 运行日志，排查播放状态问题时可在 debug 构建中查看。
+        if (msg.endsWith('state not changed!')) {
+          AppLogger.d('fvp', msg);
+        } else {
+          AppLogger.e('fvp', msg);
+        }
       case mdk.LogLevel.warning:
         AppLogger.w('fvp', msg);
       case mdk.LogLevel.info:
@@ -208,6 +216,7 @@ class WinWinApp extends StatelessWidget {
                     darkTheme: AppTheme.darkFor(uiStyle, fontFamily: fontFamily),
                     themeMode: themeMode,
                     navigatorKey: appNavigatorKey,
+                    scaffoldMessengerKey: appScaffoldMessengerKey,
                     navigatorObservers: [routeObserver, appEscapeObserver],
                     // 全局 Esc 分层路由：返回上一级 / 取消输入聚焦 /
                     // 关闭对话框与二级浮层（详见 AppEscapeScope）。

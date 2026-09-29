@@ -113,7 +113,10 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
         precacheImage(
           NetworkImage(ImageUtils.thumbnailUrl(url, type: 'emote')),
           context,
-        ).catchError((Object _) {}),
+          // 个别失效表情（404）不再产生崩溃报告：失败由网格 errorBuilder
+          // 兜底展示占位文字，预取侧仅静默忽略。
+          onError: (Object _, StackTrace? _) {},
+        ),
       );
     }
   }
