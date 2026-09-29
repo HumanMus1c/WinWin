@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
@@ -57,9 +58,7 @@ List<VideoCustomAction> buildVideoCardActions({
         icon: const Icon(Icons.tag, size: 16),
         onTap: () {
           Utils.copyText(bvid);
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            SnackBar(content: Text('已复制 BV 号：$bvid')),
-          );
+          showToast(context, '已复制 BV 号：$bvid');
         },
       ),
     );
@@ -72,9 +71,7 @@ List<VideoCustomAction> buildVideoCardActions({
         onTap: () {
           final url = 'https://www.bilibili.com/video/$bvid';
           Utils.copyText(url);
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            SnackBar(content: Text('已复制视频链接：$url')),
-          );
+          showToast(context, '已复制视频链接：$url');
         },
       ),
     );
@@ -86,23 +83,17 @@ List<VideoCustomAction> buildVideoCardActions({
         icon: const Icon(Icons.watch_later_outlined, size: 16),
         onTap: () async {
           if (!Accounts.main.isLogin) {
-            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-              const SnackBar(content: Text('请先登录')),
-            );
+            showToast(context, '请先登录');
             return;
           }
           final res = await ToviewHttp.addToview(aid: aid, bvid: bvid);
           if (res.isSuccess) {
             if (context.mounted) {
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                const SnackBar(content: Text('已添加到稍后再看')),
-              );
+              showToast(context, '已添加到稍后再看');
             }
           } else {
             if (context.mounted) {
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                SnackBar(content: Text(_errMsg(res, '添加稍后再看失败'))),
-              );
+              showToast(context, _errMsg(res, '添加稍后再看失败'));
             }
           }
         },
@@ -178,24 +169,18 @@ List<VideoCustomAction> buildVideoCardActions({
           final targetAid = aid ?? (bvid != null ? IdUtils.bv2av(bvid) : null);
           if (targetAid == null) return;
           if (!Accounts.main.isLogin) {
-            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-              const SnackBar(content: Text('请先登录')),
-            );
+            showToast(context, '请先登录');
             return;
           }
           final res = await VideoHttp.dislikeVideo(aid: targetAid, type: false);
           if (res.isSuccess) {
             if (context.mounted) {
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                const SnackBar(content: Text('已标记不感兴趣，将减少此类推荐')),
-              );
+              showToast(context, '已标记不感兴趣，将减少此类推荐');
             }
             onRemove?.call();
           } else {
             if (context.mounted) {
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                SnackBar(content: Text(_errMsg(res, '操作失败'))),
-              );
+              showToast(context, _errMsg(res, '操作失败'));
             }
           }
         },
@@ -239,18 +224,12 @@ List<VideoCustomAction> buildVideoCardActions({
                       );
                       if (res.isSuccess) {
                         if (context.mounted) {
-                          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                            SnackBar(
-                              content: Text('已拉黑 UP 主：${ownerName.isNotEmpty ? ownerName : mid}'),
-                            ),
-                          );
+                          showToast(context, '已拉黑 UP 主：${ownerName.isNotEmpty ? ownerName : mid}');
                         }
                         onRemove?.call();
                       } else {
                         if (context.mounted) {
-                          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                            SnackBar(content: Text(_errMsg(res, '拉黑失败'))),
-                          );
+                          showToast(context, _errMsg(res, '拉黑失败'));
                         }
                       }
                     },
@@ -452,9 +431,7 @@ void showVideoCoverDialog({
                           ),
                           onPressed: () {
                             Utils.copyText(cover);
-                            ScaffoldMessenger.maybeOf(dialogCtx)?.showSnackBar(
-                              const SnackBar(content: Text('已复制封面图片链接')),
-                            );
+                            showToast(dialogCtx, '已复制封面图片链接');
                           },
                         ),
                         const SizedBox(width: 8),
@@ -474,9 +451,7 @@ void showVideoCoverDialog({
                               );
                               if (response.data == null || response.data!.isEmpty) {
                                 if (dialogCtx.mounted) {
-                                  ScaffoldMessenger.maybeOf(dialogCtx)?.showSnackBar(
-                                    const SnackBar(content: Text('下载封面图片失败')),
-                                  );
+                                  showToast(dialogCtx, '下载封面图片失败');
                                 }
                                 return;
                               }
@@ -491,15 +466,11 @@ void showVideoCoverDialog({
                                 final savedPath = fileUri.isScheme('file')
                                     ? fileUri.toFilePath()
                                     : fileUri.toString();
-                                ScaffoldMessenger.maybeOf(dialogCtx)?.showSnackBar(
-                                  SnackBar(content: Text('封面已保存：$savedPath')),
-                                );
+                                showToast(dialogCtx, '封面已保存：$savedPath');
                               }
                             } catch (e) {
                               if (dialogCtx.mounted) {
-                                ScaffoldMessenger.maybeOf(dialogCtx)?.showSnackBar(
-                                  SnackBar(content: Text('保存封面失败：$e')),
-                                );
+                                showToast(dialogCtx, '保存封面失败：$e');
                               }
                             }
                           },
@@ -557,16 +528,12 @@ void _showDislikeReasonsDialog({
             );
             if (res.isSuccess) {
               if (context.mounted) {
-                ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                  SnackBar(content: Text(reason.toast ?? '已提交反馈')),
-                );
+                showToast(context, reason.toast ?? '已提交反馈');
               }
               onRemove?.call();
             } else {
               if (context.mounted) {
-                ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                  SnackBar(content: Text(_errMsg(res, '提交失败'))),
-                );
+                showToast(context, _errMsg(res, '提交失败'));
               }
             }
           },
@@ -610,9 +577,7 @@ void _showDislikeReasonsDialog({
                   id: id,
                 );
                 if (context.mounted) {
-                  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                    SnackBar(content: Text(res.isSuccess ? '已撤销不感兴趣' : _errMsg(res, '撤销失败'))),
-                  );
+                  showToast(context, res.isSuccess ? '已撤销不感兴趣' : _errMsg(res, '撤销失败'));
                 }
               },
             ),

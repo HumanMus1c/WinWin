@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/theme/app_shapes.dart';
@@ -117,16 +118,12 @@ class _DownloadPageState extends State<DownloadPage> {
         }
       }
       if (mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('已清空离线缓存')),
-        );
+        showToast(context, '已清空离线缓存');
         _loadCacheInfo();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text('清空失败: $e')),
-        );
+        showToast(context, '清空失败: $e');
       }
     }
   }

@@ -9,6 +9,7 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -831,9 +832,7 @@ class _DynPgcCard extends StatelessWidget {
       );
       return;
     }
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text('链接：$url')),
-    );
+    showToast(context, '链接：$url');
   }
 }
 
@@ -1906,9 +1905,7 @@ class _DynCard extends StatelessWidget {
       );
       return;
     }
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text('链接：$url')),
-    );
+    showToast(context, '链接：$url');
   }
 
   void _gotoMember(BuildContext context, int? mid) {

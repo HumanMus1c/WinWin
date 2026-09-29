@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
@@ -132,7 +133,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
   }
 
   void _toast(String msg) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(msg)));
+    showToast(context, msg);
   }
 
   @override

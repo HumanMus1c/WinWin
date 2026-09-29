@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/danmaku_block.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -162,9 +163,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
 
   void _toast(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-    );
+    showToast(context, msg, duration: const Duration(seconds: 2));
   }
 
   @override

@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/progress_bar/audio_video_progress_bar.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
@@ -222,15 +223,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
   Future<void> _takeScreenshot() async {
     final c = widget.controller;
     // 提示正在截图。
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(content: Text('正在截图…'), duration: Duration(seconds: 1)),
-    );
+    showToast(context, '正在截图…', duration: const Duration(seconds: 1));
     final png = await c.screenshot();
     if (!mounted) return;
     if (png == null) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('截图失败'), duration: Duration(seconds: 1)),
-      );
+      showToast(context, '截图失败', duration: const Duration(seconds: 1));
       return;
     }
     _showScreenshotPreview(png);
@@ -2350,9 +2347,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.maybeOf(
-          context,
-        )?.showSnackBar(SnackBar(content: Text('保存失败：$e')));
+        showToast(context, '保存失败：$e');
       }
     }
   }

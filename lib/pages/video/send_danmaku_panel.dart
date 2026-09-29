@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/http/danmaku.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -198,12 +199,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
 
   void _toast(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    showToast(context, msg, duration: const Duration(seconds: 2));
   }
 
   @override

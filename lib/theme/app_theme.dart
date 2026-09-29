@@ -154,6 +154,20 @@ class AppTheme {
           indicatorColor: md3LightSecondaryContainer,
           indicatorShape: const StadiumBorder(),
         ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          elevation: 6,
+          insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(_md3RadiusMedium),
+          ),
+          backgroundColor: md3LightOnSurface,
+          contentTextStyle: const TextStyle(
+            color: md3LightSurface,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
         actionIconTheme: _actionIconThemeFor(UiStyle.material3),
         extensions: _extensionsFor(UiStyle.material3),
       );
@@ -231,6 +245,20 @@ class AppTheme {
           indicatorColor: md3DarkSecondaryContainer,
           indicatorShape: const StadiumBorder(),
         ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          elevation: 6,
+          insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(_md3RadiusMedium),
+          ),
+          backgroundColor: md3DarkOnSurface,
+          contentTextStyle: const TextStyle(
+            color: md3DarkSurface,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
         actionIconTheme: _actionIconThemeFor(UiStyle.material3),
         extensions: _extensionsFor(UiStyle.material3),
       );
@@ -291,6 +319,20 @@ class AppTheme {
             borderRadius: BorderRadius.all(_miuixRadiusSmall),
           ),
         ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          elevation: 6,
+          insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(_miuixRadiusMedium),
+          ),
+          backgroundColor: miuixLightOnSurface,
+          contentTextStyle: const TextStyle(
+            color: miuixLightSurface,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
         actionIconTheme: _actionIconThemeFor(UiStyle.miuix),
         extensions: _extensionsFor(UiStyle.miuix),
       );
@@ -339,6 +381,20 @@ class AppTheme {
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(_miuixRadiusSmall),
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          elevation: 6,
+          insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(_miuixRadiusMedium),
+          ),
+          backgroundColor: miuixDarkOnSurface,
+          contentTextStyle: const TextStyle(
+            color: miuixDarkSurface,
+            fontSize: 14,
+            height: 1.4,
           ),
         ),
         actionIconTheme: _actionIconThemeFor(UiStyle.miuix),

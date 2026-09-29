@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/account/login_utils.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/log/api_blackbox.dart';
 import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/pages/dynamics/view.dart';
@@ -466,9 +467,7 @@ class _StatsRow extends StatelessWidget {
   void _gotoRelation(BuildContext ctx, RelationType type) {
     final mid = info?.mid;
     if (mid == null || mid <= 0) {
-      ScaffoldMessenger.maybeOf(ctx)?.showSnackBar(
-        const SnackBar(content: Text('用户信息未加载，请稍后重试')),
-      );
+      showToast(ctx, '用户信息未加载，请稍后重试');
       return;
     }
     showMemberRelationPage(ctx, type: type, vmid: mid);

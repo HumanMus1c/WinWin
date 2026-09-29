@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/common/widgets/dyn/dyn_repost_dialog.dart';
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -103,9 +104,7 @@ class _DynActionBarState extends State<DynActionBar> {
   }
 
   void _toast(String msg) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-    );
+    showToast(context, msg, duration: const Duration(seconds: 2));
   }
 
   @override

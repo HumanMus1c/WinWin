@@ -15,6 +15,7 @@ import 'package:winwin/common/widgets/medal_widget.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/event/event_bus.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/fav.dart';
@@ -513,9 +514,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Future<void> _toggleFollow() async {
     if (!Accounts.main.isLogin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先登录')),
-      );
+      showToast(context, '请先登录');
       return;
     }
     if (_isFollowingUpdating) return;
@@ -543,13 +542,9 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           mid: widget.mid,
           isFollowing: newFollowing,
         ));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isCurrentlyFollowed ? '已取消关注' : '关注成功')),
-        );
+        showToast(context, isCurrentlyFollowed ? '已取消关注' : '关注成功');
       case Error(:final errMsg):
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errMsg ?? '操作失败')),
-        );
+        showToast(context, errMsg ?? '操作失败');
       case Loading():
         break;
     }
@@ -648,9 +643,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     if (!isOwner)
                       MenuItemButton(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('已收到举报请求')),
-                          );
+                          showToast(context, '已收到举报请求');
                         },
                         child: const Text('举报该用户'),
                       ),
@@ -986,9 +979,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     backgroundColor: medal.parsedBackgroundColor,
                     nameColor: medal.parsedTextColor,
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('粉丝勋章: ${medal.medalName} Lv.${medal.level}')),
-                      );
+                      showToast(context, '粉丝勋章: ${medal.medalName} Lv.${medal.level}');
                     },
                   ),
               ],
@@ -2996,7 +2987,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   void _copyToClipboard(String text, String tip) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tip)));
+    showToast(context, tip);
   }
 
   Widget _buildError(String? errMsg, VoidCallback onRetry) {

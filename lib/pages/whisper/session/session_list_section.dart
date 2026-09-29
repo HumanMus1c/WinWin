@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
@@ -231,9 +232,7 @@ class SessionListSectionState extends State<SessionListSection> {
     if (!mounted) return;
     if (res.isSuccess) {
       setState(() => _sessions.removeAt(index));
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('已删除会话'), duration: Duration(seconds: 1)),
-      );
+      showToast(context, '已删除会话', duration: const Duration(seconds: 1));
     } else {
       _toast(res);
     }
@@ -241,9 +240,7 @@ class SessionListSectionState extends State<SessionListSection> {
 
   void _toast(LoadingState res) {
     final msg = res is Error ? (res.errMsg ?? '操作失败') : '操作失败';
-    ScaffoldMessenger.maybeOf(
-      context,
-    )?.showSnackBar(SnackBar(content: Text(msg)));
+    showToast(context, msg);
   }
 
   static int _nowMicros() => DateTime.now().microsecondsSinceEpoch;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/theme/style.dart';
@@ -54,20 +55,10 @@ class _DynRepostDialogState extends State<DynRepostDialog> {
 
     switch (res) {
       case Success():
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Text('转发成功'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        showToast(context, '转发成功', duration: const Duration(seconds: 2));
         Navigator.of(context).pop(true);
       case Error(:final errMsg):
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
-            content: Text(errMsg ?? '转发失败'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        showToast(context, errMsg ?? '转发失败', duration: const Duration(seconds: 2));
       case Loading():
         break;
     }

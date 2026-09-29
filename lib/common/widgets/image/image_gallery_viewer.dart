@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/utils/image_utils.dart';
 
@@ -280,20 +281,18 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
           : fileUri.toString();
 
       if (context.mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
-            content: Text('图片已成功保存至 $savedPath'),
-            duration: const Duration(seconds: 2),
-          ),
+        showToast(
+          context,
+          '图片已成功保存至 $savedPath',
+          duration: const Duration(seconds: 2),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
-            content: Text('保存图片失败：$e'),
-            duration: const Duration(seconds: 2),
-          ),
+        showToast(
+          context,
+          '保存图片失败：$e',
+          duration: const Duration(seconds: 2),
         );
       }
     }
@@ -339,11 +338,10 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   onTap: () {
                     Navigator.of(ctx).pop();
                     Clipboard.setData(ClipboardData(text: rawUrl));
-                    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                      const SnackBar(
-                        content: Text('已复制图片直链到剪贴板'),
-                        duration: Duration(seconds: 1),
-                      ),
+                    showToast(
+                      context,
+                      '已复制图片直链到剪贴板',
+                      duration: const Duration(seconds: 1),
                     );
                   },
                 ),
@@ -559,11 +557,10 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                             final curUrl =
                                 getRawUrl(widget.imageUrls[_currentIndex]);
                             Clipboard.setData(ClipboardData(text: curUrl));
-                            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                              const SnackBar(
-                                content: Text('已复制图片链接到剪贴板'),
-                                duration: Duration(seconds: 1),
-                              ),
+                            showToast(
+                              context,
+                              '已复制图片链接到剪贴板',
+                              duration: const Duration(seconds: 1),
                             );
                           },
                         ),

@@ -4,6 +4,7 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
@@ -790,12 +791,7 @@ class _PgcCard extends StatelessWidget {
               ),
             );
           } else {
-            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-              SnackBar(
-                content: Text(_title),
-                duration: const Duration(seconds: 1),
-              ),
-            );
+            showToast(context, _title, duration: const Duration(seconds: 1));
           }
         },
         child: Column(

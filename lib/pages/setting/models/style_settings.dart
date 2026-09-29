@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
@@ -119,12 +120,7 @@ List<SettingsModel> get styleSettings => [
             await GStorage.setting.put(SettingBoxKey.defaultTextScale, res);
             setState();
             if (context.mounted) {
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                const SnackBar(
-                  content: Text('重启生效'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              showToast(context, '重启生效', duration: const Duration(seconds: 2));
             }
           }
         },
@@ -154,12 +150,7 @@ List<SettingsModel> get styleSettings => [
             await GStorage.setting.put(SettingBoxKey.uiScale, res);
             setState();
             if (context.mounted) {
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                const SnackBar(
-                  content: Text('重启生效'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              showToast(context, '重启生效', duration: const Duration(seconds: 2));
             }
           }
         },
@@ -485,26 +476,14 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
       final err = await AppFontNotifier.instance.importCustomFont(path);
       if (!mounted) return;
       if (err != null) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(err), duration: const Duration(seconds: 3)),
-        );
+        showToast(context, err, duration: const Duration(seconds: 3));
       } else {
         setState(() => _selected = AppFontNotifier.customFontFamily);
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Text('字体导入成功'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        showToast(context, '字体导入成功', duration: const Duration(seconds: 2));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
-            content: Text('导入失败：$e'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        showToast(context, '导入失败：$e', duration: const Duration(seconds: 3));
       }
     } finally {
       if (mounted) setState(() => _importing = false);

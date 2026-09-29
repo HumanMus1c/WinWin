@@ -5,6 +5,7 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/history.dart';
@@ -183,9 +184,7 @@ class _HistoryPageState extends State<HistoryPage> {
       case Success():
         setState(() => _items.remove(item));
       case Error(:final errMsg):
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(errMsg ?? '删除失败')),
-        );
+        showToast(context, errMsg ?? '删除失败');
       case Loading():
         break;
     }
@@ -200,9 +199,7 @@ class _HistoryPageState extends State<HistoryPage> {
         business == null ||
         business.isEmpty;
     if (bvid == null || bvid.isEmpty || !isArchive) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('暂不支持打开该类型记录')),
-      );
+      showToast(context, '暂不支持打开该类型记录');
       return;
     }
     Navigator.of(context).push(
@@ -243,9 +240,7 @@ class _HistoryPageState extends State<HistoryPage> {
           _hasMore = false;
         });
       case Error(:final errMsg):
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(errMsg ?? '清空失败')),
-        );
+        showToast(context, errMsg ?? '清空失败');
       case Loading():
         break;
     }

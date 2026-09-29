@@ -6,6 +6,7 @@ import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/article.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -138,9 +139,7 @@ class _ArticlePageState extends State<ArticlePage> {
   }
 
   void _toast(String msg) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-    );
+    showToast(context, msg, duration: const Duration(seconds: 2));
   }
 
   @override
@@ -170,11 +169,10 @@ class _ArticlePageState extends State<ArticlePage> {
               Clipboard.setData(
                 ClipboardData(text: 'https://www.bilibili.com/read/cv$_cleanId'),
               );
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                const SnackBar(
-                  content: Text('已复制专栏文章链接'),
-                  duration: Duration(seconds: 1),
-                ),
+              showToast(
+                context,
+                '已复制专栏文章链接',
+                duration: const Duration(seconds: 1),
               );
             },
           ),

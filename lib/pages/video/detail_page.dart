@@ -13,6 +13,7 @@ import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/common/widgets/video_card/video_card_h.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/app_messenger.dart' as app_messenger;
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/log/sync_trace.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -775,9 +776,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   void _toast(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-    );
+    // 注意：本类另有实例方法 showToast(String)（VideoInteractionMixin 接口），
+    // 类内非限定调用会被实例成员遮蔽，故此处必须用库前缀调用顶层 showToast。
+    app_messenger.showToast(context, msg, duration: const Duration(seconds: 2));
   }
 
   // ─────────────────────────── 用户空间跳转 ───────────────────────────

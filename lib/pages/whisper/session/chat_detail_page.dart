@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
@@ -169,7 +170,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       await _load(refresh: true);
     } else {
       final msg = res is Error ? (res.errMsg ?? '发送失败') : '发送失败';
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(msg)));
+      showToast(context, msg);
     }
     if (mounted) setState(() => _sending = false);
   }
@@ -644,8 +645,6 @@ class _ChatBubble extends StatelessWidget {
   }
 
   void _toast(BuildContext context, String msg) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 1)),
-    );
+    showToast(context, msg, duration: const Duration(seconds: 1));
   }
 }

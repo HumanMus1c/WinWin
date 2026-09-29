@@ -8,6 +8,7 @@ import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -223,9 +224,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   }
 
   void _toast(String msg) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-    );
+    showToast(context, msg, duration: const Duration(seconds: 2));
   }
 
   @override
@@ -250,11 +249,10 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
               Clipboard.setData(
                 ClipboardData(text: 'https://t.bilibili.com/$_effectiveId'),
               );
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                const SnackBar(
-                  content: Text('已复制动态链接'),
-                  duration: Duration(seconds: 1),
-                ),
+              showToast(
+                context,
+                '已复制动态链接',
+                duration: const Duration(seconds: 1),
               );
             },
           ),
@@ -1318,9 +1316,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       );
       return;
     }
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text('链接：$url')),
-    );
+    showToast(context, '链接：$url');
   }
 
   static String _formatTime(int ts) {

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
@@ -273,13 +274,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         _isFollowed = true;
         _followStatus = 2; // 默认“在看”
       });
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('已开始追番')),
-      );
+      showToast(context, '已开始追番');
     } else if (res case Error(:final errMsg)) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(errMsg ?? '追番失败')),
-      );
+      showToast(context, errMsg ?? '追番失败');
     }
   }
 
@@ -295,13 +292,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         _isFollowed = false;
         _followStatus = 0;
       });
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('已取消追番')),
-      );
+      showToast(context, '已取消追番');
     } else if (res case Error(:final errMsg)) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(errMsg ?? '取消追番失败')),
-      );
+      showToast(context, errMsg ?? '取消追番失败');
     }
   }
 
@@ -326,13 +319,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         _isFollowed = true;
         _followStatus = status;
       });
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text('已更新为“$label”')),
-      );
+      showToast(context, '已更新为“$label”');
     } else if (res case Error(:final errMsg)) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(errMsg ?? '更新追番状态失败')),
-      );
+      showToast(context, errMsg ?? '更新追番状态失败');
     }
   }
 
@@ -430,9 +419,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                   return;
                 }
               }
-              ScaffoldMessenger.maybeOf(ctx)?.showSnackBar(
-                const SnackBar(content: Text('未找到对应集数')),
-              );
+              showToast(ctx, '未找到对应集数');
             },
             child: const Text('跳转播放'),
           ),
@@ -470,9 +457,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                 Clipboard.setData(
                   ClipboardData(text: 'https://www.bilibili.com/bangumi/play/ss$sid'),
                 );
-                ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                  const SnackBar(content: Text('番剧链接已复制到剪贴板')),
-                );
+                showToast(context, '番剧链接已复制到剪贴板');
               }
             },
           ),

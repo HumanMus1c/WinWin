@@ -9,6 +9,7 @@ import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
@@ -700,18 +701,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             );
           }
         });
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Text('弹幕发送成功'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        showToast(context, '弹幕发送成功', duration: const Duration(seconds: 1));
       case Error(:final errMsg):
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(
-            content: Text(errMsg ?? '发送弹幕失败'),
-            duration: const Duration(seconds: 2),
-          ),
+        showToast(
+          context,
+          errMsg ?? '发送弹幕失败',
+          duration: const Duration(seconds: 2),
         );
       case Loading():
         break;
@@ -720,12 +715,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   void _showQuickSendDialog() {
     if (!_isLiving) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(
-          content: Text('未开播，无法发送弹幕'),
-          duration: Duration(seconds: 1),
-        ),
-      );
+      showToast(context, '未开播，无法发送弹幕', duration: const Duration(seconds: 1));
       return;
     }
     if (!_fullscreen && !_inAppFullscreen) {
@@ -880,11 +870,10 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                               text: 'https://live.bilibili.com/$_realRoomId',
                             ),
                           );
-                          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                            const SnackBar(
-                              content: Text('已复制直播间链接'),
-                              duration: Duration(seconds: 1),
-                            ),
+                          showToast(
+                            context,
+                            '已复制直播间链接',
+                            duration: const Duration(seconds: 1),
                           );
                         },
                       ),

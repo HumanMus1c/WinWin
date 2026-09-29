@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/ui_style.dart';
@@ -70,12 +71,7 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
     await GStorage.setting.put(widget.setKey, val);
     widget.onChanged?.call(val);
     if (widget.needReboot && mounted) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(
-          content: Text('重启生效'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      showToast(context, '重启生效', duration: const Duration(seconds: 2));
     }
     if (mounted) {
       setState(() {});

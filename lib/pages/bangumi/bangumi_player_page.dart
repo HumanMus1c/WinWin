@@ -10,6 +10,7 @@ import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/core/account/login_guard.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/core/log/app_logger.dart';
@@ -316,11 +317,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     _loadReplies();
     _loadEpisodeInteraction();
 
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(
-        content: Text('正在播放：${ep.displayTitle}'),
-        duration: const Duration(seconds: 1),
-      ),
+    showToast(
+      context,
+      '正在播放：${ep.displayTitle}',
+      duration: const Duration(seconds: 1),
     );
   }
 
@@ -348,12 +348,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           posMs < opEndMs) {
         _lastOpSkippedEpId = epId;
         unawaited(ctrl.resumeTo(Duration(milliseconds: opEndMs)));
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Text('已跳过片头'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        showToast(context, '已跳过片头', duration: const Duration(seconds: 1));
         return;
       }
     }
@@ -370,12 +365,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           posMs < edEndMs) {
         _lastEdSkippedEpId = epId;
         unawaited(ctrl.resumeTo(Duration(milliseconds: edEndMs)));
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Text('已跳过片尾'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        showToast(context, '已跳过片尾', duration: const Duration(seconds: 1));
       }
     }
   }
@@ -540,9 +530,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           action: wasLiked ? 1 : (wasDisliked ? 2 : 0),
         ),
       );
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(errMsg ?? '操作失败')),
-      );
+      showToast(context, errMsg ?? '操作失败');
     }
   }
 
@@ -579,9 +567,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           action: wasDisliked ? 2 : (wasLiked ? 1 : 0),
         ),
       );
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(errMsg ?? '操作失败')),
-      );
+      showToast(context, errMsg ?? '操作失败');
     }
   }
 
@@ -629,9 +615,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         });
       case Error():
         _subLoading[rpid] = false;
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('加载回复失败')),
-        );
+        showToast(context, '加载回复失败');
       case Loading():
         break;
     }
@@ -678,14 +662,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       _commentCtrl.clear();
       _replyRoot = null;
       _replyHint = null;
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('评论发表成功')),
-      );
+      showToast(context, '评论发表成功');
       _loadReplies(refresh: true);
     } else if (res case Error(:final errMsg)) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(errMsg ?? '发送失败')),
-      );
+      showToast(context, errMsg ?? '发送失败');
     }
   }
 
@@ -2010,13 +1990,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           _hasFav = true;
           _followStatus = 2;
         });
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('已追番')),
-        );
+        showToast(context, '已追番');
       } else if (res case Error(:final errMsg)) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(errMsg ?? '追番失败')),
-        );
+        showToast(context, errMsg ?? '追番失败');
       }
     }
   }
@@ -2338,9 +2314,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         _hasFav = true;
         _isFollowed = true;
       });
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('一键三连成功！')),
-      );
+      showToast(context, '一键三连成功！');
     }
   }
 
@@ -2353,9 +2327,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     final epId = _currentEpisode.id;
     final url = 'https://www.bilibili.com/bangumi/play/ep$epId';
     Clipboard.setData(ClipboardData(text: url));
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(content: Text('播放链接已复制到剪贴板')),
-    );
+    showToast(context, '播放链接已复制到剪贴板');
   }
 
   Future<void> _actionWatchLater() async {
@@ -2369,13 +2341,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     if (!mounted) return;
     if (res case Success()) {
       setState(() => _inWatchLater = !inList);
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(!inList ? '已添加到稍后再看' : '已从稍后再看移除')),
-      );
+      showToast(context, !inList ? '已添加到稍后再看' : '已从稍后再看移除');
     } else if (res case Error(:final errMsg)) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(errMsg ?? '操作失败')),
-      );
+      showToast(context, errMsg ?? '操作失败');
     }
   }
 

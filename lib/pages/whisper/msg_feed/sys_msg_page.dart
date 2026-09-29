@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
@@ -82,13 +83,9 @@ class _SysMsgPageState extends State<SysMsgPage> {
     switch (res) {
       case Success():
         setState(() => _items.removeAt(index));
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('已删除'), duration: Duration(seconds: 1)),
-        );
+        showToast(context, '已删除', duration: const Duration(seconds: 1));
       case Error(:final errMsg):
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(errMsg ?? '删除失败')),
-        );
+        showToast(context, errMsg ?? '删除失败');
       case Loading():
         break;
     }

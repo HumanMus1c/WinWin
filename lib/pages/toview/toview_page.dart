@@ -9,6 +9,7 @@ import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/event/event_bus.dart';
 import 'package:winwin/core/log/api_blackbox.dart';
@@ -211,9 +212,7 @@ class _ToviewPageState extends State<ToviewPage> {
           inWatchLater: false,
         ));
       case Error(:final errMsg):
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(errMsg ?? '移除失败')),
-        );
+        showToast(context, errMsg ?? '移除失败');
       case Loading():
         break;
     }
@@ -223,9 +222,7 @@ class _ToviewPageState extends State<ToviewPage> {
   void _openItem(LaterItem item) {
     final bvid = item.bvid;
     if (bvid == null || bvid.isEmpty) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('暂不支持打开该类型内容')),
-      );
+      showToast(context, '暂不支持打开该类型内容');
       return;
     }
     Navigator.of(context).push(
@@ -248,9 +245,7 @@ class _ToviewPageState extends State<ToviewPage> {
     if (firstValid.bvid != null && firstValid.bvid!.isNotEmpty) {
       _openItem(firstValid);
     } else {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('暂无可播放的视频')),
-      );
+      showToast(context, '暂无可播放的视频');
     }
   }
 
@@ -282,9 +277,7 @@ class _ToviewPageState extends State<ToviewPage> {
           _totalCount = 0;
         });
       case Error(:final errMsg):
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(errMsg ?? '清空失败')),
-        );
+        showToast(context, errMsg ?? '清空失败');
       case Loading():
         break;
     }

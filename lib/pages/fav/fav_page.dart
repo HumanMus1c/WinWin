@@ -6,6 +6,7 @@ import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/log/api_blackbox.dart';
 import 'package:winwin/core/log/app_logger.dart';
@@ -471,9 +472,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
   void _openItem(FavDetailItem item) {
     final bvid = item.bvid;
     if (bvid == null || bvid.isEmpty) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('该资源已失效，无法打开')),
-      );
+      showToast(context, '该资源已失效，无法打开');
       return;
     }
     Navigator.of(context).push(
@@ -496,9 +495,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
     if (firstValid.bvid != null && firstValid.bvid!.isNotEmpty) {
       _openItem(firstValid);
     } else {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('该收藏夹暂无可用视频')),
-      );
+      showToast(context, '该收藏夹暂无可用视频');
     }
   }
 
@@ -863,9 +860,7 @@ void showFavPanel(
   ValueChanged<bool>? onSuccess,
 }) {
   if (!Accounts.main.isLogin) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(content: Text('请先登录')),
-    );
+    showToast(context, '请先登录');
     return;
   }
   showModalBottomSheet<void>(
@@ -950,9 +945,7 @@ class _FavPanelState extends State<_FavPanel> {
         widget.onSuccess?.call(isFav);
         Navigator.of(context).pop();
       case Error(:final errMsg):
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(errMsg ?? '操作失败')),
-        );
+        showToast(context, errMsg ?? '操作失败');
       case Loading():
         break;
     }

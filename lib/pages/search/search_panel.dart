@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 
 import 'package:winwin/common/widgets/video_card/video_card_h.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/search.dart';
 import 'package:winwin/models/search/result.dart';
@@ -370,11 +371,10 @@ class _SearchPanelState extends State<SearchPanel>
       child: InkWell(
         onTap: () {
           // 直播间跳转暂未实现，显示提示
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            SnackBar(
-              content: Text('直播功能暂未接入：${item.uname} 的直播间'),
-              duration: const Duration(seconds: 2),
-            ),
+          showToast(
+            context,
+            '直播功能暂未接入：${item.uname} 的直播间',
+            duration: const Duration(seconds: 2),
           );
         },
         child: Padding(
@@ -584,11 +584,10 @@ class _SearchPanelState extends State<SearchPanel>
       margin: EdgeInsets.zero,
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-            SnackBar(
-              content: Text('专栏功能暂未接入：${item.title}'),
-              duration: const Duration(seconds: 2),
-            ),
+          showToast(
+            context,
+            '专栏功能暂未接入：${item.title}',
+            duration: const Duration(seconds: 2),
           );
         },
         child: Padding(

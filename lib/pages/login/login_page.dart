@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/login.dart';
 import 'package:winwin/models/common/account_type.dart';
@@ -61,9 +62,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _toast(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-    );
+    showToast(context, msg, duration: const Duration(seconds: 2));
   }
 
   /// 登录成功后统一处理：写入账号 → 激活 buvid → 拉取用户信息 → 关闭页面。
