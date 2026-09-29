@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WinWin · Toast 提示样式演示</title>
+<style>
+  :root{
+    --bg:#F7F5FA;
+    --ink:#1D1B20;
+    --m3-inverse-surface:#322F35;
+    --m3-inverse-on-surface:#F5EFF7;
+    --m3-inverse-primary:#D0BCFF;
+    --m3-surface-container-high:#ECE6F0;
+    --m3-on-surface:#1D1B20;
+    --m3-on-surface-variant:#49454F;
+    --c-info:#47AFFF; --c-success:#32BC32; --c-warning:#FFB600; --c-error:#FF3A30;
+    --asc-success:#2D6A4F; --asc-failure:#C72C41; --asc-warning:#FCA652; --asc-help:#3282B8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Segoe UI","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    background:var(--bg);color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .page-header{max-width:1080px;margin:0 auto;padding:40px 24px 6px}
+  .page-header h1{font-size:25px;font-weight:650;letter-spacing:.2px}
+  .page-header .lead{margin-top:10px;font-size:14px;color:#4A4553;line-height:1.7}
+  .page-header .meta{margin-top:8px;font-size:12px;color:#7A7582;line-height:1.6}
+  .page-header .actions{margin-top:14px}
+  .btn-ghost{
+    border:1px solid #CBC5D4;background:transparent;color:#4A4553;
+    font-size:12.5px;padding:7px 14px;border-radius:999px;cursor:pointer;
+  }
+  .btn-ghost:hover{background:#EFEAF6}
+  main{max-width:1080px;margin:0 auto;padding:0 24px 140px}
+  section{margin-top:46px}
+  .section-head h2{font-size:19px;font-weight:650;display:flex;align-items:center;gap:10px}
+  .section-head .sub{margin-top:8px;font-size:13px;color:#56525E;line-height:1.7}
+  .section-head .sub code{background:#EFEAF6;border-radius:6px;padding:1px 6px;font-size:12px}
+  .tag{font-size:11px;font-weight:600;border-radius:999px;padding:3px 10px;letter-spacing:.3px}
+  .tag.zero{background:#E2F5E4;color:#1D6B2A}
+  .tag.dep{background:#FFF3D6;color:#8A5A00}
+  .tag.mig{background:#E4EEFF;color:#20539E}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:18px;margin-top:18px}
+  @media (max-width:960px){.grid{grid-template-columns:1fr}}
+  .card{
+    background:#fff;border-radius:18px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:12px;
+    box-shadow:0 1px 2px rgba(20,12,34,.05),0 6px 20px rgba(28,20,40,.07);
+  }
+  .card h3{font-size:15.5px;font-weight:640}
+  .card .note{font-size:12.5px;color:#5A5563;line-height:1.6}
+  .card .note b{color:#3C374A;font-weight:600}
+  .stage{
+    background:#EFEBF4;border-radius:14px;padding:16px;min-height:134px;
+    display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;
+    overflow:hidden;
+  }
+  .stage[data-stage="sb-current"]{padding:22px 0 0}
+  .stage .sb-current{border-radius:0}
+  .trigger{
+    border:0;border-radius:10px;background:#E8DEF8;color:#241C36;
+    font-size:13.5px;font-weight:600;padding:10px 18px;cursor:pointer;
+    align-self:flex-start;transition:background .15s;
+  }
+  .trigger:hover{background:#DBCCEE}
+  .trigger:active{transform:translateY(1px)}
+
+  /* ============ 方案① M3 SnackBar ============ */
+  .sb{
+    display:flex;align-items:center;gap:12px;
+    width:100%;max-width:520px;margin:0 auto;
+    padding:14px 20px;border-radius:12px;font-size:14px;line-height:1.4;
+  }
+  .sb .sb-ic{flex:0 0 auto;display:grid;place-items:center}
+  .sb .sb-ic svg{width:20px;height:20px;display:block}
+  .sb .grow{flex:1;min-width:0}
+  .sb-dark{background:var(--m3-inverse-surface);color:var(--m3-inverse-on-surface);box-shadow:0 6px 18px rgba(10,6,16,.30)}
+  .sb-light{background:var(--m3-surface-container-high);color:var(--m3-on-surface);box-shadow:0 4px 14px rgba(10,6,16,.15)}
+  .sb-light .sb-ic{color:var(--m3-on-surface-variant)}
+  .sb .sb-action{
+    border:0;background:none;cursor:pointer;margin-left:auto;flex:0 0 auto;
+    color:var(--m3-inverse-primary);font-size:14px;font-weight:650;padding:2px 4px;border-radius:6px;
+  }
+  .sb .sb-action:hover{background:rgba(208,188,255,.14)}
+  .sb-current{
+    width:100%;max-width:none;margin:0;
+    background:var(--m3-inverse-surface);color:var(--m3-inverse-on-surface);
+    font-size:14px;line-height:1.4;padding:15px 24px;
+  }
+
+  /* ============ 方案② awesome_snackbar_content ============ */
+  .asc{
+    position:relative;width:100%;max-width:520px;margin:0 auto;
+    border-radius:20px;min-height:116px;padding:16px 46px 16px 84px;
+    display:flex;flex-direction:column;justify-content:center;
+    color:#fff;box-shadow:0 8px 24px rgba(12,8,20,.18);
+    --ad:color-mix(in srgb,var(--ac) 84%,#000);
+  }
+  .asc-success{--ac:var(--asc-success);background:var(--ac)}
+  .asc-failure{--ac:var(--asc-failure);background:var(--ac)}
+  .asc-warning{--ac:var(--asc-warning);background:var(--ac)}
+  .asc-help{--ac:var(--asc-help);background:var(--ac)}
+  .asc-badge{
+    position:absolute;left:18px;top:-9px;width:48px;height:48px;border-radius:50%;
+    background:var(--ad);display:grid;place-items:center;
+    box-shadow:0 4px 10px rgba(0,0,0,.18);
+  }
+  .asc-badge svg{width:20px;height:20px;display:block}
+  .asc-title{font-size:19px;font-weight:650;letter-spacing:.2px}
+  .asc-msg{margin-top:6px;font-size:13.5px;line-height:1.5;opacity:.96}
+  .asc-close{
+    position:absolute;right:10px;top:10px;border:0;background:none;cursor:pointer;
+    color:#fff;opacity:.92;padding:4px;border-radius:8px;line-height:0;
+  }
+  .asc-close:hover{background:rgba(255,255,255,.14)}
+  .asc-close svg{width:18px;height:18px}
+  .asc-bubbles{
+    position:absolute;left:10px;bottom:10px;width:42px;height:30px;opacity:.85;pointer-events:none;
+    background:
+      radial-gradient(circle 9px at 11px 21px,var(--ad) 97%,transparent 100%),
+      radial-gradient(circle 5px at 28px 11px,var(--ad) 97%,transparent 100%),
+      radial-gradient(circle 4px at 36px 23px,var(--ad) 97%,transparent 100%);
+  }
+
+  /* ============ 方案③-A toastification ============ */
+  .tst{
+    position:relative;display:flex;align-items:flex-start;gap:12px;
+    width:100%;max-width:400px;margin:0 auto;min-height:64px;
+    padding:16px 12px 16px 20px;border-radius:12px;background:#fff;
+    box-shadow:0 16px 16px rgba(0,0,0,.03);
+    --tfg:#000;
+  }
+  .tst-icon{flex:0 0 auto;width:24px;height:24px;display:grid;place-items:center;margin-top:1px}
+  .tst-icon svg{width:22px;height:22px;display:block}
+  .tst-main{flex:1;min-width:0}
+  .tst-title{font-size:14px;font-weight:500;line-height:1.25;color:var(--tfg)}
+  .tst-desc{margin-top:6px;font-size:13.5px;font-weight:300;line-height:1.4;color:color-mix(in srgb,var(--tfg) 78%,transparent)}
+  .tst-close{
+    flex:0 0 auto;border:0;background:none;cursor:pointer;margin-left:8px;
+    color:color-mix(in srgb,var(--tfg) 40%,transparent);padding:2px;line-height:0;border-radius:6px;
+  }
+  .tst-close:hover{background:color-mix(in srgb,var(--tfg) 8%,transparent)}
+  .tst-close svg{width:18px;height:18px}
+  .tst-progress{margin-top:10px;height:2.5px;border-radius:99px;background:color-mix(in srgb,var(--tfg) 6%,transparent);overflow:hidden}
+  .tst-progress i{display:block;height:100%;width:100%;border-radius:99px;background:color-mix(in srgb,var(--tfg) 16%,transparent)}
+  .tst-progress i.anim{animation:tstBar linear forwards}
+  @keyframes tstBar{from{width:100%}to{width:0%}}
+  .tst-flat{border:1.5px solid #EBEBEB}
+  .tst-flat .tst-icon{color:var(--tc)}
+  .tst-flatcolored{border:1.5px solid var(--tc);background:color-mix(in srgb,var(--tc) 5%,#fff)}
+  .tst-fillcolored{--tfg:#fff;background:var(--tc);border:1px solid rgba(0,0,0,.10)}
+  .tst-minimal{border:1.5px solid #EBEBEB;border-left:3px solid var(--tc);border-radius:0 12px 12px 0}
+  .tst-minimal .tst-icon{color:var(--tc)}
+  .tst-simple{border:1.5px solid #EBEBEB;align-items:center}
+  .tst-simple .tst-main{flex:0 1 auto}
+  .tst-simple .tst-title{font-weight:450}
+
+  /* ============ 方案③-B motion_toast ============ */
+  .mt{
+    position:relative;display:flex;align-items:center;overflow:hidden;
+    width:100%;max-width:430px;margin:0 auto;
+    border-radius:20px;background:var(--mc);color:#fff;
+    padding:15px 20px 15px 0;
+    box-shadow:0 8px 24px rgba(12,8,20,.22);
+  }
+  .mt-side{align-self:stretch;flex:0 0 7px;width:7px;background:var(--mcd);margin-right:14px}
+  .mt-icon{flex:0 0 auto;display:grid;place-items:center;margin-right:13px}
+  .mt-icon svg{width:38px;height:38px;display:block;animation:mtPulse 1.7s ease-in-out infinite}
+  @keyframes mtPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+  .mt-main{flex:1;min-width:0}
+  .mt-title{font-size:14.5px;font-weight:650;margin-bottom:3px}
+  .mt-desc{font-size:12.5px;line-height:1.45;opacity:.88}
+
+  /* ============ 弹出层容器 ============ */
+  #stack-topright{
+    position:fixed;top:16px;right:16px;width:min(400px,92vw);
+    display:flex;flex-direction:column;align-items:stretch;gap:12px;
+    z-index:1000;pointer-events:none;
+  }
+  #stack-bottom{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:0;
+    width:min(640px,94vw);
+    display:flex;flex-direction:column;align-items:stretch;
+    z-index:1000;pointer-events:none;
+  }
+  #stack-topright>.toast-item,#stack-bottom>.toast-item{pointer-events:auto}
+  #stack-bottom>.toast-item{margin-bottom:16px}
+  .fw-host{position:fixed;left:0;right:0;bottom:0;z-index:1001}
+  .toast-item{
+    opacity:0;
+    transition:opacity .33s cubic-bezier(.2,.8,.2,1),transform .33s cubic-bezier(.2,.8,.2,1);
+    will-change:opacity,transform;
+  }
+  .toast-item[data-enter="up"]{transform:translateY(30px)}
+  .toast-item[data-enter="right"]{transform:translateX(60px)}
+  .toast-item[data-enter="down"]{transform:translateY(-30px)}
+  .toast-item.show{opacity:1;transform:none}
+
+  footer{max-width:1080px;margin:0 auto;padding:0 24px 60px;font-size:12.5px;color:#6B6675;line-height:1.8}
+  footer b{color:#4A4553}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>WinWin · Toast 提示样式演示</h1>
+  <p class="lead">
+    三种改造方案、共 18 种样式。每张卡片内是<b>静态实物预览</b>，点「触发弹出」可在页面真实位置看到弹出动画与自动消失效果。
+    点击弹出中的 Toast 可立即关闭，鼠标悬停可暂停倒计时。
+  </p>
+  <p class="meta">
+    还原依据：Material 3 规范；toastification v3.2 源码（配色 / 圆角 / 间距为精确值）；motion_toast v2.16 与 awesome_snackbar_content 0.1.8 官方样式（高保真近似）。
+    本页为纯 HTML 静态模拟，非真实 Flutter 渲染，仅用于样式选型对比。
+  </p>
+  <div class="actions"><button class="btn-ghost" id="clear-all" type="button">清除全部弹出</button></div>
+</header>
+
+<main>
+
+  <!-- ================= 方案① ================= -->
+  <section>
+    <div class="section-head">
+      <h2>方案① · M3 原生 SnackBar 主题化 <span class="tag zero">零依赖</span></h2>
+      <p class="sub">
+        只改 <code>lib/theme/app_theme.dart</code> 增加 <code>SnackBarThemeData</code>，全项目约 150 处
+        <code>showSnackBar</code> 调用点不用动，一次生效。以下 4 种为同一机制的不同主题配置。
+      </p>
+    </div>
+    <div class="grid">
+
+      <article class="card">
+        <h3>现状 · 默认 SnackBar（fixed 全宽）</h3>
+        <p class="note">对比基线：现在程序里的黑长条。贴底、全宽、无圆角，M2 式直条观感。弹出位置：底部贴边。</p>
+        <div class="stage" data-stage="sb-current"></div>
+        <button class="trigger" data-id="sb-current" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>floating · 深色反色卡</h3>
+        <p class="note">悬浮 + 12px 圆角 + 底部留距，仍用 M3 <b>inverseSurface</b> 深色面，保留高对比警示感。弹出位置：底部居中。</p>
+        <div class="stage" data-stage="sb-float-dark"></div>
+        <button class="trigger" data-id="sb-float-dark" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>floating · 浅色高表面卡</h3>
+        <p class="note">改用 M3 <b>surfaceContainerHigh</b> 浅色面 + 前导图标，观感更轻、更现代，适合提示类信息。弹出位置：底部居中。</p>
+        <div class="stage" data-stage="sb-float-light"></div>
+        <button class="trigger" data-id="sb-float-light" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>floating · 带动作按钮</h3>
+        <p class="note">深色卡 + 前导图标 + 右侧「撤销」动作（<b>inversePrimary</b> 高亮），适合可恢复操作。弹出位置：底部居中。</p>
+        <div class="stage" data-stage="sb-float-action"></div>
+        <button class="trigger" data-id="sb-float-action" type="button">触发弹出</button>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ================= 方案② ================= -->
+  <section>
+    <div class="section-head">
+      <h2>方案② · awesome_snackbar_content 彩色大卡 <span class="tag dep">+1 依赖</span></h2>
+      <p class="sub">
+        保留现有 SnackBar 机制，只把 <code>SnackBar</code> 的 content 换成 <code>AwesomeSnackbarContent</code>（背景透明 + floating 时效果最佳）。
+        改动集中在统一入口层。弹出位置：底部居中。
+      </p>
+    </div>
+    <div class="grid">
+
+      <article class="card">
+        <h3>Success · 成功</h3>
+        <p class="note">绿色系 #2D6A4F。左上悬浮圆徽章 + 白色标题 + 正文，左下气泡装饰、右上关闭。</p>
+        <div class="stage" data-stage="asc-success"></div>
+        <button class="trigger" data-id="asc-success" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>Failure · 失败</h3>
+        <p class="note">红色系 #C72C41，结构同上。适合当前“请求错误”类提示的直接替代。</p>
+        <div class="stage" data-stage="asc-failure"></div>
+        <button class="trigger" data-id="asc-failure" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>Warning · 警告</h3>
+        <p class="note">橙色系 #FCA652，结构同上。适合网络波动、区域限制等提醒。</p>
+        <div class="stage" data-stage="asc-warning"></div>
+        <button class="trigger" data-id="asc-warning" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>Help · 帮助</h3>
+        <p class="note">蓝色系 #3282B8，结构同上。「?」徽章，适合操作引导与提示。</p>
+        <div class="stage" data-stage="asc-help"></div>
+        <button class="trigger" data-id="asc-help" type="button">触发弹出</button>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ================= 方案③-A ================= -->
+  <section>
+    <div class="section-head">
+      <h2>方案③-A · toastification 五种内置样式 <span class="tag mig">+1 依赖 · 需封装入口</span></h2>
+      <p class="sub">
+        当前最主流的现代 Toast 库（1.29k likes / 20.5 万下载 / 维护良好）。五种样式均可搭配
+        success / error / warning / info 四色语义自动换色；支持队列、悬停暂停、拖拽关闭、进度条。
+        演示弹出位置：右上角（桌面端推荐，可任意配置）。
+      </p>
+    </div>
+    <div class="grid">
+
+      <article class="card">
+        <h3>flat · 描边白卡</h3>
+        <p class="note">白底 + 1.5px 浅灰描边 + 彩色图标，最百搭的默认款。示例类型：error 红。</p>
+        <div class="stage" data-stage="tst-flat"></div>
+        <button class="trigger" data-id="tst-flat" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>fillColored · 彩色实底</h3>
+        <p class="note">整卡彩色实底 + 白字白图标，强提醒。示例类型：success 绿。</p>
+        <div class="stage" data-stage="tst-fill"></div>
+        <button class="trigger" data-id="tst-fill" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>flatColored · 彩边浅底</h3>
+        <p class="note">彩色描边 + 5% 主题色浅底 + 黑色图标文字，介于 flat 与 fillColored 之间。示例类型：warning 橙。</p>
+        <div class="stage" data-stage="tst-flatcolored"></div>
+        <button class="trigger" data-id="tst-flatcolored" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>minimal · 侧条 + 进度条</h3>
+        <p class="note">白卡左侧 3px 彩条 + 底部自动消隐进度条，通知中心既视感；弹出时进度条会随剩余时间走完。示例类型：info 蓝。</p>
+        <div class="stage" data-stage="tst-minimal"></div>
+        <button class="trigger" data-id="tst-minimal" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>simple · 单行轻提示</h3>
+        <p class="note">无图标、无装饰的单行白卡 + 关闭按钮，适合「已复制」这类极轻反馈。</p>
+        <div class="stage" data-stage="tst-simple"></div>
+        <button class="trigger" data-id="tst-simple" type="button">触发弹出</button>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ================= 方案③-B ================= -->
+  <section>
+    <div class="section-head">
+      <h2>方案③-B · motion_toast 五种类型 <span class="tag mig">+1 依赖 · 需封装入口</span></h2>
+      <p class="sub">
+        动画表现更强的现代库（Material 3、23 天前刚更新）。大圆角彩色卡 + 左侧深色描边 + 图标呼吸脉冲动画，
+        内置五种语义类型。演示弹出位置：底部居中（默认从底部滑入）。
+      </p>
+    </div>
+    <div class="grid">
+
+      <article class="card">
+        <h3>success · 成功</h3>
+        <p class="note">绿色卡 #33A852 + 对勾图标脉冲动画。停留约 3 秒。</p>
+        <div class="stage" data-stage="mt-success"></div>
+        <button class="trigger" data-id="mt-success" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>error · 错误</h3>
+        <p class="note">红色卡 #E33B3B + 叉号图标，替代现在黑条错误提示的强视觉方案。</p>
+        <div class="stage" data-stage="mt-error"></div>
+        <button class="trigger" data-id="mt-error" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>warning · 警告</h3>
+        <p class="note">橙色卡 #F19A36 + 感叹号图标，适合网络波动等场景。</p>
+        <div class="stage" data-stage="mt-warning"></div>
+        <button class="trigger" data-id="mt-warning" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>info · 信息</h3>
+        <p class="note">蓝色卡 #3E82F1 + 信息图标，中性提示。</p>
+        <div class="stage" data-stage="mt-info"></div>
+        <button class="trigger" data-id="mt-info" type="button">触发弹出</button>
+      </article>
+
+      <article class="card">
+        <h3>delete · 删除</h3>
+        <p class="note">深灰卡 #5F6368 + 垃圾桶图标，用于删除类操作反馈。</p>
+        <div class="stage" data-stage="mt-delete"></div>
+        <button class="trigger" data-id="mt-delete" type="button">触发弹出</button>
+      </article>
+
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <b>演示说明</b>：点击卡片按钮触发弹出；弹出位置与自动关闭时长按各库/各配置的默认值模拟；点击弹出中的 Toast 立即关闭；悬停暂停倒计时。
+  另外支持 URL 参数自动触发（用于截图/联调）：<code>?show=sb-float-dark,mt-error&hold=1</code>。
+</footer>
+
+<div id="stack-topright"></div>
+<div id="stack-bottom"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var I = {
+    check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    cross:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+    bang:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 6.5v7"/><circle cx="12" cy="17.6" r="1.15" fill="currentColor" stroke="none"/></svg>',
+    info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><path d="M12 11v5.2"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"/></svg>',
+    question:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><path d="M9.7 9.5a2.4 2.4 0 1 1 3.3 2.2c-.8.35-1.05.85-1.05 1.7v.35"/><circle cx="12" cy="16.9" r="1.1" fill="currentColor" stroke="none"/></svg>',
+    trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4.6A1.6 1.6 0 0 1 9.6 3h4.8A1.6 1.6 0 0 1 16 4.6V6m3 0-1 13.4A1.6 1.6 0 0 1 16.4 21H7.6A1.6 1.6 0 0 1 6 19.4L5 6"/></svg>'
+  };
+
+  function tst(kind, color, title, desc, icon, progress){
+    return '<div class="tst tst-' + kind + '" style="--tc:' + color + '">'
+      + (icon ? '<span class="tst-icon">' + icon + '</span>' : '')
+      + '<div class="tst-main">'
+      +   '<div class="tst-title">' + title + '</div>'
+      +   (desc ? '<div class="tst-desc">' + desc + '</div>' : '')
+      +   (progress ? '<div class="tst-progress"><i></i></div>' : '')
+      + '</div>'
+      + '<button class="tst-close" type="button">' + I.cross + '</button>'
+      + '</div>';
+  }
+
+  function mt(color, dark, icon, title, desc){
+    return '<div class="mt" style="--mc:' + color + ';--mcd:' + dark + '">'
+      + '<div class="mt-side"></div>'
+      + '<div class="mt-icon">' + icon + '</div>'
+      + '<div class="mt-main"><div class="mt-title">' + title + '</div><div class="mt-desc">' + desc + '</div></div>'
+      + '</div>';
+  }
+
+  function asc(kind, title, msg, icon){
+    return '<div class="asc asc-' + kind + '">'
+      + '<div class="asc-badge">' + icon + '</div>'
+      + '<button class="asc-close" type="button">' + I.cross + '</button>'
+      + '<div class="asc-main"><div class="asc-title">' + title + '</div><div class="asc-msg">' + msg + '</div></div>'
+      + '<div class="asc-bubbles"></div>'
+      + '</div>';
+  }
+
+  var TOASTS = {
+    /* ---- 方案① ---- */
+    'sb-current':      { pos:'fullwidth', enter:'up', dur:4500, build:function(){ return '<div class="sb-current">请求错误：Connection failed</div>'; } },
+    'sb-float-dark':   { pos:'bottom',    enter:'up', dur:4000, build:function(){ return '<div class="sb sb-dark">网络请求失败，请稍后重试</div>'; } },
+    'sb-float-light':  { pos:'bottom',    enter:'up', dur:4000, build:function(){ return '<div class="sb sb-light"><span class="sb-ic">' + I.info + '</span>已同步到云端</div>'; } },
+    'sb-float-action': { pos:'bottom',    enter:'up', dur:5000, build:function(){ return '<div class="sb sb-dark"><span class="sb-ic">' + I.trash + '</span><span class="grow">已删除该收藏</span><button class="sb-action" type="button">撤销</button></div>'; } },
+
+    /* ---- 方案② ---- */
+    'asc-success': { pos:'bottom', enter:'up', dur:4200, build:function(){ return asc('success','成功！','你的修改已保存。', I.check); } },
+    'asc-failure': { pos:'bottom', enter:'up', dur:4200, build:function(){ return asc('failure','出错了！','请求出错：无法连接到服务器，请检查网络后重试。', I.cross); } },
+    'asc-warning': { pos:'bottom', enter:'up', dur:4200, build:function(){ return asc('warning','注意！','当前网络不稳定，可能影响播放体验。', I.bang); } },
+    'asc-help':    { pos:'bottom', enter:'up', dur:4200, build:function(){ return asc('help','需要帮助？','点击这里查看使用指南。', I.question); } },
+
+    /* ---- 方案③-A toastification ---- */
+    'tst-flat':        { pos:'topright', enter:'right', dur:5000, build:function(){ return tst('flat',       'var(--c-error)',   '加载失败','连接超时，请重试', I.cross, false); } },
+    'tst-fill':        { pos:'topright', enter:'right', dur:5000, build:function(){ return tst('fillcolored','var(--c-success)', '同步成功','观看记录已上传', I.check, false); } },
+    'tst-flatcolored': { pos:'topright', enter:'right', dur:5000, build:function(){ return tst('flatcolored','var(--c-warning)', '网络不稳定','视频可能加载缓慢', I.bang, false); } },
+    'tst-minimal':     { pos:'topright', enter:'right', dur:6000, build:function(){ return tst('minimal',    'var(--c-info)',    '关注的 UP 主发布了新视频','刚刚 · 点击查看', I.info, true); } },
+    'tst-simple':      { pos:'topright', enter:'right', dur:3500, build:function(){ return tst('simple',     'var(--c-info)',    '已复制到剪贴板', '', '', false); } },
+
+    /* ---- 方案③-B motion_toast ---- */
+    'mt-success': { pos:'bottom', enter:'up', dur:3200, build:function(){ return mt('#33A852','#277F3E', I.check, '操作成功','已添加到稍后再看'); } },
+    'mt-error':   { pos:'bottom', enter:'up', dur:3200, build:function(){ return mt('#E33B3B','#B42D2D', I.cross, '播放出错','视频源响应超时，请稍后重试'); } },
+    'mt-warning': { pos:'bottom', enter:'up', dur:3200, build:function(){ return mt('#F19A36','#C4791F', I.bang,  '网络警告','当前网络较慢，可能影响播放'); } },
+    'mt-info':    { pos:'bottom', enter:'up', dur:3200, build:function(){ return mt('#3E82F1','#2C62BC', I.info,  '提示','长按屏幕可倍速播放'); } },
+    'mt-delete':  { pos:'bottom', enter:'up', dur:3200, build:function(){ return mt('#5F6368','#44474B', I.trash, '已删除','已从历史记录中移除'); } }
+  };
+
+  var stackBottom = document.getElementById('stack-bottom');
+  var stackTopRight = document.getElementById('stack-topright');
+
+  function dismiss(el){
+    if(!el || el.dataset.hiding === '1') return;
+    el.dataset.hiding = '1';
+    el.classList.remove('show');
+    setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 360);
+  }
+
+  function spawn(id, hold){
+    var cfg = TOASTS[id];
+    if(!cfg) return null;
+
+    var host = document.createElement('div');
+    host.className = 'toast-item';
+    host.dataset.enter = cfg.enter || 'up';
+    host.innerHTML = cfg.build();
+
+    if(cfg.pos === 'fullwidth'){
+      host.className += ' fw-host';
+      document.body.appendChild(host);
+    } else if(cfg.pos === 'topright'){
+      stackTopRight.appendChild(host);
+    } else {
+      stackBottom.appendChild(host);
+    }
+
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){ host.classList.add('show'); });
+    });
+
+    var bar = host.querySelector('.tst-progress i');
+    var dur = hold ? 600000 : cfg.dur;
+    if(bar && !hold){
+      bar.classList.add('anim');
+      bar.style.animationDuration = dur + 'ms';
+    }
+
+    var timer = setTimeout(function(){ dismiss(host); }, dur);
+    host.addEventListener('mouseenter', function(){ clearTimeout(timer); });
+    host.addEventListener('mouseleave', function(){
+      clearTimeout(timer);
+      timer = setTimeout(function(){ dismiss(host); }, 1400);
+    });
+    host.addEventListener('click', function(){ clearTimeout(timer); dismiss(host); });
+
+    return host;
+  }
+
+  /* 静态陈列：把每种样式的实物放进对应卡片 */
+  document.querySelectorAll('.stage').forEach(function(stage){
+    var id = stage.dataset.stage;
+    if(TOASTS[id]) stage.innerHTML = TOASTS[id].build();
+  });
+
+  /* 手动触发 */
+  document.querySelectorAll('.trigger').forEach(function(btn){
+    btn.addEventListener('click', function(){ spawn(btn.dataset.id, false); });
+  });
+
+  /* 清除全部 */
+  document.getElementById('clear-all').addEventListener('click', function(){
+    document.querySelectorAll('.toast-item').forEach(function(el){ dismiss(el); });
+  });
+
+  /* URL 参数自动触发（截图 / 联调用）：?show=id1,id2&hold=1 */
+  var params = new URLSearchParams(location.search);
+  var show = params.get('show');
+  if(show){
+    show.split(',').forEach(function(id, idx){
+      setTimeout(function(){ spawn(id.trim(), params.get('hold') === '1'); }, 150 + idx * 180);
+    });
+  }
+})();
+</script>
+</body>
+</html>
