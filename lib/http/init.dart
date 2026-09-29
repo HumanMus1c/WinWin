@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/account_mgr.dart';
@@ -43,7 +44,10 @@ class Request {
     );
     client.interceptors.add(_JsonDecodeInterceptor());
     client.interceptors.add(accountManager);
-    client.interceptors.add(ApiBlackboxInterceptor());
+    // 深度网络黑箱仅 debug 启用（release 零开销；2026-09-29 日志基建收尾）。
+    if (kDebugMode) {
+      client.interceptors.add(ApiBlackboxInterceptor());
+    }
     client.interceptors.add(
       RetryInterceptor(client, Pref.retryCount, Pref.retryDelay),
     );

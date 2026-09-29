@@ -11,6 +11,7 @@ import 'package:window_manager/window_manager.dart' hide calcWindowPosition;
 import 'core/app_messenger.dart';
 import 'core/bootstrap.dart';
 import 'core/input/app_escape_scope.dart';
+import 'core/log/api_blackbox.dart';
 import 'core/log/app_logger.dart';
 import 'core/log/sync_trace.dart';
 import 'core/player/seek_probe.dart';
@@ -65,6 +66,12 @@ void main() async {
   // 同步崩溃安全追踪（诊断用）：关键生命周期埋点，瞬死不丢尾部。
   unawaited(SyncTrace.init());
   SyncTrace.log('main', 'app starting, pid=$pid');
+
+  // 深度网络黑箱（仅 debug）：完整请求/响应链路（Cookie 脱敏）落盘供排障；
+  // release 不初始化、不落盘（拦截器同样仅 debug 挂载），零开销。
+  if (kDebugMode) {
+    unawaited(ApiBlackbox.init());
+  }
 
   // Seek 取证探针（诊断用）：读取 Documents/logs/seek_probe.json 选择 A/B 变体。
   await SeekProbe.init();
