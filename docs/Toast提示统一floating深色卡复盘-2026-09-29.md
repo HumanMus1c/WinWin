@@ -74,3 +74,29 @@ diff 规模 `+277 / -372`（净减 95 行，散布样板收敛为单行调用）
 - **改动前快照**：`fa4480f6`（`refs/snapshots/latest` / `stash@{0}`，含改动前工作区全量，按项目规定打）；
 - **回滚基准**：`git reset --hard c12f52c`（本修复提交前），或 `git revert 6989db9`；
 - 本文档的提交 hash 见仓库 git 历史。
+
+## 六、补记（2026-09-29 第二轮）：宽度自适应与智能断行修正
+
+**新现象**（实机验收反馈）：floating 卡片过宽——短消息也不收缩；超长错误（含 URL）仍显宽。
+
+**根因（SDK 源码取证，D:\flutter 内 snack_bar.dart）**：Flutter `SnackBar` 未显式指定 `width` 时，
+宽度 = 屏幕宽 − margin（源码注释原文："the snack bar will take up the full device width less the margin"），
+内容无法决定卡片宽。widget 测试实测：三类消息的 SnackBar 宽度均为 1280（全屏宽）。
+
+**修复**（`lib/core/app_messenger.dart`）：
+1. **宽度自适应内容**：`_measureCardWidth` 用 `TextPainter` 按 `snackBarTheme.contentTextStyle` +
+   当前 `textScaler` 测量各硬换行段落的最长单行宽；卡片宽 = 文本宽 + 水平内边距（40），
+   封顶 400、并保留屏幕总留白 32；显式传入 `SnackBar.width`（宽度模式自动水平居中）。
+2. **换行断点算法**：`_breakLongSegments` 对 ≥24 字符的连续非空白片段（URL 特征）
+   在 `[/?#&=._\-:]+` 分隔符后注入零宽空格（U+200B），使换行优先落在分隔符处，
+   避免 URL 字符级硬断或整段撑宽（零宽字符不影响显示与测量）。
+
+**验证**：
+- 新增回归测试 `test/toast_probe_test.dart`：短消息 334（自适应）、长消息 400（封顶）、
+  窄窗口 328（留白约束）三态断言全部通过（`flutter test` ✓）；
+- `dart analyze lib` 0 error / 0 warning（6 条 info 同前，均为既有）；
+- Windows 双配置编译：debug √ 28.8s / release √ 75.6s，0 错误 0 警告；
+- 实机验证（第二轮，待操作截图）：短提示紧凑小卡；网络错误长卡限宽换行；URL 在分隔符处换行。
+
+**提交**：`293d9bb`（`[fix](toast): 提示卡宽度自适应内容 + 长文本智能断行`），已推送 origin/main
+（`d8449c5..293d9bb`）；改动前快照 `429bbff2`。
