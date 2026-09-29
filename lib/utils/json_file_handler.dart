@@ -9,8 +9,12 @@ import 'package:winwin/services/logger.dart';
 /// 崩溃 Report 落盘 Handler，移植自 PiliPlus。
 ///
 /// 把 catcher_2 的 [Report] 以 NDJSON（每行一个 JSON）追加写入
-/// `.winwin_logs.json`，用静态 Future 链串行化写入避免并发。
+/// `.winwin_logs.json`，用静态 Future 链串行化写入避免并发；
+/// 文件超过 5MB 时轮转为 `.old`（单代覆盖）。
 class JsonFileHandler extends ReportHandler {
+  /// 崩溃报告文件大小上限：超过即轮转为 `文件.old`（单代覆盖）。
+  static const int _maxFileBytes = 5 * 1024 * 1024;
+
   final bool enableDeviceParameters;
   final bool enableApplicationParameters;
   final bool enableStackTrace;
@@ -96,6 +100,31 @@ class JsonFileHandler extends ReportHandler {
       enableStackTrace: enableStackTrace,
       enableCustomParameters: enableCustomParameters,
     );
-    return add((raf) => raf.writeString('${jsonEncode(json)}\n'));
+    return add((raf) async {
+      final out = await _rotateIfNeeded(raf);
+      await out.writeString('${jsonEncode(json)}\n');
+      return out;
+    });
+  }
+
+  /// 超过上限时把崩溃报告轮转为 `.old`（单代覆盖）并返回新的写入句柄。
+  ///
+  /// 轮转失败（如文件占用）时回退为继续追加原文件，绝不阻断报告写入。
+  static Future<RandomAccessFile> _rotateIfNeeded(RandomAccessFile raf) async {
+    try {
+      if (await raf.length() <= _maxFileBytes) return raf;
+    } catch (_) {
+      return raf;
+    }
+    final path = raf.path;
+    try {
+      await raf.close();
+      final old = File('$path.old');
+      if (old.existsSync()) old.deleteSync();
+      File(path).renameSync(old.path);
+    } catch (_) {
+      // 归档失败：继续使用原文件。
+    }
+    return File(path).open(mode: FileMode.writeOnlyAppend);
   }
 }

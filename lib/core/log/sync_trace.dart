@@ -9,6 +9,7 @@ import 'package:winwin/services/logger.dart';
 /// - 仅用于生命周期关键路径的低频埋点（返回/退出/释放），不承载业务日志。
 /// - 未初始化前调用 [log] 会缓冲，init 后补写（应用启动早期场景）。
 /// - 任何 IO 异常静默吞掉，绝不影响主流程。
+/// - 文件超过 5MB 时轮转为 `trace.log.old`（单代覆盖），防无限增长。
 abstract final class SyncTrace {
   static RandomAccessFile? _raf;
   static final List<String> _pending = [];
@@ -35,16 +36,45 @@ abstract final class SyncTrace {
   /// 写一条同步日志并立即 flush。
   static void log(String tag, String message) {
     final line = '${DateTime.now().toIso8601String()} $tag: $message\n';
-    final raf = _raf;
-    if (raf != null) {
+    if (_raf != null) {
       try {
-        raf.writeStringSync(line);
-        raf.flushSync();
+        _rotateIfNeeded();
+        _raf!.writeStringSync(line);
+        _raf!.flushSync();
         return;
       } catch (_) {}
     } else {
       _pending.add(line);
       if (_pending.length > 200) _pending.removeRange(0, 100);
+    }
+  }
+
+  /// 文件大小上限（5MB）：超过即轮转为 `trace.log.old`（单代覆盖）。
+  static const int _maxFileBytes = 5 * 1024 * 1024;
+
+  /// 超限轮转；归档失败（如文件占用）时降级为继续追加原文件。
+  static void _rotateIfNeeded() {
+    final raf = _raf;
+    if (raf == null) return;
+    try {
+      if (raf.lengthSync() <= _maxFileBytes) return;
+    } catch (_) {
+      return;
+    }
+    final path = raf.path;
+    try {
+      raf.closeSync();
+      final old = File('$path.old');
+      if (old.existsSync()) old.deleteSync();
+      File(path).renameSync(old.path);
+      _raf = File(path).openSync(mode: FileMode.append);
+    } catch (_) {
+      // 归档失败：继续使用原文件。
+      try {
+        _raf = File(raf.path).openSync(mode: FileMode.append);
+      } catch (_) {
+        _raf = null;
+      }
     }
   }
 }
