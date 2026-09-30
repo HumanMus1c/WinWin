@@ -5,7 +5,7 @@ import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/account/login_utils.dart';
 import 'package:winwin/core/app_messenger.dart';
-import 'package:winwin/core/log/api_blackbox.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/login/login_page.dart';
@@ -140,7 +140,6 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: Style.md),
               _SettingsGroup(
                 isLogin: isLogin,
-                onGuarded: _guarded,
                 onLogout: _onLogout,
               ),
             ],
@@ -151,17 +150,23 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   /// 登录守卫：未登录→登录页；已登录→执行回调。
+  ///
+  /// 探针走 [AppLogger]（`[W]` 级）：原 `ApiBlackbox` 仅在 kDebugMode 初始化，
+  /// Release 复测日志中完全不可见（见复盘「覆盖探针」一节）。
   Future<void> _guarded(
     BuildContext context,
     void Function(BuildContext) onLoggedIn,
   ) async {
-    ApiBlackbox.log('ProfilePage', 'Action tapped: isLogin=${AccountService().isLogin}');
+    AppLogger.w(
+      'Coverage',
+      'profile guard tapped isLogin=${AccountService().isLogin}',
+    );
     if (!await LoginGuard.requireLogin(context)) {
-      ApiBlackbox.log('ProfilePage', 'Action blocked by LoginGuard');
+      AppLogger.w('Coverage', 'profile guard blocked (still logged out)');
       return;
     }
     if (!context.mounted) return;
-    ApiBlackbox.log('ProfilePage', 'Action executing callback');
+    AppLogger.w('Coverage', 'profile guard passed → running callback');
     onLoggedIn(context);
   }
 
@@ -489,12 +494,10 @@ class _StatsRow extends StatelessWidget {
 class _SettingsGroup extends StatelessWidget {
   const _SettingsGroup({
     required this.isLogin,
-    required this.onGuarded,
     required this.onLogout,
   });
 
   final bool isLogin;
-  final Future<void> Function(BuildContext, void Function(BuildContext)) onGuarded;
   final Future<void> Function(BuildContext) onLogout;
 
   @override
@@ -529,7 +532,13 @@ class _SettingsGroup extends StatelessWidget {
               borderRadius: isLogin
                   ? BorderRadius.vertical(top: r)
                   : BorderRadius.all(r),
-              onTap: (ctx, _) => onGuarded(context, (_) {}),
+              // 直接进入登录页（**无论当前是否已登录**）：账号切换的入口语义
+              // 就是去登录页换一个账号登录。原实现走 `_guarded` + 空回调，
+              // 导致「已登录」时点击毫无反应（未登录时才偶然可用）。
+              onTap: (ctx, _) {
+                AppLogger.w('Coverage', 'profile account-switch → login page');
+                showLoginPage(context);
+              },
             ),
             if (isLogin)
               NormalItem(
