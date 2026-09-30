@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
@@ -92,6 +93,18 @@ class WinWinPlayerController {
 
   /// 当前 controller 访问的播放器（即全局单例）。
   mdk.Player? get _player => _sharedPlayer;
+
+  /// 读取**音频信息**的实例：双实例模式下第二实例才是承载音轨的那一个。
+  ///
+  /// 主实例在 [_dualPlayerAudio] 下只放纯视频流，其 `mediaInfo.audio` 恒为空
+  /// （2026-09-30 取证：trace 的 `SEEK#0 MEDIA … aTracks=0`）。仅用于**只读**的
+  /// 音频信息展示（编码标签 / 音轨列表 / 当前音轨）。
+  ///
+  /// 注意：**不得**据此向该实例下发 FFmpeg 动态滤镜（loudnorm/dynaudnorm 需前瞻
+  /// 缓冲，会引入音频滞后或直接无声——见 docs/音频响度均衡修复回滚复盘）。
+  /// 响度对齐改用无前瞻的静态增益（[_normalizationGain]）。
+  mdk.Player? get _audioSource =>
+      _dualPlayerAudio ? (_audioPlayer ?? _player) : _player;
 
   // ── 对外状态（ValueNotifier）──
   final ValueNotifier<bool> playing = ValueNotifier(false);
@@ -2261,7 +2274,7 @@ class WinWinPlayerController {
     final ap = _audioPlayer;
     if (ap != null) {
       try {
-        ap.volume = volume.value / 100.0;
+        ap.volume = _audioInstanceVolume;
       } catch (_) {}
     }
     final player = _player;
@@ -2640,8 +2653,10 @@ class WinWinPlayerController {
         // 无超时，永久卡在 +buffering（观感「音频突然消失」）。
         _applyStreamProperties(ap);
         ap.setProperty('avio.headers', headers);
+        // 响度对齐静态增益：按本次媒体的响度元数据重算（无前瞻，不影响音画同步）。
+        _recomputeNormalizationGain(playUrl.volume);
         // 启动闸门期间音频静音（双保险：闸门释放时由 releaseStartupGate 恢复）。
-        ap.volume = _startupGateActive ? 0.0 : volume.value / 100.0;
+        ap.volume = _startupGateActive ? 0.0 : _audioInstanceVolume;
         // 倍速同样下发（2026-09-26 自审修正）：切画质/换视频后第二实例不能回落到 1x。
         ap.playbackRate = playbackSpeed.value > 0 ? playbackSpeed.value : 1.0;
         player.media = videoUrl;
@@ -3227,7 +3242,7 @@ class WinWinPlayerController {
       if (headers != null && headers.isNotEmpty) {
         ap.setProperty('avio.headers', headers);
       }
-      ap.volume = volume.value / 100.0;
+      ap.volume = _audioInstanceVolume;
       await Future<void>.delayed(const Duration(milliseconds: 500));
       if (_disposed) return;
       ap.media = url;
@@ -3248,7 +3263,7 @@ class WinWinPlayerController {
       }
       // 重挂后恢复基速与音量（否则以 1x 起播并迅速积累音画差，倍速下尤其明显）。
       ap.playbackRate = playbackSpeed.value > 0 ? playbackSpeed.value : 1.0;
-      ap.volume = volume.value / 100.0;
+      ap.volume = _audioInstanceVolume;
       if (!_disposed && _userIntentPlaying && canPlay) {
         ap.state = mdk.PlaybackState.playing;
       } else if (!canPlay) {
@@ -4087,7 +4102,7 @@ class WinWinPlayerController {
   /// 可用音频轨道列表（来自 mdk mediaInfo）。
   /// 每项为 (索引, 标题) — 标题取自 metadata['title'] 或语言代码。
   List<({int index, String title})> get audioTracks {
-    final player = _player;
+    final player = _audioSource;
     if (player == null) return const [];
     final audio = player.mediaInfo.audio;
     if (audio == null || audio.isEmpty) return const [];
@@ -4104,7 +4119,7 @@ class WinWinPlayerController {
 
   /// 当前激活的音频轨道索引列表（通常只有一个）。
   List<int> get activeAudioTrackIndices {
-    final player = _player;
+    final player = _audioSource;
     if (player == null) return const [];
     return player.activeAudioTracks;
   }
@@ -4112,7 +4127,7 @@ class WinWinPlayerController {
   /// 当前激活音轨的编码标签（如 "AAC"、"FLAC"），用于控制条显示。
   /// 无可用音轨或编码信息时返回 null。
   String? get audioCodecLabel {
-    final player = _player;
+    final player = _audioSource;
     if (player == null) return null;
     final audio = player.mediaInfo.audio;
     if (audio == null || audio.isEmpty) return null;
@@ -4141,22 +4156,75 @@ class WinWinPlayerController {
 
   /// 切换音频轨道（内嵌轨道）。
   void switchAudioTrack(int index) {
-    final player = _player;
+    final player = _audioSource;
     if (player == null || _disposed) return;
     player.activeAudioTracks = [index];
   }
 
-  /// 是否启用音频归一化。
+  /// 响度对齐的**静态增益**（线性倍率，1.0 = 不改变）。
+  ///
+  /// 机制说明（2026-09-30 换机制）：FFmpeg 的 loudnorm / dynaudnorm 是**动态**滤镜，
+  /// 需要前瞻缓冲（loudnorm 线性模式数秒、dynaudnorm 约 1.25s），在本项目的实时双实例
+  /// 链路上会引入**音频滞后**甚至**完全无声**（已实机复现，见
+  /// docs/音频响度均衡修复回滚复盘-2026-09-30.md）。故改为**无前瞻的静态增益**：
+  /// 按 B 站返回的响度元数据算出一个固定倍率，直接乘到**实际出声**的第二实例音量上，
+  /// 不进入滤镜链 ⇒ 零延迟、不触碰音画同步。
+  double _normalizationGain = 1.0;
+
+  /// 第二实例（实际出声）应设的音量：用户音量 × 响度对齐静态增益。
+  double get _audioInstanceVolume =>
+      (volume.value / 100.0) * _normalizationGain;
+
+  /// 按响度元数据重算静态增益（无前瞻）。
+  ///
+  /// 增益(dB) = 目标响度 − 实测响度；再按实测真峰值留 1 dB 余量防削顶；
+  /// 最后夹在 [−6, +12] dB 安全区间内。无有效实测数据（`measured_i` 非负）
+  /// 或禁用时保持 1.0（不改变）。
+  void _recomputeNormalizationGain(Volume? v) {
+    if (Pref.audioNormalization == '0' || v == null || !v.isNotEmpty) {
+      _normalizationGain = 1.0;
+      return;
+    }
+    final measuredI = v.measuredI.toDouble();
+    if (measuredI >= 0) {
+      // LUFS 约定应为负数；取到非负值说明该条流没有有效实测响度。
+      _normalizationGain = 1.0;
+      return;
+    }
+    final targetI = v.targetI != 0 ? v.targetI.toDouble() : -14.0;
+    var gainDb = targetI - measuredI;
+    final peakLimitDb = -1.0 - v.measuredTp.toDouble();
+    if (gainDb > peakLimitDb) gainDb = peakLimitDb;
+    gainDb = gainDb.clamp(-6.0, 12.0);
+    _normalizationGain = math.pow(10, gainDb / 20).toDouble();
+    // 覆盖探针：让"静态增益是否真的生效、算出多少"可从日志客观核对。
+    AppLogger.w(
+      'Coverage',
+      'loudness gain: measuredI=$measuredI targetI=$targetI '
+      'tp=${v.measuredTp} → ${_normalizationGain.toStringAsFixed(3)}x',
+    );
+  }
+
+  /// 是否启用音频响度对齐。
   bool get audioNormalizeEnabled => Pref.audioNormalization != '0';
 
-  /// 开关/切换音频归一化模式（0=禁用, 1=动态压缩, 2=智能响度均衡，或自定义滤镜参数）。
+  /// 开关/切换响度对齐模式（0=禁用, 1=动态压缩, 2=智能响度均衡，或自定义参数）。
+  ///
+  /// 换机制（2026-09-30）：**不再**向播放器下发 FFmpeg 动态滤镜（前瞻延迟/无声），
+  /// 改为重算静态增益并立即应用到实际出声的第二实例音量。
+  ///
+  /// 语义说明：`1`（动态压缩 dynaudnorm）与 `2`（智能响度均衡 loudnorm）在此实现下
+  /// **都退化为静态响度对齐**——动态压缩所需的前瞻缓冲实时不可用。UI 文案的
+  /// 后续调整见复盘文档"遗留项"。
   void setAudioNormalize(String config) {
     Pref.audioNormalization = config;
-    final filter = AudioNormalization.parse(
-      _playUrl?.volume,
-      AudioNormalization.getParamFromConfig(config),
-    );
-    _player?.setProperty('audio.avfilter', filter);
+    _recomputeNormalizationGain(_playUrl?.volume);
+    final ap = _audioPlayer;
+    if (ap != null) {
+      try {
+        ap.volume = _audioInstanceVolume;
+      } catch (_) {}
+    }
   }
 
   /// 快速切换音频归一化开/关。
@@ -4180,7 +4248,8 @@ class WinWinPlayerController {
     _player?.volume = clamped / 100.0;
     // 第二实例（纯音频）才是**实际出声**的实例，必须同步（2026-09-26 自审修正：
     // 此前只写主实例 ⇒ 用户调音量/静音对声音无效，直到下次重挂才生效）。
-    _audioPlayer?.volume = clamped / 100.0;
+    // 2026-09-30 起再叠加**响度对齐静态增益**（换机制，替代有前瞻的动态滤镜）。
+    _audioPlayer?.volume = clamped / 100.0 * _normalizationGain;
   }
 
   /// 设置播放倍速：下发 mdk playbackRate 并更新 [playbackSpeed]。
