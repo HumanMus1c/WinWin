@@ -1326,7 +1326,17 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 (context, index) {
                   if (index >= _videos.length) return null;
                   if (index == _videos.length - 1) {
-                    _loadMoreVideos();
+                    // 加载更多 - 使用 addPostFrameCallback 避免在 build 中调用 _loadMoreVideos
+                    // （同 session_list_section 范式）：_loadMoreVideos 首行即 setState，
+                    // 而 SliverChildBuilderDelegate 的 builder 在 layout 阶段被调用，
+                    // 直接调用会触发「setState() called during build」断言（Debug 才暴露）。
+                    if (!_loadingVideos && !_videoEnd && !_videoFailed) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted && !_loadingVideos && !_videoEnd && !_videoFailed) {
+                          _loadMoreVideos();
+                        }
+                      });
+                    }
                   }
                   return _buildVideoCard(_videos[index]);
                 },

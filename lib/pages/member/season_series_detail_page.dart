@@ -208,7 +208,17 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
                   itemCount: _videos.length,
                   itemBuilder: (context, index) {
                     if (index == _videos.length - 1) {
-                      _loadVideos();
+                      // 加载更多 - 使用 addPostFrameCallback 避免在 build 中调用 _loadVideos
+                      // （同 member_space_page / session_list_section 范式）：_loadVideos 在
+                      // 首个 await 之前就 setState，而 itemBuilder 在 layout 阶段被调用，
+                      // 直接调用会触发「setState() called during build」断言（Debug 才暴露）。
+                      if (!_loading && !_isEnd) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted && !_loading && !_isEnd) {
+                            _loadVideos();
+                          }
+                        });
+                      }
                     }
                     final item = _videos[index];
                     return _buildVideoItem(item, index + 1);
