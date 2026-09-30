@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -36,8 +37,10 @@ class ThemeNotifier extends ValueNotifier<ThemeMode> {
 
   /// 切换主题模式并持久化。
   Future<void> setMode(ThemeMode mode) async {
+    final previous = value;
     value = mode;
     await GStorage.setting.put(SettingBoxKey.themeMode, typeIndex);
+    AppLogger.w('Coverage', 'themeMode ${previous.name} → ${mode.name}');
   }
 }
 

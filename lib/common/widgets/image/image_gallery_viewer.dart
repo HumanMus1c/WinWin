@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/utils/image_utils.dart';
 
@@ -24,6 +25,10 @@ void showImageGallery(
 }) {
   if (imageUrls.isEmpty) return;
   final validIndex = initialIndex.clamp(0, imageUrls.length - 1);
+  AppLogger.w(
+    'Coverage',
+    'gallery opened images=${imageUrls.length} initialIndex=$validIndex',
+  );
   Navigator.of(context).push(
     _ImageGalleryRoute(
       builder: (context) => ImageGalleryViewer(
@@ -155,6 +160,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
 
   @override
   void dispose() {
+    AppLogger.w('Coverage', 'gallery closed at index=$_currentIndex');
     _focusNode.dispose();
     _pageController.dispose();
     _dragNotifier.dispose();

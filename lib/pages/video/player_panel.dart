@@ -10,6 +10,7 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -1362,6 +1363,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ),
               ),
           ],
+          onOpen: () => AppLogger.w('Coverage', 'player menu quality opened'),
           builder: (context, controller, child) => Tooltip(
             message: '画质',
             child: HoverContainer(
@@ -1616,6 +1618,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               ),
             ),
           ],
+          onOpen: () => AppLogger.w('Coverage', 'player menu audio opened'),
           builder: (context, controller, child) => Tooltip(
             message: '音频设置',
             child: HoverContainer(
@@ -2165,6 +2168,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ),
               ),
           ],
+          onOpen: () => AppLogger.w('Coverage', 'player menu speed opened'),
           builder: (context, controller, child) => Tooltip(
             message: '倍速',
             child: HoverContainer(

@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
@@ -130,19 +131,34 @@ class SelectDialog<T> extends StatelessWidget {
 /// 打开 [SelectDialog] 并返回所选值；`null` 表示未选择（关闭或点遮罩取消）。
 ///
 /// 统一各处调用点的内联 `showDialog` 样板，不改变"点选即提交"语义。
+///
+/// 覆盖探针：在此单一汇聚点记录 open / close 两条 `[W]` 级日志
+/// （Release 只落盘 w/e，故必须用 `[W]` 才能在复测日志中可见），
+/// 一次性覆盖全部 10 处调用点。因控件是"点选即提交"，返回值**就是**用户所选，
+/// 故无需在控件内部再加一条选择日志。
 Future<T?> showSelectDialog<T>(
   BuildContext context, {
   required String title,
   required List<(T, String)> values,
   T? value,
   Widget Function(BuildContext, int)? subtitleBuilder,
-}) =>
-    showDialog<T>(
-      context: context,
-      builder: (context) => SelectDialog<T>(
-        title: title,
-        values: values,
-        value: value,
-        subtitleBuilder: subtitleBuilder,
-      ),
-    );
+}) async {
+  AppLogger.w(
+    'Coverage',
+    'SelectDialog open $title (options=${values.length}, current=$value)',
+  );
+  final result = await showDialog<T>(
+    context: context,
+    builder: (context) => SelectDialog<T>(
+      title: title,
+      values: values,
+      value: value,
+      subtitleBuilder: subtitleBuilder,
+    ),
+  );
+  AppLogger.w(
+    'Coverage',
+    'SelectDialog close $title → ${result ?? 'cancelled'}',
+  );
+  return result;
+}

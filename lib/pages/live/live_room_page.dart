@@ -13,6 +13,7 @@ import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/window/desktop_fullscreen.dart';
 import 'package:winwin/http/live.dart';
@@ -108,6 +109,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   void initState() {
     super.initState();
     _realRoomId = widget.roomId;
+    AppLogger.w('Coverage', 'live room entered roomId=${widget.roomId}');
     _startHideControlsTimer();
     _initLive();
   }
@@ -1388,6 +1390,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     ),
                   ),
               ],
+              onOpen: () => AppLogger.w('Coverage', 'live menu quality opened'),
               builder: (context, controller, child) => Tooltip(
                 message: '画质清晰度',
                 child: InkWell(
@@ -1457,6 +1460,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       ),
                     ),
                 ],
+                onOpen: () => AppLogger.w('Coverage', 'live menu line opened'),
                 builder: (context, controller, child) => Tooltip(
                   message: '推流线路/CDN',
                   child: InkWell(
@@ -1529,6 +1533,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     ),
                   ),
               ],
+              onOpen: () => AppLogger.w('Coverage', 'live menu ratio opened'),
               builder: (context, controller, child) => Tooltip(
                 message: '画面比例',
                 child: InkWell(

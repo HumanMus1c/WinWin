@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'package:winwin/core/log/app_logger.dart';
+
 import 'escape_layer_registry.dart';
 
 /// 全局 Esc 路由器的路由栈观察器。
@@ -86,26 +88,33 @@ class AppEscapeScope extends StatelessWidget {
     final NavigatorState? navigator = navigatorKey.currentState;
     if (navigator == null) return KeyEventResult.ignored;
 
+    // 覆盖探针（`[W]` 级，Release 可见）：记录本次 Esc 被**哪一层**消费，
+    // 供复测时客观核对「逐层消耗、不级联」的分层语义。
     // 1) 路由级弹层关闭（不保存）：对话框 / 底部弹层 / 菜单 / 下拉。
     if (observer.hasPopupOnTop) {
+      AppLogger.w('Coverage', 'Esc layer1 popup-route');
       navigator.maybePop();
       return KeyEventResult.handled;
     }
     // 2) 自定义二级浮层（表情面板 / 弹幕样式 / 章节面板 / 音量弹层）LIFO 关闭。
     if (EscapeLayerRegistry.instance.closeTopmost()) {
+      AppLogger.w('Coverage', 'Esc layer2 overlay');
       return KeyEventResult.handled;
     }
     // 3) 输入框聚焦：取消聚焦（消耗本次 Esc，不返回）。
     final FocusNode? primaryFocus = FocusManager.instance.primaryFocus;
     if (isTextInputFocused()) {
+      AppLogger.w('Coverage', 'Esc layer3 unfocus');
       primaryFocus?.unfocus();
       return KeyEventResult.handled;
     }
     // 4) 返回上一级。
     if (navigator.canPop()) {
+      AppLogger.w('Coverage', 'Esc layer4 back');
       navigator.maybePop();
       return KeyEventResult.handled;
     }
+    AppLogger.w('Coverage', 'Esc unhandled (root)');
     return KeyEventResult.ignored;
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/theme/ui_style.dart';
@@ -38,7 +39,9 @@ class UiStyleNotifier extends ValueNotifier<UiStyle> {
   /// 脱离调用方可能的同步回调栈，避免在 semantics/layout 处理中途
   /// 触发整树重建导致 parentDataDirty 断言失败。
   Future<void> setStyle(UiStyle style) async {
+    final previous = value;
     await GStorage.setting.put(SettingBoxKey.uiStyle, style.legacyInt);
     value = style;
+    AppLogger.w('Coverage', 'uiStyle ${previous.name} → ${style.name}');
   }
 }
