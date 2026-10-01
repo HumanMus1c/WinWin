@@ -438,7 +438,7 @@ class WinWinPlayerController {
   static const int _maxLoadRetries = 4;
   static const List<int> _loadRetryDelaysMs = [1500, 3000, 5000, 8000];
 
-  /// 流 URL 过期安全边距（2026-10-01 长静置重播修复）：距 deadline 不足该值时
+  /// 流 URL 过期安全边距（2026-10-01 事故修复）：距 deadline 不足该值时
   /// 即按已过期处理（为 seek/缓冲留出余量），改走 [load] 重新拉取 playurl。
   static const int _streamDeadlineSafetyMarginMs = 60 * 1000;
 
@@ -511,10 +511,10 @@ class WinWinPlayerController {
   /// 本次流直链的截止时间（毫秒时间戳；取 video/audio URL 的 `deadline` 参数
   /// 中较早者，null = 无该参数/未知）。
   ///
-  /// 长时间静置防护（2026-10-01 事故修复）：B 站 playurl 有效期实测为拉流时刻
-  /// +2h，静置超期后 URL 已失效且连接早已断开，此时 `seek()` 必然失败（实证
-  /// 2026-10-01 22:49 静置 4h06m 后重播 `MAIN seek ret res=-8`，且失败后 UI 与
-  /// 底层状态不一致、无法再重播）。[replay]、[_escalateExpiredReload] 据此判定重载。
+  /// 休眠唤醒防护（2026-10-01 事故修复）：B 站 playurl 有效期实测为拉流时刻
+  /// +2h，挂起超期后 URL 已失效且连接早已断开，此时 `seek()` 必然失败（实证
+  /// 2026-10-01 22:49 从休眠唤醒后（距播放完毕 4h06m）重播 `MAIN seek ret res=-8`，
+  /// 且失败后 UI 与底层状态不一致、无法再重播）。[replay]、[_escalateExpiredReload] 据此判定重载。
   int? _streamDeadlineMs;
 
   /// 过期整载重拉最近一次触发时刻（2026-10-02 第二轮）：自动路径 60s 冷却，
@@ -2774,8 +2774,8 @@ class WinWinPlayerController {
         }
       }
 
-      // 长时间静置防护（2026-10-01 事故修复）：记录本次流直链的截止时间
-      //（B 站 playurl `deadline`，实测 = 拉流时刻 +2h）。静置超期后重播若仍走
+      // 休眠唤醒防护（2026-10-01 事故修复）：记录本次流直链的截止时间
+      //（B 站 playurl `deadline`，实测 = 拉流时刻 +2h）。从休眠唤醒后重播若仍走
       // seek，mdk 无法从过期 URL 取数据（实证 res=-8）⇒ [replay] 据此改走 load。
       _streamDeadlineMs = _parseStreamDeadlineMs([
         _currentVideoUrl,
@@ -2996,7 +2996,7 @@ class WinWinPlayerController {
     }
 
     // ===== 流 URL 过期升级（2026-10-02 第二轮扩展）=====
-    // 长时间静置/休眠唤醒后 URL 已过期：候选列表来自同一批 playurl、全部失效，
+    // 从休眠唤醒后 URL 已过期：候选列表来自同一批 playurl、全部失效，
     // 轮换重挂与原位 seek 必然失败（实证 2026-10-01 22:49 res=-8）⇒ 跳过候选
     // 轮换，直接整载重拉（load 拿新鲜 URL）并从当前位置恢复。
     final uiPosMs = position.value.inMilliseconds;
@@ -3419,7 +3419,7 @@ class WinWinPlayerController {
         unawaited(replay());
         return;
       }
-      // 长时间静置/休眠唤醒（2026-10-02 第二轮）：URL 已过期时原位起播读不到
+      // 从休眠唤醒后（2026-10-02 第二轮）：URL 已过期时原位起播读不到
       // 数据（缓冲耗尽后卡死转圈），升级为整载重拉并从当前位置恢复。
       if (_escalateExpiredReload(
         reason: 'resume-toggle',
@@ -3437,9 +3437,9 @@ class WinWinPlayerController {
 
   /// 重新从头开始播放。
   ///
-  /// 长时间静置兜底（2026-10-01 事故修复）：静置时长可能远超流 URL 有效期
+  /// 休眠唤醒兜底（2026-10-01 事故修复）：挂起时长可能远超流 URL 有效期
   /// （B 站 playurl deadline 实测 = 拉流时刻 +2h），届时 `seek(0)` 对过期 URL
-  /// 必然失败（实证 2026-10-01 22:49 静置 4h06m 后 `res=-8`，失败后 UI 与底层
+  /// 必然失败（实证 2026-10-01 22:49 从休眠唤醒后重播 `res=-8`，失败后 UI 与底层
   /// 状态不一致、无法再重播）。检测到 URL 已过期（[_streamDeadlineSafetyMarginMs]
   /// 安全边距，见 [_escalateExpiredReload]）时直接 [load] 重新拉取 playurl，
   /// 从片头干净起播。
@@ -3464,7 +3464,7 @@ class WinWinPlayerController {
       return;
     }
 
-    // 长时间静置/休眠唤醒：URL 已过期时 seek(0) 对死链必败，升级为整载重拉
+    // 从休眠唤醒后：URL 已过期时 seek(0) 对死链必败，升级为整载重拉
     //（用户显式操作，忽略自动路径冷却）。
     if (_escalateExpiredReload(reason: 'replay', resumeMs: 0, force: true)) {
       danmakuEngine?.clear();
@@ -3504,7 +3504,7 @@ class WinWinPlayerController {
       unawaited(replay());
       return;
     }
-    // 长时间静置/休眠唤醒（2026-10-02 第二轮）：URL 已过期时原位起播读不到
+    // 从休眠唤醒后（2026-10-02 第二轮）：URL 已过期时原位起播读不到
     // 数据（缓冲耗尽后卡死转圈），升级为整载重拉并从当前位置恢复。
     if (_escalateExpiredReload(
       reason: 'resume-play',
@@ -4149,7 +4149,7 @@ class WinWinPlayerController {
             if (eofSeekFail && seq == _seekSeq) {
               // 片尾 seek 失败兜底（2026-10-01 事故修复）：用户意图播放但媒体仍
               // 停在片尾（seek 失败被退回原位置，实证 res=-8），多为流 URL 已过期
-              //（长时间静置超 2h）/连接已死。严禁按意图强制 state=playing——底层
+              //（休眠唤醒后挂起超 2h）/连接已死。严禁按意图强制 state=playing——底层
               // 会立即被 EOS 打回 paused，留下「UI 播放中 / 底层片尾暂停」的未知
               // 状态（实证 22:49 失败后 30 分钟卡死、任何点击无反应）。改为如实置
               // UI 并重载媒体（load 会重取 playurl 得到新鲜 URL）恢复到目标位置。
