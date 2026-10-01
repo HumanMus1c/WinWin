@@ -438,6 +438,10 @@ class WinWinPlayerController {
   static const int _maxLoadRetries = 4;
   static const List<int> _loadRetryDelaysMs = [1500, 3000, 5000, 8000];
 
+  /// 流 URL 过期安全边距（2026-10-01 长静置重播修复）：距 deadline 不足该值时
+  /// 即按已过期处理（为 seek/缓冲留出余量），改走 [load] 重新拉取 playurl。
+  static const int _streamDeadlineSafetyMarginMs = 60 * 1000;
+
   /// 音画共同续播的音频位置容差（第二轮收紧：原 1500ms 会以滞后位置恢复出
   /// 「声音小时间维度滞后」，超差改为先暂停态归位再恢复）。
   static const int _audioResumeToleranceMs = 500;
@@ -504,6 +508,15 @@ class WinWinPlayerController {
   /// 依赖它 ⇒ 音频自愈是死代码；本字段独立维护第二实例的 URL。
   String? _audioPlayerUrl;
 
+  /// 本次流直链的截止时间（毫秒时间戳；取 video/audio URL 的 `deadline` 参数
+  /// 中较早者，null = 无该参数/未知）。
+  ///
+  /// 长时间静置防护（2026-10-01 事故修复）：B 站 playurl 有效期实测为拉流时刻
+  /// +2h，静置超期后 URL 已失效且连接早已断开，此时 `seek()` 必然失败（实证
+  /// 2026-10-01 22:49 静置 4h06m 后重播 `MAIN seek ret res=-8`，且失败后 UI 与
+  /// 底层状态不一致、无法再重播）。[replay] 与片尾 seek 失败兜底据此判定重载。
+  int? _streamDeadlineMs;
+
   // ── 心跳上报（Phase 4.2 & PGC/番剧支持）──
   /// 心跳定时器：每 5 秒上报一次播放进度。
   Timer? _heartBeatTimer;
@@ -530,6 +543,21 @@ class WinWinPlayerController {
     if (accept == null || accept.isEmpty) return 0;
     final idx = accept.indexOf(_currentQn);
     return idx < 0 ? 0 : idx;
+  }
+
+  /// 解析流直链的 `deadline` 查询参数（B 站 playurl 防盗链有效期，秒级时间戳），
+  /// 取所有给出 URL 中最早的一个；null = 均无该参数（不启用过期判定）。
+  static int? _parseStreamDeadlineMs(List<String?> urls) {
+    int? earliest;
+    for (final url in urls) {
+      if (url == null || url.isEmpty) continue;
+      final raw = Uri.tryParse(url)?.queryParameters['deadline'];
+      final sec = raw == null ? null : int.tryParse(raw);
+      if (sec == null || sec <= 0) continue;
+      final ms = sec * 1000;
+      if (earliest == null || ms < earliest) earliest = ms;
+    }
+    return earliest;
   }
 
   /// 通用流属性（主实例与第二实例**必须完全一致**）。
@@ -2398,6 +2426,8 @@ class WinWinPlayerController {
       _syncRealignStreak = 0;
       // 第四轮（P1）：音频位置防护缓存同步作废（换源后音频实例时间轴重置）。
       _lastValidAudioPosMs = -1;
+      // 2026-10-01：URL 截止时间同样是干净起点，待本次 URL 选定后重新解析。
+      _streamDeadlineMs = null;
 
       // 1. PlayUrlCache：先查缓存，命中且未过期则跳过 HTTP。
       final cacheKey = (epId != null && epId! > 0) ? 'ep_$epId' : bvid;
@@ -2688,6 +2718,14 @@ class WinWinPlayerController {
           player.activeAudioTracks = const [0];
         }
       }
+
+      // 长时间静置防护（2026-10-01 事故修复）：记录本次流直链的截止时间
+      //（B 站 playurl `deadline`，实测 = 拉流时刻 +2h）。静置超期后重播若仍走
+      // seek，mdk 无法从过期 URL 取数据（实证 res=-8）⇒ [replay] 据此改走 load。
+      _streamDeadlineMs = _parseStreamDeadlineMs([
+        _currentVideoUrl,
+        _audioPlayerUrl ?? _currentAudioUrl,
+      ]);
 
       // 2. prepare 加载首帧。
       // prepare 不传 position：prepare 返回 -1（already loading）时
@@ -3322,6 +3360,12 @@ class WinWinPlayerController {
   }
 
   /// 重新从头开始播放。
+  ///
+  /// 长时间静置兜底（2026-10-01 事故修复）：静置时长可能远超流 URL 有效期
+  /// （B 站 playurl deadline 实测 = 拉流时刻 +2h），届时 `seek(0)` 对过期 URL
+  /// 必然失败（实证 2026-10-01 22:49 静置 4h06m 后 `res=-8`，失败后 UI 与底层
+  /// 状态不一致、无法再重播）。检测到 URL 已过期（留 [_streamDeadlineSafetyMarginMs]
+  /// 安全边距）时直接 [load] 重新拉取 playurl，从片头干净起播。
   Future<void> replay() async {
     final player = _player;
     if (player == null || _disposed) return;
@@ -3331,9 +3375,26 @@ class WinWinPlayerController {
     _reportedEnd = false;
     _maxContinuousBufferedMs = 0;
 
-    // 极端异常兜底：若底层播放器处于 stopped 状态，重新 load 快速拉起
-    if (player.state == mdk.PlaybackState.stopped) {
-      AppLogger.w('PlayerController', 'replay: player is stopped, reloading');
+    final deadlineMs = _streamDeadlineMs;
+    final playerStopped = player.state == mdk.PlaybackState.stopped;
+    final urlExpired =
+        deadlineMs != null &&
+        DateTime.now().millisecondsSinceEpoch >
+            deadlineMs - _streamDeadlineSafetyMarginMs;
+
+    // 极端异常兜底：若底层播放器处于 stopped 状态，重新 load 快速拉起。
+    // 长时间静置：URL 已过期时同样必须重载（seek 对过期 URL 必败）。
+    if (playerStopped || urlExpired) {
+      AppLogger.w(
+        'PlayerController',
+        'replay: reload (stopped=${playerStopped ? 1 : 0} '
+        'expired=${urlExpired ? 1 : 0} deadline=${deadlineMs ?? -1})',
+      );
+      SeekProbe.note(
+        'REPLAY-RELOAD stopped=${playerStopped ? 1 : 0} '
+        'expired=${urlExpired ? 1 : 0} deadline=${deadlineMs ?? -1}',
+      );
+      danmakuEngine?.clear();
       await load(start: Duration.zero, autoplay: true);
       return;
     }
@@ -3566,6 +3627,12 @@ class WinWinPlayerController {
     // 取证：进入 seek 流程（在首次 FFI 读取之前）——若卡死发生在下方
     // `player.position` / `player.buffered()` 上，本行即为最后现场。
     SeekProbe.note('PROC seq=$seq target=$targetMs enter');
+    // 片尾 seek 失败兜底状态（2026-10-01 事故修复）：在 try 内赋值、finally 解冻
+    // 分支使用，故声明在 try 之外。durMsAtFail 为失败时刻的媒体总时长。
+    var eofSeekFail = false;
+    var durMsAtFail = 0;
+    var lastSeekRes = 0;
+    var lastSeekPosAfterMs = 0;
     unawaited(() async {
       try {
         final currentPosMs = player.position;
@@ -3770,6 +3837,18 @@ class WinWinPlayerController {
           'MAIN seek ret seq=$seq res=$res posAfter=$posAfterMainSeek '
           'target=$targetMs state=${player.state}',
         );
+
+        // 片尾 seek 失败判定（2026-10-01 事故修复）：用户意图播放、seek 失败
+        //（res<0）且位置仍被退回片尾 ⇒ 流 URL 过期/连接已死的典型形态；仅在
+        // finally 解冻分支处理（避免在 seek 瞬态窗口内叠加 setMedia 类操作）。
+        durMsAtFail = duration.value.inMilliseconds;
+        lastSeekRes = res;
+        lastSeekPosAfterMs = posAfterMainSeek;
+        eofSeekFail =
+            res < 0 &&
+            _userIntentPlaying &&
+            durMsAtFail > 0 &&
+            posAfterMainSeek >= durMsAtFail - 1500;
 
         // 方案 3：第二实例按**主实例实际落点**齐步（2026-09-25 定因修复）。
         // 旧实现按「请求目标」定位，而主实例走 keyFrame 会落在偏差 -3.6s~+3.1s 的
@@ -3986,35 +4065,57 @@ class WinWinPlayerController {
               player.mute = false;
               _seekWindowMuted = false;
             }
-            // 优化：解冻时先起音频实例、再起视频实例（实测音频侧起播延迟更大，
-            // 先起可把 seek 后的初始偏差压小一档；残余由自适应校正接管）。
-            final apOrder = _audioPlayer;
-            if (apOrder != null && _userIntentPlaying) {
-              try {
-                if (apOrder.state != mdk.PlaybackState.playing) {
-                  apOrder.state = mdk.PlaybackState.playing;
-                }
-                // 解冻瞬间的第二实例 position 恒为陈旧值 0（实测多次）：延迟 300ms
-                // 再读，RAW 行（5s 节流）另有独立校准。
-                unawaited(
-                  Future<void>.delayed(const Duration(milliseconds: 300), () {
-                    try {
-                      SeekProbe.note(
-                        'AUDIO settled pos=${apOrder.position} '
-                        'state=${apOrder.state}',
-                      );
-                    } catch (_) {}
-                  }),
-                );
-              } catch (_) {}
-            }
-            if (player.state != mdk.PlaybackState.playing &&
-                _userIntentPlaying) {
-              player.state = mdk.PlaybackState.playing;
-            } else if (!_userIntentPlaying) {
-              // 用户在冻结窗口内主动暂停：底层已是 paused（冻结用），
-              // 显式同步 UI 播放态（onStateChanged 冻结抑制未广播该变化）。
+            if (eofSeekFail && seq == _seekSeq) {
+              // 片尾 seek 失败兜底（2026-10-01 事故修复）：用户意图播放但媒体仍
+              // 停在片尾（seek 失败被退回原位置，实证 res=-8），多为流 URL 已过期
+              //（长时间静置超 2h）/连接已死。严禁按意图强制 state=playing——底层
+              // 会立即被 EOS 打回 paused，留下「UI 播放中 / 底层片尾暂停」的未知
+              // 状态（实证 22:49 失败后 30 分钟卡死、任何点击无反应）。改为如实置
+              // UI 并重载媒体（load 会重取 playurl 得到新鲜 URL）恢复到目标位置。
               playing.value = false;
+              SeekProbe.note(
+                'SEEK-FAIL-EOF-RELOAD res=$lastSeekRes target=$targetMs '
+                'posAfter=$lastSeekPosAfterMs dur=$durMsAtFail '
+                'deadline=${_streamDeadlineMs ?? -1}',
+              );
+              AppLogger.w(
+                'PlayerController',
+                'seek failed at EOF (res=$lastSeekRes), reloading stream at $targetMs',
+              );
+              unawaited(
+                load(start: Duration(milliseconds: targetMs), autoplay: true),
+              );
+            } else {
+              // 优化：解冻时先起音频实例、再起视频实例（实测音频侧起播延迟更大，
+              // 先起可把 seek 后的初始偏差压小一档；残余由自适应校正接管）。
+              final apOrder = _audioPlayer;
+              if (apOrder != null && _userIntentPlaying) {
+                try {
+                  if (apOrder.state != mdk.PlaybackState.playing) {
+                    apOrder.state = mdk.PlaybackState.playing;
+                  }
+                  // 解冻瞬间的第二实例 position 恒为陈旧值 0（实测多次）：延迟 300ms
+                  // 再读，RAW 行（5s 节流）另有独立校准。
+                  unawaited(
+                    Future<void>.delayed(const Duration(milliseconds: 300), () {
+                      try {
+                        SeekProbe.note(
+                          'AUDIO settled pos=${apOrder.position} '
+                          'state=${apOrder.state}',
+                        );
+                      } catch (_) {}
+                    }),
+                  );
+                } catch (_) {}
+              }
+              if (player.state != mdk.PlaybackState.playing &&
+                  _userIntentPlaying) {
+                player.state = mdk.PlaybackState.playing;
+              } else if (!_userIntentPlaying) {
+                // 用户在冻结窗口内主动暂停：底层已是 paused（冻结用），
+                // 显式同步 UI 播放态（onStateChanged 冻结抑制未广播该变化）。
+                playing.value = false;
+              }
             }
             SeekProbe.resetMonitorWindow();
             SeekProbe.note(
