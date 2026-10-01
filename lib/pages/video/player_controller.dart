@@ -514,8 +514,12 @@ class WinWinPlayerController {
   /// 长时间静置防护（2026-10-01 事故修复）：B 站 playurl 有效期实测为拉流时刻
   /// +2h，静置超期后 URL 已失效且连接早已断开，此时 `seek()` 必然失败（实证
   /// 2026-10-01 22:49 静置 4h06m 后重播 `MAIN seek ret res=-8`，且失败后 UI 与
-  /// 底层状态不一致、无法再重播）。[replay] 与片尾 seek 失败兜底据此判定重载。
+  /// 底层状态不一致、无法再重播）。[replay]、[_escalateExpiredReload] 据此判定重载。
   int? _streamDeadlineMs;
+
+  /// 过期整载重拉最近一次触发时刻（2026-10-02 第二轮）：自动路径 60s 冷却，
+  /// 防止离线时每 10s 空转重试风暴；用户显式操作不受冷却约束。
+  DateTime? _expiredReloadAt;
 
   // ── 心跳上报（Phase 4.2 & PGC/番剧支持）──
   /// 心跳定时器：每 5 秒上报一次播放进度。
@@ -558,6 +562,56 @@ class WinWinPlayerController {
       if (earliest == null || ms < earliest) earliest = ms;
     }
     return earliest;
+  }
+
+  /// 流 URL 是否已过期（距 deadline 不足 [_streamDeadlineSafetyMarginMs] 即视为
+  /// 过期）；deadline 未知（无该参数/尚未解析）时恒 false。
+  bool get _streamDeadlineExpired {
+    final ms = _streamDeadlineMs;
+    return ms != null &&
+        DateTime.now().millisecondsSinceEpoch >
+            ms - _streamDeadlineSafetyMarginMs;
+  }
+
+  /// 过期流 URL 的整载重拉升级（2026-10-02 第二轮扩展：覆盖休眠唤醒/长挂起）。
+  ///
+  /// 使用背景：URL 过期后，卡死自愈的候选轮换（同批 playurl 全部失效）、原位
+  /// 起播（[play] / [playOrPause] 的恢复分支）与片尾 seek 全部必然失败（实证
+  /// 2026-10-01 22:49 `seek res=-8`）——统一升级为 [load] 重拉 playurl（获得
+  /// 新鲜 deadline），从 [resumeMs] 干净恢复。
+  ///
+  /// 返回值：true = 已接管（含自动路径冷却跳过，调用方必须放弃原路径）；
+  /// false = 未过期（调用方原逻辑不变）。
+  /// 自动路径（自愈/看门狗）受 60s 冷却约束防离线重试风暴；用户显式操作
+  ///（重播/恢复播放）传 [force] 忽略冷却。
+  bool _escalateExpiredReload({
+    required String reason,
+    required int resumeMs,
+    bool force = false,
+  }) {
+    if (!_streamDeadlineExpired) return false;
+    final now = DateTime.now();
+    final last = _expiredReloadAt;
+    if (!force &&
+        last != null &&
+        now.difference(last) < const Duration(seconds: 60)) {
+      SeekProbe.note(
+        'EXPIRED-RELOAD-SKIP reason=$reason '
+        'sinceLast=${now.difference(last).inSeconds}s',
+      );
+      return true;
+    }
+    _expiredReloadAt = now;
+    SeekProbe.note(
+      'EXPIRED-RELOAD reason=$reason resume=$resumeMs '
+      'deadline=${_streamDeadlineMs ?? -1} force=${force ? 1 : 0}',
+    );
+    AppLogger.w(
+      'PlayerController',
+      'stream URL expired ($reason), reloading with fresh playurl at ${resumeMs}ms',
+    );
+    unawaited(load(start: Duration(milliseconds: resumeMs), autoplay: true));
+    return true;
   }
 
   /// 通用流属性（主实例与第二实例**必须完全一致**）。
@@ -2426,8 +2480,9 @@ class WinWinPlayerController {
       _syncRealignStreak = 0;
       // 第四轮（P1）：音频位置防护缓存同步作废（换源后音频实例时间轴重置）。
       _lastValidAudioPosMs = -1;
-      // 2026-10-01：URL 截止时间同样是干净起点，待本次 URL 选定后重新解析。
-      _streamDeadlineMs = null;
+      // 注：`_streamDeadlineMs` 不在加载起点清空（2026-10-02 第二轮）——保留旧值
+      // 直到本次 URL 解析覆盖；加载失败时仍保持「已过期」事实，自动路径按冷却继续
+      // 整载重拉，而不是退回候选轮换（陈旧 URL 必然失败）。
 
       // 1. PlayUrlCache：先查缓存，命中且未过期则跳过 HTTP。
       final cacheKey = (epId != null && epId! > 0) ? 'ep_$epId' : bvid;
@@ -2940,6 +2995,18 @@ class WinWinPlayerController {
       return;
     }
 
+    // ===== 流 URL 过期升级（2026-10-02 第二轮扩展）=====
+    // 长时间静置/休眠唤醒后 URL 已过期：候选列表来自同一批 playurl、全部失效，
+    // 轮换重挂与原位 seek 必然失败（实证 2026-10-01 22:49 res=-8）⇒ 跳过候选
+    // 轮换，直接整载重拉（load 拿新鲜 URL）并从当前位置恢复。
+    final uiPosMs = position.value.inMilliseconds;
+    if (_escalateExpiredReload(
+      reason: 'stall-recovery',
+      resumeMs: curPosMs > uiPosMs ? curPosMs : uiPosMs,
+    )) {
+      return;
+    }
+
     _isRecovering = true;
     _stallRecoveryRetryCount++;
     try {
@@ -3352,6 +3419,15 @@ class WinWinPlayerController {
         unawaited(replay());
         return;
       }
+      // 长时间静置/休眠唤醒（2026-10-02 第二轮）：URL 已过期时原位起播读不到
+      // 数据（缓冲耗尽后卡死转圈），升级为整载重拉并从当前位置恢复。
+      if (_escalateExpiredReload(
+        reason: 'resume-toggle',
+        resumeMs: position.value.inMilliseconds,
+        force: true,
+      )) {
+        return;
+      }
       _userIntentPlaying = true;
       _bufferingStallMs = 0;
       releaseStartupGate(play: false, reason: 'user-toggle');
@@ -3364,8 +3440,9 @@ class WinWinPlayerController {
   /// 长时间静置兜底（2026-10-01 事故修复）：静置时长可能远超流 URL 有效期
   /// （B 站 playurl deadline 实测 = 拉流时刻 +2h），届时 `seek(0)` 对过期 URL
   /// 必然失败（实证 2026-10-01 22:49 静置 4h06m 后 `res=-8`，失败后 UI 与底层
-  /// 状态不一致、无法再重播）。检测到 URL 已过期（留 [_streamDeadlineSafetyMarginMs]
-  /// 安全边距）时直接 [load] 重新拉取 playurl，从片头干净起播。
+  /// 状态不一致、无法再重播）。检测到 URL 已过期（[_streamDeadlineSafetyMarginMs]
+  /// 安全边距，见 [_escalateExpiredReload]）时直接 [load] 重新拉取 playurl，
+  /// 从片头干净起播。
   Future<void> replay() async {
     final player = _player;
     if (player == null || _disposed) return;
@@ -3375,27 +3452,22 @@ class WinWinPlayerController {
     _reportedEnd = false;
     _maxContinuousBufferedMs = 0;
 
-    final deadlineMs = _streamDeadlineMs;
-    final playerStopped = player.state == mdk.PlaybackState.stopped;
-    final urlExpired =
-        deadlineMs != null &&
-        DateTime.now().millisecondsSinceEpoch >
-            deadlineMs - _streamDeadlineSafetyMarginMs;
-
     // 极端异常兜底：若底层播放器处于 stopped 状态，重新 load 快速拉起。
-    // 长时间静置：URL 已过期时同样必须重载（seek 对过期 URL 必败）。
-    if (playerStopped || urlExpired) {
-      AppLogger.w(
-        'PlayerController',
-        'replay: reload (stopped=${playerStopped ? 1 : 0} '
-        'expired=${urlExpired ? 1 : 0} deadline=${deadlineMs ?? -1})',
-      );
+    if (player.state == mdk.PlaybackState.stopped) {
+      AppLogger.w('PlayerController', 'replay: player is stopped, reloading');
       SeekProbe.note(
-        'REPLAY-RELOAD stopped=${playerStopped ? 1 : 0} '
-        'expired=${urlExpired ? 1 : 0} deadline=${deadlineMs ?? -1}',
+        'REPLAY-RELOAD stopped=1 expired=${_streamDeadlineExpired ? 1 : 0} '
+        'deadline=${_streamDeadlineMs ?? -1}',
       );
       danmakuEngine?.clear();
       await load(start: Duration.zero, autoplay: true);
+      return;
+    }
+
+    // 长时间静置/休眠唤醒：URL 已过期时 seek(0) 对死链必败，升级为整载重拉
+    //（用户显式操作，忽略自动路径冷却）。
+    if (_escalateExpiredReload(reason: 'replay', resumeMs: 0, force: true)) {
+      danmakuEngine?.clear();
       return;
     }
 
@@ -3430,6 +3502,15 @@ class WinWinPlayerController {
     final posMs = player.position;
     if (completed.value || (durMs > 0 && posMs >= durMs - 200)) {
       unawaited(replay());
+      return;
+    }
+    // 长时间静置/休眠唤醒（2026-10-02 第二轮）：URL 已过期时原位起播读不到
+    // 数据（缓冲耗尽后卡死转圈），升级为整载重拉并从当前位置恢复。
+    if (_escalateExpiredReload(
+      reason: 'resume-play',
+      resumeMs: position.value.inMilliseconds,
+      force: true,
+    )) {
       return;
     }
     _userIntentPlaying = true;
