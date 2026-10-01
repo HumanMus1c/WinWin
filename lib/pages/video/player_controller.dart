@@ -4181,14 +4181,39 @@ class WinWinPlayerController {
   /// 最后夹在 [−6, +12] dB 安全区间内。无有效实测数据（`measured_i` 非负）
   /// 或禁用时保持 1.0（不改变）。
   void _recomputeNormalizationGain(Volume? v) {
-    if (Pref.audioNormalization == '0' || v == null || !v.isNotEmpty) {
+    // 覆盖探针：**每条早退路径都必须留下原因**——否则"没有 loudness gain 日志"
+    // 无法区分"当前是禁用""接口没返回响度元数据""元数据非 LUFS"三种情况
+    // （2026-10-01 诊断时正是被这个盲点挡住）。
+    final config = Pref.audioNormalization;
+    if (config == '0') {
       _normalizationGain = 1.0;
+      AppLogger.w('Coverage', 'loudness gain: skipped (mode=0 已禁用)');
+      return;
+    }
+    if (v == null) {
+      _normalizationGain = 1.0;
+      AppLogger.w(
+        'Coverage',
+        'loudness gain: skipped (playUrl.volume == null，接口未返回响度元数据)',
+      );
+      return;
+    }
+    if (!v.isNotEmpty) {
+      _normalizationGain = 1.0;
+      AppLogger.w(
+        'Coverage',
+        'loudness gain: skipped (volume 各字段全 0，无实测数据)',
+      );
       return;
     }
     final measuredI = v.measuredI.toDouble();
     if (measuredI >= 0) {
       // LUFS 约定应为负数；取到非负值说明该条流没有有效实测响度。
       _normalizationGain = 1.0;
+      AppLogger.w(
+        'Coverage',
+        'loudness gain: skipped (measuredI=$measuredI 非负，不符合 LUFS 约定)',
+      );
       return;
     }
     final targetI = v.targetI != 0 ? v.targetI.toDouble() : -14.0;
