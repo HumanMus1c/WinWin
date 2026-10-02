@@ -114,6 +114,9 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      // 圆角裁剪：WebView 内容为 Windows 纹理合成（直角矩形），未裁剪时
+      // 会在加载完成后盖住主题圆角（M3/Miuix），详见 2026-10-02 复盘。
+      clipBehavior: Clip.antiAlias,
       insetPadding: const EdgeInsets.all(24),
       child: SizedBox(
         width: 360,
