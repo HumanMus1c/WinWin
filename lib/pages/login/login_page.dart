@@ -8,6 +8,7 @@ import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/login.dart';
 import 'package:winwin/models/common/account_type.dart';
@@ -90,12 +91,69 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  /// TEMP(geetest-diagnostic)：一键触发极验弹窗（诊断 WebView/桥接链路用）。
+  ///
+  /// 复用真实取参通道 [LoginHttp.preCapture]（无需登录、无需触发风控）与
+  /// 真实弹窗 [GeetestWebviewDialog]，零副作用（不写状态、不发登录/短信请求）。
+  /// 验证通过后整体移除：本方法 + AppBar 按钮 + 探针 + AppLogger import。
+  Future<void> _debugShowGeetest() async {
+    AppLogger.w('Geetest', 'debug trigger: requesting preCapture');
+    try {
+      final res = await LoginHttp.preCapture();
+      final data = res['data'] as Map<String, dynamic>?;
+      final gt = data?['gee_gt'] as String?;
+      final challenge = data?['gee_challenge'] as String?;
+      if (res['status'] != true ||
+          gt == null ||
+          gt.isEmpty ||
+          challenge == null ||
+          challenge.isEmpty) {
+        _toast('preCapture 未返回有效参数：(${res['code']}) ${res['msg']}');
+        AppLogger.w(
+          'Geetest',
+          'debug trigger: preCapture failed code=${res['code']} msg=${res['msg']}',
+        );
+        return;
+      }
+      AppLogger.w(
+        'Geetest',
+        'debug trigger: preCapture ok gt_len=${gt.length} '
+        'challenge_len=${challenge.length}',
+      );
+      if (!mounted) return;
+      final result = await GeetestWebviewDialog.show(context, gt, challenge);
+      if (result == null) {
+        _toast('极验弹窗已关闭（未完成/取消）');
+        AppLogger.w('Geetest', 'debug result: closed/cancelled (null)');
+        return;
+      }
+      _toast('极验弹窗回传成功（已收到 validate/seccode）');
+      AppLogger.w(
+        'Geetest',
+        'debug result: success '
+        'validate_len=${(result['geetest_validate'] as String?)?.length ?? -1} '
+        'seccode_len=${(result['geetest_seccode'] as String?)?.length ?? -1}',
+      );
+    } catch (e) {
+      _toast('诊断触发失败：$e');
+      AppLogger.w('Geetest', 'debug trigger error: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('登录'),
         leading: const AppBackButton(),
+        actions: [
+          // TEMP(geetest-diagnostic)：一键触发极验弹窗，验证通过后移除。
+          IconButton(
+            icon: const Icon(Icons.bug_report_outlined),
+            tooltip: '诊断：极验弹窗（临时）',
+            onPressed: _debugShowGeetest,
+          ),
+        ],
       ),
       body: Column(
         children: [
