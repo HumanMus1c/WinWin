@@ -1,9 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/common/widgets/medal_widget.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
@@ -230,7 +232,10 @@ void main() {
                 ),
                 const UiStyleScope(
                   style: UiStyle.miuix,
-                  child: AppSwitch(value: false, onChanged: null),
+                  child: MiuixThemeScope(
+                    isDark: false,
+                    child: AppSwitch(value: false, onChanged: null),
+                  ),
                 ),
                 UiStyleScope(
                   style: UiStyle.material3,
@@ -256,6 +261,10 @@ void main() {
 
       expect(find.text('Tab1'), findsOneWidget);
       expect(find.text('TabA'), findsOneWidget);
+      // 阶段1（flutter_miuix）：miuix 侧 AppSwitch 渲染 MiuixSwitch，
+      // material3 侧保持 Material Switch。
+      expect(find.byType(MiuixSwitch), findsOneWidget);
+      expect(find.byType(Switch), findsOneWidget);
     });
   });
 }

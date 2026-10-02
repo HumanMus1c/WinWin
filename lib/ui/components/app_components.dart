@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_miuix/miuix.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_shapes.dart';
@@ -44,7 +45,8 @@ class _Tokens {
 /// 自适应卡片容器。
 ///
 /// - MD3：surfaceContainerHighest + M3 tonal elevation。
-/// - Miuix：surfaceContainer + tonalElevation=0 扁平 + 1.15× 大圆角。
+/// - Miuix：[MiuixCard]（surfaceContainer + 无阴影扁平 + squircle 圆角，
+///   flutter_miuix 阶段1 起替换原手绘圆角近似实现）。
 class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
@@ -69,28 +71,33 @@ class AppCard extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final r = radius ?? t.shapes.medium.x;
-    final renderer = resolvePrimitiveRenderer(t.style);
 
-    final (bgColor, elevation) = switch (renderer) {
-      PrimitiveRenderer.material3 => (
-          color ?? cs.surfaceContainerHighest,
-          t.chrome.elevation,
+    // Miuix 分支（阶段1）：原生 MiuixCard（squircle 圆角 + 无阴影扁平）。
+    // 颜色显式取自 WinWin colorScheme（含 miuix 调色板），与替换前保持一致。
+    if (resolvePrimitiveRenderer(t.style) == PrimitiveRenderer.miuix) {
+      final card = MiuixCard(
+        cornerRadius: r,
+        insideMargin: padding ?? const EdgeInsets.all(12),
+        colors: MiuixCardColors(
+          color: color ?? cs.surfaceContainer,
+          contentColor: cs.onSurface,
         ),
-      PrimitiveRenderer.miuix => (
-          color ?? cs.surfaceContainer,
-          0.0,
-        ),
-    };
+        onPressed: onTap,
+        child: child,
+      );
+      return margin == null ? card : Padding(padding: margin!, child: card);
+    }
 
+    // MD3 分支：surfaceContainerHighest + M3 tonal elevation。
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: bgColor,
+        color: color ?? cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(r),
       ),
       child: Material(
         color: Colors.transparent,
-        elevation: elevation,
+        elevation: t.chrome.elevation,
         borderRadius: BorderRadius.circular(r),
         child: InkWell(
           onTap: onTap,
@@ -172,9 +179,11 @@ class AppGroup extends StatelessWidget {
 // AppPrimaryButton
 // ════════════════════════════════════════════════════════════════
 
-/// 自适应主按钮 — 统一渐变 primary→tertiary + 按压 0.96 弹簧（[AppPressFeedback] 触感）。
+/// 自适应主按钮。
 ///
-/// 形状按 [AppShapes.buttonShape] 切换（MD3 9dp 圆角 / Miuix 12dp 圆角）。
+/// - MD3：渐变 primary→tertiary + 按压 0.96 弹簧（[AppPressFeedback] 触感）。
+/// - Miuix：[MiuixButton]（主色纯色 + squircle 圆角 + folme 按压反馈，
+///   flutter_miuix 阶段1 起替换原"渐变近似"实现，视觉变化已列入实机验收）。
 class AppPrimaryButton extends StatefulWidget {
   const AppPrimaryButton({
     super.key,
@@ -197,6 +206,19 @@ class _AppPrimaryButtonState extends State<AppPrimaryButton> {
   @override
   Widget build(BuildContext context) {
     final t = _Tokens.of(context);
+
+    // Miuix 分支（阶段1）：原生 MiuixButton（纯色 + squircle + folme 按压）。
+    if (resolvePrimitiveRenderer(t.style) == PrimitiveRenderer.miuix) {
+      final button = MiuixButton(
+        onPressed: widget.onPressed,
+        colors: MiuixButtonDefaults.buttonColorsPrimary(context),
+        child: widget.child,
+      );
+      return widget.expanded
+          ? SizedBox(width: double.infinity, child: button)
+          : button;
+    }
+
     final cs = Theme.of(context).colorScheme;
     final enabled = widget.onPressed != null;
 
@@ -244,7 +266,8 @@ class _AppPrimaryButtonState extends State<AppPrimaryButton> {
 /// 自适应开关。
 ///
 /// - MD3：[Switch]（M3 标准 thumb 与轨道）。
-/// - Miuix：[Switch] + 缩放 0.85 紧凑扁平化 thumb，贴合 Miuix 控件密度。
+/// - Miuix：[MiuixSwitch]（49×28 胶囊轨道 + 20dp thumb，点击/拖拽切换 +
+///   folme 弹簧，flutter_miuix 阶段1 起替换原 0.85 缩放近似实现）。
 class AppSwitch extends StatelessWidget {
   const AppSwitch({super.key, required this.value, this.onChanged});
 
@@ -258,14 +281,7 @@ class AppSwitch extends StatelessWidget {
       case PrimitiveRenderer.material3:
         return Switch(value: value, onChanged: onChanged);
       case PrimitiveRenderer.miuix:
-        return Transform.scale(
-          scale: 0.85,
-          child: Switch(
-            value: value,
-            onChanged: onChanged,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        );
+        return MiuixSwitch(value: value, onChanged: onChanged);
     }
   }
 }
@@ -677,7 +693,8 @@ class AppActionTile extends StatelessWidget {
 ///
 /// 风格差异：
 /// - MD3：primary 色，4px 标准 M3 高度，圆角 2。
-/// - Miuix：tertiary 色，3px 中等高度，全圆角。
+/// - Miuix：[MiuixLinearProgressIndicator]（tertiary 色，3px 中等高度，
+///   全圆角；flutter_miuix 阶段1 起替换原 LinearProgressIndicator 近似实现）。
 class AppProgressBar extends StatelessWidget {
   const AppProgressBar({
     super.key,
@@ -698,28 +715,29 @@ class AppProgressBar extends StatelessWidget {
     final renderer = resolvePrimitiveRenderer(t.style);
 
     final v = (value == null || !value!.isFinite) ? 0.0 : value!.clamp(0.0, 1.0);
-    final (trackColor, barColor, h, radius) = switch (renderer) {
-      PrimitiveRenderer.material3 => (
-          cs.surfaceContainerHighest,
-          cs.primary,
-          4.0,
-          2.0,
-        ),
-      PrimitiveRenderer.miuix => (
-          cs.surfaceContainerHighest,
-          cs.tertiary,
-          3.0,
-          1.5,
-        ),
-    };
 
+    // Miuix 分支（阶段1）：原生 Miuix 线性进度条（自带全圆角轨道），
+    // 保留替换前的 tertiary 配色与 3px 高度。
+    if (renderer == PrimitiveRenderer.miuix) {
+      return MiuixLinearProgressIndicator(
+        progress: v,
+        height: height ?? 3.0,
+        colors: MiuixProgressIndicatorColors(
+          foregroundColor: cs.tertiary,
+          disabledForegroundColor: cs.tertiary,
+          backgroundColor: cs.surfaceContainerHighest,
+        ),
+      );
+    }
+
+    // MD3 分支：primary 色 + 4px 标准高度 + 圆角 2。
     return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
+      borderRadius: BorderRadius.circular(2),
       child: LinearProgressIndicator(
         value: v,
-        minHeight: height ?? h,
-        backgroundColor: trackColor,
-        valueColor: AlwaysStoppedAnimation<Color>(barColor),
+        minHeight: height ?? 4.0,
+        backgroundColor: cs.surfaceContainerHighest,
+        valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
         stopIndicatorColor: Colors.transparent,
       ),
     );

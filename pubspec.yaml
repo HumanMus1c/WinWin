@@ -51,6 +51,11 @@ dependencies:
   material_ui: 1.5.0
   # 动态页多列瀑布流排版：解决异质卡片在标准网格中的行间留白浪费问题。
   flutter_staggered_grid_view: ^0.7.0
+  # Miuix 风格运行时实现：ChuxinNeko/flutter_miuix（miuix 的 Flutter 1:1 移植，
+  # 45+ 组件 / squircle 圆角 / folme 弹簧 / 玻璃材质，支持 Windows）。
+  # 社区年轻库：精确锁定 1.3.0，仅 miuix 渲染路径引用，可整体回退；
+  # 阶段1 复盘见 docs/flutter_miuix阶段1-桥接与试点复盘-2026-10-02.md。
+  flutter_miuix: 1.3.0
 
   path: any
 dev_dependencies:

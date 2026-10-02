@@ -25,6 +25,7 @@ import 'theme/app_font_notifier.dart';
 import 'theme/app_theme.dart';
 import 'theme/colors.dart';
 import 'theme/inherited_ui_style.dart';
+import 'theme/miuix_theme_bridge.dart';
 import 'theme/ui_style.dart';
 import 'theme/ui_style_notifier.dart';
 import 'ui/app.dart';
@@ -231,14 +232,25 @@ class WinWinApp extends StatelessWidget {
                     // 兼容桥接已摘除（R4，2026-10-02）：全依赖审计确认 Windows
                     // 编译面不存在运行时可达到的 SDK MaterialLocalizations / Theme
                     // 消费者；摘除证据见 docs/material_ui兼容桥接摘除复盘-2026-10-02.md。
-                    builder: (context, child) => UiStyleScope(
-                      style: uiStyle,
-                      child: AppEscapeScope(
-                        navigatorKey: appNavigatorKey,
-                        observer: appEscapeObserver,
-                        child: child ?? const SizedBox.shrink(),
-                      ),
-                    ),
+                    builder: (context, child) {
+                      final base = UiStyleScope(
+                        style: uiStyle,
+                        child: AppEscapeScope(
+                          navigatorKey: appNavigatorKey,
+                          observer: appEscapeObserver,
+                          child: child ?? const SizedBox.shrink(),
+                        ),
+                      );
+                      if (uiStyle != UiStyle.miuix) return base;
+                      // 阶段1（flutter_miuix 试点）：miuix 风格下由 MiuixThemeScope
+                      // 提供桥接配色/字体的 MiuixTheme，供 Miuix 控件取用
+                      // （见 theme/miuix_theme_bridge.dart）。
+                      return MiuixThemeScope(
+                        isDark: Theme.of(context).brightness == Brightness.dark,
+                        fontFamily: fontFamily,
+                        child: base,
+                      );
+                    },
                     home: AgreementGate(
                       bootstrapError: bootstrapError,
                       child: const AppRoot(),
