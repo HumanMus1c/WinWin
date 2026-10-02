@@ -16,11 +16,12 @@ const _geetestJsUri =
 String _buildShowJs(String configResponse) =>
     't=Geetest($configResponse).onSuccess(()=>R("success",t.getValidate())).onError(o=>R("error",o)).onClose(o=>R("close",o));t.onReady(()=>t.verify())';
 
-/// 极验验证码 WebView 对话框（移植自 PiliPlus
+/// 极验验证码 WebView 全屏覆盖层（移植自 PiliPlus
 /// `lib/pages/login/geetest/geetest_webview_dialog.dart`）。
 ///
 /// WinWin 仅支持桌面端（Windows），故移除 Linux 的 `desktop_webview_window`
-/// 兜底分支，仅保留 `InAppWebView` 实现。
+/// 兜底分支，仅保留 `InAppWebView` 实现；承载形态为**无边框全屏**（对齐手机端
+/// 近全屏观感，2026-10-02 改造），仅保留极验内容 + 左上角关闭按钮 + 加载态。
 ///
 /// 流程：
 ///   1. 通过 `https://api.geetest.com/gettype.php?gt=<gt>` 获取极验配置（JSONP）。
@@ -28,7 +29,7 @@ String _buildShowJs(String configResponse) =>
 ///   3. 在 `InAppWebView` 中加载本地 HTML，注入 gt.js + Geetest(config)。
 ///   4. JS 端通过 `flutter_inappwebview.callHandler('success', validate)` 回传
 ///      `{geetest_validate, geetest_seccode, geetest_challenge}`。
-///   5. 对话框通过 `Navigator.pop(result)` 把 Map 返回给调用方。
+///   5. 覆盖层通过 `Navigator.pop(result)` 把 Map 返回给调用方。
 class GeetestWebviewDialog extends StatefulWidget {
   const GeetestWebviewDialog(this.gt, this.challenge, {super.key});
 
@@ -38,7 +39,7 @@ class GeetestWebviewDialog extends StatefulWidget {
   @override
   State<GeetestWebviewDialog> createState() => _GeetestWebviewDialogState();
 
-  /// 弹出极验验证对话框，返回 `{geetest_validate, geetest_seccode, geetest_challenge}`
+  /// 弹出极验验证全屏覆盖层，返回 `{geetest_validate, geetest_seccode, geetest_challenge}`
   /// 或 null（用户取消 / 验证失败）。
   static Future<Map<String, dynamic>?> show(
     BuildContext context,
@@ -113,15 +114,14 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      // 圆角裁剪：WebView 内容为 Windows 纹理合成（直角矩形），未裁剪时
-      // 会在加载完成后盖住主题圆角（M3/Miuix），详见 2026-10-02 复盘。
-      clipBehavior: Clip.antiAlias,
-      insetPadding: const EdgeInsets.all(24),
-      child: SizedBox(
-        width: 360,
-        height: 480,
+    // 无边框全屏覆盖层：铺满整个路由页面（应用窗口），无卡片边框/圆角；
+    // 模态语义与返回值契约由外层 showDialog 路由承载（Esc 关闭等保持不变）。
+    return SizedBox.expand(
+      child: Material(
+        // 与极验页面白底一致：加载 → 内容态无跳色（页面本体恒为浅色）。
+        color: Colors.white,
         child: Stack(
+          fit: StackFit.expand,
           children: [
             FutureBuilder<LoadingState<String>>(
               future: _future,
@@ -258,21 +258,27 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 24),
-          FilledButton(onPressed: onClose, child: const Text('关闭')),
-        ],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              // 覆盖层背景恒为白色：显式深色，保证深色主题下可读。
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Colors.black87),
+            ),
+            const SizedBox(height: 24),
+            FilledButton(onPressed: onClose, child: const Text('关闭')),
+          ],
+        ),
       ),
     );
   }
