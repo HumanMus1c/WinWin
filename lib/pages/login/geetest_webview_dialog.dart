@@ -20,8 +20,9 @@ String _buildShowJs(String configResponse) =>
 /// `lib/pages/login/geetest/geetest_webview_dialog.dart`）。
 ///
 /// WinWin 仅支持桌面端（Windows），故移除 Linux 的 `desktop_webview_window`
-/// 兜底分支，仅保留 `InAppWebView` 实现；承载形态为**无边框全屏**（对齐手机端
-/// 近全屏观感，2026-10-02 改造），仅保留极验内容 + 左上角关闭按钮 + 加载态。
+/// 兜底分支，仅保留 `InAppWebView` 实现；承载形态为**灰蒙层 + 近全屏内容区**
+/// （对齐 BiliPai 现款：barrier 灰蒙层压暗登录页 + 96%×88% 无边框内容区；
+/// 2026-10-02 二次调整），仅保留极验内容 + 左上角关闭按钮 + 加载态。
 ///
 /// 流程：
 ///   1. 通过 `https://api.geetest.com/gettype.php?gt=<gt>` 获取极验配置（JSONP）。
@@ -49,6 +50,8 @@ class GeetestWebviewDialog extends StatefulWidget {
     return showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,
+      // 灰蒙层：与 BiliPai `setDimAmount(0.42)` 对齐（登录页透出、压暗）。
+      barrierColor: Colors.black.withValues(alpha: 0.42),
       builder: (_) => GeetestWebviewDialog(gt, challenge),
     );
   }
@@ -114,52 +117,59 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // 无边框全屏覆盖层：铺满整个路由页面（应用窗口），无卡片边框/圆角；
-    // 模态语义与返回值契约由外层 showDialog 路由承载（Esc 关闭等保持不变）。
+    // 灰蒙层 + 近全屏内容区（对齐 BiliPai 现款）：
+    // - 外层铺满路由页面但不绘制背景 → 由路由 barrier 压暗，登录页在四周透出；
+    // - 内容区约 96%×88% 居中、无边框/圆角，保持白底（与极验页面一致，
+    //   加载 → 内容态无跳色）。
     return SizedBox.expand(
-      child: Material(
-        // 与极验页面白底一致：加载 → 内容态无跳色（页面本体恒为浅色）。
-        color: Colors.white,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            FutureBuilder<LoadingState<String>>(
-              future: _future,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final config = snapshot.data!;
-                if (config is Error) {
-                  return _ErrorView(
-                    message: config.errMsg ?? '配置获取失败',
-                    onClose: () => Navigator.of(context).pop(),
-                  );
-                }
-                final response = (config as Success<String>).response;
-                return _GeetestWebView(
-                  response: response,
-                  onResult: (data) => Navigator.of(context).pop(data),
-                  onCancel: () => Navigator.of(context).pop(),
-                  onLoadStop: () {
-                    if (mounted) setState(() => _loading = false);
+      child: Center(
+        child: FractionallySizedBox(
+          widthFactor: 0.96,
+          heightFactor: 0.88,
+          child: Material(
+            color: Colors.white,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                FutureBuilder<LoadingState<String>>(
+                  future: _future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final config = snapshot.data!;
+                    if (config is Error) {
+                      return _ErrorView(
+                        message: config.errMsg ?? '配置获取失败',
+                        onClose: () => Navigator.of(context).pop(),
+                      );
+                    }
+                    final response = (config as Success<String>).response;
+                    return _GeetestWebView(
+                      response: response,
+                      onResult: (data) => Navigator.of(context).pop(data),
+                      onCancel: () => Navigator.of(context).pop(),
+                      onLoadStop: () {
+                        if (mounted) setState(() => _loading = false);
+                      },
+                    );
                   },
-                );
-              },
+                ),
+                // 顶部左上角关闭按钮（始终显示）
+                Positioned(
+                  left: 8,
+                  top: 8,
+                  child: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: '关闭',
+                  ),
+                ),
+                if (_loading)
+                  const Center(child: CircularProgressIndicator()),
+              ],
             ),
-            // 顶部左上角关闭按钮（始终显示）
-            Positioned(
-              left: 8,
-              top: 8,
-              child: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-                tooltip: '关闭',
-              ),
-            ),
-            if (_loading)
-              const Center(child: CircularProgressIndicator()),
-          ],
+          ),
         ),
       ),
     );
