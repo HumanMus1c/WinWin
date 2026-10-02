@@ -68,14 +68,14 @@ Get-ChildItem "$cache\flutter_inappwebview*\lib" -Recurse -Filter *.dart |
 | `flutter build windows --release` | ✅ 通过（105.5s） |
 | 产物取证 | Debug `data/flutter_assets` 2026-10-03 00:08:05、Release `data/app.so` 2026-10-03 00:09:56 均为新生成；exe 未重链属正常（仅 Dart 变更） |
 
-### 实机验证清单（待用户执行，验证后回填）
+### 实机验证清单（✅ 用户实机复测，2026-10-03）
 
-- [ ] 启动 → 首页/动态页滚动（瀑布流 + 图片占位、视频卡片）
-- [ ] 登录页极验弹窗全流程（成功 / 取消 / Esc 关闭）—— 摘除后**重点项**
-- [ ] 设置页 SelectDialog 10 处入口（点选即提交、Esc 取消不写入）
-- [ ] 播放器：控制栏、章节 / 音量浮层、画质 / 音轨 / 倍速菜单
-- [ ] 三风格 × 明暗切换（含个人页 / 设置页 / 首页）
-- [ ] 全程无 `No MaterialLocalizations` / 空断言类报错（可查 `Documents/logs/runtime.log`）
+- [x] 启动 → 首页/动态页滚动（瀑布流 + 图片占位、视频卡片）
+- [x] 登录页极验弹窗全流程（成功 / 取消 / Esc 关闭）—— 摘除后**重点项**（用户确认；该链路默认无日志痕迹）
+- [x] 设置页 SelectDialog 10 处入口（点选即提交、Esc 取消不写入）—— 日志见 `SelectDialog open/close 界面风格 / 主题模式`
+- [x] 播放器：控制栏、章节 / 音量浮层、画质 / 音轨 / 倍速菜单 —— 日志见 `player menu audio/quality/speed opened`
+- [x] 三风格 × 明暗切换（含个人页 / 设置页 / 首页）—— 日志见 `themeMode system → light`
+- [x] 全程无 `No MaterialLocalizations` / 空断言类报错 —— 日志取证：10-03 01:18–01:31 共 48 条（全 W 级、0 条 E 级），局部化 / 断言 / 异常 / 溢出关键词零命中；崩溃 Report 零新增；trace.log 无错误行（两次正常启动 pid=28364 / 14516；符合 Release 运行特征）
 
 ---
 
