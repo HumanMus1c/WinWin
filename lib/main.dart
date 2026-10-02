@@ -228,20 +228,15 @@ class WinWinApp extends StatelessWidget {
                     // 全局 Esc 分层路由：返回上一级 / 取消输入聚焦 /
                     // 关闭对话框与二级浮层（详见 AppEscapeScope）。
                     //
-                    // MaterialUiCompatibilityBridge：为仍从 context 读取设计状态的
-                    // 三方 SDK 子树（如 flutter_inappwebview 的极验弹窗）注入
-                    // ThemeData / MaterialLocalizations，使其在 material_ui 应用树中
-                    // 正常取到主题。该桥接不解析跨包 API 签名类型错配，故本项目自有
-                    // 代码已全量迁移（见 docs/material_ui全库迁移与SelectDialog现代化复盘）。
+                    // 兼容桥接已摘除（R4，2026-10-02）：全依赖审计确认 Windows
+                    // 编译面不存在运行时可达到的 SDK MaterialLocalizations / Theme
+                    // 消费者；摘除证据见 docs/material_ui兼容桥接摘除复盘-2026-10-02.md。
                     builder: (context, child) => UiStyleScope(
                       style: uiStyle,
-                      // ignore: deprecated_member_use
-                      child: MaterialUiCompatibilityBridge(
-                        child: AppEscapeScope(
-                          navigatorKey: appNavigatorKey,
-                          observer: appEscapeObserver,
-                          child: child ?? const SizedBox.shrink(),
-                        ),
+                      child: AppEscapeScope(
+                        navigatorKey: appNavigatorKey,
+                        observer: appEscapeObserver,
+                        child: child ?? const SizedBox.shrink(),
                       ),
                     ),
                     home: AgreementGate(
