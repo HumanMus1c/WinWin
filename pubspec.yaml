@@ -46,8 +46,9 @@ dependencies:
   file_picker: ^12.2.0
   # 官方 Material 独立包：SDK 内的 package:flutter/material.dart 已冻结，
   # 新特性（M3 Expressive 等）只在此包迭代。全库导入已迁至 material_ui。
-  # 锁定 1.0.0 = 与 SDK 3.47 冻结代码等价的零行为变化替换；升级 1.x 单独评估。
-  material_ui: 1.0.0
+  # 1.5.0 = 迁移后评估升级：1.1.0→1.5.0 无破坏性变更；Expressive 为显式
+  # opt-in（默认仍 StyleVariant.material3）；兼容桥接仍存留（见 main.dart）。
+  material_ui: 1.5.0
   # 动态页多列瀑布流排版：解决异质卡片在标准网格中的行间留白浪费问题。
   flutter_staggered_grid_view: ^0.7.0
 
