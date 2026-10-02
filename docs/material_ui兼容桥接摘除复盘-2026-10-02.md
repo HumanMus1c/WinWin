@@ -96,6 +96,6 @@ Get-ChildItem "$cache\flutter_inappwebview*\lib" -Recurse -Filter *.dart |
 
 **提交**：
 - `a2898b2` [refactor](theme): 摘除 material_ui 兼容桥接（R4 全依赖审计通过）
-- 本文档提交 hash：`<待回填>`
+- 本文档提交 hash：`8d78cfc`（本补记提交承载回填）
 
-**推送状态**：随本次收尾统一推送 `origin/main`（本补记提交随收尾同步）。
+**推送状态**：已推送 `origin/main`（`6f1ccee..8d78cfc`，含前置清理 / 代码 / 本文档；本补记提交随第二次推送同步，补记链终止）。
