@@ -117,17 +117,18 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // 灰蒙层 + 近全屏内容区（对齐 BiliPai 现款）：
-    // - 外层铺满路由页面但不绘制背景 → 由路由 barrier 压暗，登录页在四周透出；
-    // - 内容区约 96%×88% 居中、无边框/圆角，保持白底（与极验页面一致，
-    //   加载 → 内容态无跳色）。
+    // 灰蒙层 + 透明内容区（三次调整）：
+    // - 外层铺满路由页面但不绘制任何背景 → 由路由 barrier 压暗（42%），登录页透出；
+    // - 内容区无可见容器底色（透明），配合 WebView `transparentBackground`
+    //   与页面底 CSS 透明 → 初始化无白屏闪烁，验证码浮在压暗后的登录页上。
     return SizedBox.expand(
       child: Center(
         child: FractionallySizedBox(
           widthFactor: 0.96,
           heightFactor: 0.88,
           child: Material(
-            color: Colors.white,
+            // 容器半透明化：不铺底，登录页在验证码周围/间隙处透出。
+            color: Colors.transparent,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -204,6 +205,9 @@ class _GeetestWebViewState extends State<_GeetestWebView> {
         useHybridComposition: false,
         algorithmicDarkeningAllowed: true,
         useShouldOverrideUrlLoading: true,
+        // 页面底透明（WebView2 DefaultBackgroundColor alpha=0）：消除初始化
+        // 白屏闪烁，并让登录页在验证码周围透出。
+        transparentBackground: true,
         // 桌面端兼容（避免 MIXED_CONTENT_ALWAYS_ALLOW 等 Android 专属枚举）。
         incognito: true,
         allowFileAccess: false,
@@ -220,7 +224,8 @@ class _GeetestWebViewState extends State<_GeetestWebView> {
       ),
       initialData: InAppWebViewInitialData(
         data:
-            '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body>'
+            '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">'
+            '<style>html,body{margin:0;height:100%;background:transparent !important;}</style></head><body>'
             '<script src="$_geetestJsUri"></script>'
             '<script>R=flutter_inappwebview.callHandler</script>'
             '</body></html>',
@@ -279,11 +284,7 @@ class _ErrorView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              // 覆盖层背景恒为白色：显式深色，保证深色主题下可读。
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.black87),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
             FilledButton(onPressed: onClose, child: const Text('关闭')),
