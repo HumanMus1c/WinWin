@@ -20,9 +20,9 @@ String _buildShowJs(String configResponse) =>
 /// `lib/pages/login/geetest/geetest_webview_dialog.dart`）。
 ///
 /// WinWin 仅支持桌面端（Windows），故移除 Linux 的 `desktop_webview_window`
-/// 兜底分支，仅保留 `InAppWebView` 实现；承载形态为**灰蒙层 + 近全屏内容区**
-/// （对齐 BiliPai 现款：barrier 灰蒙层压暗登录页 + 96%×88% 无边框内容区；
-/// 2026-10-02 二次调整），仅保留极验内容 + 左上角关闭按钮 + 加载态。
+/// 兜底分支，仅保留 `InAppWebView` 实现；承载形态为**半透明覆盖层铺满全窗口**
+/// （barrier 压暗 42% + 容器/页面底透明；2026-10-02 四次调整）；
+/// 不含关闭按钮：出口 = Esc（AppEscapeScope layer1）或极验页自身关闭回调。
 ///
 /// 流程：
 ///   1. 通过 `https://api.geetest.com/gettype.php?gt=<gt>` 获取极验配置（JSONP）。
@@ -117,60 +117,43 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // 灰蒙层 + 透明内容区（三次调整）：
-    // - 外层铺满路由页面但不绘制任何背景 → 由路由 barrier 压暗（42%），登录页透出；
-    // - 内容区无可见容器底色（透明），配合 WebView `transparentBackground`
-    //   与页面底 CSS 透明 → 初始化无白屏闪烁，验证码浮在压暗后的登录页上。
+    // 半透明覆盖层铺满全窗口（四次调整）：
+    // - 无可见容器底色（透明），由路由 barrier 压暗（42%），登录页整体透出；
+    // - 已按需求移除左上角关闭按钮：出口 = Esc（AppEscapeScope layer1）
+    //   或极验页自身关闭回调（onClose → Navigator.pop）。
     return SizedBox.expand(
-      child: Center(
-        child: FractionallySizedBox(
-          widthFactor: 0.96,
-          heightFactor: 0.88,
-          child: Material(
-            // 容器半透明化：不铺底，登录页在验证码周围/间隙处透出。
-            color: Colors.transparent,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                FutureBuilder<LoadingState<String>>(
-                  future: _future,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    final config = snapshot.data!;
-                    if (config is Error) {
-                      return _ErrorView(
-                        message: config.errMsg ?? '配置获取失败',
-                        onClose: () => Navigator.of(context).pop(),
-                      );
-                    }
-                    final response = (config as Success<String>).response;
-                    return _GeetestWebView(
-                      response: response,
-                      onResult: (data) => Navigator.of(context).pop(data),
-                      onCancel: () => Navigator.of(context).pop(),
-                      onLoadStop: () {
-                        if (mounted) setState(() => _loading = false);
-                      },
-                    );
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            FutureBuilder<LoadingState<String>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final config = snapshot.data!;
+                if (config is Error) {
+                  return _ErrorView(
+                    message: config.errMsg ?? '配置获取失败',
+                    onClose: () => Navigator.of(context).pop(),
+                  );
+                }
+                final response = (config as Success<String>).response;
+                return _GeetestWebView(
+                  response: response,
+                  onResult: (data) => Navigator.of(context).pop(data),
+                  onCancel: () => Navigator.of(context).pop(),
+                  onLoadStop: () {
+                    if (mounted) setState(() => _loading = false);
                   },
-                ),
-                // 顶部左上角关闭按钮（始终显示）
-                Positioned(
-                  left: 8,
-                  top: 8,
-                  child: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                    tooltip: '关闭',
-                  ),
-                ),
-                if (_loading)
-                  const Center(child: CircularProgressIndicator()),
-              ],
+                );
+              },
             ),
-          ),
+            if (_loading)
+              const Center(child: CircularProgressIndicator()),
+          ],
         ),
       ),
     );
