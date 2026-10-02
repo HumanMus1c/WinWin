@@ -110,3 +110,5 @@
   1. 移除 `main.dart:239` 的桥接包裹（保留 `UiStyleScope` / `AppEscapeScope` 层级不变）；
   2. 删除 `main.dart:238` 的 `// ignore: deprecated_member_use`；
   3. 实机复验极验弹窗 + 全量回归（analyze / test / 双编译 / 实机清单）。
+
+> **后续更新（2026-10-02，R4 摘除轮）**：本附录「维持桥接」结论已被取代——全依赖细化审计将判据更新为「运行时可达到的 SDK MaterialLocalizations / Theme 消费者为零」并确认满足（唯一调用点在 get 导航代码，项目 0 使用），桥接与 `// ignore: deprecated_member_use` 已按本清单移除。摘除记录见 [material_ui兼容桥接摘除复盘-2026-10-02.md](./material_ui兼容桥接摘除复盘-2026-10-02.md)。
