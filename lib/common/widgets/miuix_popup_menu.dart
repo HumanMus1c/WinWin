@@ -306,7 +306,7 @@ class _PopupOverlay extends StatelessWidget {
       for (var itemIdx = 0; itemIdx < entry.items.length; itemIdx++) {
         final item = entry.items[itemIdx];
         rows.add(
-          _MiuixPopupRow(
+          MiuixPopupMenuRow(
             text: item.text,
             enabled: entry.enabled && item.enabled,
             selected: item.selected,
@@ -332,9 +332,13 @@ class _PopupOverlay extends StatelessWidget {
 
 /// 弹层条目行：hover 高亮 + 按压即时反馈（替代上游"纯矩形填充、无按压
 /// 涟漪"的行渲染；上游行无任何桌面 hover/按压视觉）。
-class _MiuixPopupRow extends StatefulWidget {
-  const _MiuixPopupRow({
+///
+/// 公开供同类浮层（如视频卡片右键菜单）复用同一行交互与配色。
+class MiuixPopupMenuRow extends StatefulWidget {
+  const MiuixPopupMenuRow({
+    super.key,
     required this.text,
+    this.leading,
     required this.enabled,
     required this.selected,
     required this.textStyle,
@@ -344,6 +348,9 @@ class _MiuixPopupRow extends StatefulWidget {
   });
 
   final String text;
+
+  /// 前置图标（可选；调用方自行处理尺寸/颜色继承）。
+  final Widget? leading;
   final bool enabled;
   final bool selected;
   final TextStyle textStyle;
@@ -352,10 +359,10 @@ class _MiuixPopupRow extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_MiuixPopupRow> createState() => _MiuixPopupRowState();
+  State<MiuixPopupMenuRow> createState() => _MiuixPopupMenuRowState();
 }
 
-class _MiuixPopupRowState extends State<_MiuixPopupRow> {
+class _MiuixPopupMenuRowState extends State<MiuixPopupMenuRow> {
   bool _hovered = false;
   bool _pressed = false;
 
@@ -378,6 +385,10 @@ class _MiuixPopupRowState extends State<_MiuixPopupRow> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          if (widget.leading != null) ...[
+            widget.leading!,
+            const SizedBox(width: 10),
+          ],
           Flexible(
             child: Text(
               widget.text,

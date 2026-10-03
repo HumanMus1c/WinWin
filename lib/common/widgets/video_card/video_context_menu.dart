@@ -1,13 +1,19 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data' show Uint8List;
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
+import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
@@ -16,6 +22,9 @@ import 'package:winwin/http/video.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/ui_style.dart';
+import 'package:winwin/theme/ui_style_notifier.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/utils.dart';
 
@@ -269,6 +278,20 @@ Future<void> showVideoContextMenu({
 
   if (actions.isEmpty) return;
 
+  // Miuix 分支（阶段4c-2）：自绘浮层（MiuixOverlayPanel + 复用弹层行交互：
+  // hover / 按压 / 点击即时反馈后关闭），标题取触发控件说明「更多操作」。
+  final style =
+      InheritedUiStyle.maybeOf(context) ?? UiStyleNotifier.instance.value;
+  if (style == UiStyle.miuix) {
+    final selectedAction = await _showMiuixContextMenu(
+      context: context,
+      position: position,
+      actions: actions,
+    );
+    selectedAction?.call();
+    return;
+  }
+
   final theme = Theme.of(context);
   final cs = theme.colorScheme;
 
@@ -318,6 +341,174 @@ Future<void> showVideoContextMenu({
   );
 
   selectedAction?.call();
+}
+
+// ── Miuix 右键菜单浮层（复用共用壳与行交互） ──
+
+/// 以点击位置为锚点弹出 Miuix 右键菜单；返回所选动作（未选返回 null）。
+Future<VoidCallback?> _showMiuixContextMenu({
+  required BuildContext context,
+  required Offset position,
+  required List<VideoCustomAction> actions,
+}) {
+  final overlay = Overlay.maybeOf(context, rootOverlay: true);
+  if (overlay == null) return Future.value(null);
+
+  final completer = Completer<VoidCallback?>();
+  late OverlayEntry entry;
+  var closed = false;
+  void close(VoidCallback? result) {
+    if (closed) return;
+    closed = true;
+    entry.remove();
+    if (!completer.isCompleted) completer.complete(result);
+  }
+
+  entry = OverlayEntry(
+    builder: (_) => _MiuixContextMenuOverlay(
+      position: position,
+      actions: actions,
+      onDismiss: () => close(null),
+      onSelect: (action) {
+        // 点击先即时反馈（行按压态），130ms 后关闭并回调所选动作。
+        Future.delayed(const Duration(milliseconds: 130), () => close(action));
+      },
+    ),
+  );
+  overlay.insert(entry);
+  return completer.future;
+}
+
+class _MiuixContextMenuOverlay extends StatefulWidget {
+  const _MiuixContextMenuOverlay({
+    required this.position,
+    required this.actions,
+    required this.onDismiss,
+    required this.onSelect,
+  });
+
+  final Offset position;
+  final List<VideoCustomAction> actions;
+  final VoidCallback onDismiss;
+  final ValueChanged<VoidCallback> onSelect;
+
+  @override
+  State<_MiuixContextMenuOverlay> createState() =>
+      _MiuixContextMenuOverlayState();
+}
+
+class _MiuixContextMenuOverlayState extends State<_MiuixContextMenuOverlay>
+    with SingleTickerProviderStateMixin {
+  VoidCallback? _escUnregister;
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _escUnregister = EscapeLayerRegistry.instance.register(() {
+      widget.onDismiss();
+      return true;
+    });
+    _anim.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _escUnregister?.call();
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final baseColors = MiuixDropdownDefaults.dropdownColors(context);
+    final contentColor = baseColors.contentColor;
+    final selectedContentColor = baseColors.selectedContentColor;
+    // 文本基底（覆写黄绿双下划线错误样式）+ 反色行配色（与弹层壳一致）。
+    final rowTextStyle =
+        (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+      decoration: TextDecoration.none,
+    );
+
+    final media = MediaQuery.of(context);
+    const gap = 4.0;
+    final width = math.min(300.0, media.size.width - 16);
+    final left = widget.position.dx
+        .clamp(8.0, math.max(8.0, media.size.width - width - 8))
+        .toDouble();
+    final top = widget.position.dy
+        .clamp(8.0, math.max(8.0, media.size.height - 160))
+        .toDouble();
+
+    final curved =
+        CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic);
+    // 对角线展开：以点击点为面板左上角（topLeft 锚点）缩放展开。
+    final panel = FadeTransition(
+      opacity: curved,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
+        alignment: Alignment.topLeft,
+        child: MiuixOverlayPanel(
+          title: '更多操作',
+          icon: Icon(
+            Icons.more_horiz,
+            size: 16,
+            color: theme.colorScheme.primary,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: math.max(120.0, media.size.height - top - 24),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final action in widget.actions)
+                    MiuixPopupMenuRow(
+                      text: action.title,
+                      leading: IconTheme(
+                        data: IconThemeData(color: contentColor, size: 16),
+                        child: action.icon,
+                      ),
+                      enabled: true,
+                      selected: false,
+                      textStyle: rowTextStyle,
+                      contentColor: contentColor,
+                      selectedContentColor: selectedContentColor,
+                      onTap: () => widget.onSelect(action.onTap),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return Stack(
+      children: [
+        // 点击外部关闭。
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onDismiss,
+            child: const SizedBox.expand(),
+          ),
+        ),
+        Positioned(
+          left: left,
+          top: top + gap,
+          width: width,
+          child: panel,
+        ),
+      ],
+    );
+  }
 }
 
 /// 视频卡片三点更多按钮（对齐 PiliPlus `VideoPopupMenu`）。
