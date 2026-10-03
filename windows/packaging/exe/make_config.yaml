@@ -1,0 +1,13 @@
+script_template: inno_setup.iss
+# AppId 的值唯一标识此应用。不要与其它应用共用。
+app_id: 3fe5183b-52ed-475b-9327-9cac067b7969
+publisher: HumanMus1c
+publisher_url: https://github.com/HumanMus1c/WinWin
+display_name: WinWin
+# See: https://jrsoftware.org/ishelp/index.php?topic=setup_defaultdirname
+# install_dir_name: "C:\\WinWin"
+setup_icon_file: windows\runner\resources\app_icon.ico
+locales:
+  - en
+  - zh
+privileges_required: admin

@@ -1,0 +1,102 @@
+name: Release
+
+# 适配自上游工作流：
+#   PiliPlus  build.yml / win_x64.yml —— fastforge + Inno Setup 安装器、产物命名、softprops 发布
+#   BiliPai   Build.yml —— SHA-256 校验和证据、草稿→发布两段式
+# 安装器资产移植自 PiliPlus windows/packaging/exe/（make_config.yaml / inno_setup.iss / ChineseSimplified.isl）
+# 签名：与上游 PiliPlus 一致，本项目不进行代码签名（见 docs/Windows安装器与代码签名评估-2026-10-04.md）
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "发布标签（如 v1.0.0；留空则仅构建产物、不发布）"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    name: Windows 发布构建（Release）
+    runs-on: windows-latest
+    steps:
+      - name: 代码迁出
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.0"
+          cache: true
+
+      - name: 拉取依赖
+        run: flutter pub get
+
+      - name: 读取版本号
+        shell: pwsh
+        run: |
+          $line = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+          echo "app_version=$($line.Split('+')[0])" >> $env:GITHUB_ENV
+
+      - name: 安装 Inno Setup 与 fastforge
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          dart pub global activate fastforge
+          echo "$env:LOCALAPPDATA\Pub\Cache\bin" >> $env:GITHUB_PATH
+
+      - name: 复制 Inno Setup 中文语言文件
+        shell: pwsh
+        run: |
+          Copy-Item "windows/packaging/exe/ChineseSimplified.isl" "C:\Program Files (x86)\Inno Setup 6\Languages\ChineseSimplified.isl"
+
+      - name: 构建与打包安装器（fastforge：exe）
+        run: |
+          fastforge package --platform windows --targets exe --flutter-build-args="no-pub" --skip-clean
+
+      - name: 整理产物（安装器 + 便携包）
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "WinWin-Setup" | Out-Null
+          $setup = Get-ChildItem -Path dist -Recurse -Filter *.exe | Select-Object -First 1
+          Move-Item $setup.FullName "WinWin-Setup\WinWin_windows_${{ env.app_version }}_x64_setup.exe" -Force
+          Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath "WinWin_windows_${{ env.app_version }}_x64_portable.zip"
+
+      - name: 生成校验和
+        shell: pwsh
+        run: |
+          Get-FileHash -Algorithm SHA256 "WinWin_windows_*.zip","WinWin-Setup\WinWin_windows_*.exe" |
+            ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path -Leaf $_.Path)" } |
+            Set-Content -Encoding ascii checksums.txt
+          Get-Content checksums.txt
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          name: Windows-x64-release
+          path: |
+            WinWin_windows_*.zip
+            WinWin-Setup/WinWin_windows_*.exe
+            checksums.txt
+
+      - name: 发布（草稿）
+        if: ${{ github.ref_type == 'tag' || github.event.inputs.tag != '' }}
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
+          draft: true
+          generate_release_notes: true
+          files: |
+            WinWin_windows_*.zip
+            WinWin-Setup/WinWin_windows_*.exe
+            checksums.txt

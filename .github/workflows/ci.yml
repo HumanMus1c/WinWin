@@ -1,0 +1,82 @@
+name: CI
+
+# 适配自上游工作流：
+#   PiliPlus  build.yml / win_x64.yml —— 构建、产物命名与上传范式
+#   BiliPai   PerfGuard.yml / Build.yml —— PR 质量门禁、concurrency、证据留存
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: 质量门禁（analyze + test）
+    runs-on: windows-latest
+    steps:
+      - name: 代码迁出
+        uses: actions/checkout@v7
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.0"
+          cache: true
+
+      - name: 拉取依赖
+        run: flutter pub get
+
+      - name: 静态分析
+        # --no-fatal-infos：耐受仓库既有 6 条 info 级 lint（待后续清理）；warning / error 仍视为失败
+        run: flutter analyze --no-fatal-infos
+
+      - name: 单元测试
+        run: flutter test
+
+  build-debug:
+    name: Windows 构建（Debug）
+    runs-on: windows-latest
+    needs: quality
+    steps:
+      - name: 代码迁出
+        uses: actions/checkout@v7
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.0"
+          cache: true
+
+      - name: 拉取依赖
+        run: flutter pub get
+
+      - name: 构建 Windows（Debug）
+        run: flutter build windows --debug
+
+      - name: 读取版本号
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+          echo "app_version=$v" >> $env:GITHUB_ENV
+
+      - name: 压缩打包
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "build/windows/x64/runner/Debug/*" -DestinationPath "WinWin_windows_x64_debug_${{ env.app_version }}.zip"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          name: Windows-x64-debug
+          path: WinWin_windows_x64_debug_*.zip
+          retention-days: 7
