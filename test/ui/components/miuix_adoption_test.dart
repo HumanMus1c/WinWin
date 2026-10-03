@@ -608,6 +608,8 @@ void main() {
 
       await tester.tap(find.text('选项甲'));
       await tester.pump();
+      // 点击先即时反馈、130ms 后收起（复测反馈：先变化再关闭）。
+      await tester.pump(const Duration(milliseconds: 200));
       await tester.pumpAndSettle();
 
       expect(clicked, isTrue);

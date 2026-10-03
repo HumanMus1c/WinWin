@@ -21,8 +21,10 @@ import 'package:material_ui/material_ui.dart' show MaterialUiCompatibilityBridge
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/theme/colors.dart';
 
-/// 半透明表面统一不透明度（Toast / 菜单弹层等共用；集中调整点）。
-const double kMiuixSurfaceAlpha = 0.88;
+/// 半透明表面统一不透明度（Toast / 菜单弹层 / 毛玻璃面板共用；集中调整点）。
+///
+/// 取值为替换前播放器二级弹层的既有半透明程度（0xD9 ≈ 0.85）。
+const double kMiuixSurfaceAlpha = 0.85;
 
 /// 浅色桥接配色（字段映射说明见文件头注释）。
 MiuixColors miuixBridgeLightColors() => lightColorScheme().copy(

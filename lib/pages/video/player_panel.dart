@@ -1365,6 +1365,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ],
               ),
             ],
+            itemTextStyle: const TextStyle(fontSize: 12),
             child: Tooltip(
               message: '画质',
               child: HoverContainer(
@@ -1610,6 +1611,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ],
               ),
             ],
+            itemTextStyle: const TextStyle(fontSize: 12),
             child: Tooltip(
               message: '音频设置',
               child: HoverContainer(
@@ -2299,6 +2301,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ],
               ),
             ],
+            itemTextStyle: const TextStyle(fontSize: 12),
             child: Tooltip(
               message: '倍速',
               child: HoverContainer(

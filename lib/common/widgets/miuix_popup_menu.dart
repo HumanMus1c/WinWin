@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 
 /// 自研 Miuix 弹层菜单壳（阶段4h）。
@@ -26,6 +27,7 @@ class MiuixPopupMenu extends StatefulWidget {
     required this.entries,
     required this.child,
     this.maxHeight = 420,
+    this.itemTextStyle,
   });
 
   final List<MiuixDropdownEntry> entries;
@@ -34,6 +36,10 @@ class MiuixPopupMenu extends StatefulWidget {
   final Widget child;
 
   final double maxHeight;
+
+  /// 条目文本样式（仅覆盖给定字段，其余继承面板基底）——用于继承触发
+  /// 控件的字号，避免弹层与触发控件割裂（如播放器控制条 12px）。
+  final TextStyle? itemTextStyle;
 
   @override
   State<MiuixPopupMenu> createState() => _MiuixPopupMenuState();
@@ -69,6 +75,7 @@ class _MiuixPopupMenuState extends State<MiuixPopupMenu>
         triggerRect: triggerRect,
         maxHeight: widget.maxHeight,
         entries: widget.entries,
+        itemTextStyle: widget.itemTextStyle,
         animation: _anim,
         focusNode: _focusNode,
         onDismiss: _close,
@@ -89,9 +96,16 @@ class _MiuixPopupMenuState extends State<MiuixPopupMenu>
 
   void _handleSelect(int entryIdx, int itemIdx) {
     final entry = widget.entries.elementAtOrNull(entryIdx);
-    entry?.items.elementAtOrNull(itemIdx)?.onClick?.call();
-    // 单组：选择即收起；多组（如音轨）保持展开，与上游行为一致。
-    if (widget.entries.length <= 1) _close();
+    final item = entry?.items.elementAtOrNull(itemIdx);
+    if (item == null) return;
+    item.onClick?.call();
+    // 单组：点击先产生即时视觉反馈（按压/选中变化），随后延迟收起；
+    // 多组（如音轨）保持展开，与上游行为一致。
+    if (widget.entries.length <= 1) {
+      Future.delayed(const Duration(milliseconds: 130), () {
+        if (_entry != null) _close();
+      });
+    }
   }
 
   @override
@@ -109,6 +123,7 @@ class _PopupOverlay extends StatelessWidget {
     required this.triggerRect,
     required this.maxHeight,
     required this.entries,
+    required this.itemTextStyle,
     required this.animation,
     required this.focusNode,
     required this.onDismiss,
@@ -118,6 +133,7 @@ class _PopupOverlay extends StatelessWidget {
   final Rect triggerRect;
   final double maxHeight;
   final List<MiuixDropdownEntry> entries;
+  final TextStyle? itemTextStyle;
   final Animation<double> animation;
   final FocusNode focusNode;
   final VoidCallback onDismiss;
@@ -127,24 +143,18 @@ class _PopupOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final muiColors = MiuixTheme.of(context).colors;
-    // 行底透明：让面板半透明底色透出（复测反馈：行背景遮挡了面板半透明）。
     final baseColors = MiuixDropdownDefaults.dropdownColors(context);
-    final rowColors = MiuixDropdownColors(
-      contentColor: baseColors.contentColor,
-      summaryColor: baseColors.summaryColor,
-      containerColor: Colors.transparent,
-      selectedContentColor: baseColors.selectedContentColor,
-      selectedSummaryColor: baseColors.selectedSummaryColor,
-      selectedContainerColor:
-          baseColors.selectedContainerColor.withValues(alpha: 0.60),
-      selectedIndicatorColor: baseColors.selectedIndicatorColor,
-    );
+    final contentColor = baseColors.contentColor;
+    final selectedContentColor = baseColors.selectedContentColor;
     // 文本基底：覆写 WidgetsApp 的默认"黄绿双下划线"错误样式
     // （浮层无 Material/DefaultTextStyle 时 Text 合并到该样式）。
     final bodyStyle =
         (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).copyWith(
       decoration: TextDecoration.none,
     );
+    // 条目字号继承触发控件（如播放器控制条 12px），避免弹层与其割裂。
+    final rowTextStyle =
+        itemTextStyle == null ? bodyStyle : bodyStyle.merge(itemTextStyle);
 
     const gap = 6.0;
     const screenInset = 12.0;
@@ -195,10 +205,15 @@ class _PopupOverlay extends StatelessWidget {
                     constraints: BoxConstraints(maxHeight: panelMaxHeight),
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: MiuixDropdownEntriesPopupContent(
-                        entries: entries,
-                        dropdownColors: rowColors,
-                        onItemClick: onSelect,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: _buildRows(
+                          context,
+                          rowTextStyle: rowTextStyle,
+                          contentColor: contentColor,
+                          selectedContentColor: selectedContentColor,
+                        ),
                       ),
                     ),
                   ),
@@ -239,6 +254,130 @@ class _PopupOverlay extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  List<Widget> _buildRows(
+    BuildContext context, {
+    required TextStyle rowTextStyle,
+    required Color contentColor,
+    required Color selectedContentColor,
+  }) {
+    final rows = <Widget>[];
+    for (var entryIdx = 0; entryIdx < entries.length; entryIdx++) {
+      final entry = entries[entryIdx];
+      for (var itemIdx = 0; itemIdx < entry.items.length; itemIdx++) {
+        final item = entry.items[itemIdx];
+        rows.add(
+          _MiuixPopupRow(
+            text: item.text,
+            enabled: entry.enabled && item.enabled,
+            selected: item.selected,
+            textStyle: rowTextStyle,
+            contentColor: contentColor,
+            selectedContentColor: selectedContentColor,
+            onTap: () => onSelect(entryIdx, itemIdx),
+          ),
+        );
+      }
+      if (entryIdx != entries.length - 1) {
+        rows.add(
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: MiuixHorizontalDivider(thickness: 1.5),
+          ),
+        );
+      }
+    }
+    return rows;
+  }
+}
+
+/// 弹层条目行：hover 高亮 + 按压即时反馈（替代上游"纯矩形填充、无按压
+/// 涟漪"的行渲染；上游行无任何桌面 hover/按压视觉）。
+class _MiuixPopupRow extends StatefulWidget {
+  const _MiuixPopupRow({
+    required this.text,
+    required this.enabled,
+    required this.selected,
+    required this.textStyle,
+    required this.contentColor,
+    required this.selectedContentColor,
+    required this.onTap,
+  });
+
+  final String text;
+  final bool enabled;
+  final bool selected;
+  final TextStyle textStyle;
+  final Color contentColor;
+  final Color selectedContentColor;
+  final VoidCallback onTap;
+
+  @override
+  State<_MiuixPopupRow> createState() => _MiuixPopupRowState();
+}
+
+class _MiuixPopupRowState extends State<_MiuixPopupRow> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = !widget.enabled
+        ? widget.contentColor.withValues(alpha: 0.45)
+        : (widget.selected ? widget.selectedContentColor : widget.contentColor);
+    // hover 8% / 按压 14%（在内容色上叠透明层，明暗主题自适应）。
+    final highlight = _pressed ? 0.14 : (_hovered ? 0.08 : 0.0);
+
+    final row = Container(
+      margin: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: widget.contentColor.withValues(alpha: highlight),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Flexible(
+            child: Text(
+              widget.text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: widget.textStyle.copyWith(color: textColor),
+            ),
+          ),
+          if (widget.selected) ...[
+            const SizedBox(width: 12),
+            AppIcon(
+              AppIcons.check(context),
+              size: 18,
+              color: widget.selectedContentColor,
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (!widget.enabled) return row;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() {
+        _hovered = false;
+        _pressed = false;
+      }),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        child: row,
+      ),
     );
   }
 }
