@@ -7,6 +7,7 @@ import 'package:winwin/models/common/audio_normalization.dart';
 import 'package:winwin/models/common/cdn_type.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
+import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 
 /// 音视频设置项列表。
 ///
@@ -153,7 +154,7 @@ List<SettingsModel> get videoSettings => [
         onTap: (context, setState) async {
           final res = await showDialog<double>(
             context: context,
-            builder: (context) => _BufferSliderDialog(
+            builder: (context) => AppSliderDialog(
               title: '缓冲大小',
               value: Pref.bufferSize,
               min: 1,
@@ -175,7 +176,7 @@ List<SettingsModel> get videoSettings => [
         onTap: (context, setState) async {
           final res = await showDialog<double>(
             context: context,
-            builder: (context) => _BufferSliderDialog(
+            builder: (context) => AppSliderDialog(
               title: '缓冲时长',
               value: Pref.bufferSec,
               min: 4,
@@ -236,69 +237,4 @@ String _audioQualityDesc(int code) {
     if (c == code) return desc;
   }
   return '未知 ($code)';
-}
-
-/// 缓冲滑块对话框。
-class _BufferSliderDialog extends StatefulWidget {
-  final String title;
-  final double value;
-  final double min;
-  final double max;
-  final int divisions;
-  final String suffix;
-
-  const _BufferSliderDialog({
-    required this.title,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.divisions,
-    this.suffix = '',
-  });
-
-  @override
-  State<_BufferSliderDialog> createState() => _BufferSliderDialogState();
-}
-
-class _BufferSliderDialogState extends State<_BufferSliderDialog> {
-  late double _value;
-
-  @override
-  void initState() {
-    super.initState();
-    _value = widget.value;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '${_value.toStringAsFixed(_value == _value.roundToDouble() ? 0 : 1)}${widget.suffix}',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          Slider(
-            value: _value,
-            min: widget.min,
-            max: widget.max,
-            divisions: widget.divisions,
-            onChanged: (v) => setState(() => _value = v),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, _value),
-          child: const Text('确定'),
-        ),
-      ],
-    );
-  }
 }

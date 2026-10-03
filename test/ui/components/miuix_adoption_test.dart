@@ -6,6 +6,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
+import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
@@ -311,6 +312,126 @@ void main() {
             .isRefreshing,
         isFalse,
       );
+    });
+
+    testWidgets('AppRefreshIndicator：下拉越界可触发刷新（Clamping 修复回归）', (tester) async {
+      var called = 0;
+      final completer = Completer<void>();
+      await tester.pumpWidget(
+        wrapMiuix(
+          SizedBox(
+            height: 400,
+            child: AppRefreshIndicator(
+              onRefresh: () {
+                called++;
+                return completer.future;
+              },
+              child: ListView(
+                children: const [SizedBox(height: 800, child: Text('长内容'))],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // 下拉越过阈值松手：修复后（Clamping 物理派发 OverscrollNotification）
+      // 应触发 onRefresh。说明：onRefresh 在松手回弹弹簧（约 0.4s）结束后调用，
+      // 动画需多帧推进（单次长泵不足以完成弹簧评估），故分级泵送。
+      await tester.drag(find.byType(ListView), const Offset(0, 400));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(seconds: 1));
+      expect(called, greaterThanOrEqualTo(1));
+      expect(
+        tester
+            .widget<MiuixPullToRefresh>(find.byType(MiuixPullToRefresh))
+            .isRefreshing,
+        isTrue,
+      );
+
+      completer.complete();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('MiuixSlider：宽松宽度语境（Column）下需显式撑满才可见', (tester) async {
+      double? changed;
+      await tester.pumpWidget(
+        wrapMiuix(
+          SizedBox(
+            width: 400,
+            height: 120,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 与面板 _SliderRow 相同的用法：宽松宽度下必须显式撑满，
+                // 否则内部 CustomPaint 坍缩为 0 宽（滑块"缺失"根因）。
+                SizedBox(
+                  width: double.infinity,
+                  child: MiuixSlider(
+                    value: 0.2,
+                    onValueChanged: (v) => changed = v,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final size = tester.getSize(find.byType(MiuixSlider));
+      expect(size.width, greaterThan(0));
+      expect(size.height, greaterThan(0));
+
+      await tester.drag(find.byType(MiuixSlider), const Offset(160, 0));
+      await tester.pumpAndSettle();
+      expect(changed, isNotNull);
+      expect(changed!, greaterThan(0.2));
+    });
+
+    testWidgets('AppSliderDialog：miuix 渲染 MiuixSlider 且确定返回当前值', (tester) async {
+      double? result;
+      // 宿主复刻 main.dart：UiStyleScope 包在 MaterialApp 外层，
+      // 使 showDialog 路由（Navigator 层级）同样取到 miuix 风格。
+      await tester.pumpWidget(
+        UiStyleScope(
+          style: UiStyle.miuix,
+          child: MaterialApp(
+            home: MiuixThemeScope(
+              isDark: false,
+              child: Builder(
+                builder: (context) => Center(
+                  child: TextButton(
+                    onPressed: () async {
+                      result = await showDialog<double>(
+                        context: context,
+                        builder: (_) => const AppSliderDialog(
+                          title: '字体大小',
+                          value: 1.0,
+                          min: 0.8,
+                          max: 1.4,
+                          divisions: 12,
+                          suffix: 'x',
+                          decimals: 2,
+                        ),
+                      );
+                    },
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MiuixSlider), findsOneWidget);
+      expect(find.text('1.00x'), findsOneWidget);
+
+      await tester.tap(find.text('确定'));
+      await tester.pumpAndSettle();
+      expect(result, 1.0);
     });
   });
 }

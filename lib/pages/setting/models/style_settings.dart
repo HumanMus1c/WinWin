@@ -1,13 +1,19 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/theme_notifier.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
+import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/theme/app_font_notifier.dart';
+import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/system_font_scanner.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/theme/ui_style_notifier.dart';
@@ -96,13 +102,14 @@ List<SettingsModel> get styleSettings => [
               defaultValue: 1.0) as double;
           final res = await showDialog<double>(
             context: context,
-            builder: (context) => _SliderDialog(
+            builder: (context) => AppSliderDialog(
               title: '字体大小',
               value: current,
               min: 0.8,
               max: 1.4,
               divisions: 12,
               suffix: 'x',
+              decimals: 2,
             ),
           );
           if (res != null) {
@@ -126,13 +133,14 @@ List<SettingsModel> get styleSettings => [
               defaultValue: 1.0) as double;
           final res = await showDialog<double>(
             context: context,
-            builder: (context) => _SliderDialog(
+            builder: (context) => AppSliderDialog(
               title: '界面缩放',
               value: current,
               min: 0.8,
               max: 1.5,
               divisions: 14,
               suffix: 'x',
+              decimals: 2,
             ),
           );
           if (res != null) {
@@ -172,71 +180,6 @@ List<SettingsModel> get styleSettings => [
         defaultVal: false,
       ),
     ];
-
-/// 滑块对话框（内联实现，避免单独文件）。
-class _SliderDialog extends StatefulWidget {
-  final String title;
-  final double value;
-  final double min;
-  final double max;
-  final int divisions;
-  final String suffix;
-
-  const _SliderDialog({
-    required this.title,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.divisions,
-    this.suffix = '',
-  });
-
-  @override
-  State<_SliderDialog> createState() => _SliderDialogState();
-}
-
-class _SliderDialogState extends State<_SliderDialog> {
-  late double _value;
-
-  @override
-  void initState() {
-    super.initState();
-    _value = widget.value;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '${_value.toStringAsFixed(2)}${widget.suffix}',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          Slider(
-            value: _value,
-            min: widget.min,
-            max: widget.max,
-            divisions: widget.divisions,
-            onChanged: (v) => setState(() => _value = v),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, _value),
-          child: const Text('确定'),
-        ),
-      ],
-    );
-  }
-}
 
 /// 字体选择对话框。
 ///
@@ -313,6 +256,12 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
     );
     final notifier = AppFontNotifier.instance;
     final hasCustom = notifier.isCustomFont;
+
+    // Miuix 分支（阶段3 修复轮）：MiuixDialogShell + Miuix 单选行 + 原生
+    // 搜索框；文本样式锁定默认（隔离全局字体变更），行内字体预览样式保留。
+    if (InheritedUiStyle.of(context) == UiStyle.miuix) {
+      return _buildMiuixDialog(context, notifier, hasCustom);
+    }
 
     return Theme(
       data: isolatedTheme,
@@ -446,6 +395,184 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Miuix 版字体选择弹窗（阶段3 修复轮：替换旧版 MD3 AlertDialog 外观）。
+  Widget _buildMiuixDialog(
+    BuildContext context,
+    AppFontNotifier notifier,
+    bool hasCustom,
+  ) {
+    return MiuixTheme(
+      data: MiuixTheme.of(context).copyWith(textStyles: defaultTextStyles()),
+      child: MiuixDialogShell(
+        constraints: const BoxConstraints(maxWidth: 460, maxHeight: 640),
+        child: SizedBox(
+          width: 460,
+          height: 520,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Style.lg,
+                  Style.sm,
+                  Style.sm,
+                  0,
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      '应用字体',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: AppIcon(AppIcons.clear(context)),
+                      tooltip: '关闭',
+                      onPressed: () {
+                        widget.setState();
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Style.lg),
+                child: MiuixTextField(
+                  controller: _searchController,
+                  onChanged: _onSearch,
+                  label: '搜索字体…',
+                  useLabelAsPlaceholder: true,
+                  leadingIcon: AppIcon(AppIcons.search(context), size: 20),
+                ),
+              ),
+              const SizedBox(height: Style.sm),
+              Expanded(
+                child: _scanning
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView(
+                        children: [
+                          for (final font in _filteredFonts)
+                            _miuixFontRow(
+                              context,
+                              family: font.family,
+                              title:
+                                  font.family == AppFontNotifier.windowsDefault
+                                      ? '${font.label}（Windows 默认）'
+                                      : font.label,
+                              subtitle: font.label != font.family
+                                  ? font.family
+                                  : null,
+                              titleFontFamily: font.actualFamily,
+                              titleWeight: font.weight,
+                              titleItalic: font.isItalic,
+                            ),
+                          if (hasCustom)
+                            _miuixFontRow(
+                              context,
+                              family: AppFontNotifier.customFontFamily,
+                              title: '自定义字体（已导入）',
+                              subtitle: '点击「恢复默认」可移除',
+                            ),
+                        ],
+                      ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Style.lg,
+                  vertical: Style.sm,
+                ),
+                child: Row(
+                  children: [
+                    MiuixButton(
+                      onPressed: _importing ? null : _importFont,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _importing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : AppIcon(Icons.file_upload_outlined, size: 18),
+                          const SizedBox(width: 6),
+                          Text(_importing ? '导入中…' : '导入字体文件'),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    if (hasCustom)
+                      MiuixButton(
+                        onPressed: () async {
+                          await notifier.clearCustomFont();
+                          setState(() => _selected = notifier.value);
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AppIcon(Icons.restore, size: 18),
+                            const SizedBox(width: 6),
+                            const Text('恢复默认'),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Miuix 版字体行：单选按钮 + 字体预览标题（保留各字体自身字形）。
+  Widget _miuixFontRow(
+    BuildContext context, {
+    required String family,
+    required String title,
+    String? subtitle,
+    String? titleFontFamily,
+    FontWeight? titleWeight,
+    bool titleItalic = false,
+  }) {
+    Future<void> select() async {
+      await AppFontNotifier.instance.setFontFamily(family);
+      if (mounted) setState(() => _selected = family);
+    }
+
+    return MiuixBasicComponent(
+      startAction: MiuixRadioButton(
+        selected: _selected == family,
+        onChanged: (_) => select(),
+      ),
+      content: [
+        Text(
+          title,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: titleFontFamily,
+            fontWeight: titleWeight,
+            fontStyle: titleItalic ? FontStyle.italic : FontStyle.normal,
+          ),
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+        ],
+      ],
+      insideMargin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      onClick: select,
     );
   }
 

@@ -455,13 +455,19 @@ class _SliderRow extends StatelessWidget {
             ],
           ),
           if (isMiuix)
-            MiuixSlider(
-              value: value.clamp(min, max),
-              min: min,
-              max: max,
-              steps: divisions > 1 ? divisions - 1 : 0,
-              onValueChanged: onChanged,
-              onValueChangeFinished: () => onChangeEnd(value.clamp(min, max)),
+            // MiuixSlider 内部 CustomPaint 不撑宽：宽松约束（如本行 Column）
+            // 下必须显式撑满，否则坍缩为 0 宽不可见（阶段3d 回归修复）。
+            SizedBox(
+              width: double.infinity,
+              child: MiuixSlider(
+                value: value.clamp(min, max),
+                min: min,
+                max: max,
+                steps: divisions > 1 ? divisions - 1 : 0,
+                onValueChanged: onChanged,
+                onValueChangeFinished: () =>
+                    onChangeEnd(value.clamp(min, max)),
+              ),
             )
           else
             Slider(

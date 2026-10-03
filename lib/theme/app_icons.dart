@@ -632,7 +632,8 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
   CupertinoIcons.chevron_forward:
       MiuixIcons.extended.byName('chevronForward')!,
   CupertinoIcons.search: MiuixIcons.extended.byName('search')!,
-  CupertinoIcons.clear: MiuixIcons.extended.byName('clear')!,
+  // 关闭/清除语义使用基础集 close（描边 X，符合弹窗关闭直觉）。
+  CupertinoIcons.clear: MiuixIcons.basic.close,
   CupertinoIcons.ellipsis: MiuixIcons.extended.byName('more')!,
   CupertinoIcons.settings: MiuixIcons.extended.byName('settings')!,
   CupertinoIcons.refresh: MiuixIcons.extended.byName('refresh')!,
