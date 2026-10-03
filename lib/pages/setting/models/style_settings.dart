@@ -445,6 +445,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                   onChanged: _onSearch,
                   label: '搜索字体…',
                   useLabelAsPlaceholder: true,
+                  singleLine: true,
                   leadingIcon: AppIcon(AppIcons.search(context), size: 20),
                 ),
               ),

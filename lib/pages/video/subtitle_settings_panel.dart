@@ -287,51 +287,25 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                 _put(SettingBoxKey.subtitlePaddingB, 24);
               },
             ),
-            // 字重选择
-            if (isMiuix)
-              MiuixWindowDropdownPreference(
-                title: '字重',
-                items: [
-                  for (var i = 0; i < 9; i++) 'w${(i + 1) * 100}',
-                ],
-                selectedIndex: _fontWeight.clamp(0, 8),
-                onSelectedIndexChange: (v) {
-                  setState(() => _fontWeight = v);
-                  _put(SettingBoxKey.subtitleFontWeight, v);
-                },
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: Style.xs),
-                child: Row(
-                  children: [
-                    Text('字重', style: theme.textTheme.bodyMedium),
-                    const Spacer(),
-                    DropdownMenu<int>(
-                      width: 116,
-                      requestFocusOnTap: false,
-                      initialSelection: _fontWeight,
-                      textStyle: theme.textTheme.bodyMedium,
-                      inputDecorationTheme: const InputDecorationTheme(
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                      dropdownMenuEntries: [
-                        for (var i = 0; i < 9; i++)
-                          DropdownMenuEntry(value: i, label: 'w${(i + 1) * 100}'),
-                      ],
-                      onSelected: (v) {
-                        if (v == null) return;
-                        setState(() => _fontWeight = v);
-                        _put(SettingBoxKey.subtitleFontWeight, v);
-                      },
-                    ),
-                  ],
-                ),
+            // 字重（slider：100–900，步进 100；存储仍为 0..8 索引）
+            _SliderRow(
+              label: '字重',
+              value: (_fontWeight.clamp(0, 8) + 1) * 100.0,
+              min: 100,
+              max: 900,
+              divisions: 8,
+              valueLabel: 'w${(_fontWeight.clamp(0, 8) + 1) * 100}',
+              onChanged: (v) =>
+                  setState(() => _fontWeight = (v / 100).round() - 1),
+              onChangeEnd: (v) => _put(
+                SettingBoxKey.subtitleFontWeight,
+                (v / 100).round() - 1,
               ),
+              onReset: () {
+                setState(() => _fontWeight = 5);
+                _put(SettingBoxKey.subtitleFontWeight, 5);
+              },
+            ),
           ],
         );
       },

@@ -270,51 +270,23 @@ void main() {
   });
 
   group('Miuix 刷新（阶段3d）', () {
-    testWidgets('AppRefreshIndicator：渲染 MiuixPullToRefresh 且刷新状态闭环', (tester) async {
-      final completer = Completer<void>();
+    testWidgets('AppRefreshIndicator：miuix 渲染 RefreshIndicator（原视觉回退）', (tester) async {
       await tester.pumpWidget(
         wrapMiuix(
           SizedBox(
             height: 400,
             child: AppRefreshIndicator(
-              onRefresh: () => completer.future,
+              onRefresh: () async {},
               child: ListView(children: const [Text('内容')]),
             ),
           ),
         ),
       );
-
-      expect(find.byType(MiuixPullToRefresh), findsOneWidget);
-      expect(
-        tester
-            .widget<MiuixPullToRefresh>(find.byType(MiuixPullToRefresh))
-            .isRefreshing,
-        isFalse,
-      );
-
-      // 等效「越过阈值松手」：触发 onRefresh → isRefreshing 置真并等待 Future。
-      tester
-          .widget<MiuixPullToRefresh>(find.byType(MiuixPullToRefresh))
-          .onRefresh();
-      await tester.pump();
-      expect(
-        tester
-            .widget<MiuixPullToRefresh>(find.byType(MiuixPullToRefresh))
-            .isRefreshing,
-        isTrue,
-      );
-
-      completer.complete();
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<MiuixPullToRefresh>(find.byType(MiuixPullToRefresh))
-            .isRefreshing,
-        isFalse,
-      );
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+      expect(find.byType(MiuixPullToRefresh), findsNothing);
     });
 
-    testWidgets('AppRefreshIndicator：下拉越界可触发刷新（Clamping 修复回归）', (tester) async {
+    testWidgets('AppRefreshIndicator：下拉可触发 onRefresh（原视觉下功能保持）', (tester) async {
       var called = 0;
       final completer = Completer<void>();
       await tester.pumpWidget(
@@ -334,20 +306,10 @@ void main() {
         ),
       );
 
-      // 下拉越过阈值松手：修复后（Clamping 物理派发 OverscrollNotification）
-      // 应触发 onRefresh。说明：onRefresh 在松手回弹弹簧（约 0.4s）结束后调用，
-      // 动画需多帧推进（单次长泵不足以完成弹簧评估），故分级泵送。
-      await tester.drag(find.byType(ListView), const Offset(0, 400));
+      await tester.drag(find.byType(ListView), const Offset(0, 300));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(seconds: 1));
       expect(called, greaterThanOrEqualTo(1));
-      expect(
-        tester
-            .widget<MiuixPullToRefresh>(find.byType(MiuixPullToRefresh))
-            .isRefreshing,
-        isTrue,
-      );
 
       completer.complete();
       await tester.pumpAndSettle();
