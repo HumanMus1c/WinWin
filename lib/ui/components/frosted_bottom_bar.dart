@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
@@ -126,14 +127,36 @@ class NavDestinationIcon extends StatelessWidget {
     );
 
     if (destination.page == AppPage.whisper) {
+      final isMiuix = style == UiStyle.miuix;
       return ListenableBuilder(
         listenable: MsgUnreadService(),
         builder: (context, _) {
           final unreadCount = MsgUnreadService().totalInteractiveUnread;
+          final label = unreadCount > 99 ? '99+' : unreadCount.toString();
+
+          // Miuix 分支（阶段3b）：原生 BadgedBox + Badge（error 容器 /
+          // onError 内容色取自桥接主题）。
+          if (isMiuix) {
+            if (unreadCount <= 0) return baseIcon;
+            return MiuixBadgedBox(
+              badge: MiuixBadge(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: cs.onError,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              child: baseIcon,
+            );
+          }
+
           return Badge(
             isLabelVisible: unreadCount > 0,
             label: Text(
-              unreadCount > 99 ? '99+' : unreadCount.toString(),
+              label,
               style: const TextStyle(
                 fontSize: 10,
                 color: Colors.white,
