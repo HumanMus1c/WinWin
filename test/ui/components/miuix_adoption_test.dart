@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/common/widgets/medal_widget.dart';
+import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
@@ -467,26 +468,14 @@ void main() {
       expect(icon.color, iosBlue);
     });
 
-    testWidgets('Toast：miuix 卡片为 MiuixSurface（机制：宽度自适应/点击关闭）', (tester) async {
-      // 复刻生产主题链：SnackBar.width 需 behavior=floating（应用四套主题均设置）。
+    testWidgets('Toast：miuix 经 ToastHost 上浮显示 MiuixSurface 反色卡', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData(
-            snackBarTheme: const SnackBarThemeData(
-              behavior: SnackBarBehavior.floating,
-            ),
-          ),
-          home: MiuixThemeScope(
-            isDark: false,
-            child: UiStyleScope(
-              style: UiStyle.miuix,
-              child: Scaffold(
-                body: Builder(
-                  builder: (context) => TextButton(
-                    onPressed: () => showToast(context, '操作成功'),
-                    child: const Text('toast'),
-                  ),
-                ),
+        wrapMiuix(
+          MiuixToastHost(
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showToast(context, '操作成功'),
+                child: const Text('toast'),
               ),
             ),
           ),
@@ -495,57 +484,58 @@ void main() {
 
       await tester.tap(find.text('toast'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      // 不再使用 SnackBar（横向分展过渡）；改为宿主内条目卡。
+      expect(find.byType(SnackBar), findsNothing);
       expect(
         find.descendant(
-          of: find.byType(SnackBar),
+          of: find.byType(MiuixToastHost),
           matching: find.byType(MiuixSurface),
         ),
         findsOneWidget,
       );
       expect(find.text('操作成功'), findsOneWidget);
 
-      // 等自动收起，避免遗留计时器。
-      await tester.pump(const Duration(seconds: 5));
+      // 点击卡片关闭。
+      await tester.tap(find.text('操作成功'));
+      await tester.pump();
       await tester.pumpAndSettle();
-      expect(find.byType(SnackBar), findsNothing);
+      expect(find.text('操作成功'), findsNothing);
+      miuixToastRequest.value = null;
     });
 
-    testWidgets('Toast：无 context 路径（showAppSnackBar）回退 notifier 走 miuix 分支', (tester) async {
-      // 复刻生产：messenger.context 位于 builder 链之上（无 UiStyleScope
-      // 祖先），风格解析须回退 UiStyleNotifier——缺失回退时恒落 M3 分支。
+    testWidgets('Toast：无 context 路径（showAppSnackBar）经宿主走 miuix 分支', (tester) async {
+      // showAppSnackBar 无 context：miuix 路径经全局通道直达宿主，
+      // 不再依赖 ScaffoldMessenger（其 context 位于 builder 链之上）。
       UiStyleNotifier.instance.value = UiStyle.miuix;
-      addTearDown(() => UiStyleNotifier.instance.value = UiStyle.material3);
+      addTearDown(() {
+        UiStyleNotifier.instance.value = UiStyle.material3;
+        miuixToastRequest.value = null;
+      });
 
       await tester.pumpWidget(
-        MaterialApp(
-          scaffoldMessengerKey: appScaffoldMessengerKey,
-          theme: ThemeData(
-            snackBarTheme: const SnackBarThemeData(
-              behavior: SnackBarBehavior.floating,
-            ),
-          ),
-          home: const Scaffold(body: SizedBox.shrink()),
-        ),
+        wrapMiuix(MiuixToastHost(child: const SizedBox.shrink())),
       );
 
       showAppSnackBar('网络异常，请稍后重试');
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
       expect(
         find.descendant(
-          of: find.byType(SnackBar),
+          of: find.byType(MiuixToastHost),
           matching: find.byType(MiuixSurface),
         ),
         findsOneWidget,
       );
+      expect(find.text('网络异常，请稍后重试'), findsOneWidget);
 
+      // 等待自动收起（计时器归零 → 退出动画完成 → 卡片移除）。
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();
+      expect(find.byType(MiuixSurface), findsNothing);
     });
 
     testWidgets('ActionTile：miuix 按压原语为 MiuixPressable', (tester) async {
@@ -584,6 +574,44 @@ void main() {
       await tester.pump();
       expect(find.byType(MiuixPressable), findsOneWidget);
       expect(find.text('粉丝牌'), findsOneWidget);
+    });
+
+    testWidgets('MiuixPopupMenu：点开显示条目、单组选择后收起并回调', (tester) async {
+      var clicked = false;
+      await tester.pumpWidget(
+        wrapMiuix(
+          Center(
+            child: MiuixPopupMenu(
+              entries: [
+                MiuixDropdownEntry(
+                  items: [
+                    MiuixDropdownItem(
+                      text: '选项甲',
+                      onClick: () => clicked = true,
+                    ),
+                    MiuixDropdownItem(text: '选项乙'),
+                  ],
+                ),
+              ],
+              child: const Text('打开'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('打开'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('选项甲'), findsOneWidget);
+      expect(find.byType(MiuixSurface), findsOneWidget);
+
+      await tester.tap(find.text('选项甲'));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(clicked, isTrue);
+      expect(find.text('选项甲'), findsNothing);
     });
   });
 }

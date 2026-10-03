@@ -248,7 +248,7 @@ class WinWinApp extends StatelessWidget {
                       return MiuixThemeScope(
                         isDark: Theme.of(context).brightness == Brightness.dark,
                         fontFamily: fontFamily,
-                        child: base,
+                        child: MiuixToastHost(child: base),
                       );
                     },
                     home: AgreementGate(

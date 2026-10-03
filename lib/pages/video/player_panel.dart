@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
@@ -1348,10 +1349,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
         final labels = c.qualityLabels;
         final current = c.currentQualityIndex;
         if (labels.isEmpty) return const SizedBox.shrink();
-        // Miuix 分支（阶段4c）：窗口级下拉菜单（原生揭示动效 + 选中态）。
+        // Miuix 分支（阶段4h）：自研弹层壳（无回弹过渡 + 统一半透明面板）。
         // M3 分支保留原自绘深色 MenuAnchor（冻结，仅必要修复）。
         if (InheritedUiStyle.of(context) == UiStyle.miuix) {
-          return MiuixWindowIconDropdownMenu.entries(
+          return MiuixPopupMenu(
             entries: [
               MiuixDropdownEntry(
                 items: [
@@ -1364,15 +1365,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ],
               ),
             ],
-            backgroundColor: Colors.transparent,
-            minHeight: 0,
-            minWidth: 0,
-            cornerRadius: 6,
-            onExpandedChange: (open) {
-              if (open) {
-                AppLogger.w('Coverage', 'player menu quality opened');
-              }
-            },
             child: Tooltip(
               message: '画质',
               child: HoverContainer(
@@ -1571,7 +1563,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
         // Miuix 分支（阶段4c）：音轨组 + 响度均衡组（分组分隔线），
         // 选中态由组件原生渲染；M3 分支保留原深色 MenuAnchor。
         if (InheritedUiStyle.of(context) == UiStyle.miuix) {
-          return MiuixWindowIconDropdownMenu.entries(
+          return MiuixPopupMenu(
             entries: [
               if (tracks.length > 1)
                 MiuixDropdownEntry(
@@ -1618,15 +1610,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ],
               ),
             ],
-            backgroundColor: Colors.transparent,
-            minHeight: 0,
-            minWidth: 0,
-            cornerRadius: 6,
-            onExpandedChange: (open) {
-              if (open) {
-                AppLogger.w('Coverage', 'player menu audio opened');
-              }
-            },
             child: Tooltip(
               message: '音频设置',
               child: HoverContainer(
@@ -2301,9 +2284,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return ValueListenableBuilder<double>(
       valueListenable: c.playbackSpeed,
       builder: (context, speed, _) {
-        // Miuix 分支（阶段4c）：窗口级下拉菜单（原生揭示动效 + 选中态）。
+        // Miuix 分支（阶段4h）：自研弹层壳（无回弹过渡 + 统一半透明面板）。
         if (InheritedUiStyle.of(context) == UiStyle.miuix) {
-          return MiuixWindowIconDropdownMenu.entries(
+          return MiuixPopupMenu(
             entries: [
               MiuixDropdownEntry(
                 items: [
@@ -2316,15 +2299,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ],
               ),
             ],
-            backgroundColor: Colors.transparent,
-            minHeight: 0,
-            minWidth: 0,
-            cornerRadius: 6,
-            onExpandedChange: (open) {
-              if (open) {
-                AppLogger.w('Coverage', 'player menu speed opened');
-              }
-            },
             child: Tooltip(
               message: '倍速',
               child: HoverContainer(

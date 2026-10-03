@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter_miuix/miuix.dart';
@@ -16,10 +17,6 @@ final GlobalKey<ScaffoldMessengerState> appScaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
 
 /// 浮层提示卡的最大宽度（含内边距）。
-///
-/// SnackBar 未显式指定 `width` 时会占满整屏（仅留 margin），因此必须按内容
-/// 测量宽度并显式传入 `SnackBar.width`，才能得到"短内容紧凑、长内容限宽换行"
-/// 的自适应卡片。
 const double _toastMaxWidth = 400;
 
 /// 提示卡内容区水平内边距（单侧）。
@@ -28,13 +25,22 @@ const double _toastHorizontalPadding = 20;
 /// 提示卡距屏幕两侧的最小总留白（`SnackBar.width` 模式无水平 margin）。
 const double _toastScreenInset = 32;
 
-/// 显示一条浮层提示（floating · 深色反色卡）。
+/// 显示一条浮层提示。
+///
+/// **Miuix**（flutter_miuix）：经 [MiuixToastHost] 渲染——整卡上浮渐显 /
+/// 上浮渐隐；反色半透明卡（亮色主题用暗卡、暗色主题用亮卡，统一不透明度
+/// 见 [kMiuixSurfaceAlpha]）。
+/// **Material 3**：沿用 `SnackBar` 浮动卡（冻结，仅必要修复）。
 ///
 /// - 宽度自适应内容：短消息为紧凑小卡，长消息在 [_toastMaxWidth] 内换行；
-/// - 点击卡片任意处立即关闭；
-/// - 同屏仅一条：最新优先（先平滑收起上一条）；
-/// - [duration] 缺省 4s；配色 / 圆角 / 浮起位置由各主题 `snackBarTheme` 提供。
+/// - 点击卡片任意处立即关闭；同屏仅一条：最新优先。
 void showToast(BuildContext context, String message, {Duration? duration}) {
+  final style =
+      InheritedUiStyle.maybeOf(context) ?? UiStyleNotifier.instance.value;
+  if (style == UiStyle.miuix) {
+    _presentMiuixToast(message, duration);
+    return;
+  }
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (messenger == null) return;
   _presentToast(context, messenger, message, duration: duration);
@@ -42,12 +48,202 @@ void showToast(BuildContext context, String message, {Duration? duration}) {
 
 /// 显示一条应用级浮层提示（[showToast] 的无 BuildContext 版本）。
 ///
-/// 启动早期 ScaffoldMessenger 尚未挂载时静默忽略。
+/// Miuix 路径完全无 context 依赖（请求经 [miuixToastRequest] 直达宿主）；
+/// M3 路径在启动早期 ScaffoldMessenger 尚未挂载时静默忽略。
 void showAppSnackBar(String message, {Duration? duration}) {
+  if (UiStyleNotifier.instance.value == UiStyle.miuix) {
+    _presentMiuixToast(message, duration);
+    return;
+  }
   final messenger = appScaffoldMessengerKey.currentState;
   if (messenger == null) return;
   _presentToast(messenger.context, messenger, message, duration: duration);
 }
+
+// ── Miuix Toast 通道（请求 → MiuixToastHost） ──
+
+int _miuixToastSeq = 0;
+
+/// 最新一条 Miuix Toast 请求（携带自增序号以区分同文案请求）。
+final ValueNotifier<MiuixToastRequest?> miuixToastRequest =
+    ValueNotifier<MiuixToastRequest?>(null);
+
+/// 一条 Miuix Toast 请求。
+@immutable
+class MiuixToastRequest {
+  const MiuixToastRequest({
+    required this.message,
+    required this.duration,
+    required this.seq,
+  });
+
+  final String message;
+  final Duration duration;
+  final int seq;
+}
+
+void _presentMiuixToast(String message, Duration? duration) {
+  miuixToastRequest.value = MiuixToastRequest(
+    message: message,
+    duration: duration ?? const Duration(seconds: 4),
+    seq: ++_miuixToastSeq,
+  );
+}
+
+/// Miuix Toast 宿主：挂在应用根部（`MaterialApp.builder` 的 miuix 分支）。
+///
+/// 监听 [miuixToastRequest]，以"整卡上浮渐显 / 上浮渐隐"呈现（复测反馈：
+/// 替代 `SnackBar` 的横向分展过渡）；卡面为反色半透明材质，点击即关，
+/// 同屏仅一条（新请求直接替换并重新上浮）。
+class MiuixToastHost extends StatefulWidget {
+  const MiuixToastHost({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<MiuixToastHost> createState() => _MiuixToastHostState();
+}
+
+class _MiuixToastHostState extends State<MiuixToastHost>
+    with SingleTickerProviderStateMixin {
+  MiuixToastRequest? _request;
+  bool _visible = false;
+  Timer? _timer;
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+    reverseDuration: const Duration(milliseconds: 180),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    miuixToastRequest.addListener(_onRequest);
+    _anim.addStatusListener(_onStatus);
+  }
+
+  @override
+  void dispose() {
+    miuixToastRequest.removeListener(_onRequest);
+    _anim.removeStatusListener(_onStatus);
+    _timer?.cancel();
+    _anim.dispose();
+    super.dispose();
+  }
+
+  void _onStatus(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed && !_visible && mounted) {
+      setState(() => _request = null);
+    }
+  }
+
+  void _onRequest() {
+    final req = miuixToastRequest.value;
+    if (req == null || !mounted) return;
+    _timer?.cancel();
+    setState(() {
+      _request = req;
+      _visible = true;
+    });
+    _anim.forward(from: 0);
+    _timer = Timer(req.duration, _hide);
+  }
+
+  void _hide() {
+    if (!_visible) return;
+    _timer?.cancel();
+    setState(() => _visible = false);
+    _anim.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final req = _request;
+    // StackFit.expand：宿主按最大约束铺满（否则无定位子级时 Stack 收缩到
+    // 内容尺寸，定位的 Toast 卡会被绘制在命中区域之外、无法点击）。
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        widget.child,
+        if (req != null)
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 64,
+            child: Center(
+              child: _MiuixToastCard(
+                key: ValueKey(req.seq),
+                message: req.message,
+                leaving: !_visible,
+                animation: _anim,
+                onTap: _hide,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MiuixToastCard extends StatelessWidget {
+  const _MiuixToastCard({
+    super.key,
+    required this.message,
+    required this.leaving,
+    required this.animation,
+    required this.onTap,
+  });
+
+  final String message;
+  final bool leaving;
+  final Animation<double> animation;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final displayText = _breakLongSegments(message);
+    // 反色卡：亮色主题用暗卡（inverseSurface），暗色主题用亮卡；
+    // 半透明底（统一不透明度 kMiuixSurfaceAlpha）。
+    final textStyle = TextStyle(fontSize: 14, color: cs.onInverseSurface);
+    final width = _measureCardWidth(context, displayText, textStyle);
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final progress = Curves.easeOutCubic.transform(animation.value);
+        // 进入：自下而上（+24 → 0）渐显；退出：继续上浮（0 → -24）渐隐。
+        final dy = (1 - progress) * 24 * (leaving ? -1 : 1);
+        return Opacity(
+          opacity: progress.clamp(0.0, 1.0),
+          child: Transform.translate(offset: Offset(0, dy), child: child),
+        );
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: MiuixSurface(
+          cornerRadius: 16,
+          color: cs.inverseSurface.withValues(alpha: kMiuixSurfaceAlpha),
+          contentColor: cs.onInverseSurface,
+          shadowElevation: 8,
+          child: SizedBox(
+            width: width,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _toastHorizontalPadding,
+                vertical: 15,
+              ),
+              child: Text(displayText, style: textStyle),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── M3 通道（SnackBar；按冻结策略仅保留必要修复） ──
 
 void _presentToast(
   BuildContext context,
@@ -58,7 +254,12 @@ void _presentToast(
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
-      _buildToast(context, message, () => messenger.hideCurrentSnackBar(), duration: duration),
+      _buildToast(
+        context,
+        message,
+        () => messenger.hideCurrentSnackBar(),
+        duration: duration,
+      ),
     );
 }
 
@@ -70,60 +271,13 @@ SnackBar _buildToast(
   VoidCallback onDismiss, {
   Duration? duration,
 }) {
-  final displayText = _breakLongSegments(message);
   final theme = Theme.of(context);
-
-  // 风格解析：常规调用走 InheritedUiStyle；无 context 路径（showAppSnackBar
-  // 经 `messenger.context`，位于 MaterialApp.builder 链之上）取不到作用域，
-  // 回退到全局 UiStyleNotifier——此前缺失回退导致无 context 的 toast 恒落
-  // M3 分支（复测反馈：Toast 未 Miuix 化）。
-  final style =
-      InheritedUiStyle.maybeOf(context) ?? UiStyleNotifier.instance.value;
-
-  // Miuix 分支（阶段4a）：卡片材质为 flutter_miuix 的 MiuixSurface，配色取
-  // 桥接调色板（浅色 surfaceContainer 底 + onSurfaceContainer 文字——MIUI
-  // 通知条语言；暗色模式自动取对应调色板）；宽度自适应 / 点击关闭 / 单条
-  // 优先机制不变。SnackBar 本体透明，仅承载定位与生命周期。
-  if (style == UiStyle.miuix) {
-    final isDark = theme.brightness == Brightness.dark;
-    final muiColors =
-        isDark ? miuixBridgeDarkColors() : miuixBridgeLightColors();
-    final textStyle = TextStyle(
-      fontSize: 14,
-      color: muiColors.onSurfaceContainer,
-    );
-    return SnackBar(
-      width: _measureCardWidth(context, displayText, textStyle),
-      padding: EdgeInsets.zero,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      shape: const RoundedRectangleBorder(),
-      duration: duration ?? const Duration(seconds: 4),
-      content: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onDismiss,
-        child: MiuixSurface(
-          cornerRadius: 16,
-          color: muiColors.surfaceContainer,
-          contentColor: muiColors.onSurfaceContainer,
-          shadowElevation: 8,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: _toastHorizontalPadding,
-              vertical: 15,
-            ),
-            child: Text(displayText, style: textStyle),
-          ),
-        ),
-      ),
-    );
-  }
-
-  final m3TextStyle = theme.snackBarTheme.contentTextStyle ??
+  final displayText = _breakLongSegments(message);
+  final textStyle = theme.snackBarTheme.contentTextStyle ??
       theme.textTheme.bodyMedium ??
       const TextStyle(fontSize: 14);
   return SnackBar(
-    width: _measureCardWidth(context, displayText, m3TextStyle),
+    width: _measureCardWidth(context, displayText, textStyle),
     padding: EdgeInsets.zero,
     duration: duration ?? const Duration(seconds: 4),
     content: GestureDetector(
@@ -143,7 +297,7 @@ SnackBar _buildToast(
 /// 按内容测量卡片宽度：取各硬换行段落的最长单行宽，封顶 [_toastMaxWidth]，
 /// 并保证不超出屏幕（两侧共留 [_toastScreenInset]）。
 ///
-/// [textStyle] 须与实际渲染文本一致（Miuix / M3 分支分别传入）。
+/// [textStyle] 须与实际渲染文本一致（Miuix / M3 通道分别传入）。
 double _measureCardWidth(
   BuildContext context,
   String text,

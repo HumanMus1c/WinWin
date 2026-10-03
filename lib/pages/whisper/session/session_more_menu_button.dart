@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/ui_style.dart';
@@ -35,7 +36,7 @@ class SessionMoreMenuButton extends StatelessWidget {
     final style = InheritedUiStyle.of(context);
 
     if (style == UiStyle.miuix) {
-      return MiuixWindowIconDropdownMenu.entries(
+      return MiuixPopupMenu(
         entries: [
           MiuixDropdownEntry(
             items: [
