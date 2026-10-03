@@ -576,6 +576,21 @@ void main() {
       expect(find.text('粉丝牌'), findsOneWidget);
     });
 
+    testWidgets('AppTextField：miuix 分支经 MiuixCompat 包裹（Release 空断言防护）', (tester) async {
+      // 回归防护：裸 MiuixTextField 内部 SDK TextField 在 release 缺
+      // MaterialLocalizations 会空断言崩溃（今日崩溃报告定因）——
+      // 此处锁定"输入框必须处于 MiuixCompat 桥接之内"。
+      await tester.pumpWidget(wrapMiuix(const AppTextField(label: '用户名')));
+      await tester.pump();
+      expect(
+        find.ancestor(
+          of: find.byType(MiuixTextField),
+          matching: find.byType(MiuixCompat),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('MiuixPopupMenu：点开显示条目、单组选择后收起并回调', (tester) async {
       var clicked = false;
       await tester.pumpWidget(
