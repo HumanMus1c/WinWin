@@ -1,5 +1,7 @@
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -108,49 +110,30 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final style = InheritedUiStyle.of(context);
-    final isMiuix = style == UiStyle.miuix;
 
-    return Dialog(
-      backgroundColor: isMiuix
-          ? theme.colorScheme.surface.withValues(alpha: 0.96)
-          : theme.colorScheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isMiuix ? 16 : 24),
-        side: isMiuix
-            ? BorderSide(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
-              )
-            : BorderSide.none,
-      ),
-      insetPadding: const EdgeInsets.symmetric(
-        horizontal: Style.lg,
-        vertical: Style.xl,
-      ),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Style.lg,
-            vertical: Style.md,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Text('弹幕设置', style: theme.textTheme.titleMedium),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(AppIcons.clear(context)),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const Divider(height: 1),
-              Expanded(child: _buildList(theme)),
-            ],
-          ),
+    return MiuixDialogShell(
+      constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.lg,
+          vertical: Style.md,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Text('弹幕设置', style: theme.textTheme.titleMedium),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(AppIcons.clear(context)),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const Divider(height: 1),
+            Expanded(child: _buildList(theme)),
+          ],
         ),
       ),
     );
@@ -436,6 +419,7 @@ class _SliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Style.xs),
       child: Column(
@@ -470,15 +454,25 @@ class _SliderRow extends StatelessWidget {
               ],
             ],
           ),
-          Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            divisions: divisions,
-            activeColor: biliPink,
-            onChanged: onChanged,
-            onChangeEnd: onChangeEnd,
-          ),
+          if (isMiuix)
+            MiuixSlider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              steps: divisions > 1 ? divisions - 1 : 0,
+              onValueChanged: onChanged,
+              onValueChangeFinished: () => onChangeEnd(value.clamp(min, max)),
+            )
+          else
+            Slider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              divisions: divisions,
+              activeColor: biliPink,
+              onChanged: onChanged,
+              onChangeEnd: onChangeEnd,
+            ),
         ],
       ),
     );
@@ -499,17 +493,21 @@ class _SwitchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Style.xs),
       child: Row(
         children: [
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
           const Spacer(),
-          Switch(
-            value: value,
-            activeThumbColor: biliPink,
-            onChanged: onChanged,
-          ),
+          if (isMiuix)
+            MiuixSwitch(value: value, onChanged: onChanged)
+          else
+            Switch(
+              value: value,
+              activeThumbColor: biliPink,
+              onChanged: onChanged,
+            ),
         ],
       ),
     );

@@ -1,5 +1,7 @@
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
@@ -12,8 +14,9 @@ import 'package:winwin/theme/ui_style.dart';
 /// 移植自 PiliPlus 的 `SelectDialog`，去除 GetX 依赖。
 /// 选中后通过 `Navigator.pop` 返回所选值（点选即提交，无确定按钮）。
 ///
-/// 弹窗外壳对齐项目面板惯例（`subtitle_settings_panel.dart` 的双套渲染写法）：
-/// M3 用 `surfaceContainerHigh` + 24 圆角；Miuix 用 `surface` 半透明 + 16 圆角 + 描边。
+/// 外壳统一走 [MiuixDialogShell]（M3 surfaceContainerHigh+24 / Miuix squircle
+/// 16）；选项行在 Miuix 风格下改用 flutter_miuix 的 [MiuixRadioButton] +
+/// [MiuixBasicComponent] 组合行（阶段3a 起替换原 RadioListTile 近似）。
 class SelectDialog<T> extends StatelessWidget {
   final T? value;
   final String title;
@@ -39,91 +42,112 @@ class SelectDialog<T> extends StatelessWidget {
     );
     final activeColor = isMiuix ? cs.primary : biliPink;
 
-    return Dialog(
-      backgroundColor: isMiuix
-          ? cs.surface.withValues(alpha: 0.96)
-          : cs.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isMiuix ? 16 : 24),
-        side: isMiuix
-            ? BorderSide(
-                color: cs.outlineVariant.withValues(alpha: 0.25),
-              )
-            : BorderSide.none,
+    return MiuixDialogShell(
+      // 带副标题（如界面风格说明）时抬高下限，避免说明文案被硬换行。
+      constraints: BoxConstraints(
+        minWidth: subtitleBuilder != null ? 320 : 0,
+        maxWidth: 420,
+        maxHeight: 640,
       ),
-      insetPadding: const EdgeInsets.symmetric(
-        horizontal: Style.lg,
-        vertical: Style.xl,
-      ),
-      child: ConstrainedBox(
-        // 带副标题（如界面风格说明）时抬高下限，避免说明文案被硬换行。
-        constraints: BoxConstraints(
-          minWidth: subtitleBuilder != null ? 320 : 0,
-          maxWidth: 420,
-          maxHeight: 640,
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  Style.lg,
-                  Style.md,
-                  Style.sm,
-                  0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Style.lg,
+              Style.md,
+              Style.sm,
+              0,
+            ),
+            child: Row(
+              children: [
+                Expanded(child: Text(title, style: titleMedium)),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Icon(AppIcons.clear(context)),
+                  tooltip: '关闭',
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(title, style: titleMedium)),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      icon: Icon(AppIcons.clear(context)),
-                      tooltip: '关闭',
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: Style.sm),
-              const Divider(height: 1),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: Style.md),
-                  child: RadioGroup<T>(
-                    onChanged: (v) => Navigator.of(context).pop(v ?? value),
-                    groupValue: value,
-                    child: Column(
+              ],
+            ),
+          ),
+          const SizedBox(height: Style.sm),
+          const Divider(height: 1),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: Style.md),
+              child: isMiuix
+                  ? Column(
                       mainAxisSize: MainAxisSize.min,
                       children: List.generate(
                         values.length,
-                        (index) {
-                          final item = values[index];
-                          final subtitle = subtitleBuilder?.call(context, index);
-                          return RadioListTile<T>(
-                            dense: true,
-                            value: item.$1,
-                            activeColor: activeColor,
-                            title: Text(item.$2, style: titleMedium),
-                            subtitle: subtitle == null
-                                ? null
-                                : DefaultTextStyle.merge(
-                                    style: subtitleStyle,
-                                    child: subtitle,
-                                  ),
-                          );
-                        },
+                        (index) => _buildMiuixOption(
+                          context,
+                          index,
+                          titleMedium,
+                          subtitleStyle,
+                        ),
+                      ),
+                    )
+                  : RadioGroup<T>(
+                      onChanged: (v) => Navigator.of(context).pop(v ?? value),
+                      groupValue: value,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(
+                          values.length,
+                          (index) {
+                            final item = values[index];
+                            final subtitle =
+                                subtitleBuilder?.call(context, index);
+                            return RadioListTile<T>(
+                              dense: true,
+                              value: item.$1,
+                              activeColor: activeColor,
+                              title: Text(item.$2, style: titleMedium),
+                              subtitle: subtitle == null
+                                  ? null
+                                  : DefaultTextStyle.merge(
+                                      style: subtitleStyle,
+                                      child: subtitle,
+                                    ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
+    );
+  }
+
+  /// Miuix 选项行：单选按钮 + 标题/副标题内容 + 整行点选即提交。
+  Widget _buildMiuixOption(
+    BuildContext context,
+    int index,
+    TextStyle? titleStyle,
+    TextStyle? subtitleStyle,
+  ) {
+    final item = values[index];
+    final subtitle = subtitleBuilder?.call(context, index);
+    void commit() => Navigator.of(context).pop(item.$1);
+
+    return MiuixBasicComponent(
+      startAction: MiuixRadioButton(
+        selected: item.$1 == value,
+        onChanged: (_) => commit(),
+      ),
+      content: [
+        Text(item.$2, style: titleStyle),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          DefaultTextStyle.merge(style: subtitleStyle, child: subtitle),
+        ],
+      ],
+      onClick: commit,
     );
   }
 }

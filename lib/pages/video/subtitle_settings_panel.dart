@@ -1,5 +1,7 @@
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -76,49 +78,30 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final style = InheritedUiStyle.of(context);
-    final isMiuix = style == UiStyle.miuix;
 
-    return Dialog(
-      backgroundColor: isMiuix
-          ? theme.colorScheme.surface.withValues(alpha: 0.96)
-          : theme.colorScheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(isMiuix ? 16 : 24),
-        side: isMiuix
-            ? BorderSide(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
-              )
-            : BorderSide.none,
-      ),
-      insetPadding: const EdgeInsets.symmetric(
-        horizontal: Style.lg,
-        vertical: Style.xl,
-      ),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Style.lg,
-            vertical: Style.md,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Text('字幕设置', style: theme.textTheme.titleMedium),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(AppIcons.clear(context)),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const Divider(height: 1),
-              Expanded(child: _buildList(theme)),
-            ],
-          ),
+    return MiuixDialogShell(
+      constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.lg,
+          vertical: Style.md,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Text('字幕设置', style: theme.textTheme.titleMedium),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(AppIcons.clear(context)),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const Divider(height: 1),
+            Expanded(child: _buildList(theme)),
+          ],
         ),
       ),
     );
@@ -126,6 +109,12 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
 
   Widget _buildList(ThemeData theme) {
     final sub = widget.controller.subtitle;
+    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
+    void selectAi(SubtitlePreference pref) {
+      setState(() => _aiPref = pref);
+      _put(SettingBoxKey.subtitlePreferenceV2, pref.value);
+    }
+
     return ListenableBuilder(
       listenable: sub,
       builder: (context, _) {
@@ -165,25 +154,43 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
             // ── AI 偏好策略 ──
             Text('AI 字幕策略', style: theme.textTheme.labelLarge),
             const SizedBox(height: Style.xs),
-            RadioGroup<SubtitlePreference>(
-              groupValue: _aiPref,
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() => _aiPref = v);
-                _put(SettingBoxKey.subtitlePreferenceV2, v.value);
-              },
-              child: Column(
+            if (isMiuix)
+              Column(
                 children: [
                   for (final pref in SubtitlePreference.values)
-                    RadioListTile<SubtitlePreference>(
-                      value: pref,
-                      activeColor: biliPink,
-                      dense: true,
-                      title: Text(_aiPrefLabel(pref)),
+                    MiuixBasicComponent(
+                      startAction: MiuixRadioButton(
+                        selected: _aiPref == pref,
+                        onChanged: (_) => selectAi(pref),
+                      ),
+                      content: [Text(_aiPrefLabel(pref))],
+                      insideMargin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      onClick: () => selectAi(pref),
                     ),
                 ],
+              )
+            else
+              RadioGroup<SubtitlePreference>(
+                groupValue: _aiPref,
+                onChanged: (v) {
+                  if (v == null) return;
+                  selectAi(v);
+                },
+                child: Column(
+                  children: [
+                    for (final pref in SubtitlePreference.values)
+                      RadioListTile<SubtitlePreference>(
+                        value: pref,
+                        activeColor: biliPink,
+                        dense: true,
+                        title: Text(_aiPrefLabel(pref)),
+                      ),
+                  ],
+                ),
               ),
-            ),
             const Divider(height: Style.lg),
 
             // ── 样式设置 ──
@@ -281,37 +288,50 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
               },
             ),
             // 字重选择
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: Style.xs),
-              child: Row(
-                children: [
-                  Text('字重', style: theme.textTheme.bodyMedium),
-                  const Spacer(),
-                  DropdownMenu<int>(
-                    width: 116,
-                    requestFocusOnTap: false,
-                    initialSelection: _fontWeight,
-                    textStyle: theme.textTheme.bodyMedium,
-                    inputDecorationTheme: const InputDecorationTheme(
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    dropdownMenuEntries: [
-                      for (var i = 0; i < 9; i++)
-                        DropdownMenuEntry(value: i, label: 'w${(i + 1) * 100}'),
-                    ],
-                    onSelected: (v) {
-                      if (v == null) return;
-                      setState(() => _fontWeight = v);
-                      _put(SettingBoxKey.subtitleFontWeight, v);
-                    },
-                  ),
+            if (isMiuix)
+              MiuixWindowDropdownPreference(
+                title: '字重',
+                items: [
+                  for (var i = 0; i < 9; i++) 'w${(i + 1) * 100}',
                 ],
+                selectedIndex: _fontWeight.clamp(0, 8),
+                onSelectedIndexChange: (v) {
+                  setState(() => _fontWeight = v);
+                  _put(SettingBoxKey.subtitleFontWeight, v);
+                },
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: Style.xs),
+                child: Row(
+                  children: [
+                    Text('字重', style: theme.textTheme.bodyMedium),
+                    const Spacer(),
+                    DropdownMenu<int>(
+                      width: 116,
+                      requestFocusOnTap: false,
+                      initialSelection: _fontWeight,
+                      textStyle: theme.textTheme.bodyMedium,
+                      inputDecorationTheme: const InputDecorationTheme(
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                      dropdownMenuEntries: [
+                        for (var i = 0; i < 9; i++)
+                          DropdownMenuEntry(value: i, label: 'w${(i + 1) * 100}'),
+                      ],
+                      onSelected: (v) {
+                        if (v == null) return;
+                        setState(() => _fontWeight = v);
+                        _put(SettingBoxKey.subtitleFontWeight, v);
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         );
       },
@@ -348,6 +368,51 @@ class _SubtitleOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = Row(
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: selected ? biliPink : null,
+              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+        if (badge != null) ...[
+          const SizedBox(width: Style.xs),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: biliPink.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(Style.radiusXs),
+            ),
+            child: Text(
+              badge!,
+              style: const TextStyle(
+                fontSize: 10,
+                color: biliPink,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+
+    if (InheritedUiStyle.of(context) == UiStyle.miuix) {
+      return MiuixBasicComponent(
+        startAction: MiuixRadioButton(
+          selected: selected,
+          onChanged: (_) => onTap(),
+        ),
+        content: [title],
+        insideMargin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        onClick: onTap,
+      );
+    }
+
     return ListTile(
       dense: true,
       leading: Icon(
@@ -355,38 +420,7 @@ class _SubtitleOptionTile extends StatelessWidget {
         color: selected ? biliPink : null,
         size: 20,
       ),
-      title: Row(
-        children: [
-          Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: selected ? biliPink : null,
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ),
-          if (badge != null) ...[
-            const SizedBox(width: Style.xs),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: biliPink.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(Style.radiusXs),
-              ),
-              child: Text(
-                badge!,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: biliPink,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
+      title: title,
       onTap: onTap,
     );
   }
@@ -420,6 +454,7 @@ class _SliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Style.xs),
       child: Column(
@@ -454,16 +489,26 @@ class _SliderRow extends StatelessWidget {
               ],
             ],
           ),
-          Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            divisions: divisions,
-            activeColor: biliPink,
-            inactiveColor: Colors.white24,
-            onChanged: onChanged,
-            onChangeEnd: onChangeEnd,
-          ),
+          if (isMiuix)
+            MiuixSlider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              steps: divisions > 1 ? divisions - 1 : 0,
+              onValueChanged: onChanged,
+              onValueChangeFinished: () => onChangeEnd(value.clamp(min, max)),
+            )
+          else
+            Slider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              divisions: divisions,
+              activeColor: biliPink,
+              inactiveColor: Colors.white24,
+              onChanged: onChanged,
+              onChangeEnd: onChangeEnd,
+            ),
         ],
       ),
     );

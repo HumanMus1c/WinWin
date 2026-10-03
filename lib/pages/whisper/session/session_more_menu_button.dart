@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_icons.dart';
@@ -6,8 +7,11 @@ import 'package:winwin/theme/ui_style.dart';
 
 /// 会话列表项右侧的现代化更多操作菜单按钮。
 ///
-/// 替代老旧的 [PopupMenuButton]，基于 Flutter 官方 Material 3 的 [MenuAnchor] 与
-/// [MenuItemButton] 构建，并随 [UiStyle] 自动适配 M3 悬浮菜单或 Miuix 风格。
+/// - MD3：[MenuAnchor] + [MenuItemButton]（原实现保留）；
+/// - Miuix：[MiuixWindowIconDropdownMenu]（阶段3a 起替换自绘 MenuStyle 近似，
+///   获得原生菜单揭示动效与分组分隔线）。受上游 API 限制，菜单项文本颜色
+///   无法逐项定制——「删除会话」保留红色图标，文本退化为默认内容色
+///   （见阶段3 复盘"已知差异"）。
 class SessionMoreMenuButton extends StatelessWidget {
   const SessionMoreMenuButton({
     super.key,
@@ -28,26 +32,66 @@ class SessionMoreMenuButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final style = InheritedUiStyle.of(context);
-    final isMiuix = style == UiStyle.miuix;
+
+    if (style == UiStyle.miuix) {
+      return MiuixWindowIconDropdownMenu.entries(
+        entries: [
+          MiuixDropdownEntry(
+            items: [
+              MiuixDropdownItem(
+                text: isPinned ? '取消置顶' : '置顶会话',
+                icon: Icon(
+                  AppIcons.pin(context, active: isPinned),
+                  size: 18,
+                  color: isPinned ? theme.colorScheme.primary : null,
+                ),
+                onClick: onToggleTop,
+              ),
+              MiuixDropdownItem(
+                text: isDnd ? '关闭免打扰' : '开启免打扰',
+                icon: Icon(
+                  AppIcons.notificationsOff(context, active: isDnd),
+                  size: 18,
+                  color: isDnd ? theme.colorScheme.primary : null,
+                ),
+                onClick: onToggleDnd,
+              ),
+            ],
+          ),
+          MiuixDropdownEntry(
+            items: [
+              MiuixDropdownItem(
+                text: '删除会话',
+                icon: Icon(
+                  AppIcons.delete(context),
+                  size: 18,
+                  color: theme.colorScheme.error,
+                ),
+                onClick: onRemove,
+              ),
+            ],
+          ),
+        ],
+        child: Tooltip(
+          message: '更多选项',
+          child: Icon(
+            AppIcons.moreOptions(context),
+            size: 20,
+            color: theme.colorScheme.outline,
+          ),
+        ),
+      );
+    }
 
     return MenuAnchor(
       alignmentOffset: const Offset(-100, 0),
       style: MenuStyle(
         backgroundColor: WidgetStatePropertyAll(
-          isMiuix
-              ? theme.colorScheme.surface.withValues(alpha: 0.95)
-              : theme.colorScheme.surfaceContainer,
+          theme.colorScheme.surfaceContainer,
         ),
-        elevation: WidgetStatePropertyAll(isMiuix ? 2 : 3),
+        elevation: const WidgetStatePropertyAll(3),
         shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(isMiuix ? 14 : 12),
-            side: isMiuix
-                ? BorderSide(
-                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                  )
-                : BorderSide.none,
-          ),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         padding: const WidgetStatePropertyAll(
           EdgeInsets.symmetric(vertical: 6, horizontal: 4),
