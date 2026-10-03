@@ -201,12 +201,19 @@ class _MiuixToastCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final displayText = _breakLongSegments(message);
     // 反色卡：亮色主题用暗卡（inverseSurface），暗色主题用亮卡；
     // 半透明底（统一不透明度 kMiuixSurfaceAlpha）。
     final textStyle = TextStyle(fontSize: 14, color: cs.onInverseSurface);
     final width = _measureCardWidth(context, displayText, textStyle);
+    // 文本基底：覆写 WidgetsApp 的默认"黄绿双下划线"错误样式
+    // （根部宿主不在 Material 子树内，Text 合并到该样式）。
+    final bodyStyle =
+        (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+      decoration: TextDecoration.none,
+    );
 
     return AnimatedBuilder(
       animation: animation,
@@ -219,22 +226,25 @@ class _MiuixToastCard extends StatelessWidget {
           child: Transform.translate(offset: Offset(0, dy), child: child),
         );
       },
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: MiuixSurface(
-          cornerRadius: 16,
-          color: cs.inverseSurface.withValues(alpha: kMiuixSurfaceAlpha),
-          contentColor: cs.onInverseSurface,
-          shadowElevation: 8,
-          child: SizedBox(
-            width: width,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: _toastHorizontalPadding,
-                vertical: 15,
+      child: DefaultTextStyle(
+        style: bodyStyle,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: MiuixSurface(
+            cornerRadius: 16,
+            color: cs.inverseSurface.withValues(alpha: kMiuixSurfaceAlpha),
+            contentColor: cs.onInverseSurface,
+            shadowElevation: 8,
+            child: SizedBox(
+              width: width,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _toastHorizontalPadding,
+                  vertical: 15,
+                ),
+                child: Text(displayText, style: textStyle),
               ),
-              child: Text(displayText, style: textStyle),
             ),
           ),
         ),

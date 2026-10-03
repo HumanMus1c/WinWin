@@ -127,7 +127,24 @@ class _PopupOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final muiColors = MiuixTheme.of(context).colors;
-    final dropdownColors = MiuixDropdownDefaults.dropdownColors(context);
+    // 行底透明：让面板半透明底色透出（复测反馈：行背景遮挡了面板半透明）。
+    final baseColors = MiuixDropdownDefaults.dropdownColors(context);
+    final rowColors = MiuixDropdownColors(
+      contentColor: baseColors.contentColor,
+      summaryColor: baseColors.summaryColor,
+      containerColor: Colors.transparent,
+      selectedContentColor: baseColors.selectedContentColor,
+      selectedSummaryColor: baseColors.selectedSummaryColor,
+      selectedContainerColor:
+          baseColors.selectedContainerColor.withValues(alpha: 0.60),
+      selectedIndicatorColor: baseColors.selectedIndicatorColor,
+    );
+    // 文本基底：覆写 WidgetsApp 的默认"黄绿双下划线"错误样式
+    // （浮层无 Material/DefaultTextStyle 时 Text 合并到该样式）。
+    final bodyStyle =
+        (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).copyWith(
+      decoration: TextDecoration.none,
+    );
 
     const gap = 6.0;
     const screenInset = 12.0;
@@ -143,41 +160,46 @@ class _PopupOverlay extends StatelessWidget {
     final right = math.max(8.0, media.size.width - triggerRect.right);
     final maxWidth = math.min(320.0, media.size.width - 16);
 
+    final curved =
+        CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+    // 对角线展开：以贴近触发器的一角为原点缩放（向下展开→右上角；
+    // 向上翻转→右下角）。
     final panel = FadeTransition(
-      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, -0.035),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-        child: Focus(
-          focusNode: focusNode,
-          onKeyEvent: (node, event) {
-            if (event is KeyDownEvent &&
-                event.logicalKey == LogicalKeyboardKey.escape) {
-              onDismiss();
-              return KeyEventResult.handled;
-            }
-            return KeyEventResult.ignored;
-          },
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {},
-            child: MiuixSurface(
-              cornerRadius: 16,
-              color: muiColors.surfaceContainer
-                  .withValues(alpha: kMiuixSurfaceAlpha),
-              shadowElevation: 6,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: panelMaxHeight),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: MiuixDropdownEntriesPopupContent(
-                      entries: entries,
-                      dropdownColors: dropdownColors,
-                      onItemClick: onSelect,
+      opacity: curved,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
+        alignment: placeAbove ? Alignment.bottomRight : Alignment.topRight,
+        child: DefaultTextStyle(
+          style: bodyStyle,
+          child: Focus(
+            focusNode: focusNode,
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.escape) {
+                onDismiss();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {},
+              child: MiuixSurface(
+                cornerRadius: 16,
+                color: muiColors.surfaceContainer
+                    .withValues(alpha: kMiuixSurfaceAlpha),
+                shadowElevation: 6,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: panelMaxHeight),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: MiuixDropdownEntriesPopupContent(
+                        entries: entries,
+                        dropdownColors: rowColors,
+                        onItemClick: onSelect,
+                      ),
                     ),
                   ),
                 ),

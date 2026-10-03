@@ -1,8 +1,8 @@
 import 'dart:async' show unawaited;
-import 'dart:ui' show ImageFilter;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
 import 'package:winwin/core/emote/emote_store.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
@@ -155,14 +155,13 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
     _overlay = OverlayEntry(
       builder: (ctx) {
         final theme = Theme.of(ctx);
-        final isDark = theme.brightness == Brightness.dark;
 
         final panel = FadeTransition(
           opacity: _controller,
           child: ScaleTransition(
             scale: _scale,
             alignment: anchor,
-            child: _buildPanel(theme, isDark),
+            child: _buildPanel(theme),
           ),
         );
 
@@ -206,79 +205,21 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
     _precacheEmotes();
   }
 
-  Widget _buildPanel(ThemeData theme, bool isDark) {
-    final cs = theme.colorScheme;
-    return Material(
-      type: MaterialType.transparency,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.15),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xD9262626)
-                    : const Color(0xD9EAEAEA),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : Colors.black.withValues(alpha: 0.08),
-                  width: 1,
-                ),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.sentiment_satisfied_alt_outlined,
-                        size: 16,
-                        color: cs.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '表情',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    height: 1,
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.1)
-                        : Colors.black.withValues(alpha: 0.08),
-                  ),
-                  const SizedBox(height: 10),
-                  _EmoteGridArea(
-                    onPick: (code) {
-                      _insert(code);
-                      _removePanel();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+  Widget _buildPanel(ThemeData theme) {
+    // 共用浮层面板（MiuixOverlayPanel）：与"弹幕样式"面板统一样式，
+    // 半透明底统一走 kMiuixSurfaceAlpha；对角线展开动画在 Overlay 层包裹。
+    return MiuixOverlayPanel(
+      title: '表情',
+      icon: Icon(
+        Icons.sentiment_satisfied_alt_outlined,
+        size: 16,
+        color: theme.colorScheme.primary,
+      ),
+      child: _EmoteGridArea(
+        onPick: (code) {
+          _insert(code);
+          _removePanel();
+        },
       ),
     );
   }

@@ -1,7 +1,6 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
@@ -94,8 +93,15 @@ class SendDanmakuPanel extends StatefulWidget {
   State<SendDanmakuPanel> createState() => _SendDanmakuPanelState();
 }
 
-class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
+class _SendDanmakuPanelState extends State<SendDanmakuPanel>
+    with SingleTickerProviderStateMixin {
   late final TextEditingController _textController;
+
+  /// 内联样式浮层的对角线展开动画（对齐表情面板）。
+  late final AnimationController _settingsAnim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+  );
   late final ValueNotifier<int> _mode;
   late final ValueNotifier<int> _color;
   late final ValueNotifier<int> _fontSize;
@@ -121,6 +127,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
   @override
   void dispose() {
     _closeInlineSettings();
+    _settingsAnim.dispose();
     _textController.dispose();
     _mode.dispose();
     _color.dispose();
@@ -473,14 +480,48 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
     final buttonPosition = renderBox.localToGlobal(Offset.zero);
     final buttonSize = renderBox.size;
 
+    // 对角线展开（对齐表情面板）：面板位于按钮上方、右缘对齐按钮右缘，
+    // 以贴近按钮的右下角为原点缩放展开。
+    _settingsAnim.forward(from: 0);
+
     _settingsOverlay = OverlayEntry(
       builder: (context) {
         final theme = Theme.of(context);
-        final isDark = theme.brightness == Brightness.dark;
         // 面板在按钮正上方，右对齐按钮右边缘
         final panelWidth = 340.0;
         final panelLeft = (buttonPosition.dx + buttonSize.width - panelWidth)
             .clamp(8.0, double.infinity);
+        // 共用浮层面板（MiuixOverlayPanel）：与"表情"面板统一样式，
+        // 半透明底统一走 kMiuixSurfaceAlpha。
+        final panel = FadeTransition(
+          opacity: _settingsAnim,
+          child: ScaleTransition(
+            scale: CurvedAnimation(
+              parent: _settingsAnim,
+              curve: Curves.easeOutCubic,
+            ),
+            alignment: Alignment.bottomRight,
+            child: MiuixOverlayPanel(
+              title: '弹幕样式',
+              icon: Icon(
+                Icons.palette_outlined,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildColorSection(theme),
+                  const SizedBox(height: 20),
+                  _buildChipSection(theme, '位置', _modeOptions, _mode),
+                  const SizedBox(height: 20),
+                  _buildChipSection(theme, '字号', _fontSizeOptions, _fontSize),
+                ],
+              ),
+            ),
+          ),
+        );
         return Stack(
           children: [
             // 透明遮罩，点击外部关闭
@@ -489,97 +530,13 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel> {
               onTap: _closeInlineSettings,
               child: Container(color: Colors.transparent),
             ),
-            // 设置面板（灰色半透明毛玻璃高质感容器）
             Positioned(
               left: panelLeft,
               bottom: MediaQuery.of(context).size.height -
                   buttonPosition.dy +
                   8,
               width: panelWidth,
-              child: Material(
-                type: MaterialType.transparency,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.15),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xD9262626) // 暗色模式：灰色半透明 (~85% 不透明度)
-                              : const Color(0xD9EAEAEA), // 亮色模式：灰色半透明 (~85% 不透明度)
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.12)
-                                : Colors.black.withValues(alpha: 0.08),
-                            width: 1,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 标题
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.palette_outlined,
-                                    size: 18,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '弹幕样式',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              // 分隔线
-                              Container(
-                                height: 1,
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.1)
-                                    : Colors.black.withValues(alpha: 0.08),
-                              ),
-                              const SizedBox(height: 16),
-                              // 颜色选择
-                              _buildColorSection(theme),
-                              const SizedBox(height: 20),
-                              // 位置选择
-                              _buildChipSection(theme, '位置', _modeOptions, _mode),
-                              const SizedBox(height: 20),
-                              // 字号选择
-                              _buildChipSection(
-                                theme,
-                                '字号',
-                                _fontSizeOptions,
-                                _fontSize,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              child: panel,
             ),
           ],
         );
