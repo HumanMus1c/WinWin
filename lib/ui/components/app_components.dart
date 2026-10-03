@@ -688,39 +688,53 @@ class AppActionTile extends StatelessWidget {
       PrimitiveRenderer.miuix => (iconTint ?? cs.onSurfaceVariant, 8.0, t.shapes.medium),
     };
 
+    final tile = ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 80),
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: Column(
+          spacing: spacing,
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null)
+              Icon(icon, color: contentColor, size: 22)
+            else
+              Text(
+                count ?? '-',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: t.typo.titleWeight,
+                  color: contentColor,
+                ),
+              ),
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Miuix 分支（阶段4d）：按压反馈替换为原生 MiuixPressable（扁平按压、
+    // 无 ripple）；M3 分支保留 InkWell 圆角 ripple。
+    if (renderer == PrimitiveRenderer.miuix) {
+      return Flexible(
+        child: MiuixPressable(
+          onPressed: onTap,
+          enabled: onTap != null,
+          child: tile,
+        ),
+      );
+    }
+
     return Flexible(
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.all(radius),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 80),
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: Column(
-              spacing: spacing,
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null)
-                  Icon(icon, color: contentColor, size: 22)
-                else
-                  Text(
-                    count ?? '-',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: t.typo.titleWeight,
-                      color: contentColor,
-                    ),
-                  ),
-                Text(
-                  label,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        child: tile,
       ),
     );
   }

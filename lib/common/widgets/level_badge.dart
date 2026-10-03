@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/level_icon.dart';
@@ -152,18 +153,35 @@ class LevelExpBar extends StatelessWidget {
           ),
           if (!isMax) ...[
             const SizedBox(height: 4),
-            ClipRRect(
-              borderRadius: barRadius,
-              child: SizedBox(
+            // Miuix 分支（阶段4d）：进度条替换为原生 MiuixLinearProgressIndicator
+            // （内置全圆角轨道，等级色语义不变）；M3 分支保持 M3 进度条。
+            if (renderer == PrimitiveRenderer.miuix)
+              SizedBox(
                 width: 140,
                 height: barHeight,
-                child: LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: cs.outlineVariant.withValues(alpha: 0.25),
-                  valueColor: AlwaysStoppedAnimation<Color>(levelColor),
+                child: MiuixLinearProgressIndicator(
+                  progress: progress,
+                  height: barHeight,
+                  colors: MiuixProgressIndicatorColors(
+                    foregroundColor: levelColor,
+                    disabledForegroundColor: levelColor,
+                    backgroundColor: cs.outlineVariant.withValues(alpha: 0.25),
+                  ),
+                ),
+              )
+            else
+              ClipRRect(
+                borderRadius: barRadius,
+                child: SizedBox(
+                  width: 140,
+                  height: barHeight,
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: cs.outlineVariant.withValues(alpha: 0.25),
+                    valueColor: AlwaysStoppedAnimation<Color>(levelColor),
+                  ),
                 ),
               ),
-            ),
           ],
         ],
       ),

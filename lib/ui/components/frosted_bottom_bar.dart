@@ -199,6 +199,28 @@ class FrostedBottomBar extends StatelessWidget {
 
     final radius = chrome.containerRadius;
 
+    // Miuix 分支（阶段4b）：外壳替换为 flutter_miuix 浮动导航栏（squircle 胶囊 +
+    // 原生按压/选中态）。逐项彩色图标保留：_FloatingIconBadge 走 IconTheme
+    // 继承（非 ColorFilter 强制着色，经源码核对），显式色标的图标不受影响。
+    // 毛玻璃外壳仅保留在 M3 分支。
+    if (style == UiStyle.miuix) {
+      return MiuixFloatingNavigationBar(
+        children: [
+          for (var i = 0; i < navDestinations.length; i++)
+            MiuixFloatingNavigationBarItem(
+              label: navDestinations[i].label,
+              selected: i == currentIndex,
+              onPressed: () => onSelect(i),
+              icon: NavDestinationIcon(
+                destination: navDestinations[i],
+                selected: i == currentIndex,
+                size: 24,
+              ),
+            ),
+        ],
+      );
+    }
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(

@@ -1,6 +1,10 @@
 import 'dart:math' as math;
 
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
+
+import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/ui_style.dart';
 
 /// 应用级 ScaffoldMessenger 句柄（挂载于 `MaterialApp.scaffoldMessengerKey`）。
 ///
@@ -65,6 +69,48 @@ SnackBar _buildToast(
   Duration? duration,
 }) {
   final displayText = _breakLongSegments(message);
+
+  // Miuix 分支（阶段4a）：卡片材质替换为 flutter_miuix 的 MiuixSurface
+  // （squircle 16 + 内容色注入 + 阴影）；宽度自适应 / 点击关闭 / 单条优先
+  // 机制保持不变。SnackBar 本体透明，仅承载定位与生命周期。
+  if (InheritedUiStyle.of(context) == UiStyle.miuix) {
+    final theme = Theme.of(context);
+    final container =
+        theme.snackBarTheme.backgroundColor ?? theme.colorScheme.inverseSurface;
+    final contentColor = theme.snackBarTheme.contentTextStyle?.color ??
+        theme.colorScheme.onInverseSurface;
+    return SnackBar(
+      width: _measureCardWidth(context, displayText),
+      padding: EdgeInsets.zero,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      shape: const RoundedRectangleBorder(),
+      duration: duration ?? const Duration(seconds: 4),
+      content: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onDismiss,
+        child: MiuixSurface(
+          cornerRadius: 16,
+          color: container,
+          contentColor: contentColor,
+          shadowElevation: 8,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: _toastHorizontalPadding,
+              vertical: 15,
+            ),
+            child: Text(
+              displayText,
+              style: (theme.snackBarTheme.contentTextStyle ??
+                      theme.textTheme.bodyMedium)
+                  ?.copyWith(color: contentColor),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   return SnackBar(
     width: _measureCardWidth(context, displayText),
     padding: EdgeInsets.zero,

@@ -5,7 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/common/widgets/level_badge.dart';
+import 'package:winwin/common/widgets/medal_widget.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
+import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -14,6 +17,7 @@ import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 
 Widget wrapMiuix(Widget child, {bool dark = false}) => MaterialApp(
       home: MiuixThemeScope(
@@ -432,6 +436,118 @@ void main() {
       final size = tester.getSize(find.byType(MiuixTextField));
       expect(size.width, greaterThan(300));
       expect(size.height, lessThan(100));
+    });
+  });
+
+  group('阶段4：sweep 完全化', () {
+    testWidgets('底栏：miuix 渲染 MiuixFloatingNavigationBar 且保留彩色图标', (tester) async {
+      await tester.pumpWidget(
+        wrapMiuix(
+          SizedBox(
+            height: 140,
+            child: FrostedBottomBar(currentIndex: 0, onSelect: (_) {}),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(MiuixFloatingNavigationBar), findsOneWidget);
+      expect(find.byType(BackdropFilter), findsNothing);
+
+      // 逐项彩色图标保留（选中首页 → 显式色标 iosBlue 不受 Miuix 着色影响）。
+      final icon = tester.widget<Icon>(
+        find
+            .descendant(
+              of: find.byType(MiuixFloatingNavigationBarItem).first,
+              matching: find.byType(Icon),
+            )
+            .first,
+      );
+      expect(icon.color, iosBlue);
+    });
+
+    testWidgets('Toast：miuix 卡片为 MiuixSurface（机制：宽度自适应/点击关闭）', (tester) async {
+      // 复刻生产主题链：SnackBar.width 需 behavior=floating（应用四套主题均设置）。
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            snackBarTheme: const SnackBarThemeData(
+              behavior: SnackBarBehavior.floating,
+            ),
+          ),
+          home: MiuixThemeScope(
+            isDark: false,
+            child: UiStyleScope(
+              style: UiStyle.miuix,
+              child: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    onPressed: () => showToast(context, '操作成功'),
+                    child: const Text('toast'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('toast'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.byType(MiuixSurface),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('操作成功'), findsOneWidget);
+
+      // 等自动收起，避免遗留计时器。
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('ActionTile：miuix 按压原语为 MiuixPressable', (tester) async {
+      await tester.pumpWidget(
+        wrapMiuix(
+          Row(children: [AppActionTile(count: '12', label: '动态', onTap: () {})]),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(MiuixPressable), findsOneWidget);
+      expect(find.text('12'), findsOneWidget);
+      expect(find.text('动态'), findsOneWidget);
+    });
+
+    testWidgets('LevelExpBar：miuix 进度条为 MiuixLinearProgressIndicator', (tester) async {
+      await tester.pumpWidget(
+        wrapMiuix(
+          const LevelExpBar(level: 5, currentExp: 100, nextExp: 200),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(MiuixLinearProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('MedalWidget：miuix onTap 用 MiuixPressable 包裹', (tester) async {
+      await tester.pumpWidget(
+        wrapMiuix(
+          MedalWidget(
+            medalName: '粉丝牌',
+            level: 21,
+            backgroundColor: Colors.pink,
+            onTap: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(MiuixPressable), findsOneWidget);
+      expect(find.text('粉丝牌'), findsOneWidget);
     });
   });
 }

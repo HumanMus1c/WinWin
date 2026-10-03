@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_shapes.dart';
@@ -98,6 +99,10 @@ class MedalWidget extends StatelessWidget {
     );
 
     if (onTap != null) {
+      // Miuix 分支（阶段4d）：点按反馈替换为原生 MiuixPressable（扁平按压）。
+      if (renderer == PrimitiveRenderer.miuix) {
+        return MiuixPressable(onPressed: onTap, child: child);
+      }
       return InkWell(
         onTap: onTap,
         borderRadius: outerRadius,
