@@ -1,4 +1,5 @@
 import 'package:cupertino_ui/cupertino_ui.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/inherited_ui_style.dart';
@@ -582,6 +583,81 @@ abstract final class AppIcons {
       };
 }
 
+/// 自适应图标部件：Miuix 风格下将具备 Miuix 矢量对应的字形升级为
+/// flutter_miuix 原生矢量图标（[MiuixIcon] + [MiuixVectorIcon]）；
+/// 其余情况（M3 风格 / 无对应字形 / 带 [shadows] 的媒体叠加场景）回退 [Icon]。
+///
+/// 调用模式与 [Icon] 兼容：`AppIcon(AppIcons.xxx(context), size: 20, color: c)`。
+class AppIcon extends StatelessWidget {
+  const AppIcon(this.icon, {super.key, this.size, this.color, this.shadows});
+
+  final IconData icon;
+  final double? size;
+  final Color? color;
+  final List<Shadow>? shadows;
+
+  @override
+  Widget build(BuildContext context) {
+    if (InheritedUiStyle.of(context) == UiStyle.miuix &&
+        (shadows == null || shadows!.isEmpty)) {
+      final vector = miuixVectorForGlyph(icon);
+      if (vector != null) {
+        return MiuixIcon(vector: vector, size: size, tint: color);
+      }
+    }
+    return Icon(icon, size: size, color: color, shadows: shadows);
+  }
+}
+
+/// Cupertino 字形 → Miuix 矢量映射（仅覆盖 Miuix 图标集具备的通用语义；
+/// 播放器专属语义（弹幕/字幕/画质/倍速/画中画等）无对应字形，保留
+/// Cupertino——完整覆盖清单见 `docs/flutter_miuix阶段3c-图标体系复盘`）。
+///
+/// 注：映射键为 [AppIcons] miuix 分支返回的 Cupertino 字形；M3 字形与未列出
+/// 的字形由 [AppIcon] 直接回退 [Icon]。
+final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
+  CupertinoIcons.chevron_back: MiuixIcons.extended.byName('chevronBackward')!,
+  CupertinoIcons.house: MiuixIcons.extended.byName('home')!,
+  CupertinoIcons.house_fill: MiuixIcons.extended.byName('home')!,
+  CupertinoIcons.clock: MiuixIcons.extended.byName('recent')!,
+  CupertinoIcons.clock_fill: MiuixIcons.extended.byName('recent')!,
+  CupertinoIcons.chat_bubble_2: MiuixIcons.extended.byName('messages')!,
+  CupertinoIcons.chat_bubble_2_fill: MiuixIcons.extended.byName('messages')!,
+  CupertinoIcons.star: MiuixIcons.extended.byName('favorites')!,
+  CupertinoIcons.star_fill: MiuixIcons.extended.byName('favoritesFill')!,
+  CupertinoIcons.share: MiuixIcons.extended.byName('share')!,
+  CupertinoIcons.reply: MiuixIcons.extended.byName('reply')!,
+  CupertinoIcons.chevron_down: MiuixIcons.extended.byName('expandMore')!,
+  CupertinoIcons.chevron_up: MiuixIcons.extended.byName('expandLess')!,
+  CupertinoIcons.chevron_forward:
+      MiuixIcons.extended.byName('chevronForward')!,
+  CupertinoIcons.search: MiuixIcons.extended.byName('search')!,
+  CupertinoIcons.clear: MiuixIcons.extended.byName('clear')!,
+  CupertinoIcons.ellipsis: MiuixIcons.extended.byName('more')!,
+  CupertinoIcons.settings: MiuixIcons.extended.byName('settings')!,
+  CupertinoIcons.refresh: MiuixIcons.extended.byName('refresh')!,
+  CupertinoIcons.arrow_down_to_line: MiuixIcons.extended.byName('download')!,
+  CupertinoIcons.delete: MiuixIcons.extended.byName('delete')!,
+  CupertinoIcons.slider_horizontal_3: MiuixIcons.extended.byName('tune')!,
+  CupertinoIcons.checkmark: MiuixIcons.extended.byName('ok')!,
+  CupertinoIcons.play: MiuixIcons.extended.byName('play')!,
+  CupertinoIcons.play_fill: MiuixIcons.extended.byName('play')!,
+  CupertinoIcons.pause: MiuixIcons.extended.byName('pause')!,
+  CupertinoIcons.pause_fill: MiuixIcons.extended.byName('pause')!,
+  CupertinoIcons.forward_fill: MiuixIcons.extended.byName('forward')!,
+  CupertinoIcons.lock: MiuixIcons.extended.byName('lock')!,
+  CupertinoIcons.lock_fill: MiuixIcons.extended.byName('lock')!,
+  CupertinoIcons.speaker_3_fill: MiuixIcons.extended.byName('volumeUp')!,
+  CupertinoIcons.speaker_slash_fill: MiuixIcons.extended.byName('volumeOff')!,
+  CupertinoIcons.pin_fill: MiuixIcons.extended.byName('pin')!,
+  CupertinoIcons.pin_slash_fill: MiuixIcons.extended.byName('unpin')!,
+  CupertinoIcons.slash_circle: MiuixIcons.extended.byName('blocklist')!,
+};
+
+/// 查询字形对应的 Miuix 矢量（无对应返回 null）。
+MiuixVectorIcon? miuixVectorForGlyph(IconData glyph) =>
+    _miuixVectorByGlyph[glyph];
+
 /// 全局通用的自适应返回按钮。
 ///
 /// 根据当前主题的 [UiStyle] 自动渲染 M3 箭头或 Miuix 返回箭头；全屏对话框
@@ -628,7 +704,7 @@ class AppBackButton extends StatelessWidget {
     final effectiveColor = color ?? theme.colorScheme.onSurface;
 
     return IconButton(
-      icon: Icon(iconData, size: size, shadows: shadows),
+      icon: AppIcon(iconData, size: size, shadows: shadows),
       color: effectiveColor,
       tooltip: tooltip ?? (isClose ? '关闭' : '返回'),
       padding: padding,

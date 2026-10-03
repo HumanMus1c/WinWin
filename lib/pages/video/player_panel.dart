@@ -805,7 +805,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(AppIcons.error(context), color: Colors.white70, size: 40),
+          AppIcon(AppIcons.error(context), color: Colors.white70, size: 40),
           const SizedBox(height: Style.sm),
           Text(
             message,
@@ -2155,7 +2155,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 style: _darkMenuItemStyle,
                 onPressed: () => c.setPlaybackSpeed(v),
                 leadingIcon: v == speed
-                    ? Icon(AppIcons.check(context), size: 18, color: biliBlue)
+                    ? AppIcon(AppIcons.check(context), size: 18, color: biliBlue)
                     : const SizedBox(width: 18),
                 child: Text(
                   '${v.toStringAsFixed(1)}x',
@@ -2375,7 +2375,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                   Text('截图预览', style: Theme.of(context).textTheme.titleMedium),
                   const Spacer(),
                   IconButton(
-                    icon: Icon(AppIcons.clear(context)),
+                    icon: AppIcon(AppIcons.clear(context)),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -2413,7 +2413,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Icon(AppIcons.download(context), size: 18),
+                        : AppIcon(AppIcons.download(context), size: 18),
                     label: Text(_savedPath != null ? '已保存' : '保存'),
                   ),
                 ],

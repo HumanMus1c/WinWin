@@ -1590,7 +1590,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       padding: const EdgeInsets.only(top: Style.xs),
                       child: TextButton.icon(
                         onPressed: () => _loadSubReplies(reply),
-                        icon: Icon(AppIcons.expandMore(context), size: 16),
+                        icon: AppIcon(AppIcons.expandMore(context), size: 16),
                         label: Text(
                           '查看更多回复 ${reply.rcount != null ? "(${subReplies.length}/${reply.rcount})" : ""}',
                           style: const TextStyle(fontSize: 12),
@@ -1907,7 +1907,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       .withValues(alpha: 0.5),
                   suffixIcon: _replyRoot != null
                       ? IconButton(
-                          icon: Icon(AppIcons.clear(context), size: 16),
+                          icon: AppIcon(AppIcons.clear(context), size: 16),
                           onPressed: _clearReplyTarget,
                         )
                       : null,
@@ -2063,22 +2063,22 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           // 数据行（播放量、弹幕、时长、开播时间）
           Row(
             children: [
-              Icon(AppIcons.viewCount(context), size: 15, color: cs.onSurfaceVariant),
+              AppIcon(AppIcons.viewCount(context), size: 15, color: cs.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(NumUtils.formatNum(stat?.views), style: grayStyle),
               const SizedBox(width: Style.md),
-              Icon(AppIcons.danmakuCount(context), size: 14, color: cs.onSurfaceVariant),
+              AppIcon(AppIcons.danmakuCount(context), size: 14, color: cs.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(NumUtils.formatNum(stat?.danmakus), style: grayStyle),
               if (_currentEpisode.duration != null && _currentEpisode.duration! > 0) ...[
                 const SizedBox(width: Style.md),
-                Icon(AppIcons.duration(context), size: 14, color: cs.onSurfaceVariant),
+                AppIcon(AppIcons.duration(context), size: 14, color: cs.onSurfaceVariant),
                 const SizedBox(width: 4),
                 Text(_currentEpisode.formattedDuration, style: grayStyle),
               ],
               if (_currentEpisode.pubTime != null || widget.detail.publish?.releaseDateShow != null) ...[
                 const SizedBox(width: Style.md),
-                Icon(AppIcons.calendar(context), size: 13, color: cs.onSurfaceVariant),
+                AppIcon(AppIcons.calendar(context), size: 13, color: cs.onSurfaceVariant),
                 const SizedBox(width: 4),
                 Text(
                   _currentEpisode.pubTime != null

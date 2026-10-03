@@ -12,6 +12,7 @@ import 'package:winwin/theme/ui_style.dart';
 ///   获得原生菜单揭示动效与分组分隔线）。受上游 API 限制，菜单项文本颜色
 ///   无法逐项定制——「删除会话」保留红色图标，文本退化为默认内容色
 ///   （见阶段3 复盘"已知差异"）。
+/// 图标经 [AppIcon] 分发：Miuix 风格下升级为 Miuix 矢量（阶段3c）。
 class SessionMoreMenuButton extends StatelessWidget {
   const SessionMoreMenuButton({
     super.key,
@@ -40,7 +41,7 @@ class SessionMoreMenuButton extends StatelessWidget {
             items: [
               MiuixDropdownItem(
                 text: isPinned ? '取消置顶' : '置顶会话',
-                icon: Icon(
+                icon: AppIcon(
                   AppIcons.pin(context, active: isPinned),
                   size: 18,
                   color: isPinned ? theme.colorScheme.primary : null,
@@ -49,7 +50,7 @@ class SessionMoreMenuButton extends StatelessWidget {
               ),
               MiuixDropdownItem(
                 text: isDnd ? '关闭免打扰' : '开启免打扰',
-                icon: Icon(
+                icon: AppIcon(
                   AppIcons.notificationsOff(context, active: isDnd),
                   size: 18,
                   color: isDnd ? theme.colorScheme.primary : null,
@@ -62,7 +63,7 @@ class SessionMoreMenuButton extends StatelessWidget {
             items: [
               MiuixDropdownItem(
                 text: '删除会话',
-                icon: Icon(
+                icon: AppIcon(
                   AppIcons.delete(context),
                   size: 18,
                   color: theme.colorScheme.error,
@@ -74,7 +75,7 @@ class SessionMoreMenuButton extends StatelessWidget {
         ],
         child: Tooltip(
           message: '更多选项',
-          child: Icon(
+          child: AppIcon(
             AppIcons.moreOptions(context),
             size: 20,
             color: theme.colorScheme.outline,
@@ -99,7 +100,7 @@ class SessionMoreMenuButton extends StatelessWidget {
       ),
       builder: (context, controller, child) {
         return IconButton(
-          icon: Icon(
+          icon: AppIcon(
             AppIcons.moreOptions(context),
             size: 20,
             color: theme.colorScheme.outline,
@@ -117,7 +118,7 @@ class SessionMoreMenuButton extends StatelessWidget {
       },
       menuChildren: [
         MenuItemButton(
-          leadingIcon: Icon(
+          leadingIcon: AppIcon(
             AppIcons.pin(context, active: isPinned),
             size: 18,
             color: isPinned ? theme.colorScheme.primary : null,
@@ -126,7 +127,7 @@ class SessionMoreMenuButton extends StatelessWidget {
           child: Text(isPinned ? '取消置顶' : '置顶会话'),
         ),
         MenuItemButton(
-          leadingIcon: Icon(
+          leadingIcon: AppIcon(
             AppIcons.notificationsOff(context, active: isDnd),
             size: 18,
             color: isDnd ? theme.colorScheme.primary : null,
@@ -136,7 +137,7 @@ class SessionMoreMenuButton extends StatelessWidget {
         ),
         const Divider(height: 1, indent: 8, endIndent: 8),
         MenuItemButton(
-          leadingIcon: Icon(
+          leadingIcon: AppIcon(
             AppIcons.delete(context),
             size: 18,
             color: theme.colorScheme.error,

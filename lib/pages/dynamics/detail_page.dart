@@ -238,7 +238,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         title: const Text('动态详情', style: TextStyle(fontSize: 16)),
         actions: [
           IconButton(
-            icon: Icon(AppIcons.refresh(context)),
+            icon: AppIcon(AppIcons.refresh(context)),
             tooltip: '重新加载',
             onPressed: _loadDetail,
           ),

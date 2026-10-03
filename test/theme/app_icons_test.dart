@@ -1,4 +1,5 @@
 import 'package:cupertino_ui/cupertino_ui.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/pages/whisper/session/session_more_menu_button.dart';
@@ -394,7 +395,7 @@ void main() {
       expect(find.byIcon(CupertinoIcons.chevron_back), findsNothing);
     });
 
-    testWidgets('在 Miuix 环境下渲染 CupertinoIcons.chevron_back', (tester) async {
+    testWidgets('在 Miuix 环境下渲染 Miuix 矢量返回图标（阶段3c AppIcon 升级）', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: UiStyleScope(
@@ -406,7 +407,8 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(CupertinoIcons.chevron_back), findsOneWidget);
+      expect(find.byType(MiuixIcon), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.chevron_back), findsNothing);
       expect(find.byIcon(Icons.arrow_back), findsNothing);
     });
   });
@@ -442,7 +444,7 @@ void main() {
       expect(find.text('删除会话'), findsOneWidget);
     });
 
-    testWidgets('在 Miuix 环境下渲染 CupertinoIcons.ellipsis', (tester) async {
+    testWidgets('在 Miuix 环境下渲染 Miuix 矢量更多图标（阶段3c AppIcon 升级）', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: UiStyleScope(
@@ -460,11 +462,12 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(CupertinoIcons.ellipsis), findsOneWidget);
+      expect(find.byType(MiuixIcon), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.ellipsis), findsNothing);
       expect(find.byIcon(Icons.more_vert), findsNothing);
 
-      // 点击打开菜单
-      await tester.tap(find.byIcon(CupertinoIcons.ellipsis));
+      // 点击打开菜单（Tooltip 命中层保持可用）
+      await tester.tap(find.byTooltip('更多选项'));
       await tester.pumpAndSettle();
 
       expect(find.text('取消置顶'), findsOneWidget);

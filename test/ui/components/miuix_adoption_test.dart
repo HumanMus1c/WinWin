@@ -1,8 +1,10 @@
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
@@ -220,6 +222,46 @@ void main() {
       await tester.tap(find.text('账号切换'));
       await tester.pumpAndSettle();
       expect(tapped, isTrue);
+    });
+  });
+
+  group('Miuix 图标升级（阶段3c）', () {
+    test('映射表初始化安全（byName 全部非空）且未映射回退 null', () {
+      // 触发整表初始化：任一 byName 拼写错误都会在此抛错。
+      expect(miuixVectorForGlyph(CupertinoIcons.settings), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.house_fill), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.star_fill), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.ellipsis), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.person), isNull);
+    });
+
+    testWidgets('AppIcon：miuix 映射字形渲染 MiuixIcon；未映射与 M3 回退 Icon',
+        (tester) async {
+      await tester.pumpWidget(
+        wrapMiuix(
+          Column(
+            children: const [
+              AppIcon(CupertinoIcons.settings, size: 20),
+              AppIcon(CupertinoIcons.person, size: 20),
+            ],
+          ),
+        ),
+      );
+      expect(find.byType(MiuixIcon), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.person), findsOneWidget);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: UiStyleScope(
+            style: UiStyle.material3,
+            child: Scaffold(
+              body: const AppIcon(CupertinoIcons.settings, size: 20),
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(MiuixIcon), findsNothing);
+      expect(find.byIcon(CupertinoIcons.settings), findsOneWidget);
     });
   });
 }

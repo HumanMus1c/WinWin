@@ -65,9 +65,9 @@ class AppTheme {
   static ActionIconThemeData _actionIconThemeFor(UiStyle style) =>
       ActionIconThemeData(
         backButtonIconBuilder: (BuildContext context) =>
-            Icon(AppIcons.backOf(style)),
+            AppIcon(AppIcons.backOf(style)),
         closeButtonIconBuilder: (BuildContext context) =>
-            Icon(AppIcons.clearOf(style)),
+            AppIcon(AppIcons.clearOf(style)),
       );
 
 

@@ -94,7 +94,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                 Text('字幕设置', style: theme.textTheme.titleMedium),
                 const Spacer(),
                 IconButton(
-                  icon: Icon(AppIcons.clear(context)),
+                  icon: AppIcon(AppIcons.clear(context)),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -415,7 +415,7 @@ class _SubtitleOptionTile extends StatelessWidget {
 
     return ListTile(
       dense: true,
-      leading: Icon(
+      leading: AppIcon(
         AppIcons.radio(context, selected: selected),
         color: selected ? biliPink : null,
         size: 20,
@@ -476,7 +476,7 @@ class _SliderRow extends StatelessWidget {
                 const SizedBox(width: 2),
                 IconButton(
                   tooltip: '恢复默认',
-                  icon: Icon(AppIcons.refresh(context), size: 15),
+                  icon: AppIcon(AppIcons.refresh(context), size: 15),
                   color: Theme.of(context).colorScheme.outline,
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,

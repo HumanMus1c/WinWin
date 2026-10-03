@@ -444,12 +444,12 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         leading: const AppBackButton(),
         actions: [
           IconButton(
-            icon: Icon(AppIcons.refresh(context)),
+            icon: AppIcon(AppIcons.refresh(context)),
             tooltip: '刷新',
             onPressed: () => _loadDetail(),
           ),
           IconButton(
-            icon: Icon(AppIcons.share(context)),
+            icon: AppIcon(AppIcons.share(context)),
             tooltip: '分享',
             onPressed: () {
               final sid = _detail?.seasonId ?? widget.seasonId;

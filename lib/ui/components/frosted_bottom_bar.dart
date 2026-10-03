@@ -102,7 +102,7 @@ class NavDestinationIcon extends StatelessWidget {
                     color: Colors.grey,
                     child: SizedBox.expand(),
                   ),
-                  errorBuilder: (_, _, _) => Icon(
+                  errorBuilder: (_, _, _) => AppIcon(
                     iconData,
                     color: color,
                     size: size - 4,
@@ -111,7 +111,7 @@ class NavDestinationIcon extends StatelessWidget {
               ),
             );
           }
-          return Icon(
+          return AppIcon(
             iconData,
             color: color,
             size: size,
@@ -120,7 +120,7 @@ class NavDestinationIcon extends StatelessWidget {
       );
     }
 
-    final Widget baseIcon = Icon(
+    final Widget baseIcon = AppIcon(
       iconData,
       color: color,
       size: size,

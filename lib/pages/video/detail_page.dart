@@ -1788,7 +1788,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       padding: const EdgeInsets.only(top: Style.xs),
                       child: TextButton.icon(
                         onPressed: () => _loadSubReplies(reply),
-                        icon: Icon(AppIcons.expandMore(context), size: 16),
+                        icon: AppIcon(AppIcons.expandMore(context), size: 16),
                         label: Text(
                           '查看更多回复 ${reply.rcount != null ? "(${subReplies.length}/${reply.rcount})" : ""}',
                           style: const TextStyle(fontSize: 12),
@@ -2086,7 +2086,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       .withValues(alpha: 0.5),
                   suffixIcon: _replyRoot != null
                       ? IconButton(
-                          icon: Icon(AppIcons.clear(context), size: 16),
+                          icon: AppIcon(AppIcons.clear(context), size: 16),
                           onPressed: _clearReplyTarget,
                         )
                       : null,
