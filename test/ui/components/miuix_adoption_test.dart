@@ -395,5 +395,43 @@ void main() {
       await tester.pumpAndSettle();
       expect(result, 1.0);
     });
+
+    testWidgets('字体弹窗搜索框：固定高度 Column 下高度正常（MiuixCompat 包裹）', (tester) async {
+      final ctrl = TextEditingController();
+      addTearDown(ctrl.dispose);
+      await tester.pumpWidget(
+        wrapMiuix(
+          SizedBox(
+            width: 460,
+            height: 520,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: MiuixCompat(
+                    child: MiuixTextField(
+                      controller: ctrl,
+                      label: '搜索字体…',
+                      useLabelAsPlaceholder: true,
+                      singleLine: true,
+                      leadingIcon: const Icon(Icons.search, size: 20),
+                      onChanged: (_) {},
+                    ),
+                  ),
+                ),
+                Expanded(child: ListView(children: const [Text('x')])),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 回归：桥接缺失时 SDK TextField 内部渲染失败（release 大灰块 /
+      // debug 断言），表现为搜索框高度异常溢出——这里锁定正常高度。
+      final size = tester.getSize(find.byType(MiuixTextField));
+      expect(size.width, greaterThan(300));
+      expect(size.height, lessThan(100));
+    });
   });
 }

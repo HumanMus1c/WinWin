@@ -1,12 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart' as legacy;
 import 'package:flutter_miuix/miuix.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/ui_style.dart';
 
 export 'app_desktop_interaction.dart';
@@ -533,17 +533,10 @@ class _AppTextFieldState extends State<AppTextField> {
         onSubmitted: widget.onSubmitted,
         obscureText: widget.obscureText,
       );
-      // MiuixTextField 内部使用 SDK flutter/material 的 TextField：需为 SDK
-      // 材料组件补 ThemeData / MaterialLocalizations（material_ui 官方迁移
-      // 桥接；缺后者在 release 下空断言崩溃）与 Material 祖先（debug 断言）。
-      // 作用域仅限本输入框子树；material_ui 移除该桥接 API 时改为等价手写注入。
-      // ignore: deprecated_member_use
-      return MaterialUiCompatibilityBridge(
-        child: legacy.Material(
-          type: legacy.MaterialType.transparency,
-          child: field,
-        ),
-      );
+      // MiuixTextField 内部使用 SDK flutter/material 的 TextField：经
+      // MiuixCompat 提供 SDK Material 祖先与 ThemeData/MaterialLocalizations
+      // 桥接（缺失后者在 release 下会空断言崩溃，见阶段3复盘）。
+      return MiuixCompat(child: field);
     }
 
     return TextField(

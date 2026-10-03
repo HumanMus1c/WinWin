@@ -13,6 +13,7 @@ import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/theme/app_font_notifier.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/system_font_scanner.dart';
 import 'package:winwin/theme/ui_style.dart';
@@ -440,13 +441,15 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Style.lg),
-                child: MiuixTextField(
-                  controller: _searchController,
-                  onChanged: _onSearch,
-                  label: '搜索字体…',
-                  useLabelAsPlaceholder: true,
-                  singleLine: true,
-                  leadingIcon: AppIcon(AppIcons.search(context), size: 20),
+                child: MiuixCompat(
+                  child: MiuixTextField(
+                    controller: _searchController,
+                    onChanged: _onSearch,
+                    label: '搜索字体…',
+                    useLabelAsPlaceholder: true,
+                    singleLine: true,
+                    leadingIcon: AppIcon(AppIcons.search(context), size: 20),
+                  ),
                 ),
               ),
               const SizedBox(height: Style.sm),
