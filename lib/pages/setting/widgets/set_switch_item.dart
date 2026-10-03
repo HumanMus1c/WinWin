@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/app_messenger.dart';
@@ -10,6 +11,7 @@ import 'package:winwin/ui/components/app_components.dart';
 ///
 /// 移植自 PiliPlus 的 `SetSwitchItem`，去除 GetX/SmartDialog 依赖。
 /// [isSplit] 为 true 时左侧点击进入子设置（[onTap]），右侧独立开关。
+/// Miuix 非 split 分支使用 flutter_miuix 的 [MiuixSwitchPreference]（阶段2）。
 class SetSwitchItem extends StatefulWidget {
   final String title;
   final String? subtitle;
@@ -224,20 +226,29 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
           );
         }
 
-        return InkWell(
-          onTap: switchChange,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
-            padding: widget.contentPadding ??
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(child: miuixContent()),
-                const SizedBox(width: 8),
-                miuixSwitchBtn,
-              ],
-            ),
-          ),
+        final Color? customTitleColor = widget.titleStyle?.color;
+        return MiuixSwitchPreference(
+          value: val,
+          onChanged: switchChange,
+          title: widget.title,
+          summary: widget.subtitle,
+          titleColor: customTitleColor == null
+              ? null
+              : MiuixBasicComponentColors(
+                  color: customTitleColor,
+                  disabledColor: theme.colorScheme.outline,
+                ),
+          startAction: widget.leading == null
+              ? null
+              : IconTheme(
+                  data: IconThemeData(
+                    color: theme.colorScheme.primary,
+                    size: 22,
+                  ),
+                  child: widget.leading!,
+                ),
+          insideMargin: widget.contentPadding ??
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         );
     }
   }

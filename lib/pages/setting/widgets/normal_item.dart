@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/inherited_ui_style.dart';
@@ -7,6 +8,7 @@ import 'package:winwin/theme/ui_style.dart';
 ///
 /// 移植自 PiliPlus 的 `NormalItem`，去除 GetX 依赖。
 /// [onTap] 回调接收 `setState` 用于刷新副标题。
+/// Miuix 分支使用 flutter_miuix 的 [MiuixBasicComponent]（阶段2 起替换）。
 class NormalItem extends StatefulWidget {
   final String? title;
   final ValueGetter<String>? getTitle;
@@ -82,53 +84,38 @@ class _NormalItemState extends State<NormalItem> {
                 ),
         );
       case PrimitiveRenderer.miuix:
-        return InkWell(
-          borderRadius: widget.borderRadius,
-          onTap: widget.onTap == null
+        final Color? customTitleColor = widget.titleStyle?.color;
+        return MiuixBasicComponent(
+          title: widget.title ?? widget.getTitle!(),
+          summary: text,
+          titleColor: customTitleColor == null
               ? null
-              : () => widget.onTap!(context, refresh),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
-            padding: widget.contentPadding ??
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                if (widget.leading != null) ...[
-                  IconTheme(
-                    data: IconThemeData(
-                      color: theme.colorScheme.primary,
-                      size: 22,
-                    ),
-                    child: widget.leading!,
-                  ),
-                  const SizedBox(width: 14),
-                ],
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.title ?? widget.getTitle!(),
-                        style: widget.titleStyle ?? theme.textTheme.bodyLarge,
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 2),
-                        subtitle,
-                      ],
-                    ],
-                  ),
+              : MiuixBasicComponentColors(
+                  color: customTitleColor,
+                  disabledColor: theme.colorScheme.outline,
                 ),
-                if (trailing != null) ...[
-                  const SizedBox(width: 8),
+          startAction: widget.leading == null
+              ? null
+              : IconTheme(
+                  data: IconThemeData(
+                    color: theme.colorScheme.primary,
+                    size: 22,
+                  ),
+                  child: widget.leading!,
+                ),
+          endActions: trailing == null
+              ? null
+              : [
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 200),
                     child: trailing,
                   ),
                 ],
-              ],
-            ),
-          ),
+          insideMargin: widget.contentPadding ??
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          onClick: widget.onTap == null
+              ? null
+              : () => widget.onTap!(context, refresh),
         );
     }
   }

@@ -1,11 +1,23 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/ui/components/app_components.dart';
+
+Widget wrapMiuix(Widget child, {bool dark = false}) => MaterialApp(
+      home: MiuixThemeScope(
+        isDark: dark,
+        child: UiStyleScope(
+          style: UiStyle.miuix,
+          child: Scaffold(body: Center(child: child)),
+        ),
+      ),
+    );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -64,16 +76,6 @@ void main() {
   });
 
   group('Miuix 组件替换（阶段1）', () {
-    Widget wrapMiuix(Widget child, {bool dark = false}) => MaterialApp(
-          home: MiuixThemeScope(
-            isDark: dark,
-            child: UiStyleScope(
-              style: UiStyle.miuix,
-              child: Scaffold(body: Center(child: child)),
-            ),
-          ),
-        );
-
     testWidgets('miuix 风格：四类控件替换为 Miuix 原生组件', (tester) async {
       var toggled = false;
       await tester.pumpWidget(
@@ -123,6 +125,101 @@ void main() {
       expect(find.byType(MiuixButton), findsNothing);
       expect(find.byType(MiuixCard), findsNothing);
       expect(find.byType(MiuixLinearProgressIndicator), findsNothing);
+    });
+  });
+
+  group('Miuix 组件替换（阶段2）', () {
+    testWidgets('AppTextField：渲染 MiuixTextField 且格式化器在控制器层生效', (tester) async {
+      final digitsCtrl = TextEditingController();
+      final denyCtrl = TextEditingController();
+      addTearDown(digitsCtrl.dispose);
+      addTearDown(denyCtrl.dispose);
+
+      await tester.pumpWidget(
+        wrapMiuix(
+          Column(
+            children: [
+              AppTextField(
+                controller: digitsCtrl,
+                label: '手机号',
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+              AppTextField(
+                controller: denyCtrl,
+                label: '账号',
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.byType(MiuixTextField), findsNWidgets(2));
+      await tester.enterText(find.byType(MiuixTextField).first, '1a2 3');
+      await tester.pump();
+      expect(digitsCtrl.text, '123');
+
+      await tester.enterText(find.byType(MiuixTextField).last, 'a b c');
+      await tester.pump();
+      expect(denyCtrl.text, 'abc');
+    });
+
+    testWidgets('AppSegmentedControl：渲染 MiuixTabRow 且切换回调正确', (tester) async {
+      var selected = 0;
+      await tester.pumpWidget(
+        wrapMiuix(
+          AppSegmentedControl<int>(
+            value: 0,
+            segments: const [(0, '密码'), (1, '短信'), (2, '扫码')],
+            onChanged: (v) => selected = v,
+          ),
+        ),
+      );
+
+      expect(find.byType(MiuixTabRow), findsOneWidget);
+      await tester.tap(find.text('扫码'));
+      await tester.pump();
+      expect(selected, 2);
+    });
+
+    testWidgets('AppGroup/AppListItem/NormalItem：渲染 MiuixCard 与行组件', (tester) async {
+      await tester.pumpWidget(
+        wrapMiuix(
+          AppGroup(
+            children: [
+              const AppListItem(
+                icon: Icons.code,
+                title: '项目说明',
+                subtitle: 'GPL-3.0',
+              ),
+              NormalItem(leading: const Icon(Icons.settings), title: '设置'),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.byType(MiuixCard), findsOneWidget);
+      expect(find.byType(MiuixBasicComponent), findsNWidgets(2));
+      expect(find.text('项目说明'), findsOneWidget);
+      expect(find.text('设置'), findsOneWidget);
+    });
+
+    testWidgets('NormalItem：miuix 行点击回调可用', (tester) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        wrapMiuix(
+          NormalItem(
+            title: '账号切换',
+            onTap: (ctx, refresh) => tapped = true,
+          ),
+        ),
+      );
+      await tester.tap(find.text('账号切换'));
+      await tester.pumpAndSettle();
+      expect(tapped, isTrue);
     });
   });
 }

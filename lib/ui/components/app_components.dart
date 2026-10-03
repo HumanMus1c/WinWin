@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/material.dart' as legacy;
 import 'package:flutter_miuix/miuix.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
@@ -119,7 +120,8 @@ class AppCard extends StatelessWidget {
 /// 自适应分组容器（设置页 / 表单用）。
 ///
 /// - MD3：surfaceContainer + 24dp 圆角，无分割线（靠间距分隔）。
-/// - Miuix：surface + 20dp + 0 elevation，无分割线。
+/// - Miuix：[MiuixCard]（surface + squircle 圆角 + 0 elevation；外层
+///   ClipPath 裁四角，保证行内按压反馈不溢出；flutter_miuix 阶段2 起替换）。
 class AppGroup extends StatelessWidget {
   const AppGroup({super.key, required this.children, this.margin});
 
@@ -132,19 +134,35 @@ class AppGroup extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final renderer = resolvePrimitiveRenderer(t.style);
 
-    final bgColor = switch (renderer) {
-      PrimitiveRenderer.material3 => cs.surfaceContainer,
-      PrimitiveRenderer.miuix => cs.surface,
-    };
     final r = switch (renderer) {
       PrimitiveRenderer.material3 => t.chrome.containerRadius,
       PrimitiveRenderer.miuix => t.shapes.large.x,
     };
 
+    if (renderer == PrimitiveRenderer.miuix) {
+      return Container(
+        margin: margin,
+        child: ClipPath(
+          clipper: ShapeBorderClipper(
+            shape: MiuixSquircleBorder(cornerRadius: r),
+          ),
+          child: MiuixCard(
+            cornerRadius: r,
+            insideMargin: EdgeInsets.zero,
+            colors: MiuixCardColors(
+              color: cs.surface,
+              contentColor: cs.onSurface,
+            ),
+            child: Column(children: children),
+          ),
+        ),
+      );
+    }
+
     return Container(
       margin: margin,
       child: Material(
-        color: bgColor,
+        color: cs.surfaceContainer,
         borderRadius: BorderRadius.circular(r),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -293,7 +311,8 @@ class AppSwitch extends StatelessWidget {
 /// 自适应列表项 — 图标 + 标题 + 副标题 + 尾部。
 ///
 /// - MD3：标准 [ListTile] + M3 ripple。
-/// - Miuix：扁平 + 左侧色块条，无右箭头，中性灰背景。
+/// - Miuix：[MiuixBasicComponent]（标题/摘要 + 起始图标 + 尾部自定义，
+///   整行按压反馈；flutter_miuix 阶段2 起替换原手绘行）。
 class AppListItem extends StatelessWidget {
   const AppListItem({
     super.key,
@@ -334,45 +353,13 @@ class AppListItem extends StatelessWidget {
           trailing: trailing,
         );
       case PrimitiveRenderer.miuix:
-        return InkWell(
-          borderRadius: borderRadius,
-          onTap: onTap,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 3,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: tint,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Icon(icon, color: tint, size: 22),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: theme.textTheme.bodyLarge),
-                      if (subtitle != null)
-                        Text(
-                          subtitle!,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: cs.outline,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                ?trailing,
-              ],
-            ),
-          ),
+        return MiuixBasicComponent(
+          title: title,
+          summary: subtitle,
+          startAction: Icon(icon, color: tint, size: 22),
+          endActions: trailing == null ? null : [trailing!],
+          insideMargin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          onClick: onTap,
         );
     }
   }
@@ -385,7 +372,8 @@ class AppListItem extends StatelessWidget {
 /// 自适应分段控件。
 ///
 /// - MD3：[SegmentedButton] 标准 M3 带边框容器。
-/// - Miuix：tonal 胶囊滑动 Row，药丸高亮指示块。
+/// - Miuix：[MiuixTabRow]（原生胶囊选中指示 + squircle 揭示；
+///   flutter_miuix 阶段2 起替换原自绘胶囊实现）。
 class AppSegmentedControl<T extends Object> extends StatelessWidget {
   const AppSegmentedControl({
     super.key,
@@ -401,7 +389,6 @@ class AppSegmentedControl<T extends Object> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = _Tokens.of(context);
-    final cs = Theme.of(context).colorScheme;
 
     switch (resolvePrimitiveRenderer(t.style)) {
       case PrimitiveRenderer.material3:
@@ -418,39 +405,11 @@ class AppSegmentedControl<T extends Object> extends StatelessWidget {
           },
         );
       case PrimitiveRenderer.miuix:
-        return Container(
-          decoration: BoxDecoration(
-            color: cs.surfaceContainer,
-            borderRadius: t.shapes.pillBorder,
-          ),
-          padding: const EdgeInsets.all(3),
-          child: Row(
-            children: segments.map((e) {
-              final selected = e.$1 == value;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => onChanged(e.$1),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 6),
-                    decoration: BoxDecoration(
-                      color: selected ? cs.primary : Colors.transparent,
-                      borderRadius: t.shapes.pillBorder,
-                    ),
-                    child: Text(
-                      e.$2,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: selected ? cs.onPrimary : cs.onSurfaceVariant,
-                        fontWeight: t.typo.titleWeight,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+        final index = segments.indexWhere((e) => e.$1 == value);
+        return MiuixTabRow(
+          tabs: segments.map((e) => e.$2).toList(),
+          selectedTabIndex: index < 0 ? 0 : index,
+          onTabSelected: (i) => onChanged(segments[i].$1),
         );
     }
   }
@@ -462,10 +421,15 @@ class AppSegmentedControl<T extends Object> extends StatelessWidget {
 
 /// 自适应文本输入框。
 ///
-/// - iOS：圆角填充 + 无边框。
-/// - MD3：outlined + M3 label。
-/// - Miuix：扁平填充 + 底部细线。
-class AppTextField extends StatelessWidget {
+/// - MD3：outlined + M3 label（原生 [TextField]，格式化器直传）。
+/// - Miuix：[MiuixTextField]（浮动标签 + 聚焦 squircle 边框；
+///   flutter_miuix 阶段2 起替换原"扁平填充 + 底部细线"近似实现）。
+///
+/// 桥接说明：flutter_miuix 1.3.0 的 `MiuixTextField` 暂无 `inputFormatters`
+/// 参数，而调用侧需要过滤输入；此处以 [_FormatterProxyController] 在控制器
+/// 层应用格式化器——复用 Flutter 官方 [TextInputFormatter.formatEditUpdate]
+/// （与 EditableText 内部同一机制），上游补齐该参数后可整体移除。
+class AppTextField extends StatefulWidget {
   const AppTextField({
     super.key,
     this.controller,
@@ -498,60 +462,144 @@ class AppTextField extends StatelessWidget {
   final int? maxLines;
 
   @override
+  State<AppTextField> createState() => _AppTextFieldState();
+}
+
+class _AppTextFieldState extends State<AppTextField> {
+  /// 内部自建的基础控制器（外部未传入 controller 且需要格式化桥接时）。
+  TextEditingController? _ownedController;
+
+  /// 格式化桥接控制器（仅 miuix 分支、且有格式化器时启用）。
+  _FormatterProxyController? _proxy;
+
+  @override
+  void didUpdateWidget(AppTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldHasFormatters = oldWidget.inputFormatters?.isNotEmpty ?? false;
+    final newHasFormatters = widget.inputFormatters?.isNotEmpty ?? false;
+    if (oldWidget.controller != widget.controller ||
+        oldHasFormatters != newHasFormatters) {
+      _disposeProxy();
+      return;
+    }
+    _proxy?.formatters = widget.inputFormatters ?? const [];
+  }
+
+  @override
+  void dispose() {
+    _disposeProxy();
+    super.dispose();
+  }
+
+  void _disposeProxy() {
+    _proxy?.dispose();
+    _proxy = null;
+    _ownedController?.dispose();
+    _ownedController = null;
+  }
+
+  /// 取得启用格式化桥接的控制器（惰性创建）。
+  TextEditingController _ensureProxy() {
+    final existing = _proxy;
+    if (existing != null) return existing;
+    final base =
+        widget.controller ?? (_ownedController ??= TextEditingController());
+    final proxy = _FormatterProxyController(base, widget.inputFormatters!);
+    _proxy = proxy;
+    return proxy;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = _Tokens.of(context);
     final cs = Theme.of(context).colorScheme;
     final renderer = resolvePrimitiveRenderer(t.style);
 
+    // Miuix 分支（阶段2）：原生 MiuixTextField + 控制器层格式化桥接。
+    if (renderer == PrimitiveRenderer.miuix) {
+      final hasFormatters = widget.inputFormatters?.isNotEmpty ?? false;
+      final field = MiuixTextField(
+        controller: hasFormatters ? _ensureProxy() : widget.controller,
+        focusNode: widget.focusNode,
+        onChanged: widget.onChanged,
+        label: widget.label ?? widget.hint ?? '',
+        useLabelAsPlaceholder: widget.label == null && widget.hint != null,
+        leadingIcon: widget.prefix,
+        trailingIcon: widget.suffix,
+        singleLine: (widget.maxLines ?? 1) == 1,
+        minLines: widget.minLines,
+        maxLines: widget.maxLines,
+        keyboardType: widget.keyboardType,
+        onSubmitted: widget.onSubmitted,
+        obscureText: widget.obscureText,
+      );
+      // MiuixTextField 内部使用 SDK flutter/material 的 TextField：需为 SDK
+      // 材料组件补 ThemeData / MaterialLocalizations（material_ui 官方迁移
+      // 桥接；缺后者在 release 下空断言崩溃）与 Material 祖先（debug 断言）。
+      // 作用域仅限本输入框子树；material_ui 移除该桥接 API 时改为等价手写注入。
+      // ignore: deprecated_member_use
+      return MaterialUiCompatibilityBridge(
+        child: legacy.Material(
+          type: legacy.MaterialType.transparency,
+          child: field,
+        ),
+      );
+    }
+
     return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      obscureText: obscureText,
-      onChanged: onChanged,
-      onSubmitted: onSubmitted,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      minLines: minLines,
-      maxLines: maxLines,
+      controller: widget.controller,
+      focusNode: widget.focusNode,
+      obscureText: widget.obscureText,
+      onChanged: widget.onChanged,
+      onSubmitted: widget.onSubmitted,
+      keyboardType: widget.keyboardType,
+      inputFormatters: widget.inputFormatters,
+      minLines: widget.minLines,
+      maxLines: widget.maxLines,
       decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: prefix,
-        suffixIcon: suffix,
-        filled: renderer != PrimitiveRenderer.material3,
-        fillColor: cs.surfaceContainerHighest,
-        border: switch (renderer) {
-          PrimitiveRenderer.material3 => OutlineInputBorder(
-              borderRadius: t.shapes.smallBorder,
-              borderSide: BorderSide(color: cs.outline),
-            ),
-          PrimitiveRenderer.miuix => UnderlineInputBorder(
-              borderRadius: t.shapes.smallBorder,
-              borderSide: BorderSide(color: cs.outlineVariant),
-            ),
-        },
-        enabledBorder: switch (renderer) {
-          PrimitiveRenderer.material3 => OutlineInputBorder(
-              borderRadius: t.shapes.smallBorder,
-              borderSide: BorderSide(color: cs.outlineVariant),
-            ),
-          PrimitiveRenderer.miuix => UnderlineInputBorder(
-              borderRadius: t.shapes.smallBorder,
-              borderSide: BorderSide(color: cs.outlineVariant),
-            ),
-        },
-        focusedBorder: switch (renderer) {
-          PrimitiveRenderer.material3 => OutlineInputBorder(
-              borderRadius: t.shapes.smallBorder,
-              borderSide: BorderSide(color: cs.primary, width: 2),
-            ),
-          PrimitiveRenderer.miuix => UnderlineInputBorder(
-              borderRadius: t.shapes.smallBorder,
-              borderSide: BorderSide(color: cs.primary, width: 2),
-            ),
-        },
+        labelText: widget.label,
+        hintText: widget.hint,
+        prefixIcon: widget.prefix,
+        suffixIcon: widget.suffix,
+        filled: false,
+        border: OutlineInputBorder(
+          borderRadius: t.shapes.smallBorder,
+          borderSide: BorderSide(color: cs.outline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: t.shapes.smallBorder,
+          borderSide: BorderSide(color: cs.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: t.shapes.smallBorder,
+          borderSide: BorderSide(color: cs.primary, width: 2),
+        ),
       ),
     );
+  }
+}
+
+/// 控制器层格式化桥接（flutter_miuix 1.3.0 缺 `inputFormatters` 参数的临时
+/// 补偿）：在写入前经官方 formatter 链过滤，行为与 EditableText 内部一致。
+class _FormatterProxyController extends TextEditingController {
+  _FormatterProxyController(this._inner, List<TextInputFormatter> formatters)
+      : formatters = List.of(formatters);
+
+  final TextEditingController _inner;
+  List<TextInputFormatter> formatters;
+
+  @override
+  TextEditingValue get value => _inner.value;
+
+  @override
+  set value(TextEditingValue newValue) {
+    var formatted = newValue;
+    for (final formatter in formatters) {
+      formatted = formatter.formatEditUpdate(_inner.value, formatted);
+    }
+    _inner.value = formatted;
+    // 同步通知本代理的监听者（EditableText 依赖 read-back 取过滤结果）。
+    notifyListeners();
   }
 }
 
