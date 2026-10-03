@@ -1,6 +1,7 @@
 # Flutter / Dart
 build/
 dist/
+
 .dart_tool/
 .packages
 .flutter-plugins
@@ -11,6 +12,11 @@ dist/
 *.obj
 *.tmp
 *.o
+
+# Release 产物（fastforge / CI 打包输出）
+WinWin-Setup/
+WinWin_windows_*.zip
+checksums.txt
 
 # Logs & Diagnostics
 *.log

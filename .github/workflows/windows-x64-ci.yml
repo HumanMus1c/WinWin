@@ -1,4 +1,4 @@
-name: CI
+name: CI（Windows x64）
 
 # 适配自上游工作流：
 #   PiliPlus  build.yml / win_x64.yml —— 构建、产物命名与上传范式
@@ -35,8 +35,7 @@ jobs:
         run: flutter pub get
 
       - name: 静态分析
-        # --no-fatal-infos：耐受仓库既有 6 条 info 级 lint（待后续清理）；warning / error 仍视为失败
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze
 
       - name: 单元测试
         run: flutter test

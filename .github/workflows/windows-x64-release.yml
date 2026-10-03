@@ -1,4 +1,4 @@
-name: Release
+name: Release（Windows x64）
 
 # 适配自上游工作流：
 #   PiliPlus  build.yml / win_x64.yml —— fastforge + Inno Setup 安装器、产物命名、softprops 发布
