@@ -85,16 +85,21 @@
 
 测试输出取证：`Coverage: miuixAdopt: scope active isDark=false font=system`（测试运行可见）。
 
-### 3.2 实机验证（待做 — 用户操作）
+### 3.2 实机验证（已完成 — 2026-10-03 复测 + 日志取证）
 
-- [ ] 1. 设置 → 外观 → 切到 **Miuix**：开关为 49×28 胶囊轨道，点击/拖拽可切换、按压 thumb 放大。
-- [ ] 2. 主按钮（登录页/确认弹窗）：纯色 Miuix 按钮 + squircle 圆角 + folme 弹簧按压（原"渐变"已替换，请确认可接受）。
-- [ ] 3. 首页/动态页卡片：squircle 连续曲率圆角、无阴影。
-- [ ] 4. 个人页经验进度条：3px tertiary 全圆角 Miuix 进度条。
-- [ ] 5. 切回 **Material 3**：上述控件恢复原样，无布局错位/闪烁。
-- [ ] 6. 日志取证：`uiStyle material3 → miuix` 与 `miuixAdopt: scope active` 均可见（Release 日志可查）。
+- [x] 1–5. 用户于 2026-10-03 复测通过（Miuix 风格下开关 / 主按钮 / 卡片 / 进度条外观与交互正常；
+  会话路径覆盖界面风格弹窗、Esc 层级、视频起播/退出、登录页进入等，无异常迹象）。
+- [x] 6. 日志取证（`D:\Documents\logs\runtime.log`，2026-10-03 复测会话）：
+  - `2026-10-03T13:20:40.348265 [W] Coverage: miuixAdopt: scope active isDark=false font=PingFang SC`
+    → 桥接 Scope 实机生效（Release 运行；字体注入 = 用户导入字体 PingFang SC）。
+  - 2026-10-02 / 10-03 全量检索：**0 条 [E]**（全文件 4 条 [E] 均为 09-28/09-29 旧会话）；
+    无 Miuix / 着色器 / 布局溢出 / dynamic_color 相关告警。
+  - `.winwin_logs.json` 末次写入 2026-10-02 19:03（早于本次构建）：复测期间**无新增崩溃报告**。
+  - 说明：本次会话未发生 m3↔miuix 往返切换（风格弹窗以 cancelled 关闭）；切换路径此前会话
+    （10-02 22:31 material3→miuix、10-02 17:54 miuix→material3）已有记录，且由单测覆盖。
+- 结论：阶段1 复测通过、无回归证据，可进入阶段2。
 
-> 任一项异常 → 截图/日志回传；必要时 `git reset --hard 8b9958d7…` 秒级回滚。
+> 回滚基准保持 `8b9958d7…`；如需回滚 `git reset --hard 8b9958d79d43332ffdd89e60de21f0dfc3e913ed`。
 
 ---
 
@@ -130,7 +135,8 @@ MD3 路径与其余 12 处 miuix 分支行为不变。
 
 ## 五、GitHub commit 提交记录
 
-- 提交：`daef8cbe28d69995819a236f6decc67c24afcb03`（`[feat](miuix): 引入 flutter_miuix 桥接并试点替换 4 个自适应组件（阶段1）`，12 文件 / +526 −53；按全局开发规定补记）
+- 阶段1提交：`daef8cbe28d69995819a236f6decc67c24afcb03`（`[feat](miuix): 引入 flutter_miuix 桥接并试点替换 4 个自适应组件（阶段1）`，12 文件 / +526 −53）
+  + `637c764`（docs 回填）——已于 **2026-10-03 推送 `origin/main`**。
+- 复测回填：本 `[docs]` 提交（提交 hash 按全局开发规定事后补记；随同阶段1一并推送）。
 - 快照 / 回滚基准：`8b9958d79d43332ffdd89e60de21f0dfc3e913ed`
-  （改动前状态；`git reset --hard 8b9958d79d43332ffdd89e60de21f0dfc3e913ed`）
-- 推送：按用户习惯会话末尾批量推送（本地先提交；推送状态事后补记）。
+  （改动前状态；`git reset --hard 8b9958d79d43332ffdd89e60de21f0dfc3e913ed` 秒级回滚）。
