@@ -37,6 +37,7 @@ class SessionMoreMenuButton extends StatelessWidget {
 
     if (style == UiStyle.miuix) {
       return MiuixPopupMenu(
+        title: '更多选项',
         entries: [
           MiuixDropdownEntry(
             items: [

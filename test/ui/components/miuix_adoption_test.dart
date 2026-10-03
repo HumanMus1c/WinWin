@@ -582,6 +582,7 @@ void main() {
         wrapMiuix(
           Center(
             child: MiuixPopupMenu(
+              title: '测试菜单',
               entries: [
                 MiuixDropdownEntry(
                   items: [
@@ -603,6 +604,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
+      expect(find.text('测试菜单'), findsOneWidget);
       expect(find.text('选项甲'), findsOneWidget);
       expect(find.byType(MiuixSurface), findsOneWidget);
 

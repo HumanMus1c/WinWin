@@ -26,6 +26,7 @@ class MiuixPopupMenu extends StatefulWidget {
     super.key,
     required this.entries,
     required this.child,
+    this.title,
     this.maxHeight = 420,
     this.itemTextStyle,
   });
@@ -34,6 +35,10 @@ class MiuixPopupMenu extends StatefulWidget {
 
   /// 触发器（含 hover 视觉的任意控件；点击由本壳接管）。
   final Widget child;
+
+  /// 弹层标题（取原触发控件的 tooltip / 功能描述，避免无标题导致误判
+  /// 操作）；null 时不渲染标题行。
+  final String? title;
 
   final double maxHeight;
 
@@ -75,6 +80,7 @@ class _MiuixPopupMenuState extends State<MiuixPopupMenu>
         triggerRect: triggerRect,
         maxHeight: widget.maxHeight,
         entries: widget.entries,
+        title: widget.title,
         itemTextStyle: widget.itemTextStyle,
         animation: _anim,
         focusNode: _focusNode,
@@ -123,6 +129,7 @@ class _PopupOverlay extends StatelessWidget {
     required this.triggerRect,
     required this.maxHeight,
     required this.entries,
+    required this.title,
     required this.itemTextStyle,
     required this.animation,
     required this.focusNode,
@@ -133,6 +140,7 @@ class _PopupOverlay extends StatelessWidget {
   final Rect triggerRect;
   final double maxHeight;
   final List<MiuixDropdownEntry> entries;
+  final String? title;
   final TextStyle? itemTextStyle;
   final Animation<double> animation;
   final FocusNode focusNode;
@@ -203,18 +211,47 @@ class _PopupOverlay extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(maxHeight: panelMaxHeight),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: _buildRows(
-                          context,
-                          rowTextStyle: rowTextStyle,
-                          contentColor: contentColor,
-                          selectedContentColor: selectedContentColor,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (title != null) ...[
+                          Padding(
+                            padding:
+                                const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                            child: Text(
+                              title!,
+                              style: (Theme.of(context)
+                                          .textTheme
+                                          .titleSmall ??
+                                      const TextStyle())
+                                  .copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: contentColor,
+                              ),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 14),
+                            child: MiuixHorizontalDivider(thickness: 1.5),
+                          ),
+                        ],
+                        Flexible(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: _buildRows(
+                                context,
+                                rowTextStyle: rowTextStyle,
+                                contentColor: contentColor,
+                                selectedContentColor: selectedContentColor,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
