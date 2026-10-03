@@ -274,6 +274,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
             widget.onToast('极验参数缺失，请改用扫码或 Cookie 登录');
             return;
           }
+          if (!mounted) return;
           // 弹出极验 webview，等待用户完成滑块验证。
           final result = await GeetestWebviewDialog.show(
             context,
@@ -510,6 +511,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
             return;
           }
 
+          if (!mounted) return;
           // 弹出极验 webview，等待用户完成滑块验证。
           final result = await GeetestWebviewDialog.show(
             context,

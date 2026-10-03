@@ -5,7 +5,7 @@ import 'package:winwin/models/user/user_info.dart';
 
 /// 账户状态广播服务（移植自 PiliPlus `lib/services/account_service.dart`）。
 ///
-/// WinWin 精简版：用 [ChangeNotifier] 替代 GetX 的 Rx<bool>，供 UI 通过
+/// WinWin 精简版：用 [ChangeNotifier] 替代 GetX 的 `Rx<bool>`，供 UI 通过
 /// [AnimatedBuilder] / [ListenableBuilder] 监听登录态变化。
 ///
 /// 持有当前用户信息 [userInfo]，登录后由 [LoginUtils.onLoginMain] 写入，

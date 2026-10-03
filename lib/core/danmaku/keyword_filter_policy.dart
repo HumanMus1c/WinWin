@@ -362,13 +362,13 @@ bool shouldBlockDanmakuByRules(
   if ((content.trim().isEmpty && userHash.trim().isEmpty) || rules.isEmpty) {
     return false;
   }
-  final matchers = compileDanmakuBlockRules(rules);
+  final matchers = _compileDanmakuBlockRules(rules);
   if (matchers.isEmpty) return false;
   return matchers.any((m) => m.matches(content, userHash: userHash));
 }
 
 /// 编译规则列表为匹配器列表（预编译，多次匹配时复用）。
-List<_DanmakuBlockRuleMatcher> compileDanmakuBlockRules(List<String> rules) {
+List<_DanmakuBlockRuleMatcher> _compileDanmakuBlockRules(List<String> rules) {
   return rules
       .map((r) => _resolveMatcher(r))
       .whereType<_DanmakuBlockRuleMatcher>()

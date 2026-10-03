@@ -6,10 +6,10 @@
 // instead of recommendations tuned to the logged-in account.
 
 /// Host of bilibili's public web API.
-const String BILIBILI_API_HOST = 'api.bilibili.com';
+const String bilibiliApiHost = 'api.bilibili.com';
 
 /// Path of the web home-feed (top feed recommend) endpoint.
-const String WEB_HOME_FEED_PATH =
+const String webHomeFeedPath =
     '/x/web-interface/wbi/index/top/feed/rcmd';
 
 /// Immutable snapshot of the anonymizer runtime's hit stats.
@@ -135,15 +135,15 @@ class HomeFeedAnonymizerPolicy {
   /// identified by [host] and [path].
   ///
   /// That is the case only when the anonymizer is [enabled], the [host] is
-  /// [BILIBILI_API_HOST], and [path] is [WEB_HOME_FEED_PATH].
+  /// [bilibiliApiHost], and [path] is [webHomeFeedPath].
   static bool shouldClearHomeFeedCookies(
     String host,
     String path,
     bool enabled,
   ) {
     return enabled &&
-        host == BILIBILI_API_HOST &&
-        path == WEB_HOME_FEED_PATH;
+        host == bilibiliApiHost &&
+        path == webHomeFeedPath;
   }
 
   /// Returns the cookie header names that should survive the policy.
