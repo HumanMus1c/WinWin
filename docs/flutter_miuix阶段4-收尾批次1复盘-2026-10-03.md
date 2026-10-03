@@ -33,7 +33,7 @@
 |---|---|
 | `dart analyze` | **0 错误 0 警告**（6 条既有 info） |
 | `flutter test` | **126/126 通过**（+5：底栏/Toast/ActionTile/LevelExpBar/MedalWidget） |
-| 双构建 | 见下（本批与 4c/4f 合并最终验收前各跑一次） |
+| 双构建 | `windows --debug` ✅ / `--release` ✅，0 警告 0 错误（批次1 提交后核验通过） |
 
 ### 实机验证清单（待做）
 
