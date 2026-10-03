@@ -17,4 +17,5 @@
 - When presenting a plan with open choices, expects the decision points to be pre-answered with explicit defaults ("未批注则按默认执行") and the work to proceed on those defaults if he doesn't annotate them — he approves the plan and lets it run rather than answering each choice, so blocking on per-decision confirmation is unwanted. Confidence: 0.5
 
 doesn't annotate them — he approves the plan and lets it run rather than answering each choice, so blocking on per-decision confirmation is unwanted. Confidence: 0.5
+- For large mechanical/consistency sweeps (bulk conversions touching many call sites, e.g. ~50 `IconData` → widget sites), expects the work delivered incrementally in small per-component steps ("逐部件小步") with each part verified as it goes, rather than as one sweeping change. Confidence: 0.45
 
