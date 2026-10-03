@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
@@ -262,6 +265,52 @@ void main() {
       );
       expect(find.byType(MiuixIcon), findsNothing);
       expect(find.byIcon(CupertinoIcons.settings), findsOneWidget);
+    });
+  });
+
+  group('Miuix 刷新（阶段3d）', () {
+    testWidgets('AppRefreshIndicator：渲染 MiuixPullToRefresh 且刷新状态闭环', (tester) async {
+      final completer = Completer<void>();
+      await tester.pumpWidget(
+        wrapMiuix(
+          SizedBox(
+            height: 400,
+            child: AppRefreshIndicator(
+              onRefresh: () => completer.future,
+              child: ListView(children: const [Text('内容')]),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(MiuixPullToRefresh), findsOneWidget);
+      expect(
+        tester
+            .widget<MiuixPullToRefresh>(find.byType(MiuixPullToRefresh))
+            .isRefreshing,
+        isFalse,
+      );
+
+      // 等效「越过阈值松手」：触发 onRefresh → isRefreshing 置真并等待 Future。
+      tester
+          .widget<MiuixPullToRefresh>(find.byType(MiuixPullToRefresh))
+          .onRefresh();
+      await tester.pump();
+      expect(
+        tester
+            .widget<MiuixPullToRefresh>(find.byType(MiuixPullToRefresh))
+            .isRefreshing,
+        isTrue,
+      );
+
+      completer.complete();
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<MiuixPullToRefresh>(find.byType(MiuixPullToRefresh))
+            .isRefreshing,
+        isFalse,
+      );
     });
   });
 }

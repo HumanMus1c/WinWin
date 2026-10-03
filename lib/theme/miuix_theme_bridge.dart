@@ -124,6 +124,14 @@ class _MiuixThemeScopeState extends State<MiuixThemeScope> {
       'miuixAdopt: scope $phase isDark=${widget.isDark} '
       'font=${widget.fontFamily ?? 'system'}',
     );
+    // OS4 玻璃着色器探测（阶段3d）：着色器为惰性加载，首次渲染 MiuixGlass*
+    // 组件前 loaded=0；此日志用于跨会话取证 Windows 端的玻璃可用性
+    // （loadError 非 none 即为降级原因）。
+    AppLogger.w(
+      'Coverage',
+      'miuixAdopt: glass loaded=${MiuixGlassRendering.loadedPrograms.length} '
+      'error=${MiuixGlassRendering.loadError ?? 'none'}',
+    );
   }
 
   @override
