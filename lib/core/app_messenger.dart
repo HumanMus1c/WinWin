@@ -4,7 +4,9 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/ui_style.dart';
+import 'package:winwin/theme/ui_style_notifier.dart';
 
 /// 应用级 ScaffoldMessenger 句柄（挂载于 `MaterialApp.scaffoldMessengerKey`）。
 ///
@@ -69,18 +71,29 @@ SnackBar _buildToast(
   Duration? duration,
 }) {
   final displayText = _breakLongSegments(message);
+  final theme = Theme.of(context);
 
-  // Miuix 分支（阶段4a）：卡片材质替换为 flutter_miuix 的 MiuixSurface
-  // （squircle 16 + 内容色注入 + 阴影）；宽度自适应 / 点击关闭 / 单条优先
-  // 机制保持不变。SnackBar 本体透明，仅承载定位与生命周期。
-  if (InheritedUiStyle.of(context) == UiStyle.miuix) {
-    final theme = Theme.of(context);
-    final container =
-        theme.snackBarTheme.backgroundColor ?? theme.colorScheme.inverseSurface;
-    final contentColor = theme.snackBarTheme.contentTextStyle?.color ??
-        theme.colorScheme.onInverseSurface;
+  // 风格解析：常规调用走 InheritedUiStyle；无 context 路径（showAppSnackBar
+  // 经 `messenger.context`，位于 MaterialApp.builder 链之上）取不到作用域，
+  // 回退到全局 UiStyleNotifier——此前缺失回退导致无 context 的 toast 恒落
+  // M3 分支（复测反馈：Toast 未 Miuix 化）。
+  final style =
+      InheritedUiStyle.maybeOf(context) ?? UiStyleNotifier.instance.value;
+
+  // Miuix 分支（阶段4a）：卡片材质为 flutter_miuix 的 MiuixSurface，配色取
+  // 桥接调色板（浅色 surfaceContainer 底 + onSurfaceContainer 文字——MIUI
+  // 通知条语言；暗色模式自动取对应调色板）；宽度自适应 / 点击关闭 / 单条
+  // 优先机制不变。SnackBar 本体透明，仅承载定位与生命周期。
+  if (style == UiStyle.miuix) {
+    final isDark = theme.brightness == Brightness.dark;
+    final muiColors =
+        isDark ? miuixBridgeDarkColors() : miuixBridgeLightColors();
+    final textStyle = TextStyle(
+      fontSize: 14,
+      color: muiColors.onSurfaceContainer,
+    );
     return SnackBar(
-      width: _measureCardWidth(context, displayText),
+      width: _measureCardWidth(context, displayText, textStyle),
       padding: EdgeInsets.zero,
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -91,28 +104,26 @@ SnackBar _buildToast(
         onTap: onDismiss,
         child: MiuixSurface(
           cornerRadius: 16,
-          color: container,
-          contentColor: contentColor,
+          color: muiColors.surfaceContainer,
+          contentColor: muiColors.onSurfaceContainer,
           shadowElevation: 8,
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: _toastHorizontalPadding,
               vertical: 15,
             ),
-            child: Text(
-              displayText,
-              style: (theme.snackBarTheme.contentTextStyle ??
-                      theme.textTheme.bodyMedium)
-                  ?.copyWith(color: contentColor),
-            ),
+            child: Text(displayText, style: textStyle),
           ),
         ),
       ),
     );
   }
 
+  final m3TextStyle = theme.snackBarTheme.contentTextStyle ??
+      theme.textTheme.bodyMedium ??
+      const TextStyle(fontSize: 14);
   return SnackBar(
-    width: _measureCardWidth(context, displayText),
+    width: _measureCardWidth(context, displayText, m3TextStyle),
     padding: EdgeInsets.zero,
     duration: duration ?? const Duration(seconds: 4),
     content: GestureDetector(
@@ -131,17 +142,19 @@ SnackBar _buildToast(
 
 /// 按内容测量卡片宽度：取各硬换行段落的最长单行宽，封顶 [_toastMaxWidth]，
 /// 并保证不超出屏幕（两侧共留 [_toastScreenInset]）。
-double _measureCardWidth(BuildContext context, String text) {
-  final theme = Theme.of(context);
-  final style = theme.snackBarTheme.contentTextStyle ??
-      theme.textTheme.bodyMedium ??
-      const TextStyle(fontSize: 14);
+///
+/// [textStyle] 须与实际渲染文本一致（Miuix / M3 分支分别传入）。
+double _measureCardWidth(
+  BuildContext context,
+  String text,
+  TextStyle textStyle,
+) {
   final scaler = MediaQuery.textScalerOf(context);
 
   var naturalWidth = 0.0;
   for (final line in text.split('\n')) {
     final painter = TextPainter(
-      text: TextSpan(text: line, style: style),
+      text: TextSpan(text: line, style: textStyle),
       textDirection: TextDirection.ltr,
       textScaler: scaler,
       maxLines: 1,

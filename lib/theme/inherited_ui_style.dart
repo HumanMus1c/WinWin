@@ -25,11 +25,16 @@ class InheritedUiStyle extends InheritedWidget {
   ///
   /// 若树中无 [InheritedUiStyle]（如测试环境），回退到 [UiStyle.material3]
   /// （默认风格），避免抛异常。
-  static UiStyle of(BuildContext context) {
-    final widget =
-        context.dependOnInheritedWidgetOfExactType<InheritedUiStyle>();
-    return widget?.style ?? UiStyle.material3;
-  }
+  static UiStyle of(BuildContext context) => maybeOf(context) ?? UiStyle.material3;
+
+  /// 读取当前 [UiStyle]；无作用域时返回 null。
+  ///
+  /// 供"执行位置可能在样式作用域之上"的调用点使用——如
+  /// ScaffoldMessenger 的无 context 弹提示路径（`messenger.context` 位于
+  /// `MaterialApp.builder` 链之上，取不到作用域）。调用方应回退到
+  /// `UiStyleNotifier.instance` 等全局来源，避免静默落入 M3 默认分支。
+  static UiStyle? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<InheritedUiStyle>()?.style;
 
   @override
   bool updateShouldNotify(InheritedUiStyle oldWidget) =>

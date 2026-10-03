@@ -214,12 +214,14 @@ class _UserInfoSection extends StatelessWidget {
     final isVip = info?.isVip ?? false;
     final nextExp = levelInfo?.nextExp;
     final curExp = levelInfo?.currentExp;
+    // 进度：常规为 curExp/nextExp；LV6（nextExp 为 null/"–"）但经验有值时
+    // 渲染满格——原先返回 null 会渲染为空轨道（复测反馈：经验条不可见）。
     final progress = (hasLevel &&
             nextExp != null &&
             nextExp > 0 &&
             curExp != null)
-        ? (curExp / nextExp)
-        : null;
+        ? (curExp / nextExp).clamp(0.0, 1.0)
+        : (curExp != null && curExp > 0 ? 1.0 : null);
 
     final coinLabelStyle = theme.textTheme.labelMedium?.copyWith(
       color: cs.outline,

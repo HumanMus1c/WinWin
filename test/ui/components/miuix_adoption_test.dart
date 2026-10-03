@@ -16,6 +16,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/ui_style.dart';
+import 'package:winwin/theme/ui_style_notifier.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 
@@ -510,6 +511,41 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();
       expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('Toast：无 context 路径（showAppSnackBar）回退 notifier 走 miuix 分支', (tester) async {
+      // 复刻生产：messenger.context 位于 builder 链之上（无 UiStyleScope
+      // 祖先），风格解析须回退 UiStyleNotifier——缺失回退时恒落 M3 分支。
+      UiStyleNotifier.instance.value = UiStyle.miuix;
+      addTearDown(() => UiStyleNotifier.instance.value = UiStyle.material3);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          scaffoldMessengerKey: appScaffoldMessengerKey,
+          theme: ThemeData(
+            snackBarTheme: const SnackBarThemeData(
+              behavior: SnackBarBehavior.floating,
+            ),
+          ),
+          home: const Scaffold(body: SizedBox.shrink()),
+        ),
+      );
+
+      showAppSnackBar('网络异常，请稍后重试');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.byType(MiuixSurface),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('ActionTile：miuix 按压原语为 MiuixPressable', (tester) async {

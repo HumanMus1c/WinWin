@@ -151,38 +151,36 @@ class LevelExpBar extends StatelessWidget {
               ),
             ],
           ),
-          if (!isMax) ...[
-            const SizedBox(height: 4),
-            // Miuix 分支（阶段4d）：进度条替换为原生 MiuixLinearProgressIndicator
-            // （内置全圆角轨道，等级色语义不变）；M3 分支保持 M3 进度条。
-            if (renderer == PrimitiveRenderer.miuix)
-              SizedBox(
-                width: 140,
+          // 上限后（isMax）亦展示进度条（progress 初始即 1.0 满格）——
+          // 原先隐藏导致用户空间页"看不到经验条"（复测反馈）。
+          const SizedBox(height: 4),
+          if (renderer == PrimitiveRenderer.miuix)
+            SizedBox(
+              width: 140,
+              height: barHeight,
+              child: MiuixLinearProgressIndicator(
+                progress: progress,
                 height: barHeight,
-                child: MiuixLinearProgressIndicator(
-                  progress: progress,
-                  height: barHeight,
-                  colors: MiuixProgressIndicatorColors(
-                    foregroundColor: levelColor,
-                    disabledForegroundColor: levelColor,
-                    backgroundColor: cs.outlineVariant.withValues(alpha: 0.25),
-                  ),
-                ),
-              )
-            else
-              ClipRRect(
-                borderRadius: barRadius,
-                child: SizedBox(
-                  width: 140,
-                  height: barHeight,
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: cs.outlineVariant.withValues(alpha: 0.25),
-                    valueColor: AlwaysStoppedAnimation<Color>(levelColor),
-                  ),
+                colors: MiuixProgressIndicatorColors(
+                  foregroundColor: levelColor,
+                  disabledForegroundColor: levelColor,
+                  backgroundColor: cs.outlineVariant.withValues(alpha: 0.25),
                 ),
               ),
-          ],
+            )
+          else
+            ClipRRect(
+              borderRadius: barRadius,
+              child: SizedBox(
+                width: 140,
+                height: barHeight,
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: cs.outlineVariant.withValues(alpha: 0.25),
+                  valueColor: AlwaysStoppedAnimation<Color>(levelColor),
+                ),
+              ),
+            ),
         ],
       ),
     );
