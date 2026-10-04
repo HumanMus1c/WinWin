@@ -168,17 +168,36 @@ const List<_Clause> _clauses = [
   ),
 ];
 
+/// 只读条款列表（供「关于-开源协议」等入口查看；无勾选交互）。
+class UserAgreementClauses extends StatelessWidget {
+  const UserAgreementClauses({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppGroup(
+      children: [
+        for (final clause in _clauses)
+          _ClauseTile(clause: clause, checked: false, showCheckbox: false),
+      ],
+    );
+  }
+}
+
 /// 条款行：整行可点切换勾选 + 尾部 [Checkbox]。
 class _ClauseTile extends StatelessWidget {
   const _ClauseTile({
     required this.clause,
     required this.checked,
-    required this.onTap,
+    this.onTap,
+    this.showCheckbox = true,
   });
 
   final _Clause clause;
   final bool checked;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+
+  /// 只读查看（如「关于-开源协议」入口）时隐藏勾选框。
+  final bool showCheckbox;
 
   @override
   Widget build(BuildContext context) {
@@ -219,7 +238,8 @@ class _ClauseTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Checkbox(value: checked, onChanged: (_) => onTap()),
+            if (showCheckbox)
+              Checkbox(value: checked, onChanged: (_) => onTap?.call()),
           ],
         ),
       ),

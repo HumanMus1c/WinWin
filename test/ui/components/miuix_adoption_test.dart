@@ -10,6 +10,7 @@ import 'package:winwin/common/widgets/medal_widget.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/pages/onboarding/user_agreement_page.dart';
 import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -589,6 +590,17 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('用户协议页：miuix 渲染三条条款（标题+图标）', (tester) async {
+      await tester.pumpWidget(
+        wrapMiuix(UserAgreementPage(onAgreed: () {})),
+      );
+      await tester.pump();
+      expect(find.text('开源且免费'), findsOneWidget);
+      expect(find.text('免责与版权'), findsOneWidget);
+      expect(find.text('反馈与日志'), findsOneWidget);
+      expect(find.byIcon(Icons.volunteer_activism_outlined), findsOneWidget);
     });
 
     testWidgets('MiuixPopupMenu：点开显示条目、单组选择后收起并回调', (tester) async {

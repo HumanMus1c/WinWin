@@ -15,6 +15,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
+import 'package:winwin/ui/components/hover_container.dart';
 
 /// 消息页（Phase 7.7.3）。
 ///
@@ -222,9 +223,12 @@ class _EntryItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GestureDetector(
+    // hover 反馈：以条目强调色 8% 底衬显示可点击外形（复测反馈）。
+    return HoverContainer(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
+      borderRadius: 14,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      hoverColor: color.withValues(alpha: 0.08),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
