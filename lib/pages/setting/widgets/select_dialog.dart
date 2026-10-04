@@ -4,10 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// 单选对话框：用于画质/音质/主题模式等枚举值选择。
 ///
@@ -35,12 +32,10 @@ class SelectDialog<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
     final titleMedium = TextTheme.of(context).titleMedium;
     final subtitleStyle = theme.textTheme.labelSmall?.copyWith(
       color: cs.outline,
     );
-    final activeColor = isMiuix ? cs.primary : biliPink;
 
     return MiuixDialogShell(
       // 带副标题（如界面风格说明）时抬高下限，避免说明文案被硬换行。
@@ -77,46 +72,18 @@ class SelectDialog<T> extends StatelessWidget {
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: Style.md),
-              child: isMiuix
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(
-                        values.length,
-                        (index) => _buildMiuixOption(
-                          context,
-                          index,
-                          titleMedium,
-                          subtitleStyle,
-                        ),
-                      ),
-                    )
-                  : RadioGroup<T>(
-                      onChanged: (v) => Navigator.of(context).pop(v ?? value),
-                      groupValue: value,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(
-                          values.length,
-                          (index) {
-                            final item = values[index];
-                            final subtitle =
-                                subtitleBuilder?.call(context, index);
-                            return RadioListTile<T>(
-                              dense: true,
-                              value: item.$1,
-                              activeColor: activeColor,
-                              title: Text(item.$2, style: titleMedium),
-                              subtitle: subtitle == null
-                                  ? null
-                                  : DefaultTextStyle.merge(
-                                      style: subtitleStyle,
-                                      child: subtitle,
-                                    ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(
+                  values.length,
+                  (index) => _buildMiuixOption(
+                    context,
+                    index,
+                    titleMedium,
+                    subtitleStyle,
+                  ),
+                ),
+              ),
             ),
           ),
         ],

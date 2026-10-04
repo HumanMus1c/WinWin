@@ -12,7 +12,6 @@ import 'package:winwin/pages/setting/widgets/select_dialog.dart';
 import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/theme/app_font_notifier.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/system_font_scanner.dart';
@@ -244,159 +243,12 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final baseTheme = Theme.of(context);
-    // 将整个字体选择弹窗与全局字体变更隔离，锁定使用系统默认 UI 字体，
-    // 防止全局字体切换时弹窗本身的基础样式被覆盖。
-    final isolatedTheme = baseTheme.copyWith(
-      textTheme: baseTheme.textTheme.apply(
-        fontFamily: AppFontNotifier.windowsDefault,
-      ),
-      primaryTextTheme: baseTheme.primaryTextTheme.apply(
-        fontFamily: AppFontNotifier.windowsDefault,
-      ),
-    );
     final notifier = AppFontNotifier.instance;
     final hasCustom = notifier.isCustomFont;
 
-    // Miuix 分支（阶段3 修复轮）：MiuixDialogShell + Miuix 单选行 + 原生
+    // 阶段5d-L1：M3 分支已移除；MiuixDialogShell + Miuix 单选行 + 原生
     // 搜索框；文本样式锁定默认（隔离全局字体变更），行内字体预览样式保留。
-    if (InheritedUiStyle.of(context) == UiStyle.miuix) {
-      return _buildMiuixDialog(context, notifier, hasCustom);
-    }
-
-    return Theme(
-      data: isolatedTheme,
-      child: AlertDialog(
-        title: const Text('应用字体'),
-        contentPadding: EdgeInsets.zero,
-        content: SizedBox(
-          width: 420,
-          height: 480,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 搜索框
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: _onSearch,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    hintText: '搜索字体…',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-              // 字体列表
-              Expanded(
-                child: _scanning
-                    ? const Center(child: CircularProgressIndicator())
-                    : RadioGroup<String>(
-                        onChanged: (v) async {
-                          if (v == null) return;
-                          await notifier.setFontFamily(v);
-                          setState(() => _selected = v);
-                        },
-                        groupValue: _selected,
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: _filteredFonts.length + (hasCustom ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            // 自定义字体项放在列表末尾。
-                            if (index == _filteredFonts.length && hasCustom) {
-                              return RadioListTile<String>(
-                                dense: true,
-                                value: AppFontNotifier.customFontFamily,
-                                title: const Text('自定义字体（已导入）'),
-                                subtitle: Text(
-                                  '点击「恢复默认」可移除',
-                                  style: isolatedTheme.textTheme.labelSmall?.copyWith(
-                                        color: isolatedTheme.colorScheme.outline,
-                                      ),
-                                ),
-                              );
-                            }
-                            final font = _filteredFonts[index];
-                            final isDefault =
-                                font.family == AppFontNotifier.windowsDefault;
-                            final hasSubtitle = font.label != font.family;
-                            return RadioListTile<String>(
-                              dense: true,
-                              value: font.family,
-                              title: Text(
-                                isDefault
-                                    ? '${font.label}（Windows 默认）'
-                                    : font.label,
-                                style: TextStyle(
-                                  fontFamily: font.actualFamily,
-                                  fontWeight: font.weight,
-                                  fontStyle: font.isItalic
-                                      ? FontStyle.italic
-                                      : FontStyle.normal,
-                                ),
-                              ),
-                              subtitle: hasSubtitle
-                                  ? Text(
-                                      font.family,
-                                      style: isolatedTheme.textTheme.labelSmall?.copyWith(
-                                            color: isolatedTheme.colorScheme.outline,
-                                          ),
-                                    )
-                                  : null,
-                            );
-                          },
-                        ),
-                      ),
-              ),
-              const Divider(height: 1),
-              // 导入 / 恢复默认
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    TextButton.icon(
-                      onPressed: _importing ? null : _importFont,
-                      icon: SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: _importing
-                            ? const CircularProgressIndicator(strokeWidth: 2)
-                            : const Icon(Icons.file_upload_outlined, size: 18),
-                      ),
-                      label: Text(_importing ? '导入中…' : '导入字体文件'),
-                    ),
-                    if (hasCustom) ...[
-                      const Spacer(),
-                      TextButton.icon(
-                        onPressed: () async {
-                          await notifier.clearCustomFont();
-                          setState(() => _selected = notifier.value);
-                        },
-                        icon: const Icon(Icons.restore, size: 18),
-                        label: const Text('恢复默认'),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              widget.setState();
-              Navigator.pop(context);
-            },
-            child: const Text('完成'),
-          ),
-        ],
-      ),
-    );
+    return _buildMiuixDialog(context, notifier, hasCustom);
   }
 
   /// Miuix 版字体选择弹窗（阶段3 修复轮：替换旧版 MD3 AlertDialog 外观）。

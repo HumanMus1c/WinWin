@@ -1,9 +1,7 @@
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// 三处对话框共用外壳（SelectDialog / 弹幕设置 / 字幕设置）。
 ///
@@ -29,32 +27,28 @@ class MiuixDialogShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
 
     final content = ConstrainedBox(constraints: constraints, child: child);
 
+    // 阶段5d-L1：M3 分支已移除，Miuix 材质为唯一实现。
     return Dialog(
-      backgroundColor: isMiuix ? Colors.transparent : cs.surfaceContainerHigh,
-      elevation: isMiuix ? 0 : null,
-      shape: isMiuix
-          ? const RoundedRectangleBorder()
-          : RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      shape: const RoundedRectangleBorder(),
       insetPadding: const EdgeInsets.symmetric(
         horizontal: Style.lg,
         vertical: Style.xl,
       ),
-      child: isMiuix
-          ? MiuixSurface(
-              cornerRadius: 16,
-              color: cs.surface.withValues(alpha: 0.96),
-              border: Border.all(
-                color: cs.outlineVariant.withValues(alpha: 0.25),
-                width: 0.5,
-              ),
-              shadowElevation: 8,
-              child: content,
-            )
-          : Material(type: MaterialType.transparency, child: content),
+      child: MiuixSurface(
+        cornerRadius: 16,
+        color: cs.surface.withValues(alpha: 0.96),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.25),
+          width: 0.5,
+        ),
+        shadowElevation: 8,
+        child: content,
+      ),
     );
   }
 }

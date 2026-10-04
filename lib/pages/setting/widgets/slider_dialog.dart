@@ -2,9 +2,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// 通用滑块设置对话框（字体大小 / 界面缩放 / 缓冲大小 / 缓冲时长共用）。
 ///
@@ -55,11 +53,9 @@ class _AppSliderDialogState extends State<AppSliderDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
-
-    if (isMiuix) {
-      final theme = Theme.of(context);
-      return MiuixDialogShell(
+    // 阶段5d-L1：M3 分支已移除。
+    final theme = Theme.of(context);
+    return MiuixDialogShell(
         constraints: const BoxConstraints(minWidth: 320, maxWidth: 360),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -113,36 +109,5 @@ class _AppSliderDialogState extends State<AppSliderDialog> {
           ),
         ),
       );
-    }
-
-    return AlertDialog(
-      title: Text(widget.title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            _valueLabel,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          Slider(
-            value: _value,
-            min: widget.min,
-            max: widget.max,
-            divisions: widget.divisions,
-            onChanged: (v) => setState(() => _value = v),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, _value),
-          child: const Text('确定'),
-        ),
-      ],
-    );
   }
 }
