@@ -44,18 +44,8 @@ class AppChrome extends ThemeExtension<AppChrome> {
   /// 当前风格。
   final UiStyle style;
 
-  // ── Material 3（tonal elevation + 标准 M3 阴影）──
-  static const material3 = AppChrome(
-    containerRadius: 24,
-    pillRadius: 28,
-    elevation: 3,
-    tonalElevation: 3,
-    showDividers: false,
-    scrolledUnderElevation: 3,
-    style: UiStyle.material3,
-  );
-
-  // ── Miuix（扁平 0 elevation + 无分割线，对齐 BiliPai tonalSurfaceElevationDp = 0）──
+  // ── Miuix（阶段5d-L2 起为唯一取值；扁平 0 elevation + 无分割线，
+  //   对齐 BiliPai tonalSurfaceElevationDp = 0）──
   static const miuix = AppChrome(
     containerRadius: 20,
     pillRadius: 22,
@@ -67,14 +57,8 @@ class AppChrome extends ThemeExtension<AppChrome> {
   );
 
   /// 兼容旧代码：映射到 [miuix]（对齐 upstream 单向迁移规则）。
-  @Deprecated('Use miuix or material3 instead. Upstream BiliPai maps iOS to MIUIX.')
+  @Deprecated('Use miuix instead. Upstream BiliPai maps iOS to MIUIX.')
   static const ios = miuix;
-
-  /// 按 [UiStyle] 解析对应 Token。
-  static AppChrome forStyle(UiStyle style) => switch (style) {
-        UiStyle.material3 => material3,
-        UiStyle.miuix => miuix,
-      };
 
   /// 容器圆角的 BorderRadius 便捷访问。
   BorderRadius get containerBorder => BorderRadius.circular(containerRadius);

@@ -19,19 +19,14 @@ import 'ui_style.dart';
 /// 在 `main.dart` 通过 `ValueListenableBuilder<UiStyle>` 消费
 /// [UiStyleNotifier]，切换 `theme`/`darkTheme` 即可实现整树热切换。
 class AppTheme {
-  /// 浅色主题（按 [style] 解析，可注入 [fontFamily]）。
+  /// 浅色主题（阶段5d-L2 固化：Token 与主题恒为 Miuix 取值；[style] 参数
+  /// 保留以兼容调用签名，不再分支）。
   static ThemeData lightFor(UiStyle style, {String? fontFamily}) =>
-      _applyFont(switch (style) {
-        UiStyle.material3 => _md3Light,
-        UiStyle.miuix => _miuixLight,
-      }, fontFamily);
+      _applyFont(_miuixLight, fontFamily);
 
-  /// 深色主题（按 [style] 解析，可注入 [fontFamily]）。
+  /// 深色主题（阶段5d-L2 固化，同上）。
   static ThemeData darkFor(UiStyle style, {String? fontFamily}) =>
-      _applyFont(switch (style) {
-        UiStyle.material3 => _md3Dark,
-        UiStyle.miuix => _miuixDark,
-      }, fontFamily);
+      _applyFont(_miuixDark, fontFamily);
 
   /// 默认 Material 3 浅色主题。
   static ThemeData get light => lightFor(UiStyle.material3);
@@ -52,13 +47,13 @@ class AppTheme {
     );
   }
 
-  /// 按 [UiStyle] 组装设计 Token（[AppShapes] / [AppTypography] /
-  /// [AppChrome]），挂载到 [ThemeData.extensions]，组件通过
-  /// `Theme.of(context).extension<AppShapes>()` 等读取。
+  /// 组装设计 Token（阶段5d-L2 固化：恒为 Miuix 取值），挂载到
+  /// [ThemeData.extensions]，组件通过 `Theme.of(context).extension<AppShapes>()`
+  /// 等读取。
   static Iterable<ThemeExtension<dynamic>> _extensionsFor(UiStyle style) => [
-        AppShapes.forStyle(style),
-        AppTypography.forStyle(style),
-        AppChrome.forStyle(style),
+        AppShapes.miuix,
+        AppTypography.miuix,
+        AppChrome.miuix,
       ];
 
   /// 全局操作图标主题：按 [UiStyle] 自动注入系统 BackButton 与 CloseButton 图标
@@ -71,199 +66,7 @@ class AppTheme {
       );
 
 
-  // ─────────────────────────── Material 3 ───────────────────────────
-
-  /// M3 圆角缩放系数（BiliPai: MD3_CORNER_RADIUS_SCALE = 0.9f）。
-  static const _md3Scale = 0.9;
-  static final _md3RadiusSmall = Radius.circular((10 * _md3Scale).roundToDouble());
-  static final _md3RadiusMedium = Radius.circular((12 * _md3Scale).roundToDouble());
-  static final _md3RadiusLarge = Radius.circular((14 * _md3Scale).roundToDouble());
-  static final _md3RadiusXLarge = Radius.circular((20 * _md3Scale).roundToDouble());
-  static final _md3RadiusFloating = Radius.circular((28 * _md3Scale).roundToDouble());
-
-  static ThemeData get _md3Light => ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        colorScheme: const ColorScheme.light(
-          primary: md3LightPrimary,
-          onPrimary: md3LightOnPrimary,
-          primaryContainer: md3LightPrimaryContainer,
-          onPrimaryContainer: md3LightOnPrimaryContainer,
-          secondary: md3LightSecondary,
-          onSecondary: md3LightOnSecondary,
-          secondaryContainer: md3LightSecondaryContainer,
-          onSecondaryContainer: md3LightOnSecondaryContainer,
-          tertiary: md3LightTertiary,
-          onTertiary: md3LightOnTertiary,
-          tertiaryContainer: md3LightTertiaryContainer,
-          onTertiaryContainer: md3LightOnTertiaryContainer,
-          surface: md3LightSurface,
-          surfaceContainerLowest: md3LightSurfaceContainerLowest,
-          surfaceContainerLow: md3LightSurfaceContainerLow,
-          surfaceContainer: md3LightSurfaceContainer,
-          surfaceContainerHigh: md3LightSurfaceContainerHigh,
-          surfaceContainerHighest: md3LightSurfaceContainerHighest,
-          onSurface: md3LightOnSurface,
-          onSurfaceVariant: md3LightOnSurfaceVariant,
-          outline: md3LightOutline,
-          outlineVariant: md3LightOutlineVariant,
-          error: md3LightError,
-          onError: md3LightOnError,
-          errorContainer: md3LightErrorContainer,
-          onErrorContainer: md3LightOnErrorContainer,
-        ),
-        scaffoldBackgroundColor: md3LightBackground,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 3,
-        ),
-        cardTheme: CardThemeData(
-          color: md3LightSurfaceContainerLow,
-          elevation: 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(_md3RadiusMedium),
-          ),
-        ),
-        dialogTheme: DialogThemeData(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(_md3RadiusLarge),
-          ),
-        ),
-        listTileTheme: const ListTileThemeData(
-          contentPadding: EdgeInsets.symmetric(horizontal: 16),
-        ),
-        navigationRailTheme: NavigationRailThemeData(
-          backgroundColor: Colors.transparent,
-          indicatorColor: md3LightSecondaryContainer,
-          indicatorShape: const StadiumBorder(),
-          selectedIconTheme: const IconThemeData(color: md3LightOnSecondaryContainer),
-          unselectedIconTheme: const IconThemeData(color: md3LightOnSurfaceVariant),
-          selectedLabelTextStyle: const TextStyle(
-            color: md3LightOnSurface,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-          unselectedLabelTextStyle: const TextStyle(
-            color: md3LightOnSurfaceVariant,
-            fontSize: 12,
-          ),
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: md3LightSurfaceContainer,
-          indicatorColor: md3LightSecondaryContainer,
-          indicatorShape: const StadiumBorder(),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-          elevation: 6,
-          insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(_md3RadiusMedium),
-          ),
-          backgroundColor: md3LightOnSurface,
-          contentTextStyle: const TextStyle(
-            color: md3LightSurface,
-            fontSize: 14,
-            height: 1.4,
-          ),
-        ),
-        actionIconTheme: _actionIconThemeFor(UiStyle.material3),
-        extensions: _extensionsFor(UiStyle.material3),
-      );
-
-  static ThemeData get _md3Dark => ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: const ColorScheme.dark(
-          primary: md3DarkPrimary,
-          onPrimary: md3DarkOnPrimary,
-          primaryContainer: md3DarkPrimaryContainer,
-          onPrimaryContainer: md3DarkOnPrimaryContainer,
-          secondary: md3DarkSecondary,
-          onSecondary: md3DarkOnSecondary,
-          secondaryContainer: md3DarkSecondaryContainer,
-          onSecondaryContainer: md3DarkOnSecondaryContainer,
-          tertiary: md3DarkTertiary,
-          onTertiary: md3DarkOnTertiary,
-          tertiaryContainer: md3DarkTertiaryContainer,
-          onTertiaryContainer: md3DarkOnTertiaryContainer,
-          surface: md3DarkSurface,
-          surfaceContainerLowest: md3DarkSurfaceContainerLowest,
-          surfaceContainerLow: md3DarkSurfaceContainerLow,
-          surfaceContainer: md3DarkSurfaceContainer,
-          surfaceContainerHigh: md3DarkSurfaceContainerHigh,
-          surfaceContainerHighest: md3DarkSurfaceContainerHighest,
-          onSurface: md3DarkOnSurface,
-          onSurfaceVariant: md3DarkOnSurfaceVariant,
-          outline: md3DarkOutline,
-          outlineVariant: md3DarkOutlineVariant,
-          error: md3DarkError,
-          onError: md3DarkOnError,
-          errorContainer: md3DarkErrorContainer,
-          onErrorContainer: md3DarkOnErrorContainer,
-        ),
-        scaffoldBackgroundColor: md3DarkBackground,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 3,
-        ),
-        cardTheme: CardThemeData(
-          color: md3DarkSurfaceContainer,
-          elevation: 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(_md3RadiusMedium),
-          ),
-        ),
-        dialogTheme: DialogThemeData(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(_md3RadiusLarge),
-          ),
-        ),
-        listTileTheme: const ListTileThemeData(
-          contentPadding: EdgeInsets.symmetric(horizontal: 16),
-        ),
-        navigationRailTheme: NavigationRailThemeData(
-          backgroundColor: Colors.transparent,
-          indicatorColor: md3DarkSecondaryContainer,
-          indicatorShape: const StadiumBorder(),
-          selectedIconTheme: const IconThemeData(color: md3DarkOnSecondaryContainer),
-          unselectedIconTheme: const IconThemeData(color: md3DarkOnSurfaceVariant),
-          selectedLabelTextStyle: const TextStyle(
-            color: md3DarkOnSurface,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-          unselectedLabelTextStyle: const TextStyle(
-            color: md3DarkOnSurfaceVariant,
-            fontSize: 12,
-          ),
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: md3DarkSurfaceContainer,
-          indicatorColor: md3DarkSecondaryContainer,
-          indicatorShape: const StadiumBorder(),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-          elevation: 6,
-          insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(_md3RadiusMedium),
-          ),
-          backgroundColor: md3DarkOnSurface,
-          contentTextStyle: const TextStyle(
-            color: md3DarkSurface,
-            fontSize: 14,
-            height: 1.4,
-          ),
-        ),
-        actionIconTheme: _actionIconThemeFor(UiStyle.material3),
-        extensions: _extensionsFor(UiStyle.material3),
-      );
-
-  // ─────────────────────────── Miuix ───────────────────────────
+  // ─────────────────────────── Miuix（阶段5d-L2 起为唯一取值） ───────────────────────────
 
   /// Miuix 圆角缩放系数（BiliPai: MIUIX_CORNER_RADIUS_SCALE = 1.15f）。
   static const _miuixScale = 1.15;
@@ -401,29 +204,15 @@ class AppTheme {
         extensions: _extensionsFor(UiStyle.miuix),
       );
 
-  /// 通用：按风格返回圆角半径（供组件层使用）。
-  static Radius radiusSmall(UiStyle style) => switch (style) {
-        UiStyle.material3 => _md3RadiusSmall,
-        UiStyle.miuix => _miuixRadiusSmall,
-      };
+  /// 通用：按风格返回圆角半径（阶段5d-L2 固化：恒为 Miuix 取值；[style]
+  /// 参数保留以兼容调用签名）。
+  static Radius radiusSmall(UiStyle style) => _miuixRadiusSmall;
 
-  static Radius radiusMedium(UiStyle style) => switch (style) {
-        UiStyle.material3 => _md3RadiusMedium,
-        UiStyle.miuix => _miuixRadiusMedium,
-      };
+  static Radius radiusMedium(UiStyle style) => _miuixRadiusMedium;
 
-  static Radius radiusLarge(UiStyle style) => switch (style) {
-        UiStyle.material3 => _md3RadiusLarge,
-        UiStyle.miuix => _miuixRadiusLarge,
-      };
+  static Radius radiusLarge(UiStyle style) => _miuixRadiusLarge;
 
-  static Radius radiusXLarge(UiStyle style) => switch (style) {
-        UiStyle.material3 => _md3RadiusXLarge,
-        UiStyle.miuix => _miuixRadiusXLarge,
-      };
+  static Radius radiusXLarge(UiStyle style) => _miuixRadiusXLarge;
 
-  static Radius radiusFloating(UiStyle style) => switch (style) {
-        UiStyle.material3 => _md3RadiusFloating,
-        UiStyle.miuix => _miuixRadiusFloating,
-      };
+  static Radius radiusFloating(UiStyle style) => _miuixRadiusFloating;
 }

@@ -101,7 +101,7 @@ class _LivePageState extends State<LivePage>
     super.build(context);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
 
     // 嵌入 HomePage 时需顶部留白以避开浮动顶栏(60) + 一级分类标签行(36)
     return Padding(

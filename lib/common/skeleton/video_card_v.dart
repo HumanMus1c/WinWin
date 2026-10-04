@@ -13,7 +13,7 @@ class VideoCardVSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
     final radius = shapes.medium;
     final blockColor = skeletonBlockColor(context);
 

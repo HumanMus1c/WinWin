@@ -1380,7 +1380,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Widget _buildVideoCard(MemberVideoItem item) {
     final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
     final radius = shapes.medium;
     final bvid = item.bvid;
 
@@ -2553,7 +2553,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Widget _buildFavFolderCard(FavFolderInfo item) {
     final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
     final radius = shapes.medium;
 
     return Card(
@@ -2741,7 +2741,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Widget _buildBangumiCard(SpaceBangumiItem item) {
     final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
     final radius = shapes.medium;
 
     return Card(

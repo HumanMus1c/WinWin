@@ -28,9 +28,9 @@ export 'user_vip_badge.dart';
 /// 从 context 读取两套 Token 的便捷封装。
 class _Tokens {
   _Tokens.of(BuildContext context)
-      : shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.material3,
-        chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.material3,
-        typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.material3,
+      : shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.miuix,
+        chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.miuix,
+        typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.miuix,
         style = InheritedUiStyle.of(context);
 
   final AppShapes shapes;

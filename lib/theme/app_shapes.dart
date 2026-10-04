@@ -48,19 +48,8 @@ class AppShapes extends ThemeExtension<AppShapes> {
   /// 当前风格（供组件做风格特判时使用）。
   final UiStyle style;
 
-  // ── Material 3（×0.9 缩放，对齐 BiliPai MD3_CORNER_RADIUS_SCALE = 0.9f）──
-  static const material3 = AppShapes(
-    tiny: Radius.circular(4),
-    small: Radius.circular(9),
-    medium: Radius.circular(11),
-    large: Radius.circular(13),
-    extraLarge: Radius.circular(18),
-    floating: Radius.circular(25),
-    pill: Radius.circular(100),
-    style: UiStyle.material3,
-  );
-
-  // ── Miuix（×1.15 缩放，扁平大圆角，对齐 BiliPai MIUIX_CORNER_RADIUS_SCALE = 1.15f）──
+  // ── Miuix（阶段5d-L2 起为唯一取值；×1.15 缩放，扁平大圆角，
+  //   对齐 BiliPai MIUIX_CORNER_RADIUS_SCALE = 1.15f）──
   static const miuix = AppShapes(
     tiny: Radius.circular(6),
     small: Radius.circular(12),
@@ -73,14 +62,8 @@ class AppShapes extends ThemeExtension<AppShapes> {
   );
 
   /// 兼容旧代码：映射到 [miuix]（对齐 upstream 单向迁移规则）。
-  @Deprecated('Use miuix or material3 instead. Upstream BiliPai maps iOS to MIUIX.')
+  @Deprecated('Use miuix instead. Upstream BiliPai maps iOS to MIUIX.')
   static const ios = miuix;
-
-  /// 按 [UiStyle] 解析对应 Token。
-  static AppShapes forStyle(UiStyle style) => switch (style) {
-        UiStyle.material3 => material3,
-        UiStyle.miuix => miuix,
-      };
 
   // ── BorderRadius 便捷访问 ──
   BorderRadius get tinyBorder => BorderRadius.all(tiny);

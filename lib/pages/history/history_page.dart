@@ -395,7 +395,7 @@ class _HistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
     final radius = shapes.medium;
     final duration = item.duration ?? 0;
     final progress = item.progress ?? 0;

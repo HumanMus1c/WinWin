@@ -90,7 +90,7 @@ class LevelExpBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
     final levelColor = LevelColors.forLevel(level, isSenior: isSenior);
 
     final isMax = level >= 6 || (nextExp == null && (currentExp ?? 0) > 0);

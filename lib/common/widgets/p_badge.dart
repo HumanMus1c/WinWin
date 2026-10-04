@@ -71,7 +71,7 @@ class PBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
     final style = InheritedUiStyle.of(context);
     final isDark = theme.brightness == Brightness.dark;
 

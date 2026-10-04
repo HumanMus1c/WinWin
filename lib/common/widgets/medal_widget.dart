@@ -30,7 +30,7 @@ class MedalWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
 
     // 阶段5d-L1：M3 分支已移除，恒为全圆角胶囊。
     final outerRadius = shapes.pillBorder;

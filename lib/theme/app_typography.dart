@@ -46,18 +46,7 @@ class AppTypography extends ThemeExtension<AppTypography> {
   /// 当前风格。
   final UiStyle style;
 
-  // ── Material 3（规范间距）──
-  static const material3 = AppTypography(
-    titleLetterSpacing: 0.15,
-    labelLetterSpacing: 0.1,
-    bodyLetterSpacing: 0.25,
-    headlineWeight: FontWeight.w500,
-    titleWeight: FontWeight.w500,
-    bodyWeight: FontWeight.w400,
-    style: UiStyle.material3,
-  );
-
-  // ── Miuix（扁平舒展，对齐 BiliMiuixTypography 视觉调性）──
+  // ── Miuix（阶段5d-L2 起为唯一取值；扁平舒展，对齐 BiliMiuixTypography 视觉调性）──
   static const miuix = AppTypography(
     titleLetterSpacing: 0.0,
     labelLetterSpacing: 0.0,
@@ -69,14 +58,8 @@ class AppTypography extends ThemeExtension<AppTypography> {
   );
 
   /// 兼容旧代码：映射到 [miuix]（对齐 upstream 单向迁移规则）。
-  @Deprecated('Use miuix or material3 instead. Upstream BiliPai maps iOS to MIUIX.')
+  @Deprecated('Use miuix instead. Upstream BiliPai maps iOS to MIUIX.')
   static const ios = miuix;
-
-  /// 按 [UiStyle] 解析对应 Token。
-  static AppTypography forStyle(UiStyle style) => switch (style) {
-        UiStyle.material3 => material3,
-        UiStyle.miuix => miuix,
-      };
 
   /// 将 [base] 文本样式叠加当前风格的字重 / 字间距。
   TextStyle applyTo(TextStyle base) => base.copyWith(

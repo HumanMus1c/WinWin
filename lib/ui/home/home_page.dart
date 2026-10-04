@@ -100,8 +100,8 @@ class _HomeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
-    final chrome = theme.extension<AppChrome>() ?? AppChrome.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final chrome = theme.extension<AppChrome>() ?? AppChrome.miuix;
     final style = InheritedUiStyle.of(context);
     final renderer = resolvePrimitiveRenderer(style);
     final tabs = HomeTabType.defaultOrder;

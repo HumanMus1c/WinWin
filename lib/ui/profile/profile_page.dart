@@ -206,7 +206,7 @@ class _UserInfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.material3;
+    final typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.miuix;
 
     final levelInfo = info?.levelInfo;
     final hasLevel = levelInfo?.currentLevel != null;
@@ -504,7 +504,7 @@ class _SettingsGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.miuix;
     // 阶段5d-L1：M3 分支已移除。
     final r = Radius.circular(shapes.large.x);
 

@@ -172,7 +172,7 @@ class AppNavRail extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.material3;
+    final chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.miuix;
 
     return SafeArea(
       child: Container(

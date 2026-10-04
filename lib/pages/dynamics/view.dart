@@ -491,7 +491,7 @@ class _DynVideoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
     final radius = shapes.medium;
     final archive = item.archive;
     final bvid = archive?.bvid;
@@ -641,7 +641,7 @@ class _DynPgcCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
     final radius = shapes.medium;
     final pgc = item.pgc;
     final cover = pgc?.cover ?? item.archive?.cover;

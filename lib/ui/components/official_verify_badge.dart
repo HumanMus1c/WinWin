@@ -126,7 +126,7 @@ class OfficialVerifyBadge extends StatelessWidget {
       return OfficialVerifyAvatarBadge(badge: badge);
     }
 
-    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.material3;
+    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.miuix;
 
     final (containerColor, contentColor) = switch (badge.tone) {
       OfficialVerifyBadgeTone.personal => (
