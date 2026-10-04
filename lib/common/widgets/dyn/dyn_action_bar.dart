@@ -116,21 +116,33 @@ class _DynActionBarState extends State<DynActionBar> {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _buildButton(
-          icon: AppIcons.reply(context),
+          icon: AppIcon(
+            AppIcons.reply(context),
+            size: widget.iconSize,
+            color: cs.outline,
+          ),
           count: (_stat?.repost ?? 0) + _repostBump,
           color: cs.outline,
           tooltip: '转发',
           onTap: widget.item.id.isEmpty ? null : _onTapRepost,
         ),
         _buildButton(
-          icon: AppIcons.whisper(context),
+          icon: AppIcon(
+            AppIcons.whisper(context),
+            size: widget.iconSize,
+            color: cs.outline,
+          ),
           count: _stat?.comment ?? 0,
           color: cs.outline,
           tooltip: '评论',
           onTap: widget.onComment,
         ),
         _buildButton(
-          icon: AppIcons.like(context, active: liked),
+          icon: AppIcon(
+            AppIcons.like(context, active: liked),
+            size: widget.iconSize,
+            color: liked ? biliPink : cs.outline,
+          ),
           count: _effectiveLikeCount,
           color: liked ? biliPink : cs.outline,
           tooltip: liked ? '取消点赞' : '点赞',
@@ -141,7 +153,7 @@ class _DynActionBarState extends State<DynActionBar> {
   }
 
   Widget _buildButton({
-    required IconData icon,
+    required Widget icon,
     required int count,
     required Color color,
     required String tooltip,
@@ -160,7 +172,7 @@ class _DynActionBarState extends State<DynActionBar> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: widget.iconSize, color: color),
+                icon,
                 const SizedBox(width: 4),
                 Text(
                   count > 0 ? NumUtils.formatNum(count) : '0',

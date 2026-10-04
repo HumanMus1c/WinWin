@@ -130,7 +130,13 @@ class _VideoActionRowState extends State<VideoActionRow>
             onLongPressEnd: (_) => _cancelTriplePress(),
             onLongPressCancel: _cancelTriplePress,
             child: _ActionButton(
-              icon: AppIcons.like(context, active: widget.hasLike),
+              icon: AppIcon(
+              AppIcons.like(context, active: widget.hasLike),
+              size: 24,
+              color: widget.hasLike
+                  ? biliPink
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
               text: NumUtils.formatNum(stat?.like),
               isActive: widget.hasLike,
               tooltip: '点赞（长按一键三连）',
@@ -142,7 +148,13 @@ class _VideoActionRowState extends State<VideoActionRow>
         // 投币
         Expanded(
           child: _ActionButton(
-            icon: AppIcons.coin(context, active: widget.coinNum > 0),
+            icon: AppIcon(
+              AppIcons.coin(context, active: widget.coinNum > 0),
+              size: 24,
+              color: widget.coinNum > 0
+                  ? biliPink
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             text: NumUtils.formatNum(stat?.coin),
             isActive: widget.coinNum > 0,
             tooltip: '投币',
@@ -152,7 +164,13 @@ class _VideoActionRowState extends State<VideoActionRow>
         // 收藏
         Expanded(
           child: _ActionButton(
-            icon: AppIcons.favorite(context, active: widget.hasFav),
+            icon: AppIcon(
+              AppIcons.favorite(context, active: widget.hasFav),
+              size: 24,
+              color: widget.hasFav
+                  ? biliPink
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             text: NumUtils.formatNum(stat?.favorite),
             isActive: widget.hasFav,
             tooltip: '收藏',
@@ -162,7 +180,13 @@ class _VideoActionRowState extends State<VideoActionRow>
         // 点踩
         Expanded(
           child: _ActionButton(
-            icon: AppIcons.dislike(context, active: widget.hasDislike),
+            icon: AppIcon(
+              AppIcons.dislike(context, active: widget.hasDislike),
+              size: 24,
+              color: widget.hasDislike
+                  ? biliPink
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             text: widget.hasDislike ? '已点踩' : '点踩',
             isActive: widget.hasDislike,
             tooltip: '点踩',
@@ -173,7 +197,11 @@ class _VideoActionRowState extends State<VideoActionRow>
         // 有计数显示计数，否则显示「分享」）
         Expanded(
           child: _ActionButton(
-            icon: AppIcons.share(context),
+            icon: AppIcon(
+              AppIcons.share(context),
+              size: 24,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             text: (stat?.share ?? 0) > 0
                 ? NumUtils.formatNum(stat?.share)
                 : '分享',
@@ -185,7 +213,13 @@ class _VideoActionRowState extends State<VideoActionRow>
         // 稍后再看
         Expanded(
           child: _ActionButton(
-            icon: AppIcons.watchLater(context, active: inWatchLater),
+            icon: AppIcon(
+              AppIcons.watchLater(context, active: inWatchLater),
+              size: 24,
+              color: inWatchLater
+                  ? biliPink
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             text: inWatchLater ? '已添加' : '稍后看',
             isActive: inWatchLater,
             tooltip: inWatchLater ? '移除稍后再看' : '添加稍后再看',
@@ -208,7 +242,7 @@ class _ActionButton extends StatelessWidget {
     this.progress,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String text;
   final bool isActive;
   final String tooltip;
@@ -222,7 +256,7 @@ class _ActionButton extends StatelessWidget {
     final theme = Theme.of(context);
     final inactive = theme.colorScheme.onSurfaceVariant;
     final color = isActive ? biliPink : inactive;
-    Widget iconWidget = Icon(icon, size: 24, color: color);
+    Widget iconWidget = icon;
     if (progress != null) {
       iconWidget = AnimatedBuilder(
         animation: progress!,
