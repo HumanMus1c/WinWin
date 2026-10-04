@@ -189,7 +189,7 @@ class _FavPageState extends State<FavPage> {
               ? _buildError()
               : _folders.isEmpty
                   ? const AppEmptyState(
-                      icon: Icons.folder_off_outlined,
+                      icon: Icon(Icons.folder_off_outlined),
                       title: '暂无收藏夹',
                       subtitle: '去创建或收藏喜欢的视频吧',
                     )
@@ -267,7 +267,7 @@ class _FavPageState extends State<FavPage> {
   Widget _buildError() {
     if (_error == '请先登录') {
       return const AppEmptyState(
-        icon: Icons.account_circle_outlined,
+        icon: Icon(Icons.account_circle_outlined),
         title: '请先登录',
         subtitle: '登录后可查看我的收藏',
       );
@@ -516,7 +516,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _items.isEmpty
               ? const AppEmptyState(
-                  icon: Icons.folder_off_outlined,
+                  icon: Icon(Icons.folder_off_outlined),
                   title: '该收藏夹暂无视频',
                 )
               : NotificationListener<ScrollNotification>(

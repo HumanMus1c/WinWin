@@ -178,7 +178,7 @@ class GlassControlButton extends StatefulWidget {
     this.padding = const EdgeInsets.all(6.0),
   });
 
-  final IconData icon;
+  final Widget icon;
   final VoidCallback? onPressed;
   final String? tooltip;
   final double size;
@@ -196,11 +196,9 @@ class _GlassControlButtonState extends State<GlassControlButton> {
 
   @override
   Widget build(BuildContext context) {
-    final iconWidget = ContrastIcon(
-      widget.icon,
-      size: widget.size,
-      color: widget.iconColor,
-      shadows: ContrastStyle.glyphShadows,
+    final iconWidget = IconTheme(
+      data: IconThemeData(size: widget.size, color: widget.iconColor),
+      child: widget.icon,
     );
 
     Widget content;

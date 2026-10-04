@@ -325,7 +325,7 @@ class AppListItem extends StatelessWidget {
     this.borderRadius,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String title;
   final String? subtitle;
   final Color? iconTint;
@@ -347,7 +347,10 @@ class AppListItem extends StatelessWidget {
               ? RoundedRectangleBorder(borderRadius: borderRadius!)
               : null,
           onTap: onTap,
-          leading: Icon(icon, color: tint),
+          leading: IconTheme(
+            data: IconThemeData(color: tint),
+            child: icon,
+          ),
           title: Text(title),
           subtitle: subtitle != null ? Text(subtitle!) : null,
           trailing: trailing,
@@ -356,7 +359,10 @@ class AppListItem extends StatelessWidget {
         return MiuixBasicComponent(
           title: title,
           summary: subtitle,
-          startAction: Icon(icon, color: tint, size: 22),
+          startAction: IconTheme(
+            data: IconThemeData(color: tint, size: 22),
+            child: icon,
+          ),
           endActions: trailing == null ? null : [trailing!],
           insideMargin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           onClick: onTap,

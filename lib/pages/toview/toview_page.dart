@@ -312,7 +312,7 @@ class _ToviewPageState extends State<ToviewPage> {
               ? _buildError()
               : _items.isEmpty
                   ? const AppEmptyState(
-                      icon: Icons.watch_later_outlined,
+                      icon: Icon(Icons.watch_later_outlined),
                       title: '稍后再看列表为空',
                       subtitle: '把想看的视频加入稍后再看吧',
                     )
@@ -417,7 +417,7 @@ class _ToviewPageState extends State<ToviewPage> {
   Widget _buildError() {
     if (_error == '请先登录') {
       return const AppEmptyState(
-        icon: Icons.account_circle_outlined,
+        icon: Icon(Icons.account_circle_outlined),
         title: '请先登录',
         subtitle: '登录后可查看稍后再看',
       );

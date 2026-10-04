@@ -267,7 +267,7 @@ class _HistoryPageState extends State<HistoryPage> {
               ? _buildError()
               : _items.isEmpty
                   ? const AppEmptyState(
-                      icon: Icons.history_rounded,
+                      icon: Icon(Icons.history_rounded),
                       title: '暂无观看记录',
                       subtitle: '看过的视频会出现在这里',
                     )
@@ -367,7 +367,7 @@ class _HistoryPageState extends State<HistoryPage> {
   Widget _buildError() {
     if (_error == '请先登录') {
       return const AppEmptyState(
-        icon: Icons.account_circle_outlined,
+        icon: Icon(Icons.account_circle_outlined),
         title: '请先登录',
         subtitle: '登录后可查看历史记录',
       );

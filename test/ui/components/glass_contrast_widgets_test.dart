@@ -127,7 +127,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: GlassControlButton(
-              icon: Icons.play_arrow,
+              icon: const Icon(Icons.play_arrow),
               tooltip: '播放',
               useGlass: true,
               onPressed: () => tapped = true,

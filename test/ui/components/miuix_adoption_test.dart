@@ -203,7 +203,7 @@ void main() {
           AppGroup(
             children: [
               const AppListItem(
-                icon: Icons.code,
+                icon: Icon(Icons.code),
                 title: '项目说明',
                 subtitle: 'GPL-3.0',
               ),

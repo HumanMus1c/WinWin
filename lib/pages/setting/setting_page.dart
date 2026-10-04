@@ -111,7 +111,7 @@ class _SettingPageState extends State<SettingPage> {
   Widget _buildCategoryItem(ThemeData theme, _SettingEntry item) {
     final isSelected = item.type == _type;
     return AppListItem(
-      icon: item.icon,
+      icon: Icon(item.icon),
       title: item.type.title,
       subtitle: item.subtitle,
       iconTint: isSelected

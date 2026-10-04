@@ -9,14 +9,16 @@ import 'package:material_ui/material_ui.dart';
 class AppEmptyState extends StatelessWidget {
   const AppEmptyState({
     super.key,
-    this.icon = Icons.search_rounded,
+    this.icon,
     this.iconColor,
     required this.title,
     this.subtitle,
     this.action,
   });
 
-  final IconData icon;
+  /// 图标组件（Widget 化：传入方自行携带字形/尺寸，颜色经 IconTheme 由
+  /// [iconColor]/tint 统一注入）；缺省为搜索语义图标。
+  final Widget? icon;
   final Color? iconColor;
   final String title;
   final String? subtitle;
@@ -44,7 +46,10 @@ class AppEmptyState extends StatelessWidget {
                   color: tint.withValues(alpha: 0.09),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 32, color: tint),
+                child: IconTheme(
+                  data: IconThemeData(size: 32, color: tint),
+                  child: icon ?? const Icon(Icons.search_rounded),
+                ),
               ),
               const SizedBox(height: 16),
               Text(
@@ -89,7 +94,7 @@ class AppErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return AppEmptyState(
-      icon: Icons.error_outline_rounded,
+      icon: const Icon(Icons.error_outline_rounded),
       iconColor: cs.error,
       title: '加载失败',
       subtitle: message,
