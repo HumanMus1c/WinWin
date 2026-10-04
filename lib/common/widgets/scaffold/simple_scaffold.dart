@@ -1,8 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
-import 'package:winwin/theme/app_shapes.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/ui_style.dart';
 
 export 'package:winwin/theme/app_icons.dart' show AppBackButton, AppIcons;
@@ -59,11 +57,6 @@ class SimpleScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final chrome = theme.extension<AppChrome>() ?? AppChrome.material3;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
 
     final bg = backgroundColor ?? theme.scaffoldBackgroundColor;
 
@@ -76,17 +69,9 @@ class SimpleScaffold extends StatelessWidget {
       );
     }
 
-    // 两套风格顶栏外观差异：
-    // - MD3：表面色 + scrolledUnderElevation
-    // - Miuix：透明背景 + 无分割线（扁平通透）
+    // 阶段5d-L1：M3 分支已移除，顶栏恒为透明背景 + 无分割线。
     final effectiveAppBar = appBar != null
-        ? _StyleAwareAppBar(
-            chrome: chrome,
-            shapes: shapes,
-            cs: cs,
-            renderer: renderer,
-            child: appBar!,
-          )
+        ? _StyleAwareAppBar(child: appBar!)
         : null;
 
     final stackedBody = extendBodyBehindAppBar && effectiveAppBar != null
@@ -126,33 +111,13 @@ enum FabPosition { start, center, end }
 
 /// 风格感知的顶栏包装器。
 class _StyleAwareAppBar extends StatelessWidget {
-  const _StyleAwareAppBar({
-    required this.child,
-    required this.chrome,
-    required this.shapes,
-    required this.cs,
-    required this.renderer,
-  });
+  const _StyleAwareAppBar({required this.child});
 
   final Widget child;
-  final AppChrome chrome;
-  final AppShapes shapes;
-  final ColorScheme cs;
-  final PrimitiveRenderer renderer;
 
   @override
   Widget build(BuildContext context) {
-    switch (renderer) {
-      case PrimitiveRenderer.material3:
-        // MD3：表面色 + scrolledUnderElevation（由 Material 自动处理）
-        return Material(
-          color: cs.surface,
-          elevation: 0,
-          child: child,
-        );
-      case PrimitiveRenderer.miuix:
-        // Miuix：透明背景，无分割线
-        return child;
-    }
+    // 阶段5d-L1：M3 分支已移除，恒为透明背景、无分割线（扁平通透）。
+    return child;
   }
 }

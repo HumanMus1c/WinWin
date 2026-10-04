@@ -37,9 +37,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/utils/date_utils.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
@@ -629,8 +627,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     ),
                     onPressed: () => _copyToClipboard('https://space.bilibili.com/${widget.mid}', '主页链接已复制'),
                   ),
-                if (InheritedUiStyle.of(context) == UiStyle.miuix)
-                  MiuixPopupMenu(
+                // 阶段5d-L1：M3 冻结分支已移除
+                MiuixPopupMenu(
                     title: '更多选项',
                     entries: [
                       MiuixDropdownEntry(
@@ -671,48 +669,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                           size: 20,
                         ),
                       ),
-                    ),
-                  )
-                else
-                  MenuAnchor(
-                    alignmentOffset: const Offset(-100, 0),
-                    menuChildren: [
-                      MenuItemButton(
-                        onPressed: () => _copyToClipboard(
-                            widget.mid.toString(), 'UID 已复制'),
-                        child: const Text('复制 UID'),
-                      ),
-                      MenuItemButton(
-                        onPressed: () => _copyToClipboard(
-                          'https://space.bilibili.com/${widget.mid}',
-                          '主页链接已复制',
-                        ),
-                        child: const Text('复制主页链接'),
-                      ),
-                      if (!isOwner)
-                        MenuItemButton(
-                          onPressed: () {
-                            showToast(context, '已收到举报请求');
-                          },
-                          child: const Text('举报该用户'),
-                        ),
-                    ],
-                    builder: (context, controller, child) => IconButton(
-                      icon: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          AppIcons.more(context),
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      onPressed: () => controller.isOpen
-                          ? controller.close()
-                          : controller.open(),
                     ),
                   ),
                 const SizedBox(width: Style.sm),

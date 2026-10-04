@@ -22,9 +22,6 @@ import 'package:winwin/http/video.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
-import 'package:winwin/theme/ui_style.dart';
-import 'package:winwin/theme/ui_style_notifier.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/utils.dart';
 
@@ -264,11 +261,6 @@ Future<void> showVideoContextMenu({
   dynamic videoItem,
   VoidCallback? onRemove,
 }) async {
-  final overlay = Overlay.maybeOf(context)?.context.findRenderObject() as RenderBox?;
-  final overlayRect = overlay != null
-      ? Offset.zero & overlay.size
-      : Offset.zero & MediaQuery.sizeOf(context);
-
   final actions = buildVideoCardActions(
     context: context,
     data: data,
@@ -278,68 +270,12 @@ Future<void> showVideoContextMenu({
 
   if (actions.isEmpty) return;
 
-  // Miuix 分支（阶段4c-2）：自绘浮层（MiuixOverlayPanel + 复用弹层行交互：
-  // hover / 按压 / 点击即时反馈后关闭），标题取触发控件说明「更多操作」。
-  final style =
-      InheritedUiStyle.maybeOf(context) ?? UiStyleNotifier.instance.value;
-  if (style == UiStyle.miuix) {
-    final selectedAction = await _showMiuixContextMenu(
-      context: context,
-      position: position,
-      actions: actions,
-    );
-    selectedAction?.call();
-    return;
-  }
-
-  final theme = Theme.of(context);
-  final cs = theme.colorScheme;
-
-  final selectedAction = await showMenu<VoidCallback>(
+  // 阶段5d-L1：M3 冻结分支（showMenu）已移除，自绘浮层为唯一实现。
+  final selectedAction = await _showMiuixContextMenu(
     context: context,
-    position: RelativeRect.fromRect(
-      Rect.fromLTWH(position.dx, position.dy, 0, 0),
-      overlayRect,
-    ),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-      side: BorderSide(
-        color: cs.outlineVariant.withValues(alpha: 0.3),
-      ),
-    ),
-    color: cs.surfaceContainerHigh,
-    elevation: 6,
-    items: actions.map((act) {
-      return PopupMenuItem<VoidCallback>(
-        value: act.onTap,
-        height: 38,
-        child: Row(
-          children: [
-            IconTheme(
-              data: IconThemeData(
-                size: 16,
-                color: cs.onSurfaceVariant,
-              ),
-              child: act.icon,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                act.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 13,
-                  color: cs.onSurface,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }).toList(),
+    position: position,
+    actions: actions,
   );
-
   selectedAction?.call();
 }
 

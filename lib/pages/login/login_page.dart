@@ -15,9 +15,7 @@ import 'package:winwin/http/login.dart';
 import 'package:winwin/models/common/account_type.dart';
 import 'package:winwin/pages/login/geetest_webview_dialog.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
 /// 登录页（移植自 PiliPlus `lib/pages/login/`）。
@@ -611,8 +609,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
             label: '手机号',
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            prefix: InheritedUiStyle.of(context) == UiStyle.miuix
-                ? MiuixPopupMenu(
+            prefix: MiuixPopupMenu(
                     title: '选择国际冠码',
                     entries: [
                       MiuixDropdownEntry(
@@ -637,44 +634,6 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                           Text('+$_countryId'),
                           const Icon(Icons.arrow_drop_down),
                         ],
-                      ),
-                    ),
-                  )
-                : MenuAnchor(
-                    menuChildren: [
-                      for (final item in _countryCodes)
-                        MenuItemButton(
-                          onPressed: () => setState(() => _countryId = item.$1),
-                          leadingIcon: item.$1 == _countryId
-                              ? const Icon(Icons.check, size: 18)
-                              : const SizedBox(width: 18),
-                          child: SizedBox(
-                            width: 150,
-                            child: Row(
-                              children: [
-                                Text(item.$2),
-                                const Spacer(),
-                                Text('+${item.$1}'),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                    builder: (context, controller, child) => Tooltip(
-                      message: '选择国际冠码，当前为+$_countryId',
-                      child: InkWell(
-                        onTap: () => controller.isOpen
-                            ? controller.close()
-                            : controller.open(),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.phone, color: cs.onSurfaceVariant),
-                            const SizedBox(width: 4),
-                            Text('+$_countryId'),
-                            const Icon(Icons.arrow_drop_down),
-                          ],
-                        ),
                       ),
                     ),
                   ),

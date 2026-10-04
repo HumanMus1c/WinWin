@@ -1,14 +1,11 @@
-import 'dart:ui';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/services/msg_unread_service.dart';
-import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
-import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/ui_style.dart';
 
 import 'package:winwin/theme/app_icons.dart';
@@ -191,20 +188,8 @@ class FrostedBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.material3;
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
-
-    final radius = chrome.containerRadius;
-
-    // Miuix 分支（阶段4b）：外壳替换为 flutter_miuix 浮动导航栏（squircle 胶囊 +
-    // 原生按压/选中态）。逐项彩色图标保留：_FloatingIconBadge 走 IconTheme
-    // 继承（非 ColorFilter 强制着色，经源码核对），显式色标的图标不受影响。
-    // 毛玻璃外壳仅保留在 M3 分支。
-    if (style == UiStyle.miuix) {
-      return MiuixFloatingNavigationBar(
+    // 阶段5d-L1：M3 冻结分支（毛玻璃外壳）已移除，浮动导航栏为唯一实现。
+    return MiuixFloatingNavigationBar(
         children: [
           for (var i = 0; i < navDestinations.length; i++)
             MiuixFloatingNavigationBarItem(
@@ -219,93 +204,6 @@ class FrostedBottomBar extends StatelessWidget {
             ),
         ],
       );
-    }
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: Style.lg, vertical: Style.lg),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(radius),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              height: Style.bottomBarHeight,
-              decoration: BoxDecoration(
-                color: cs.surface.withValues(alpha: 0.72),
-                borderRadius: BorderRadius.circular(radius),
-                border: Border.all(
-                  color: cs.outline.withValues(alpha: renderer == PrimitiveRenderer.miuix ? 0 : 0.1),
-                  width: 0.5,
-                ),
-                boxShadow: renderer == PrimitiveRenderer.miuix
-                    ? const []
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-              ),
-              child: Row(
-                children: navDestinations.asMap().entries.map((entry) {
-                  final selected = entry.key == currentIndex;
-                  return Expanded(
-                    child: _NavButton(
-                      destination: entry.value,
-                      selected: selected,
-                      onTap: () => onSelect(entry.key),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 
-class _NavButton extends StatelessWidget {
-  final NavDestination destination;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _NavButton({
-    required this.destination,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = selected ? destination.color : theme.colorScheme.onSurfaceVariant;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          NavDestinationIcon(
-            destination: destination,
-            selected: selected,
-            size: 24,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            destination.label,
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
