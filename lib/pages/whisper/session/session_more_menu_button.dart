@@ -3,8 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// 会话列表项右侧的现代化更多操作菜单按钮。
 ///
@@ -33,10 +31,8 @@ class SessionMoreMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final style = InheritedUiStyle.of(context);
-
-    if (style == UiStyle.miuix) {
-      return MiuixPopupMenu(
+    // 阶段5d-L1：M3 冻结分支已移除，弹层壳为唯一实现。
+    return MiuixPopupMenu(
         title: '更多选项',
         entries: [
           MiuixDropdownEntry(
@@ -84,73 +80,5 @@ class SessionMoreMenuButton extends StatelessWidget {
           ),
         ),
       );
-    }
-
-    return MenuAnchor(
-      alignmentOffset: const Offset(-100, 0),
-      style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(
-          theme.colorScheme.surfaceContainer,
-        ),
-        elevation: const WidgetStatePropertyAll(3),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        ),
-      ),
-      builder: (context, controller, child) {
-        return IconButton(
-          icon: AppIcon(
-            AppIcons.moreOptions(context),
-            size: 20,
-            color: theme.colorScheme.outline,
-          ),
-          tooltip: '更多选项',
-          splashRadius: 18,
-          onPressed: () {
-            if (controller.isOpen) {
-              controller.close();
-            } else {
-              controller.open();
-            }
-          },
-        );
-      },
-      menuChildren: [
-        MenuItemButton(
-          leadingIcon: AppIcon(
-            AppIcons.pin(context, active: isPinned),
-            size: 18,
-            color: isPinned ? theme.colorScheme.primary : null,
-          ),
-          onPressed: onToggleTop,
-          child: Text(isPinned ? '取消置顶' : '置顶会话'),
-        ),
-        MenuItemButton(
-          leadingIcon: AppIcon(
-            AppIcons.notificationsOff(context, active: isDnd),
-            size: 18,
-            color: isDnd ? theme.colorScheme.primary : null,
-          ),
-          onPressed: onToggleDnd,
-          child: Text(isDnd ? '关闭免打扰' : '开启免打扰'),
-        ),
-        const Divider(height: 1, indent: 8, endIndent: 8),
-        MenuItemButton(
-          leadingIcon: AppIcon(
-            AppIcons.delete(context),
-            size: 18,
-            color: theme.colorScheme.error,
-          ),
-          onPressed: onRemove,
-          child: Text(
-            '删除会话',
-            style: TextStyle(color: theme.colorScheme.error),
-          ),
-        ),
-      ],
-    );
   }
 }

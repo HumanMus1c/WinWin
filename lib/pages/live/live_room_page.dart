@@ -24,9 +24,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/tcp/live.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
@@ -546,24 +544,6 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     setState(() => _volume = val);
     _player?.volume = val;
   }
-
-  static const ButtonStyle _menuItemStyle = ButtonStyle(
-    overlayColor: WidgetStatePropertyAll(Color(0x1FFFFFFF)),
-  );
-
-  static MenuStyle _menuStyle() => MenuStyle(
-    backgroundColor: const WidgetStatePropertyAll(Color(0xE61E1E1E)),
-    elevation: const WidgetStatePropertyAll(8),
-    shape: WidgetStatePropertyAll(
-      RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: Colors.white12),
-      ),
-    ),
-    padding: const WidgetStatePropertyAll(
-      EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-    ),
-  );
 
   Future<void> _changeQuality(int qn) async {
     if (_currentQn == qn) return;
@@ -1364,9 +1344,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
             const Spacer(),
 
-            // 5. 画质/清晰度切换菜单
-            if (InheritedUiStyle.of(context) == UiStyle.miuix)
-              MiuixPopupMenu(
+            // 5. 画质/清晰度切换菜单（阶段5d-L1：M3 冻结分支已移除）
+            MiuixPopupMenu(
                 title: '画质清晰度',
                 itemTextStyle: const TextStyle(fontSize: 12),
                 entries: [
@@ -1410,83 +1389,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     ),
                   ),
                 ),
-              )
-            else
-              MenuAnchor(
-                style: _menuStyle(),
-                menuChildren: [
-                  for (final qn in availableQn)
-                    MenuItemButton(
-                      style: _menuItemStyle,
-                      onPressed: () => _changeQuality(qn),
-                      leadingIcon: Icon(
-                        _currentQn == qn
-                            ? Icons.radio_button_checked
-                            : Icons.radio_button_unchecked,
-                        size: 16,
-                        color: _currentQn == qn
-                            ? Colors.lightBlueAccent
-                            : Colors.white54,
-                      ),
-                      child: Text(
-                        LiveQuality.descFromCode(qn),
-                        style: TextStyle(
-                          color: _currentQn == qn
-                              ? Colors.lightBlueAccent
-                              : Colors.white,
-                          fontSize: 13,
-                          fontWeight: _currentQn == qn
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                ],
-                onOpen: () =>
-                    AppLogger.w('Coverage', 'live menu quality opened'),
-                builder: (context, controller, child) => Tooltip(
-                  message: '画质清晰度',
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(4),
-                    onTap: () => controller.isOpen
-                        ? controller.close()
-                        : controller.open(),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            currentQnText,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_drop_down,
-                            color: Colors.white70,
-                            size: 16,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ),
             const SizedBox(width: 8),
 
-            // 6. 推流线路切换菜单
+            // 6. 推流线路切换菜单（阶段5d-L1：M3 冻结分支已移除）
             if (_streamLines.isNotEmpty)
-              if (InheritedUiStyle.of(context) == UiStyle.miuix)
-                MiuixPopupMenu(
+              MiuixPopupMenu(
                   title: '推流线路/CDN',
                   itemTextStyle: const TextStyle(fontSize: 12),
                   entries: [
@@ -1530,82 +1438,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       ),
                     ),
                   ),
-                )
-              else
-                MenuAnchor(
-                  style: _menuStyle(),
-                  menuChildren: [
-                    for (int idx = 0; idx < _streamLines.length; idx++)
-                      MenuItemButton(
-                        style: _menuItemStyle,
-                        onPressed: () => _switchLine(idx),
-                        leadingIcon: Icon(
-                          _currentStreamIndex == idx
-                              ? Icons.check
-                              : Icons.radio_button_unchecked,
-                          size: 16,
-                          color: _currentStreamIndex == idx
-                              ? Colors.lightBlueAccent
-                              : Colors.white54,
-                        ),
-                        child: Text(
-                          _streamLines[idx].title,
-                          style: TextStyle(
-                            color: _currentStreamIndex == idx
-                                ? Colors.lightBlueAccent
-                                : Colors.white,
-                            fontSize: 13,
-                            fontWeight: _currentStreamIndex == idx
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                  ],
-                  onOpen: () =>
-                      AppLogger.w('Coverage', 'live menu line opened'),
-                  builder: (context, controller, child) => Tooltip(
-                    message: '推流线路/CDN',
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(4),
-                      onTap: () => controller.isOpen
-                          ? controller.close()
-                          : controller.open(),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '线路 ${_currentStreamIndex + 1}',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_drop_down,
-                              color: Colors.white70,
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                 ),
             const SizedBox(width: 6),
 
-            // 7. 画面比例模式切换
-            if (InheritedUiStyle.of(context) == UiStyle.miuix)
-              MiuixPopupMenu(
+            // 7. 画面比例模式切换（阶段5d-L1：M3 冻结分支已移除）
+            MiuixPopupMenu(
                 title: '画面比例',
                 itemTextStyle: const TextStyle(fontSize: 12),
                 entries: [
@@ -1635,59 +1472,6 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       Icons.aspect_ratio,
                       color: Colors.white70,
                       size: 20,
-                    ),
-                  ),
-                ),
-              )
-            else
-              MenuAnchor(
-                style: _menuStyle(),
-                menuChildren: [
-                  for (final (idx, mode) in const [
-                    '16:9',
-                    '4:3',
-                    '原始比例',
-                    '铺满拉伸',
-                  ].indexed)
-                    MenuItemButton(
-                      style: _menuItemStyle,
-                      onPressed: () => setState(() => _aspectRatioMode = idx),
-                      leadingIcon: Icon(
-                        _aspectRatioMode == idx
-                            ? Icons.radio_button_checked
-                            : Icons.radio_button_unchecked,
-                        size: 16,
-                        color: _aspectRatioMode == idx
-                            ? Colors.lightBlueAccent
-                            : Colors.white54,
-                      ),
-                      child: Text(
-                        mode,
-                        style: TextStyle(
-                          color: _aspectRatioMode == idx
-                              ? Colors.lightBlueAccent
-                              : Colors.white,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                ],
-                onOpen: () =>
-                    AppLogger.w('Coverage', 'live menu ratio opened'),
-                builder: (context, controller, child) => Tooltip(
-                  message: '画面比例',
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(4),
-                    onTap: () => controller.isOpen
-                        ? controller.close()
-                        : controller.open(),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        Icons.aspect_ratio,
-                        color: Colors.white70,
-                        size: 20,
-                      ),
                     ),
                   ),
                 ),

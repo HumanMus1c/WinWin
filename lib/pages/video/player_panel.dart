@@ -12,7 +12,6 @@ import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
-import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -26,9 +25,7 @@ import 'package:winwin/pages/video/send_danmaku_panel.dart';
 import 'package:winwin/pages/video/subtitle_settings_panel.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/utils/duration_utils.dart';
@@ -39,27 +36,6 @@ Duration _clampDuration(Duration value, Duration min, Duration max) {
   if (value > max) return max;
   return value;
 }
-
-/// 控制条深色弹出菜单样式（MenuAnchor）：对齐原 PopupMenuButton 的
-/// `0xE61A1A1A + white12 描边 + radiusSm` 视觉。
-MenuStyle _darkMenuStyle() => MenuStyle(
-  backgroundColor: const WidgetStatePropertyAll(Color(0xE61A1A1A)),
-  elevation: const WidgetStatePropertyAll(8),
-  shape: WidgetStatePropertyAll(
-    RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(Style.radiusSm),
-      side: const BorderSide(color: Colors.white12),
-    ),
-  ),
-  padding: const WidgetStatePropertyAll(
-    EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-  ),
-);
-
-/// 深色菜单项 hover 高亮（白色 12%，对齐控制条 HoverContainer）。
-const ButtonStyle _darkMenuItemStyle = ButtonStyle(
-  overlayColor: WidgetStatePropertyAll(Color(0x1FFFFFFF)),
-);
 
 /// BiliPai 风格的播放器面板。
 ///
@@ -1373,10 +1349,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
         final labels = c.qualityLabels;
         final current = c.currentQualityIndex;
         if (labels.isEmpty) return const SizedBox.shrink();
-        // Miuix 分支（阶段4h）：自研弹层壳（无回弹过渡 + 统一半透明面板）。
-        // M3 分支保留原自绘深色 MenuAnchor（冻结，仅必要修复）。
-        if (InheritedUiStyle.of(context) == UiStyle.miuix) {
-          return MiuixPopupMenu(
+        // 阶段5d-L1：M3 冻结分支已移除，弹层壳为唯一实现。
+        return MiuixPopupMenu(
             entries: [
               MiuixDropdownEntry(
                 items: [
@@ -1413,51 +1387,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
               ),
             ),
           );
-        }
-        return MenuAnchor(
-          style: _darkMenuStyle(),
-          menuChildren: [
-            for (int i = 0; i < labels.length; i++)
-              MenuItemButton(
-                style: _darkMenuItemStyle,
-                onPressed: () => c.switchQuality(i),
-                child: Text(
-                  labels[i],
-                  style: TextStyle(
-                    color: i == current ? biliBlue : Colors.white70,
-                    fontWeight: i == current
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                ),
-              ),
-          ],
-          onOpen: () => AppLogger.w('Coverage', 'player menu quality opened'),
-          builder: (context, controller, child) => Tooltip(
-            message: '画质',
-            child: HoverContainer(
-              onTap: () => controller.isOpen
-                  ? controller.close()
-                  : controller.open(),
-              borderRadius: 6.0,
-              padding: const EdgeInsets.symmetric(
-                horizontal: Style.sm,
-                vertical: 6,
-              ),
-              hoverColor: Colors.white.withValues(alpha: 0.12),
-              child: ContrastText(
-                (current >= 0 && current < labels.length)
-                    ? labels[current]
-                    : '画质',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 12,
-                ),
-                shadows: ContrastStyle.glyphShadows,
-              ),
-            ),
-          ),
-        );
       },
     );
   }
@@ -1586,10 +1515,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
         final active = c.activeAudioTrackIndices;
         final activeIndex = active.isNotEmpty ? active.first : -1;
         final currentNorm = Pref.audioNormalization;
-        // Miuix 分支（阶段4c）：音轨组 + 响度均衡组（分组分隔线），
-        // 选中态由组件原生渲染；M3 分支保留原深色 MenuAnchor。
-        if (InheritedUiStyle.of(context) == UiStyle.miuix) {
-          return MiuixPopupMenu(
+        // 阶段5d-L1：M3 冻结分支已移除，弹层壳为唯一实现。
+        return MiuixPopupMenu(
             entries: [
               if (tracks.length > 1)
                 MiuixDropdownEntry(
@@ -1681,155 +1608,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
               ),
             ),
           );
-        }
-        return MenuAnchor(
-          style: _darkMenuStyle(),
-          menuChildren: [
-            if (tracks.length > 1) ...[
-              for (final t in tracks)
-                MenuItemButton(
-                  style: _darkMenuItemStyle,
-                  onPressed: () => c.switchAudioTrack(t.index),
-                  leadingIcon: Icon(
-                    t.index == activeIndex
-                        ? AppIcons.check(context)
-                        : AppIcons.radio(context, selected: false),
-                    size: 18,
-                    color: t.index == activeIndex ? biliBlue : null,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 220),
-                    child: Text(
-                      t.title,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: t.index == activeIndex
-                            ? biliBlue
-                            : Colors.white70,
-                        fontWeight: t.index == activeIndex
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                ),
-              const Divider(height: 1, indent: 8, endIndent: 8),
-            ],
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
-              ),
-              child: Text(
-                '音频响度均衡',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.white.withValues(alpha: 0.5),
-                ),
-              ),
-            ),
-            MenuItemButton(
-              style: _darkMenuItemStyle,
-              onPressed: () {
-                c.setAudioNormalize('2');
-                setState(() {});
-              },
-              leadingIcon: Icon(
-                AppIcons.radio(context, selected: currentNorm == '2'),
-                size: 16,
-                color: currentNorm == '2' ? biliBlue : null,
-              ),
-              child: Text(
-                '智能响度均衡 (loudnorm)',
-                style: TextStyle(
-                  color: currentNorm == '2' ? biliBlue : Colors.white70,
-                ),
-              ),
-            ),
-            MenuItemButton(
-              style: _darkMenuItemStyle,
-              onPressed: () {
-                c.setAudioNormalize('1');
-                setState(() {});
-              },
-              leadingIcon: Icon(
-                AppIcons.radio(context, selected: currentNorm == '1'),
-                size: 16,
-                color: currentNorm == '1' ? biliBlue : null,
-              ),
-              child: Text(
-                '动态压缩 (dynaudnorm)',
-                style: TextStyle(
-                  color: currentNorm == '1' ? biliBlue : Colors.white70,
-                ),
-              ),
-            ),
-            MenuItemButton(
-              style: _darkMenuItemStyle,
-              onPressed: () {
-                c.setAudioNormalize('0');
-                setState(() {});
-              },
-              leadingIcon: Icon(
-                AppIcons.radio(context, selected: currentNorm == '0'),
-                size: 16,
-                color: currentNorm == '0' ? biliBlue : null,
-              ),
-              child: Text(
-                '禁用',
-                style: TextStyle(
-                  color: currentNorm == '0' ? biliBlue : Colors.white70,
-                ),
-              ),
-            ),
-          ],
-          onOpen: () => AppLogger.w('Coverage', 'player menu audio opened'),
-          builder: (context, controller, child) => Tooltip(
-            message: '音频设置',
-            child: HoverContainer(
-              onTap: () => controller.isOpen
-                  ? controller.close()
-                  : controller.open(),
-              borderRadius: 6.0,
-              padding: const EdgeInsets.symmetric(
-                horizontal: Style.sm,
-                vertical: 6,
-              ),
-              hoverColor: Colors.white.withValues(alpha: 0.12),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ContrastText(
-                    codec,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 12,
-                    ),
-                    shadows: ContrastStyle.glyphShadows,
-                  ),
-                  if (c.audioNormalizeEnabled) ...[
-                    const SizedBox(width: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: biliPink.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: const ContrastText(
-                        '均衡',
-                        style: TextStyle(color: biliPink, fontSize: 10),
-                        shadows: ContrastStyle.glyphShadows,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        );
       },
     );
   }
@@ -2312,9 +2090,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
     return ValueListenableBuilder<double>(
       valueListenable: c.playbackSpeed,
       builder: (context, speed, _) {
-        // Miuix 分支（阶段4h）：自研弹层壳（无回弹过渡 + 统一半透明面板）。
-        if (InheritedUiStyle.of(context) == UiStyle.miuix) {
-          return MiuixPopupMenu(
+        // 阶段5d-L1：M3 冻结分支已移除，弹层壳为唯一实现。
+        return MiuixPopupMenu(
             entries: [
               MiuixDropdownEntry(
                 items: [
@@ -2353,55 +2130,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
               ),
             ),
           );
-        }
-        return MenuAnchor(
-          style: _darkMenuStyle(),
-          menuChildren: [
-            for (final v in c.speedList)
-              MenuItemButton(
-                style: _darkMenuItemStyle,
-                onPressed: () => c.setPlaybackSpeed(v),
-                leadingIcon: v == speed
-                    ? AppIcon(AppIcons.check(context), size: 18, color: biliBlue)
-                    : const SizedBox(width: 18),
-                child: Text(
-                  '${v.toStringAsFixed(1)}x',
-                  style: TextStyle(
-                    color: v == speed ? biliBlue : Colors.white70,
-                    fontWeight: v == speed
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                ),
-              ),
-          ],
-          onOpen: () => AppLogger.w('Coverage', 'player menu speed opened'),
-          builder: (context, controller, child) => Tooltip(
-            message: '倍速',
-            child: HoverContainer(
-              onTap: () => controller.isOpen
-                  ? controller.close()
-                  : controller.open(),
-              borderRadius: 6.0,
-              padding: const EdgeInsets.symmetric(
-                horizontal: Style.sm,
-                vertical: 6,
-              ),
-              hoverColor: Colors.white.withValues(alpha: 0.12),
-              child: ContrastText(
-                speed == 1.0 ? '倍速' : '${speed.toStringAsFixed(1)}x',
-                style: TextStyle(
-                  color: speed == 1.0
-                      ? Colors.white.withValues(alpha: 0.85)
-                      : const Color(0xFF00AEEC),
-                  fontSize: 12,
-                  fontWeight: speed == 1.0 ? FontWeight.normal : FontWeight.bold,
-                ),
-                shadows: ContrastStyle.glyphShadows,
-              ),
-            ),
-          ),
-        );
       },
     );
   }
