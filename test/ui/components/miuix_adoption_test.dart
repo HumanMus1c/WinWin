@@ -248,7 +248,7 @@ void main() {
       expect(miuixVectorForGlyph(CupertinoIcons.person), isNull);
     });
 
-    testWidgets('AppIcon：miuix 映射字形渲染 MiuixIcon；未映射与 M3 回退 Icon',
+    testWidgets('AppIcon：映射字形恒渲染 MiuixIcon；未映射回退 Icon（阶段5d-L3）',
         (tester) async {
       await tester.pumpWidget(
         wrapMiuix(
@@ -263,6 +263,7 @@ void main() {
       expect(find.byType(MiuixIcon), findsOneWidget);
       expect(find.byIcon(CupertinoIcons.person), findsOneWidget);
 
+      // 阶段5d-L3：M3 风格下映射同样恒启用（渐进退役）。
       await tester.pumpWidget(
         MaterialApp(
           home: UiStyleScope(
@@ -273,8 +274,7 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(MiuixIcon), findsNothing);
-      expect(find.byIcon(CupertinoIcons.settings), findsOneWidget);
+      expect(find.byType(MiuixIcon), findsOneWidget);
     });
   });
 

@@ -23,8 +23,7 @@ abstract final class AppIcons {
       backOf(InheritedUiStyle.of(context));
 
   static IconData backOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.arrow_back,
-        UiStyle.miuix => CupertinoIcons.chevron_back,
+        _ => CupertinoIcons.chevron_back,
       };
 
   /// 顶层导航 — 首页
@@ -33,9 +32,7 @@ abstract final class AppIcons {
 
   static IconData homeOf(UiStyle style, {bool selected = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          selected ? Icons.home : Icons.home_outlined,
-        UiStyle.miuix =>
+        _ =>
           selected ? CupertinoIcons.house_fill : CupertinoIcons.house,
       };
 
@@ -45,9 +42,7 @@ abstract final class AppIcons {
 
   static IconData dynamicOf(UiStyle style, {bool selected = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          selected ? Icons.notifications : Icons.notifications_outlined,
-        UiStyle.miuix =>
+        _ =>
           selected ? CupertinoIcons.bell_fill : CupertinoIcons.bell,
       };
 
@@ -57,9 +52,7 @@ abstract final class AppIcons {
 
   static IconData historyOf(UiStyle style, {bool selected = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          selected ? Icons.history : Icons.history_outlined,
-        UiStyle.miuix =>
+        _ =>
           selected ? CupertinoIcons.clock_fill : CupertinoIcons.clock,
       };
 
@@ -69,9 +62,7 @@ abstract final class AppIcons {
 
   static IconData whisperOf(UiStyle style, {bool selected = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          selected ? Icons.chat_bubble : Icons.chat_bubble_outline,
-        UiStyle.miuix => selected
+        _ => selected
             ? CupertinoIcons.chat_bubble_2_fill
             : CupertinoIcons.chat_bubble_2,
       };
@@ -82,9 +73,7 @@ abstract final class AppIcons {
 
   static IconData profileOf(UiStyle style, {bool selected = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          selected ? Icons.person : Icons.person_outlined,
-        UiStyle.miuix =>
+        _ =>
           selected ? CupertinoIcons.person_fill : CupertinoIcons.person,
       };
 
@@ -98,9 +87,7 @@ abstract final class AppIcons {
 
   static IconData likeOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.thumb_up : Icons.thumb_up_outlined,
-        UiStyle.miuix => active
+        _ => active
             ? CupertinoIcons.hand_thumbsup_fill
             : CupertinoIcons.hand_thumbsup,
       };
@@ -111,9 +98,7 @@ abstract final class AppIcons {
 
   static IconData dislikeOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.thumb_down : Icons.thumb_down_outlined,
-        UiStyle.miuix => active
+        _ => active
             ? CupertinoIcons.hand_thumbsdown_fill
             : CupertinoIcons.hand_thumbsdown,
       };
@@ -124,9 +109,7 @@ abstract final class AppIcons {
 
   static IconData coinOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.monetization_on : Icons.monetization_on_outlined,
-        UiStyle.miuix => active
+        _ => active
             ? CupertinoIcons.money_dollar_circle_fill
             : CupertinoIcons.money_dollar_circle,
       };
@@ -137,8 +120,7 @@ abstract final class AppIcons {
 
   static IconData favoriteOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 => active ? Icons.star : Icons.star_border,
-        UiStyle.miuix =>
+        _ =>
           active ? CupertinoIcons.star_fill : CupertinoIcons.star,
       };
 
@@ -147,8 +129,7 @@ abstract final class AppIcons {
       shareOf(InheritedUiStyle.of(context));
 
   static IconData shareOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.share_outlined,
-        UiStyle.miuix => CupertinoIcons.share,
+        _ => CupertinoIcons.share,
       };
 
   /// 稍后再看
@@ -157,9 +138,7 @@ abstract final class AppIcons {
 
   static IconData watchLaterOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.watch_later : Icons.watch_later_outlined,
-        UiStyle.miuix =>
+        _ =>
           active ? CupertinoIcons.clock_fill : CupertinoIcons.clock,
       };
 
@@ -172,8 +151,7 @@ abstract final class AppIcons {
       replyOf(InheritedUiStyle.of(context));
 
   static IconData replyOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.reply,
-        UiStyle.miuix => CupertinoIcons.reply,
+        _ => CupertinoIcons.reply,
       };
 
   /// 展开更多回复 / 下拉指示
@@ -181,8 +159,7 @@ abstract final class AppIcons {
       expandMoreOf(InheritedUiStyle.of(context));
 
   static IconData expandMoreOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.expand_more,
-        UiStyle.miuix => CupertinoIcons.chevron_down,
+        _ => CupertinoIcons.chevron_down,
       };
 
   // ---------------------------------------------------------------------------
@@ -194,8 +171,7 @@ abstract final class AppIcons {
       searchOf(InheritedUiStyle.of(context));
 
   static IconData searchOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.search,
-        UiStyle.miuix => CupertinoIcons.search,
+        _ => CupertinoIcons.search,
       };
 
   /// 清除 / 取消
@@ -203,8 +179,7 @@ abstract final class AppIcons {
       clearOf(InheritedUiStyle.of(context));
 
   static IconData clearOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.clear,
-        UiStyle.miuix => CupertinoIcons.clear,
+        _ => CupertinoIcons.clear,
       };
 
   /// 更多选项（垂直三点 / 横向省略）
@@ -212,8 +187,7 @@ abstract final class AppIcons {
       moreOf(InheritedUiStyle.of(context));
 
   static IconData moreOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.more_vert,
-        UiStyle.miuix => CupertinoIcons.ellipsis,
+        _ => CupertinoIcons.ellipsis,
       };
 
   /// 设置
@@ -221,8 +195,7 @@ abstract final class AppIcons {
       settingsOf(InheritedUiStyle.of(context));
 
   static IconData settingsOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.settings_outlined,
-        UiStyle.miuix => CupertinoIcons.settings,
+        _ => CupertinoIcons.settings,
       };
 
   /// 刷新
@@ -230,8 +203,7 @@ abstract final class AppIcons {
       refreshOf(InheritedUiStyle.of(context));
 
   static IconData refreshOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.refresh,
-        UiStyle.miuix => CupertinoIcons.refresh,
+        _ => CupertinoIcons.refresh,
       };
 
   /// 下载 / 缓存
@@ -239,8 +211,7 @@ abstract final class AppIcons {
       downloadOf(InheritedUiStyle.of(context));
 
   static IconData downloadOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.download_outlined,
-        UiStyle.miuix => CupertinoIcons.arrow_down_to_line,
+        _ => CupertinoIcons.arrow_down_to_line,
       };
 
   /// 删除 / 清理
@@ -248,8 +219,7 @@ abstract final class AppIcons {
       deleteOf(InheritedUiStyle.of(context));
 
   static IconData deleteOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.delete_outline,
-        UiStyle.miuix => CupertinoIcons.delete,
+        _ => CupertinoIcons.delete,
       };
 
   /// 排序 / 筛选
@@ -257,8 +227,7 @@ abstract final class AppIcons {
       filterOf(InheritedUiStyle.of(context));
 
   static IconData filterOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.filter_list,
-        UiStyle.miuix => CupertinoIcons.slider_horizontal_3,
+        _ => CupertinoIcons.slider_horizontal_3,
       };
 
   /// 成功 / 勾选
@@ -266,8 +235,7 @@ abstract final class AppIcons {
       checkOf(InheritedUiStyle.of(context));
 
   static IconData checkOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.check,
-        UiStyle.miuix => CupertinoIcons.checkmark,
+        _ => CupertinoIcons.checkmark,
       };
 
   /// 前进 / 展开箭头
@@ -275,8 +243,7 @@ abstract final class AppIcons {
       chevronForwardOf(InheritedUiStyle.of(context));
 
   static IconData chevronForwardOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.chevron_right,
-        UiStyle.miuix => CupertinoIcons.chevron_forward,
+        _ => CupertinoIcons.chevron_forward,
       };
 
   /// 向上折叠箭头
@@ -284,8 +251,7 @@ abstract final class AppIcons {
       chevronUpOf(InheritedUiStyle.of(context));
 
   static IconData chevronUpOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.expand_less,
-        UiStyle.miuix => CupertinoIcons.chevron_up,
+        _ => CupertinoIcons.chevron_up,
       };
 
   /// 向下展开箭头
@@ -293,8 +259,7 @@ abstract final class AppIcons {
       chevronDownOf(InheritedUiStyle.of(context));
 
   static IconData chevronDownOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.expand_more,
-        UiStyle.miuix => CupertinoIcons.chevron_down,
+        _ => CupertinoIcons.chevron_down,
       };
 
   /// 播放
@@ -303,9 +268,7 @@ abstract final class AppIcons {
 
   static IconData playOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.play_arrow : Icons.play_arrow_outlined,
-        UiStyle.miuix =>
+        _ =>
           active ? CupertinoIcons.play_fill : CupertinoIcons.play,
       };
 
@@ -315,8 +278,7 @@ abstract final class AppIcons {
 
   static IconData pauseOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 => active ? Icons.pause : Icons.pause_circle_outline,
-        UiStyle.miuix =>
+        _ =>
           active ? CupertinoIcons.pause_fill : CupertinoIcons.pause,
       };
 
@@ -325,8 +287,7 @@ abstract final class AppIcons {
       replayOf(InheritedUiStyle.of(context));
 
   static IconData replayOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.replay,
-        UiStyle.miuix => CupertinoIcons.restart,
+        _ => CupertinoIcons.restart,
       };
 
   /// 快进
@@ -334,8 +295,7 @@ abstract final class AppIcons {
       fastForwardOf(InheritedUiStyle.of(context));
 
   static IconData fastForwardOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.fast_forward,
-        UiStyle.miuix => CupertinoIcons.forward_fill,
+        _ => CupertinoIcons.forward_fill,
       };
 
   /// 快退
@@ -343,8 +303,7 @@ abstract final class AppIcons {
       fastRewindOf(InheritedUiStyle.of(context));
 
   static IconData fastRewindOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.fast_rewind,
-        UiStyle.miuix => CupertinoIcons.backward_fill,
+        _ => CupertinoIcons.backward_fill,
       };
 
   /// 锁定
@@ -352,8 +311,7 @@ abstract final class AppIcons {
       lockOf(InheritedUiStyle.of(context));
 
   static IconData lockOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.lock,
-        UiStyle.miuix => CupertinoIcons.lock_fill,
+        _ => CupertinoIcons.lock_fill,
       };
 
   /// 解锁 / 锁外框
@@ -361,8 +319,7 @@ abstract final class AppIcons {
       lockOutlineOf(InheritedUiStyle.of(context));
 
   static IconData lockOutlineOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.lock_outline,
-        UiStyle.miuix => CupertinoIcons.lock,
+        _ => CupertinoIcons.lock,
       };
 
   /// 音量 — 大
@@ -370,8 +327,7 @@ abstract final class AppIcons {
       volumeUpOf(InheritedUiStyle.of(context));
 
   static IconData volumeUpOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.volume_up,
-        UiStyle.miuix => CupertinoIcons.speaker_3_fill,
+        _ => CupertinoIcons.speaker_3_fill,
       };
 
   /// 音量 — 小
@@ -379,8 +335,7 @@ abstract final class AppIcons {
       volumeDownOf(InheritedUiStyle.of(context));
 
   static IconData volumeDownOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.volume_down,
-        UiStyle.miuix => CupertinoIcons.speaker_1_fill,
+        _ => CupertinoIcons.speaker_1_fill,
       };
 
   /// 静音
@@ -388,8 +343,7 @@ abstract final class AppIcons {
       volumeOffOf(InheritedUiStyle.of(context));
 
   static IconData volumeOffOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.volume_off,
-        UiStyle.miuix => CupertinoIcons.speaker_slash_fill,
+        _ => CupertinoIcons.speaker_slash_fill,
       };
 
   /// 全屏 / 退出全屏
@@ -398,9 +352,7 @@ abstract final class AppIcons {
 
   static IconData fullscreenOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.fullscreen_exit : Icons.fullscreen,
-        UiStyle.miuix =>
+        _ =>
           active ? CupertinoIcons.fullscreen_exit : CupertinoIcons.fullscreen,
       };
 
@@ -410,9 +362,7 @@ abstract final class AppIcons {
 
   static IconData inAppFullscreenOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.crop_square : Icons.crop_square_outlined,
-        UiStyle.miuix =>
+        _ =>
           active ? CupertinoIcons.square_fill : CupertinoIcons.square,
       };
 
@@ -421,8 +371,7 @@ abstract final class AppIcons {
       pipOf(InheritedUiStyle.of(context));
 
   static IconData pipOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.picture_in_picture_alt,
-        UiStyle.miuix => CupertinoIcons.tv,
+        _ => CupertinoIcons.tv,
       };
 
   /// 弹幕开关
@@ -431,9 +380,7 @@ abstract final class AppIcons {
 
   static IconData danmakuOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.chat_bubble : Icons.chat_bubble_outline,
-        UiStyle.miuix => active
+        _ => active
             ? CupertinoIcons.chat_bubble_fill
             : CupertinoIcons.chat_bubble,
       };
@@ -443,8 +390,7 @@ abstract final class AppIcons {
       sendDanmakuOf(InheritedUiStyle.of(context));
 
   static IconData sendDanmakuOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.comment_outlined,
-        UiStyle.miuix => CupertinoIcons.bubble_left,
+        _ => CupertinoIcons.bubble_left,
       };
 
   /// 弹幕设置 / 调优
@@ -452,8 +398,7 @@ abstract final class AppIcons {
       danmakuTuneOf(InheritedUiStyle.of(context));
 
   static IconData danmakuTuneOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.tune,
-        UiStyle.miuix => CupertinoIcons.slider_horizontal_3,
+        _ => CupertinoIcons.slider_horizontal_3,
       };
 
   /// 字幕
@@ -462,9 +407,7 @@ abstract final class AppIcons {
 
   static IconData subtitleOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.closed_caption : Icons.closed_caption_outlined,
-        UiStyle.miuix => active
+        _ => active
             ? CupertinoIcons.captions_bubble_fill
             : CupertinoIcons.captions_bubble,
       };
@@ -475,9 +418,7 @@ abstract final class AppIcons {
 
   static IconData chapterOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.bookmarks : Icons.bookmarks_outlined,
-        UiStyle.miuix =>
+        _ =>
           active ? CupertinoIcons.bookmark_fill : CupertinoIcons.bookmark,
       };
 
@@ -486,8 +427,7 @@ abstract final class AppIcons {
       moreOptionsOf(InheritedUiStyle.of(context));
 
   static IconData moreOptionsOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.more_vert,
-        UiStyle.miuix => CupertinoIcons.ellipsis,
+        _ => CupertinoIcons.ellipsis,
       };
 
   /// 置顶
@@ -496,9 +436,7 @@ abstract final class AppIcons {
 
   static IconData pinOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 =>
-          active ? Icons.vertical_align_bottom : Icons.vertical_align_top,
-        UiStyle.miuix =>
+        _ =>
           active ? CupertinoIcons.pin_slash_fill : CupertinoIcons.pin_fill,
       };
 
@@ -508,10 +446,7 @@ abstract final class AppIcons {
 
   static IconData notificationsOffOf(UiStyle style, {bool active = false}) =>
       switch (style) {
-        UiStyle.material3 => active
-            ? Icons.notifications_active_outlined
-            : Icons.notifications_off_outlined,
-        UiStyle.miuix =>
+        _ =>
           active ? CupertinoIcons.bell_fill : CupertinoIcons.bell_slash,
       };
 
@@ -521,9 +456,7 @@ abstract final class AppIcons {
 
   static IconData radioOf(UiStyle style, {required bool selected}) =>
       switch (style) {
-        UiStyle.material3 =>
-          selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-        UiStyle.miuix => selected
+        _ => selected
             ? CupertinoIcons.check_mark_circled_solid
             : CupertinoIcons.circle,
       };
@@ -533,8 +466,7 @@ abstract final class AppIcons {
       blockOf(InheritedUiStyle.of(context));
 
   static IconData blockOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.block,
-        UiStyle.miuix => CupertinoIcons.slash_circle,
+        _ => CupertinoIcons.slash_circle,
       };
 
   /// 错误 / 告警提示
@@ -542,8 +474,7 @@ abstract final class AppIcons {
       errorOf(InheritedUiStyle.of(context));
 
   static IconData errorOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.error_outline,
-        UiStyle.miuix => CupertinoIcons.exclamationmark_circle,
+        _ => CupertinoIcons.exclamationmark_circle,
       };
 
   /// 视频播放数 / 观看数
@@ -551,8 +482,7 @@ abstract final class AppIcons {
       viewCountOf(InheritedUiStyle.of(context));
 
   static IconData viewCountOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.play_circle_outline,
-        UiStyle.miuix => CupertinoIcons.play_circle,
+        _ => CupertinoIcons.play_circle,
       };
 
   /// 视频弹幕数
@@ -560,8 +490,7 @@ abstract final class AppIcons {
       danmakuCountOf(InheritedUiStyle.of(context));
 
   static IconData danmakuCountOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.subtitles_outlined,
-        UiStyle.miuix => CupertinoIcons.captions_bubble,
+        _ => CupertinoIcons.captions_bubble,
       };
 
   /// 视频时长
@@ -569,8 +498,7 @@ abstract final class AppIcons {
       durationOf(InheritedUiStyle.of(context));
 
   static IconData durationOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.schedule_outlined,
-        UiStyle.miuix => CupertinoIcons.clock,
+        _ => CupertinoIcons.clock,
       };
 
   /// 日历 / 发布日期
@@ -578,8 +506,7 @@ abstract final class AppIcons {
       calendarOf(InheritedUiStyle.of(context));
 
   static IconData calendarOf(UiStyle style) => switch (style) {
-        UiStyle.material3 => Icons.calendar_today_outlined,
-        UiStyle.miuix => CupertinoIcons.calendar,
+        _ => CupertinoIcons.calendar,
       };
 }
 
@@ -598,8 +525,8 @@ class AppIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (InheritedUiStyle.of(context) == UiStyle.miuix &&
-        (shadows == null || shadows!.isEmpty)) {
+    // 阶段5d-L3：字形→Miuix 矢量映射恒启用（原 miuix 风格门控收敛移除）。
+    if (shadows == null || shadows!.isEmpty) {
       final vector = miuixVectorForGlyph(icon);
       if (vector != null) {
         return MiuixIcon(vector: vector, size: size, tint: color);

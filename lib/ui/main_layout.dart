@@ -1,8 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
-import 'package:winwin/theme/ui_style.dart';
 import 'components/frosted_bottom_bar.dart';
 
 /// 宽屏断点（≥ 此宽度启用侧边 [AppNavRail]，否则底部浮动栏）。
@@ -65,21 +63,16 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= kRailBreakpoint;
         return Row(
           children: [
             if (wide)
-              renderer == PrimitiveRenderer.material3
-                  ? _buildMaterial3Rail(context)
-                  : AppNavRail(
-                      currentIndex: widget.currentIndex,
-                      onSelect: widget.onSelect,
-                    ),
+              AppNavRail(
+                currentIndex: widget.currentIndex,
+                onSelect: widget.onSelect,
+              ),
             Expanded(
               child: Stack(
                 children: [
@@ -87,26 +80,8 @@ class _MainLayoutState extends State<MainLayout> {
                     onNotification: _onScroll,
                     child: widget.body,
                   ),
-                  if (!wide && renderer == PrimitiveRenderer.material3)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: NavigationBar(
-                        selectedIndex: widget.currentIndex,
-                        onDestinationSelected: widget.onSelect,
-                        destinations: navDestinations
-                            .map(
-                              (d) => NavigationDestination(
-                                icon: NavDestinationIcon(destination: d, selected: false),
-                                selectedIcon: NavDestinationIcon(destination: d, selected: true),
-                                label: d.label,
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    )
-                  else if (!wide)
+                  // 阶段5d-L3：M3 底栏分支已移除，毛玻璃浮动底栏恒用。
+                  if (!wide)
                     Positioned(
                       left: 0,
                       right: 0,
@@ -132,24 +107,6 @@ class _MainLayoutState extends State<MainLayout> {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildMaterial3Rail(BuildContext context) {
-    return NavigationRail(
-      selectedIndex: widget.currentIndex,
-      onDestinationSelected: widget.onSelect,
-      labelType: NavigationRailLabelType.all,
-      groupAlignment: 0.0,
-      destinations: navDestinations
-          .map(
-            (d) => NavigationRailDestination(
-              icon: NavDestinationIcon(destination: d, selected: false),
-              selectedIcon: NavDestinationIcon(destination: d, selected: true),
-              label: Text(d.label),
-            ),
-          )
-          .toList(),
     );
   }
 }
