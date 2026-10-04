@@ -4,10 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
-import 'package:winwin/theme/ui_style.dart';
-import 'package:winwin/theme/ui_style_notifier.dart';
 
 /// 应用级 ScaffoldMessenger 句柄（挂载于 `MaterialApp.scaffoldMessengerKey`）。
 ///
@@ -35,15 +32,8 @@ const double _toastScreenInset = 32;
 /// - 宽度自适应内容：短消息为紧凑小卡，长消息在 [_toastMaxWidth] 内换行；
 /// - 点击卡片任意处立即关闭；同屏仅一条：最新优先。
 void showToast(BuildContext context, String message, {Duration? duration}) {
-  final style =
-      InheritedUiStyle.maybeOf(context) ?? UiStyleNotifier.instance.value;
-  if (style == UiStyle.miuix) {
-    _presentMiuixToast(message, duration);
-    return;
-  }
-  final messenger = ScaffoldMessenger.maybeOf(context);
-  if (messenger == null) return;
-  _presentToast(context, messenger, message, duration: duration);
+  // 阶段5d-L1：M3（SnackBar）分支已移除，Miuix 宿主为唯一实现。
+  _presentMiuixToast(message, duration);
 }
 
 /// 显示一条应用级浮层提示（[showToast] 的无 BuildContext 版本）。
@@ -51,13 +41,8 @@ void showToast(BuildContext context, String message, {Duration? duration}) {
 /// Miuix 路径完全无 context 依赖（请求经 [miuixToastRequest] 直达宿主）；
 /// M3 路径在启动早期 ScaffoldMessenger 尚未挂载时静默忽略。
 void showAppSnackBar(String message, {Duration? duration}) {
-  if (UiStyleNotifier.instance.value == UiStyle.miuix) {
-    _presentMiuixToast(message, duration);
-    return;
-  }
-  final messenger = appScaffoldMessengerKey.currentState;
-  if (messenger == null) return;
-  _presentToast(messenger.context, messenger, message, duration: duration);
+  // 阶段5d-L1：M3（SnackBar）分支已移除。
+  _presentMiuixToast(message, duration);
 }
 
 // ── Miuix Toast 通道（请求 → MiuixToastHost） ──
@@ -251,57 +236,6 @@ class _MiuixToastCard extends StatelessWidget {
       ),
     );
   }
-}
-
-// ── M3 通道（SnackBar；按冻结策略仅保留必要修复） ──
-
-void _presentToast(
-  BuildContext context,
-  ScaffoldMessengerState messenger,
-  String message, {
-  Duration? duration,
-}) {
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      _buildToast(
-        context,
-        message,
-        () => messenger.hideCurrentSnackBar(),
-        duration: duration,
-      ),
-    );
-}
-
-/// 构建统一提示卡：内边距归零让点击区域（[GestureDetector]）铺满整卡，
-/// 并按文本测量结果显式指定卡片宽度（自适应内容）。
-SnackBar _buildToast(
-  BuildContext context,
-  String message,
-  VoidCallback onDismiss, {
-  Duration? duration,
-}) {
-  final theme = Theme.of(context);
-  final displayText = _breakLongSegments(message);
-  final textStyle = theme.snackBarTheme.contentTextStyle ??
-      theme.textTheme.bodyMedium ??
-      const TextStyle(fontSize: 14);
-  return SnackBar(
-    width: _measureCardWidth(context, displayText, textStyle),
-    padding: EdgeInsets.zero,
-    duration: duration ?? const Duration(seconds: 4),
-    content: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onDismiss,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: _toastHorizontalPadding,
-          vertical: 15,
-        ),
-        child: Text(displayText),
-      ),
-    ),
-  );
 }
 
 /// 按内容测量卡片宽度：取各硬换行段落的最长单行宽，封顶 [_toastMaxWidth]，

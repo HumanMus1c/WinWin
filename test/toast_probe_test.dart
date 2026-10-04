@@ -1,8 +1,15 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:winwin/core/app_messenger.dart';
-import 'package:winwin/theme/app_theme.dart';
+import 'package:winwin/theme/inherited_ui_style.dart';
+import 'package:winwin/theme/miuix_theme_bridge.dart';
+import 'package:winwin/theme/ui_style.dart';
 
+/// Toast 宽度自适应探针（阶段5d-L1 后：Miuix 宿主为唯一实现）。
+///
+/// 断言口径与旧 M3（SnackBar）探针一致：短消息自适应、长消息封顶 400、
+/// 窄屏遵守两侧留白——现测量 [MiuixSurface] 卡片宽度。
 Future<void> _pumpAndShow(
   WidgetTester tester,
   String message, {
@@ -16,14 +23,20 @@ Future<void> _pumpAndShow(
   });
   await tester.pumpWidget(
     MaterialApp(
-      theme: AppTheme.light,
-      scaffoldMessengerKey: appScaffoldMessengerKey,
-      home: Scaffold(
-        body: Builder(
-          builder: (context) => Center(
-            child: TextButton(
-              onPressed: () => showToast(context, message),
-              child: const Text('show'),
+      home: MiuixThemeScope(
+        isDark: false,
+        child: UiStyleScope(
+          style: UiStyle.miuix,
+          child: Scaffold(
+            body: MiuixToastHost(
+              child: Builder(
+                builder: (context) => Center(
+                  child: TextButton(
+                    onPressed: () => showToast(context, message),
+                    child: const Text('show'),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -32,13 +45,11 @@ Future<void> _pumpAndShow(
   );
   await tester.tap(find.text('show'));
   await tester.pump();
-  await tester.pump(const Duration(milliseconds: 500));
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 double _cardWidth(WidgetTester tester) {
-  final messageText = find.descendant(of: find.byType(SnackBar), matching: find.byType(Text));
-  final card = find.ancestor(of: messageText, matching: find.byType(Material)).first;
-  return tester.getSize(card).width;
+  return tester.getSize(find.byType(MiuixSurface)).width;
 }
 
 void main() {

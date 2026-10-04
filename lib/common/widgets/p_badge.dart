@@ -204,7 +204,8 @@ class _ThemedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final r = style == UiStyle.miuix ? const Radius.circular(100) : radius;
+    // 阶段5d-L1：恒为全圆角胶囊。
+    final r = const Radius.circular(100);
 
     // 官方规范颜色取值（对标 PiliPlus 与官方 App）：
     // - highlight（高光推荐）：官方亮橙色 #FF7F24（浅色）/ #D66011（深色）
@@ -296,7 +297,8 @@ class _ProgressBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final r = style == UiStyle.miuix ? const Radius.circular(100) : radius;
+    // 阶段5d-L1：恒为全圆角胶囊。
+    final r = const Radius.circular(100);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(

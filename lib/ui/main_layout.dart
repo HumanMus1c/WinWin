@@ -173,8 +173,6 @@ class AppNavRail extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.material3;
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
 
     return SafeArea(
       child: Container(
@@ -213,8 +211,9 @@ class AppNavRail extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 4),
                           decoration: BoxDecoration(
+                            // 阶段5d-L1：选中底衬恒为 Miuix 值。
                             color: selected
-                                ? d.color.withValues(alpha: renderer == PrimitiveRenderer.miuix ? 0.12 : 0.18)
+                                ? d.color.withValues(alpha: 0.12)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(chrome.pillRadius),
                           ),
