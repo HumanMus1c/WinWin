@@ -1,5 +1,6 @@
 script_template: inno_setup.iss
-# AppId 的值唯一标识此应用。不要与其它应用共用。
+# AppId 的值唯一标识此应用，同时是「升级识别锚点」：跨版本（含升级）不可变更。
+# 不要与其它应用共用同一 AppId。
 app_id: 3fe5183b-52ed-475b-9327-9cac067b7969
 publisher: HumanMus1c
 publisher_url: https://github.com/HumanMus1c/WinWin
