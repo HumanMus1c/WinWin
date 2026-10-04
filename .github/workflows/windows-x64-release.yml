@@ -24,6 +24,10 @@ jobs:
   release-windows:
     name: Windows 发布构建（Release）
     runs-on: windows-latest
+    env:
+      # 固定与本地一致的包源：pubspec.lock 由 pub.flutter-io.cn 生成，
+      # 源不一致会导致 pub 判定 lock 失效并整体重解析（见 docs/云端CI失败根因与处置复盘-2026-10-04.md）
+      PUB_HOSTED_URL: https://pub.flutter-io.cn
     steps:
       - name: 代码迁出
         uses: actions/checkout@v7
@@ -37,8 +41,8 @@ jobs:
           flutter-version: "3.47.0"
           cache: true
 
-      - name: 拉取依赖
-        run: flutter pub get
+      - name: 拉取依赖（严格遵循 pubspec.lock，防云端重解析）
+        run: flutter pub get --enforce-lockfile
 
       - name: 读取版本号
         shell: pwsh
