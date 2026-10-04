@@ -14,7 +14,6 @@ import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
@@ -102,8 +101,6 @@ class _HomeHeader extends StatelessWidget {
     final cs = theme.colorScheme;
     final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
     final chrome = theme.extension<AppChrome>() ?? AppChrome.miuix;
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
     final tabs = HomeTabType.defaultOrder;
 
     final barColor = cs.surface.withValues(alpha: 0.72);
@@ -115,14 +112,9 @@ class _HomeHeader extends StatelessWidget {
     );
     final barContentColor = barContrast.contentColor;
     final barRadius = chrome.containerRadius;
-    final showShadow = renderer != PrimitiveRenderer.miuix;
 
-    final searchBg = renderer == PrimitiveRenderer.material3
-        ? cs.surfaceContainerHighest
-        : cs.surfaceContainer.withValues(alpha: 0.5);
-    final searchFg = renderer == PrimitiveRenderer.material3
-        ? cs.onSurfaceVariant
-        : barContentColor;
+    final searchBg = cs.surfaceContainer.withValues(alpha: 0.5);
+    final searchFg = barContentColor;
 
     final headerContent = Padding(
       padding: const EdgeInsets.symmetric(
@@ -176,9 +168,7 @@ class _HomeHeader extends StatelessWidget {
               IconButton(
                 tooltip: '设置',
                 icon: Icon(
-                  renderer == PrimitiveRenderer.material3
-                      ? Icons.settings_outlined
-                      : Icons.settings,
+                  Icons.settings,
                   color: searchFg,
                   size: 22,
                 ),
@@ -201,60 +191,32 @@ class _HomeHeader extends StatelessWidget {
               separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
               itemBuilder: (context, index) {
                 final isSelected = index == selectedCategory;
-                if (renderer == PrimitiveRenderer.material3) {
-                  return GestureDetector(
-                    onTap: () => onSelectCategory(index),
-                    child: Container(
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
+                final baseColor = cs.primary;
+                return GestureDetector(
+                  onTap: () => onSelectCategory(index),
+                  child: Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? baseColor.withValues(alpha: 0.28)
+                          : Colors.transparent,
+                      borderRadius: shapes.pillBorder,
+                    ),
+                    child: Text(
+                      tabs[index].label,
+                      style: TextStyle(
                         color: isSelected
-                            ? cs.secondaryContainer
-                            : Colors.transparent,
-                        borderRadius: shapes.pillBorder,
-                      ),
-                      child: Text(
-                        tabs[index].label,
-                        style: TextStyle(
-                          color: isSelected
-                              ? cs.onSecondaryContainer
-                              : cs.onSurfaceVariant,
-                          fontSize: 13,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
+                            ? baseColor
+                            : barContentColor.withValues(alpha: 0.78),
+                        fontSize: 13,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                       ),
                     ),
-                  );
-                } else {
-                  final baseColor = cs.primary;
-                  return GestureDetector(
-                    onTap: () => onSelectCategory(index),
-                    child: Container(
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? baseColor.withValues(alpha: 0.28)
-                            : Colors.transparent,
-                        borderRadius: shapes.pillBorder,
-                      ),
-                      child: Text(
-                        tabs[index].label,
-                        style: TextStyle(
-                          color: isSelected
-                              ? baseColor
-                              : barContentColor.withValues(alpha: 0.78),
-                          fontSize: 13,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  );
-                }
+                  ),
+                );
               },
             ),
           ),
@@ -267,47 +229,23 @@ class _HomeHeader extends StatelessWidget {
         horizontal: Style.lg,
         vertical: Style.sm,
       ),
-      child: renderer == PrimitiveRenderer.material3
-          ? Container(
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: headerContent,
-            )
-          : ClipRRect(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(barRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: barColor,
               borderRadius: BorderRadius.circular(barRadius),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: barColor,
-                    borderRadius: BorderRadius.circular(barRadius),
-                    border: Border.all(
-                      color: cs.outline.withValues(alpha: 0),
-                      width: 0.5,
-                    ),
-                    boxShadow: showShadow
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : const [],
-                  ),
-                  child: headerContent,
-                ),
+              border: Border.all(
+                color: cs.outline.withValues(alpha: 0),
+                width: 0.5,
               ),
             ),
+            child: headerContent,
+          ),
+        ),
+      ),
     );
   }
 }
