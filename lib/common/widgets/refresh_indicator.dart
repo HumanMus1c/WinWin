@@ -1,13 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'package:winwin/theme/inherited_ui_style.dart';
-import 'package:winwin/theme/ui_style.dart';
-
-/// 自适应下拉刷新指示器（对齐双风格设计系统）。
+/// 下拉刷新指示器（阶段5d-L1：M3 分支已移除，紧凑扁平视觉为唯一实现）。
 ///
-/// 按 [UiStyle] 切换：
-/// - **Material 3**：标准 [RefreshIndicator]（M3 拉拽指示器，标准 40dp 偏移）。
-/// - **Miuix**：[RefreshIndicator] 紧凑扁平视觉（32dp 紧凑偏移，细边框指示环）。
+/// 视觉与功能口径（用户偏好定格）：紧凑偏移（32dp 等效）与细边框指示环，
+/// 拖拽触发行为保持历史实现不变。
 ///
 /// 用法：
 /// ```dart
@@ -32,26 +28,13 @@ class AppRefreshIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = InheritedUiStyle.of(context);
-
-    switch (resolvePrimitiveRenderer(style)) {
-      case PrimitiveRenderer.material3:
-        return RefreshIndicator(
-          onRefresh: onRefresh,
-          displacement: displacement,
-          edgeOffset: edgeOffset,
-          child: child,
-        );
-      case PrimitiveRenderer.miuix:
-        return RefreshIndicator(
-          onRefresh: onRefresh,
-          // Miuix 紧凑扁平视觉
-          displacement: displacement * 0.8,
-          strokeWidth: 2.2,
-          edgeOffset: edgeOffset,
-          child: child,
-        );
-    }
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      // 紧凑扁平视觉（原 Miuix 分支取值）
+      displacement: displacement * 0.8,
+      strokeWidth: 2.2,
+      edgeOffset: edgeOffset,
+      child: child,
+    );
   }
 }
-

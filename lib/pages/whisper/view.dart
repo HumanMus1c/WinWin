@@ -12,9 +12,7 @@ import 'package:winwin/pages/whisper/msg_feed/sys_msg_page.dart';
 import 'package:winwin/pages/whisper/session/session_list_section.dart';
 import 'package:winwin/services/msg_unread_service.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 
 /// 消息页（Phase 7.7.3）。
@@ -96,14 +94,12 @@ class _WhisperPageState extends State<WhisperPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
     final theme = Theme.of(context);
     // 四类互动入口固定在顶部，仅下方会话列表可滚动。
     return Scaffold(
       appBar: AppBar(
         title: const Text('消息'),
-        scrolledUnderElevation: renderer == PrimitiveRenderer.material3 ? 3 : 0,
+        scrolledUnderElevation: 0,
       ),
       body: Column(
         children: [
@@ -114,10 +110,8 @@ class _WhisperPageState extends State<WhisperPage>
             ),
             child: _buildEntries(theme),
           ),
-          if (renderer == PrimitiveRenderer.miuix)
-            const Divider(height: 1)
-          else
-            const SizedBox(height: 4),
+          // 阶段5d-L1：M3 分支已移除。
+          const Divider(height: 1),
           Expanded(
             child: AppRefreshIndicator(
               onRefresh: () async {

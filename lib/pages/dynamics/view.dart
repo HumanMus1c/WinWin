@@ -20,9 +20,7 @@ import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/id_utils.dart';
@@ -71,8 +69,6 @@ class _DynamicsPageState extends State<DynamicsPage>
 
   @override
   Widget build(BuildContext context) {
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
@@ -84,14 +80,13 @@ class _DynamicsPageState extends State<DynamicsPage>
           indicatorSize: TabBarIndicatorSize.label,
           labelPadding: const EdgeInsets.symmetric(horizontal: Style.md),
         ),
-        shape: renderer == PrimitiveRenderer.miuix
-            ? Border(
-                bottom: BorderSide(
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                  width: 0.5,
-                ),
-              )
-            : null,
+        // 阶段5d-L1：M3 分支已移除（细分隔线恒用）。
+        shape: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 0.5,
+          ),
+        ),
       ),
       body: TabBarView(
         controller: _tabController,

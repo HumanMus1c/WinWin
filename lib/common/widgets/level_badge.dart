@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/level_icon.dart';
 import 'package:winwin/theme/app_shapes.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -92,8 +91,6 @@ class LevelExpBar extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
     final levelColor = LevelColors.forLevel(level, isSenior: isSenior);
 
     final isMax = level >= 6 || (nextExp == null && (currentExp ?? 0) > 0);
@@ -105,30 +102,14 @@ class LevelExpBar extends StatelessWidget {
       progress = (currentInRange / range).clamp(0.0, 1.0);
     }
 
-    final (barHeight, barRadius, containerBorder) = switch (renderer) {
-      PrimitiveRenderer.material3 => (
-          4.0,
-          shapes.tinyBorder,
-          Border.all(
-            color: cs.outlineVariant.withValues(alpha: 0.35),
-            width: 0.5,
-          ),
-        ),
-      PrimitiveRenderer.miuix => (
-          3.0,
-          shapes.pillBorder,
-          null,
-        ),
-    };
+    // 阶段5d-L1：M3 分支已移除（3dp 全圆角、无描边）。
+    const barHeight = 3.0;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(
-          alpha: renderer == PrimitiveRenderer.miuix ? 0.35 : 0.5,
-        ),
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
         borderRadius: shapes.smallBorder,
-        border: containerBorder,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,33 +135,20 @@ class LevelExpBar extends StatelessWidget {
           // 上限后（isMax）亦展示进度条（progress 初始即 1.0 满格）——
           // 原先隐藏导致用户空间页"看不到经验条"（复测反馈）。
           const SizedBox(height: 4),
-          if (renderer == PrimitiveRenderer.miuix)
-            SizedBox(
-              width: 140,
+          // 阶段5d-L1：M3 分支已移除。
+          SizedBox(
+            width: 140,
+            height: barHeight,
+            child: MiuixLinearProgressIndicator(
+              progress: progress,
               height: barHeight,
-              child: MiuixLinearProgressIndicator(
-                progress: progress,
-                height: barHeight,
-                colors: MiuixProgressIndicatorColors(
-                  foregroundColor: levelColor,
-                  disabledForegroundColor: levelColor,
-                  backgroundColor: cs.outlineVariant.withValues(alpha: 0.25),
-                ),
-              ),
-            )
-          else
-            ClipRRect(
-              borderRadius: barRadius,
-              child: SizedBox(
-                width: 140,
-                height: barHeight,
-                child: LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: cs.outlineVariant.withValues(alpha: 0.25),
-                  valueColor: AlwaysStoppedAnimation<Color>(levelColor),
-                ),
+              colors: MiuixProgressIndicatorColors(
+                foregroundColor: levelColor,
+                disabledForegroundColor: levelColor,
+                backgroundColor: cs.outlineVariant.withValues(alpha: 0.25),
               ),
             ),
+          ),
         ],
       ),
     );

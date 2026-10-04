@@ -2,7 +2,6 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_shapes.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/ui_style.dart';
 
 /// 粉丝勋章徽章组件（对齐 B 站官方与自适应设计系统）。
@@ -32,21 +31,14 @@ class MedalWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final shapes = theme.extension<AppShapes>() ?? AppShapes.material3;
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
 
-    final outerRadius = switch (renderer) {
-      PrimitiveRenderer.material3 => shapes.tinyBorder,
-      PrimitiveRenderer.miuix => shapes.pillBorder,
-    };
-    final innerRadius = switch (renderer) {
-      PrimitiveRenderer.material3 => BorderRadius.circular(3),
-      PrimitiveRenderer.miuix => shapes.pillBorder,
-    };
+    // 阶段5d-L1：M3 分支已移除，恒为全圆角胶囊。
+    final outerRadius = shapes.pillBorder;
+    final innerRadius = shapes.pillBorder;
 
     Widget child = Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: renderer == PrimitiveRenderer.miuix ? 6 : 5,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 6,
         vertical: 1.5,
       ),
       decoration: BoxDecoration(
@@ -99,15 +91,8 @@ class MedalWidget extends StatelessWidget {
     );
 
     if (onTap != null) {
-      // Miuix 分支（阶段4d）：点按反馈替换为原生 MiuixPressable（扁平按压）。
-      if (renderer == PrimitiveRenderer.miuix) {
-        return MiuixPressable(onPressed: onTap, child: child);
-      }
-      return InkWell(
-        onTap: onTap,
-        borderRadius: outerRadius,
-        child: child,
-      );
+      // 阶段5d-L1：M3 分支已移除；点按反馈为原生 MiuixPressable（扁平按压）。
+      return MiuixPressable(onPressed: onTap, child: child);
     }
     return child;
   }

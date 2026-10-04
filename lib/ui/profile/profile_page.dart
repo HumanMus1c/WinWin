@@ -13,7 +13,6 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
-import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/colors.dart';
@@ -504,21 +503,14 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
     final cs = Theme.of(context).colorScheme;
     final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.material3;
-    final chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.material3;
-    final r = Radius.circular(switch (renderer) {
-      PrimitiveRenderer.material3 => chrome.containerRadius,
-      PrimitiveRenderer.miuix => shapes.large.x,
-    });
+    // 阶段5d-L1：M3 分支已移除。
+    final r = Radius.circular(shapes.large.x);
 
     Widget trailingChevron(ThemeData theme) => Icon(
-          renderer == PrimitiveRenderer.material3
-              ? Icons.chevron_right
-              : Icons.arrow_forward_ios,
-          size: renderer == PrimitiveRenderer.material3 ? 20 : 14,
+          Icons.arrow_forward_ios,
+          size: 14,
           color: theme.colorScheme.outline,
         );
 
