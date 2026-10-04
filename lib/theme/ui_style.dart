@@ -18,17 +18,10 @@ enum UiStyle {
 
   const UiStyle(this.label, this.legacyInt);
 
-  /// 从持久化的 int 值反序列化（对齐 BiliPai §5.2 单向迁移表）：
-  /// - 0（历史旧 iOS 值）：单向迁移为 [miuix]
-  /// - 1：保留 [material3]
-  /// - 2：保留 [miuix]
-  /// - 其余或空值：默认回退到 [material3]
-  static UiStyle fromLegacyInt(int? value) => switch (value) {
-        0 => miuix,
-        1 => material3,
-        2 => miuix,
-        _ => material3,
-      };
+  /// 从持久化的 int 值反序列化（阶段5d-L4-1 单轨迁移）：
+  /// 历史值 0（旧 iOS）/ 1（material3）/ 2（miuix）与空值**统一单向迁移为
+  /// [miuix]**——风格切换入口已退役，运行时不再存在 material3 取值来源。
+  static UiStyle fromLegacyInt(int? value) => miuix;
 }
 
 /// 组件级渲染分发枚举。

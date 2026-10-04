@@ -37,8 +37,8 @@ class NavDestination {
         AppPage.profile => AppIcons.profileOf(style, selected: selected),
       };
 
-  IconData get outlinedIcon => icon(UiStyle.material3, selected: false);
-  IconData get filledIcon => icon(UiStyle.material3, selected: true);
+  IconData get outlinedIcon => icon(UiStyle.miuix, selected: false);
+  IconData get filledIcon => icon(UiStyle.miuix, selected: true);
 }
 
 /// 默认导航项顺序（可后续接入 [SettingBoxKey.navBarSort] 用户重排）。

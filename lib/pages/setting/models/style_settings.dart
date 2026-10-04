@@ -15,40 +15,11 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/system_font_scanner.dart';
-import 'package:winwin/theme/ui_style.dart';
-import 'package:winwin/theme/ui_style_notifier.dart';
 
 /// 外观设置项列表。
 ///
 /// 移植自 PiliPlus 的 `styleSettings`，仅保留桌面端适用项。
 List<SettingsModel> get styleSettings => [
-      // ── Phase 7.1：界面风格（Material 3 / Miuix 热切换） ──
-      NormalModel(
-        title: '界面风格',
-        leading: const Icon(Icons.palette_outlined),
-        getSubtitle: () =>
-            '当前风格：${UiStyleNotifier.instance.value.label}（切换即时生效）',
-        onTap: (context, setState) async {
-          final res = await showSelectDialog<UiStyle>(
-            context,
-            title: '界面风格',
-            value: UiStyleNotifier.instance.value,
-            values: UiStyle.values.map((e) => (e, e.label)).toList(),
-            subtitleBuilder: (_, index) {
-              final desc = switch (UiStyle.values[index]) {
-                UiStyle.material3 => 'M3 原生控件 + 标准 tonal elevation',
-                UiStyle.miuix => '扁平控件 + 0 elevation + 1.15× 圆角',
-              };
-              return Text(desc);
-            },
-          );
-          if (res != null) {
-            await UiStyleNotifier.instance.setStyle(res);
-            setState();
-          }
-        },
-      ),
-
       // 应用字体（移植自 BiliPai AppFontFileStore）
       NormalModel(
         title: '应用字体',

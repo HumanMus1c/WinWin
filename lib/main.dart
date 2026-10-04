@@ -241,10 +241,10 @@ class WinWinApp extends StatelessWidget {
                           child: child ?? const SizedBox.shrink(),
                         ),
                       );
-                      if (uiStyle != UiStyle.miuix) return base;
-                      // 阶段1（flutter_miuix 试点）：miuix 风格下由 MiuixThemeScope
-                      // 提供桥接配色/字体的 MiuixTheme，供 Miuix 控件取用
-                      // （见 theme/miuix_theme_bridge.dart）。
+                      // 阶段5d-L4-1：风格入口退役后 MiuixThemeScope 恒启用
+                      // （原 `uiStyle != UiStyle.miuix` 门控移除）。由
+                      // MiuixThemeScope 提供桥接配色/字体的 MiuixTheme，供
+                      // Miuix 控件取用（见 theme/miuix_theme_bridge.dart）。
                       return MiuixThemeScope(
                         isDark: Theme.of(context).brightness == Brightness.dark,
                         fontFamily: fontFamily,

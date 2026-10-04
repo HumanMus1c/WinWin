@@ -23,9 +23,9 @@ class InheritedUiStyle extends InheritedWidget {
 
   /// 从最近的 [InheritedUiStyle] 祖先读取当前 [UiStyle]。
   ///
-  /// 若树中无 [InheritedUiStyle]（如测试环境），回退到 [UiStyle.material3]
-  /// （默认风格），避免抛异常。
-  static UiStyle of(BuildContext context) => maybeOf(context) ?? UiStyle.material3;
+  /// 若树中无 [InheritedUiStyle]（如测试环境），回退到 [UiStyle.miuix]
+  /// （阶段5d-L4-1 单轨后唯一取值），避免抛异常。
+  static UiStyle of(BuildContext context) => maybeOf(context) ?? UiStyle.miuix;
 
   /// 读取当前 [UiStyle]；无作用域时返回 null。
   ///

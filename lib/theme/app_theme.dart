@@ -28,12 +28,6 @@ class AppTheme {
   static ThemeData darkFor(UiStyle style, {String? fontFamily}) =>
       _applyFont(_miuixDark, fontFamily);
 
-  /// 默认 Material 3 浅色主题。
-  static ThemeData get light => lightFor(UiStyle.material3);
-
-  /// 默认 Material 3 深色主题。
-  static ThemeData get dark => darkFor(UiStyle.material3);
-
   /// 将 [fontFamily]（或字体标识键）注入 [ThemeData] 的 textTheme / primaryTextTheme。
   ///
   /// 自动解析底层 DirectWrite 基础族名。
