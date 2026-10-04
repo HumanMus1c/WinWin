@@ -13,7 +13,6 @@ import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/contrast_policy.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 
 /// Home page — ported from BiliPai's HomeScreen.
@@ -36,7 +35,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    InheritedUiStyle.of(context);
     return Scaffold(
       body: Stack(
         children: [
@@ -151,7 +149,7 @@ class _HomeHeader extends StatelessWidget {
                         vertical: 8,
                       ),
                       prefixIcon: AppIcon(
-                        AppIcons.search(context),
+                        AppIcons.search(),
                         size: 20,
                         color: searchFg,
                       ),
@@ -169,7 +167,7 @@ class _HomeHeader extends StatelessWidget {
               IconButton(
                 tooltip: '设置',
                 icon: AppIcon(
-                  AppIcons.settings(context),
+                  AppIcons.settings(),
                   color: searchFg,
                   size: 22,
                 ),

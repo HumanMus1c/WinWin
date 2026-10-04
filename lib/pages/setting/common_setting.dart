@@ -1,7 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/pages/setting/setting_type.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
@@ -26,14 +25,13 @@ class CommonSetting extends StatefulWidget {
 class _CommonSettingState extends State<CommonSetting> {
   @override
   Widget build(BuildContext context) {
-    final style = InheritedUiStyle.of(context);
     final settings = widget.settingType.settings;
     final showAppBar = widget.showAppBar;
     final padding = MediaQuery.viewPaddingOf(context);
     return Scaffold(
       appBar: showAppBar ? AppBar(title: Text(widget.settingType.title)) : null,
       body: ListView(
-        key: ValueKey('${widget.settingType.name}_${style.name}'),
+        key: ValueKey(widget.settingType.name),
         padding: EdgeInsets.only(
           left: showAppBar ? padding.left + Style.md : Style.md,
           right: showAppBar ? padding.right + Style.md : Style.md,

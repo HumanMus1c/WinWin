@@ -131,7 +131,7 @@ class _VideoActionRowState extends State<VideoActionRow>
             onLongPressCancel: _cancelTriplePress,
             child: _ActionButton(
               icon: AppIcon(
-              AppIcons.like(context, active: widget.hasLike),
+              AppIcons.like(active: widget.hasLike),
               size: 24,
               color: widget.hasLike
                   ? biliPink
@@ -149,7 +149,7 @@ class _VideoActionRowState extends State<VideoActionRow>
         Expanded(
           child: _ActionButton(
             icon: AppIcon(
-              AppIcons.coin(context, active: widget.coinNum > 0),
+              AppIcons.coin(active: widget.coinNum > 0),
               size: 24,
               color: widget.coinNum > 0
                   ? biliPink
@@ -165,7 +165,7 @@ class _VideoActionRowState extends State<VideoActionRow>
         Expanded(
           child: _ActionButton(
             icon: AppIcon(
-              AppIcons.favorite(context, active: widget.hasFav),
+              AppIcons.favorite(active: widget.hasFav),
               size: 24,
               color: widget.hasFav
                   ? biliPink
@@ -181,7 +181,7 @@ class _VideoActionRowState extends State<VideoActionRow>
         Expanded(
           child: _ActionButton(
             icon: AppIcon(
-              AppIcons.dislike(context, active: widget.hasDislike),
+              AppIcons.dislike(active: widget.hasDislike),
               size: 24,
               color: widget.hasDislike
                   ? biliPink
@@ -198,7 +198,7 @@ class _VideoActionRowState extends State<VideoActionRow>
         Expanded(
           child: _ActionButton(
             icon: AppIcon(
-              AppIcons.share(context),
+              AppIcons.share(),
               size: 24,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -214,7 +214,7 @@ class _VideoActionRowState extends State<VideoActionRow>
         Expanded(
           child: _ActionButton(
             icon: AppIcon(
-              AppIcons.watchLater(context, active: inWatchLater),
+              AppIcons.watchLater(active: inWatchLater),
               size: 24,
               color: inWatchLater
                   ? biliPink

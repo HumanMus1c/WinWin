@@ -400,7 +400,7 @@ class _MiuixPopupMenuRowState extends State<MiuixPopupMenuRow> {
           if (widget.selected) ...[
             const SizedBox(width: 12),
             AppIcon(
-              AppIcons.check(context),
+              AppIcons.check(),
               size: 18,
               color: widget.selectedContentColor,
             ),

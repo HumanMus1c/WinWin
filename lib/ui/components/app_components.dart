@@ -5,9 +5,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 export 'app_desktop_interaction.dart';
 export 'app_press_feedback.dart';
@@ -30,13 +28,11 @@ class _Tokens {
   _Tokens.of(BuildContext context)
       : shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.miuix,
         chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.miuix,
-        typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.miuix,
-        style = InheritedUiStyle.of(context);
+        typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.miuix;
 
   final AppShapes shapes;
   final AppChrome chrome;
   final AppTypography typo;
-  final UiStyle style;
 }
 
 // ════════════════════════════════════════════════════════════════

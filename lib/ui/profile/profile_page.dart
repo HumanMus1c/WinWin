@@ -16,16 +16,14 @@ import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 import 'package:winwin/ui/profile/widgets/profile_sections.dart';
 import 'package:winwin/utils/image_utils.dart';
 
-/// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术按 [UiStyle] 三风格切换。
+/// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术单轨 Miuix（阶段5d-L4-2）。
 ///
 /// 结构（PiliPlus 布局升级版）：
 /// ```
@@ -103,7 +101,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    InheritedUiStyle.of(context);
     final service = AccountService();
     final info = service.userInfo;
     final isLogin = service.isLogin;

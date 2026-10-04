@@ -1,6 +1,6 @@
 /// Miuix 主题桥接（flutter_miuix 分阶段替换 · 阶段1）。
 ///
-/// `uiStyle == UiStyle.miuix` 时由 main.dart 在整树之上提供 [MiuixTheme]：
+/// 由 main.dart 在整树之上恒提供 [MiuixTheme]（阶段5d-L4-2 单轨）：
 /// - 配色：以 flutter_miuix 默认 `MiuixColors` 为底，逐字段覆盖 colors.dart
 ///   中已有的 miuixLight*/miuixDark* 调色板，保持替换前后的视觉连续性；
 /// - 字体：`defaultTextStyles()` 全 14 字段注入 AppFontNotifier 的字体族；
@@ -90,7 +90,7 @@ MiuixTextStyles miuixBridgeTextStyles(String? fontFamily) {
 
 /// 在 miuix 风格下向整树提供桥接后的 [MiuixTheme]。
 ///
-/// 由 main.dart 的 `MaterialApp.builder` 在 `uiStyle == UiStyle.miuix` 时
+/// 由 main.dart 的 `MaterialApp.builder`（阶段5d-L4-2 单轨恒启用）
 /// 包裹（位于 Navigator 之上，覆盖全部路由）；明暗由调用方解析
 /// （含 ThemeMode 强制态）后传入。
 class MiuixThemeScope extends StatefulWidget {

@@ -252,7 +252,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: AppIcon(AppIcons.clear(context)),
+                      icon: AppIcon(AppIcons.clear()),
                       tooltip: '关闭',
                       onPressed: () {
                         widget.setState();
@@ -271,7 +271,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                     label: '搜索字体…',
                     useLabelAsPlaceholder: true,
                     singleLine: true,
-                    leadingIcon: AppIcon(AppIcons.search(context), size: 20),
+                    leadingIcon: AppIcon(AppIcons.search(), size: 20),
                   ),
                 ),
               ),

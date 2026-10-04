@@ -1,8 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'ui_style.dart';
 
-/// Chrome Token — 按 [UiStyle] 解析的容器外观（圆角 / 阴影 / 边框策略）。
+/// Chrome Token — 容器外观（圆角 / 阴影 / 边框策略；阶段5d-L4-2 单轨化）。
 ///
 /// 参照 BiliPai 的 `BiliDesign.chrome`：描述「外壳」级视觉特征——
 /// 容器圆角、胶囊指示器圆角、阴影 elevation、是否启用 tonal elevation、
@@ -20,7 +19,6 @@ class AppChrome extends ThemeExtension<AppChrome> {
     required this.tonalElevation,
     required this.showDividers,
     required this.scrolledUnderElevation,
-    required this.style,
   });
 
   /// 外壳容器圆角（底部导航 / 顶栏背景 / sheet 头部）。
@@ -42,7 +40,6 @@ class AppChrome extends ThemeExtension<AppChrome> {
   final double scrolledUnderElevation;
 
   /// 当前风格。
-  final UiStyle style;
 
   // ── Miuix（阶段5d-L2 起为唯一取值；扁平 0 elevation + 无分割线，
   //   对齐 BiliPai tonalSurfaceElevationDp = 0）──
@@ -53,7 +50,6 @@ class AppChrome extends ThemeExtension<AppChrome> {
     tonalElevation: 0,
     showDividers: false,
     scrolledUnderElevation: 0,
-    style: UiStyle.miuix,
   );
 
   /// 兼容旧代码：映射到 [miuix]（对齐 upstream 单向迁移规则）。
@@ -74,7 +70,6 @@ class AppChrome extends ThemeExtension<AppChrome> {
     double? tonalElevation,
     bool? showDividers,
     double? scrolledUnderElevation,
-    UiStyle? style,
   }) =>
       AppChrome(
         containerRadius: containerRadius ?? this.containerRadius,
@@ -84,7 +79,6 @@ class AppChrome extends ThemeExtension<AppChrome> {
         showDividers: showDividers ?? this.showDividers,
         scrolledUnderElevation:
             scrolledUnderElevation ?? this.scrolledUnderElevation,
-        style: style ?? this.style,
       );
 
   @override
@@ -99,7 +93,6 @@ class AppChrome extends ThemeExtension<AppChrome> {
       showDividers: t < 0.5 ? showDividers : other.showDividers,
       scrolledUnderElevation:
           _lerpDouble(scrolledUnderElevation, other.scrolledUnderElevation, t),
-      style: t < 0.5 ? style : other.style,
     );
   }
 }

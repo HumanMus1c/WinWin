@@ -60,7 +60,7 @@ class SelectDialog<T> extends StatelessWidget {
                 IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  icon: AppIcon(AppIcons.clear(context)),
+                  icon: AppIcon(AppIcons.clear()),
                   tooltip: '关闭',
                   onPressed: () => Navigator.of(context).pop(),
                 ),

@@ -1,7 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 export 'package:winwin/theme/app_icons.dart' show AppBackButton, AppIcons;
 
@@ -15,7 +14,7 @@ export 'package:winwin/theme/app_icons.dart' show AppBackButton, AppIcons;
 /// - [appBar]：可空的顶部栏 Widget（非标准 AppBar，可任意自定义）。
 /// - [body]：主体内容，自动填充剩余空间。
 /// - [fab]：可空的浮动按钮，定位右下角。
-/// - 背景：按 [UiStyle] 解析的 [AppChrome] 提供 scaffoldBackgroundColor。
+/// - 背景：由 [AppChrome]（Miuix 取值）提供 scaffoldBackgroundColor。
 /// - SafeArea：默认启用顶部内边距，避免状态栏遮挡。
 class SimpleScaffold extends StatelessWidget {
   const SimpleScaffold({

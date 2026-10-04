@@ -190,7 +190,7 @@ class _SearchPageState extends State<SearchPage> {
         onSubmitted: _submitSearch,
         decoration: InputDecoration(
           hintText: '搜索视频、UP主...',
-          prefixIcon: AppIcon(AppIcons.search(context), size: 20),
+          prefixIcon: AppIcon(AppIcons.search(), size: 20),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(100),
             borderSide: BorderSide.none,
@@ -200,7 +200,7 @@ class _SearchPageState extends State<SearchPage> {
           contentPadding: const EdgeInsets.symmetric(horizontal: Style.md),
           suffixIcon: _controller.text.isNotEmpty
               ? IconButton(
-                  icon: AppIcon(AppIcons.clear(context), size: 18),
+                  icon: AppIcon(AppIcons.clear(), size: 18),
                   onPressed: () {
                     _controller.clear();
                     setState(() => _suggests = []);
@@ -252,7 +252,7 @@ class _SearchPageState extends State<SearchPage> {
         ),
         GestureDetector(
           onTap: _clearHistory,
-          child: AppIcon(AppIcons.delete(context),
+          child: AppIcon(AppIcons.delete(),
               size: 18, color: Theme.of(context).colorScheme.outline),
         ),
       ],
@@ -267,7 +267,7 @@ class _SearchPageState extends State<SearchPage> {
         return InputChip(
           label: Text(word),
           onSelected: (_) => _submitSearch(word),
-          deleteIcon: AppIcon(AppIcons.clear(context), size: 14),
+          deleteIcon: AppIcon(AppIcons.clear(), size: 14),
           onDeleted: () => _removeHistory(word),
           visualDensity: VisualDensity.compact,
         );
@@ -429,7 +429,7 @@ class _SearchPageState extends State<SearchPage> {
       itemBuilder: (context, index) {
         final item = _suggests[index];
         return ListTile(
-          leading: AppIcon(AppIcons.search(context), size: 18),
+          leading: AppIcon(AppIcons.search(), size: 18),
           title: Text(item.name ?? ''),
           dense: true,
           onTap: () => _submitSearch(item.term ?? item.name ?? ''),

@@ -4,9 +4,6 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/common/widgets/medal_widget.dart';
 import 'package:winwin/theme/contrast_policy.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
-import 'package:winwin/theme/miuix_theme_bridge.dart';
-import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
 void main() {
@@ -159,55 +156,27 @@ void main() {
     });
   });
 
-  group('LevelBadge & MedalWidget Dual Style Tests', () {
-    testWidgets('renders LevelBadge in Material 3 and Miuix without crash',
-        (tester) async {
+  group('LevelBadge & MedalWidget 单轨渲染测试（阶段5d-L4-2）', () {
+    testWidgets('renders LevelBadge without crash', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: Column(
-              children: [
-                UiStyleScope(
-                  style: UiStyle.material3,
-                  child: LevelBadge(level: 6),
-                ),
-                UiStyleScope(
-                  style: UiStyle.miuix,
-                  child: LevelBadge(level: 5),
-                ),
-              ],
-            ),
+            body: LevelBadge(level: 6),
           ),
         ),
       );
 
-      expect(find.byType(LevelBadge), findsNWidgets(2));
+      expect(find.byType(LevelBadge), findsOneWidget);
     });
 
-    testWidgets('renders MedalWidget in Material 3 and Miuix without crash',
-        (tester) async {
+    testWidgets('renders MedalWidget without crash', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: Column(
-              children: [
-                UiStyleScope(
-                  style: UiStyle.material3,
-                  child: MedalWidget(
-                    medalName: '牌子A',
-                    level: 16,
-                    backgroundColor: Color(0xFFFB7299),
-                  ),
-                ),
-                UiStyleScope(
-                  style: UiStyle.miuix,
-                  child: MedalWidget(
-                    medalName: '牌子B',
-                    level: 20,
-                    backgroundColor: Color(0xFF00A1D6),
-                  ),
-                ),
-              ],
+            body: MedalWidget(
+              medalName: '牌子A',
+              level: 16,
+              backgroundColor: Color(0xFFFB7299),
             ),
           ),
         ),
@@ -215,43 +184,20 @@ void main() {
 
       expect(find.text('牌子A'), findsOneWidget);
       expect(find.text('16'), findsOneWidget);
-      expect(find.text('牌子B'), findsOneWidget);
-      expect(find.text('20'), findsOneWidget);
     });
 
-    testWidgets('renders AppSwitch and AppSegmentedControl via flutter_miuix in both styles',
+    testWidgets('renders AppSwitch and AppSegmentedControl via flutter_miuix',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: Column(
               children: [
-                const UiStyleScope(
-                  style: UiStyle.material3,
-                  child: AppSwitch(value: true, onChanged: null),
-                ),
-                const UiStyleScope(
-                  style: UiStyle.miuix,
-                  child: MiuixThemeScope(
-                    isDark: false,
-                    child: AppSwitch(value: false, onChanged: null),
-                  ),
-                ),
-                UiStyleScope(
-                  style: UiStyle.material3,
-                  child: AppSegmentedControl<int>(
-                    value: 0,
-                    segments: const [(0, 'Tab1'), (1, 'Tab2')],
-                    onChanged: (_) {},
-                  ),
-                ),
-                UiStyleScope(
-                  style: UiStyle.miuix,
-                  child: AppSegmentedControl<int>(
-                    value: 1,
-                    segments: const [(0, 'TabA'), (1, 'TabB')],
-                    onChanged: (_) {},
-                  ),
+                const AppSwitch(value: true, onChanged: null),
+                AppSegmentedControl<int>(
+                  value: 1,
+                  segments: const [(0, 'TabA'), (1, 'TabB')],
+                  onChanged: (_) {},
                 ),
               ],
             ),
@@ -259,12 +205,11 @@ void main() {
         ),
       );
 
-      expect(find.text('Tab1'), findsOneWidget);
       expect(find.text('TabA'), findsOneWidget);
-      // 阶段5d-L1：M3 冻结分支已移除——两风格下均渲染 flutter_miuix 组件。
-      expect(find.byType(MiuixSwitch), findsNWidgets(2));
+      // 阶段5d-L1/L4-2：M3 冻结分支与双风格宿主均已移除——恒渲染 flutter_miuix 组件。
+      expect(find.byType(MiuixSwitch), findsOneWidget);
       expect(find.byType(Switch), findsNothing);
-      expect(find.byType(MiuixTabRow), findsNWidgets(2));
+      expect(find.byType(MiuixTabRow), findsOneWidget);
     });
   });
 }

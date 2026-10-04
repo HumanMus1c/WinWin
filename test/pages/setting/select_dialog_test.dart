@@ -4,8 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// [SelectDialog] / [showSelectDialog] 契约测试。
 ///
@@ -21,11 +19,8 @@ void main() {
     required GlobalKey<NavigatorState> navigatorKey,
     required AppEscapeNavigatorObserver observer,
     required Widget home,
-    UiStyle uiStyle = UiStyle.material3,
   }) {
-    return UiStyleScope(
-      style: uiStyle,
-      child: MaterialApp(
+    return MaterialApp(
         navigatorKey: navigatorKey,
         navigatorObservers: [observer],
         builder: (context, child) => AppEscapeScope(
@@ -34,7 +29,6 @@ void main() {
           child: child ?? const SizedBox.shrink(),
         ),
         home: home,
-      ),
     );
   }
 
@@ -45,7 +39,6 @@ void main() {
     required GlobalKey<NavigatorState> navigatorKey,
     required AppEscapeNavigatorObserver observer,
     required void Function(int?) onWritten,
-    UiStyle uiStyle = UiStyle.material3,
     Widget Function(BuildContext, int)? subtitleBuilder,
     String title = '重试次数',
     List<(int, String)> options = values,
@@ -53,7 +46,6 @@ void main() {
     return host(
       navigatorKey: navigatorKey,
       observer: observer,
-      uiStyle: uiStyle,
       home: Scaffold(
         body: StatefulBuilder(
           builder: (context, setState) => Center(
@@ -153,8 +145,7 @@ void main() {
     expect(find.text('重试次数'), findsNothing);
   });
 
-  testWidgets('副标题完整渲染且弹窗宽度不低于 320（M3 / Miuix 双风格）', (tester) async {
-    for (final style in UiStyle.values) {
+  testWidgets('副标题完整渲染且弹窗宽度不低于 320', (tester) async {
       final navigatorKey = GlobalKey<NavigatorState>();
       final observer = AppEscapeNavigatorObserver();
 
@@ -162,7 +153,6 @@ void main() {
         launcher(
           navigatorKey: navigatorKey,
           observer: observer,
-          uiStyle: style,
           onWritten: (_) {},
           title: '界面风格',
           options: const [(0, 'Material 3'), (1, 'Miuix')],
@@ -193,6 +183,5 @@ void main() {
       await tester.tap(find.byTooltip('关闭'));
       await tester.pumpAndSettle();
       expect(find.text('界面风格'), findsNothing);
-    }
   });
 }

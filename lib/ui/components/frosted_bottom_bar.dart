@@ -5,8 +5,6 @@ import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/services/msg_unread_service.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/utils/image_utils.dart';
@@ -29,16 +27,16 @@ class NavDestination {
   );
 
   /// 依据 [UiStyle] 动态分发 M3 与 Miuix 图标
-  IconData icon(UiStyle style, {bool selected = false}) => switch (page) {
-        AppPage.home => AppIcons.homeOf(style, selected: selected),
-        AppPage.dynamic => AppIcons.dynamicOf(style, selected: selected),
-        AppPage.history => AppIcons.historyOf(style, selected: selected),
-        AppPage.whisper => AppIcons.whisperOf(style, selected: selected),
-        AppPage.profile => AppIcons.profileOf(style, selected: selected),
+  IconData icon({bool selected = false}) => switch (page) {
+        AppPage.home => AppIcons.home(selected: selected),
+        AppPage.dynamic => AppIcons.dynamic(selected: selected),
+        AppPage.history => AppIcons.history(selected: selected),
+        AppPage.whisper => AppIcons.whisper(selected: selected),
+        AppPage.profile => AppIcons.profile(selected: selected),
       };
 
-  IconData get outlinedIcon => icon(UiStyle.miuix, selected: false);
-  IconData get filledIcon => icon(UiStyle.miuix, selected: true);
+  IconData get outlinedIcon => icon(selected: false);
+  IconData get filledIcon => icon(selected: true);
 }
 
 /// 默认导航项顺序（可后续接入 [SettingBoxKey.navBarSort] 用户重排）。
@@ -69,9 +67,8 @@ class NavDestinationIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final style = InheritedUiStyle.of(context);
     final color = selected ? destination.color : cs.onSurfaceVariant;
-    final iconData = destination.icon(style, selected: selected);
+    final iconData = destination.icon(selected: selected);
 
     if (destination.page == AppPage.profile) {
       return ListenableBuilder(
@@ -156,7 +153,7 @@ class NavDestinationIcon extends StatelessWidget {
 
 /// 浮动底部导航栏 — 毛玻璃胶囊 + 自适应圆角/阴影。
 ///
-/// 参照 BiliPai 的 `FrostedBottomBar`（简化），形状与阴影按 [UiStyle]
+/// 参照 BiliPai 的 `FrostedBottomBar`（简化），状状与阴影按 [UiStyle]
 /// 解析：iOS 连续曲率 + 扩散阴影，MD3 tonal elevation，Miuix 扁平 0 阴影。
 /// 由 [MainLayout] 通过 [AnimatedSlide] 控制滚动联动显隐。
 class FrostedBottomBar extends StatelessWidget {

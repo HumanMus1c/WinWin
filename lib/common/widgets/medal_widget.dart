@@ -2,11 +2,10 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_shapes.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// 粉丝勋章徽章组件（对齐 B 站官方与自适应设计系统）。
 ///
-/// 遵循 [UiStyle] 自适应规范：
+/// 单轨视觉规范（阶段5d-L4-2）：
 /// - **Material 3**：[AppShapes.tinyBorder] 微倒角，0 扩散阴影，双色块自然拼合；
 /// - **Miuix**：全圆角胶囊形态，0 阴影纯扁平，药丸级紧凑布局。
 class MedalWidget extends StatelessWidget {

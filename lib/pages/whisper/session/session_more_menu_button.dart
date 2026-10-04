@@ -40,7 +40,7 @@ class SessionMoreMenuButton extends StatelessWidget {
               MiuixDropdownItem(
                 text: isPinned ? '取消置顶' : '置顶会话',
                 icon: AppIcon(
-                  AppIcons.pin(context, active: isPinned),
+                  AppIcons.pin(active: isPinned),
                   size: 18,
                   color: isPinned ? theme.colorScheme.primary : null,
                 ),
@@ -49,7 +49,7 @@ class SessionMoreMenuButton extends StatelessWidget {
               MiuixDropdownItem(
                 text: isDnd ? '关闭免打扰' : '开启免打扰',
                 icon: AppIcon(
-                  AppIcons.notificationsOff(context, active: isDnd),
+                  AppIcons.notificationsOff(active: isDnd),
                   size: 18,
                   color: isDnd ? theme.colorScheme.primary : null,
                 ),
@@ -62,7 +62,7 @@ class SessionMoreMenuButton extends StatelessWidget {
               MiuixDropdownItem(
                 text: '删除会话',
                 icon: AppIcon(
-                  AppIcons.delete(context),
+                  AppIcons.delete(),
                   size: 18,
                   color: theme.colorScheme.error,
                 ),
@@ -74,7 +74,7 @@ class SessionMoreMenuButton extends StatelessWidget {
         child: Tooltip(
           message: '更多选项',
           child: AppIcon(
-            AppIcons.moreOptions(context),
+            AppIcons.moreOptions(),
             size: 20,
             color: theme.colorScheme.outline,
           ),

@@ -10,7 +10,6 @@ import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/models/common/cdn_type.dart';
 import 'package:winwin/utils/credential_crypto.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// Trimmed-down preference accessor.
 /// Only covers settings that WinWin Phase 1 actually uses:
@@ -34,12 +33,6 @@ abstract final class Pref {
     1 => ThemeMode.dark,
     _ => ThemeMode.system,
   };
-
-  /// Phase 7.1：UI 风格（ios / material3 / miuix）。
-  /// 持久化在 [SettingBoxKey.uiStyle]，默认 iOS 风格。
-  static UiStyle get uiStyle => UiStyle.fromLegacyInt(
-        _setting.get(SettingBoxKey.uiStyle, defaultValue: 0) as int,
-      );
 
   static double get defaultTextScale =>
       _setting.get(SettingBoxKey.defaultTextScale, defaultValue: 1.0);

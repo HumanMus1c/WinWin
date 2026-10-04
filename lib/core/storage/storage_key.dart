@@ -219,8 +219,6 @@ abstract final class SettingBoxKey {
       systemProxyPort = 'systemProxyPort';
 
   static const String themeMode = 'themeMode',
-      // Phase 7.1：UI 风格（0=ios, 1=material3, 2=miuix）
-      uiStyle = 'uiStyle',
       // 应用字体族名（null/空 = 系统默认 Segoe UI）
       appFontFamily = 'appFontFamily',
       // 自定义字体文件名（导入的 .ttf/.otf 文件名）

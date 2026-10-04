@@ -1318,19 +1318,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             spacing: Style.md,
             children: [
               Icon(
-                AppIcons.viewCount(context),
+                AppIcons.viewCount(),
                 size: 15,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               Text(NumUtils.formatNum(stat?.view), style: grayStyle),
               Icon(
-                AppIcons.danmakuCount(context),
+                AppIcons.danmakuCount(),
                 size: 14,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               Text(NumUtils.formatNum(stat?.danmaku), style: grayStyle),
               Icon(
-                AppIcons.duration(context),
+                AppIcons.duration(),
                 size: 14,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -1644,7 +1644,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             spacing: 4,
                             children: [
                               Icon(
-                                AppIcons.like(context, active: reply.isLiked),
+                                AppIcons.like(active: reply.isLiked),
                                 size: 15,
                                 color: reply.isLiked
                                     ? biliPink
@@ -1665,7 +1665,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                         GestureDetector(
                           onTap: () => _toggleDislikeReply(reply),
                           child: Icon(
-                            AppIcons.dislike(context, active: reply.isDisliked),
+                            AppIcons.dislike(active: reply.isDisliked),
                             size: 15,
                             color: reply.isDisliked
                                 ? biliPink
@@ -1698,7 +1698,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             spacing: 3,
                             children: [
                               Icon(
-                                AppIcons.reply(context),
+                                AppIcons.reply(),
                                 size: 15,
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -1727,8 +1727,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                 ),
                                 Icon(
                                   subReplies != null
-                                      ? AppIcons.chevronUp(context)
-                                      : AppIcons.expandMore(context),
+                                      ? AppIcons.chevronUp()
+                                      : AppIcons.expandMore(),
                                   size: 15,
                                   color: theme.colorScheme.primary,
                                 ),
@@ -1788,7 +1788,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       padding: const EdgeInsets.only(top: Style.xs),
                       child: TextButton.icon(
                         onPressed: () => _loadSubReplies(reply),
-                        icon: AppIcon(AppIcons.expandMore(context), size: 16),
+                        icon: AppIcon(AppIcons.expandMore(), size: 16),
                         label: Text(
                           '查看更多回复 ${reply.rcount != null ? "(${subReplies.length}/${reply.rcount})" : ""}',
                           style: const TextStyle(fontSize: 12),
@@ -1944,7 +1944,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     spacing: 3,
                     children: [
                       Icon(
-                        AppIcons.like(context, active: sub.isLiked),
+                        AppIcons.like(active: sub.isLiked),
                         size: 13,
                         color: sub.isLiked
                             ? biliPink
@@ -1965,7 +1965,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 GestureDetector(
                   onTap: () => _toggleDislikeReply(sub),
                   child: Icon(
-                    AppIcons.dislike(context, active: sub.isDisliked),
+                    AppIcons.dislike(active: sub.isDisliked),
                     size: 13,
                     color: sub.isDisliked
                         ? biliPink
@@ -2001,7 +2001,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     spacing: 2,
                     children: [
                       Icon(
-                        AppIcons.reply(context),
+                        AppIcons.reply(),
                         size: 13,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -2086,7 +2086,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       .withValues(alpha: 0.5),
                   suffixIcon: _replyRoot != null
                       ? IconButton(
-                          icon: AppIcon(AppIcons.clear(context), size: 16),
+                          icon: AppIcon(AppIcons.clear(), size: 16),
                           onPressed: _clearReplyTarget,
                         )
                       : null,

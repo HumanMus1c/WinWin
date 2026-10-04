@@ -124,7 +124,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
                 Text('弹幕设置', style: theme.textTheme.titleMedium),
                 const Spacer(),
                 IconButton(
-                  icon: AppIcon(AppIcons.clear(context)),
+                  icon: AppIcon(AppIcons.clear()),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -375,7 +375,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              icon: AppIcon(AppIcons.block(context), size: 18),
+              icon: AppIcon(AppIcons.block(), size: 18),
               label: const Text('屏蔽规则管理'),
               onPressed: () => showDanmakuBlockPage(
                 context,
@@ -438,7 +438,7 @@ class _SliderRow extends StatelessWidget {
                 const SizedBox(width: 2),
                 IconButton(
                   tooltip: '恢复默认',
-                  icon: AppIcon(AppIcons.refresh(context), size: 15),
+                  icon: AppIcon(AppIcons.refresh(), size: 15),
                   color: Theme.of(context).colorScheme.outline,
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,

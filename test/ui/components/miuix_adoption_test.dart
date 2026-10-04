@@ -15,20 +15,14 @@ import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
-import 'package:winwin/theme/ui_style.dart';
-import 'package:winwin/theme/ui_style_notifier.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 
 Widget wrapMiuix(Widget child, {bool dark = false}) => MaterialApp(
       home: MiuixThemeScope(
         isDark: dark,
-        child: UiStyleScope(
-          style: UiStyle.miuix,
-          child: Scaffold(body: Center(child: child)),
-        ),
+        child: Scaffold(body: Center(child: child)),
       ),
     );
 
@@ -114,12 +108,10 @@ void main() {
       expect(toggled, isTrue);
     });
 
-    testWidgets('material3 风格：L1 后同样由 flutter_miuix 驱动（渐进退役）', (tester) async {
+    testWidgets('L1/L4-2 后组件恒由 flutter_miuix 驱动（单轨）', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: UiStyleScope(
-            style: UiStyle.material3,
-            child: Scaffold(
+            home: Scaffold(
               body: Column(
                 children: [
                   AppSwitch(value: false, onChanged: (_) {}),
@@ -129,7 +121,6 @@ void main() {
                 ],
               ),
             ),
-          ),
         ),
       );
 
@@ -263,15 +254,12 @@ void main() {
       expect(find.byType(MiuixIcon), findsOneWidget);
       expect(find.byIcon(CupertinoIcons.person), findsOneWidget);
 
-      // 阶段5d-L3：M3 风格下映射同样恒启用（渐进退役）。
+      // 阶段5d-L3/L4-2：映射恒启用（单轨）。
       await tester.pumpWidget(
         MaterialApp(
-          home: UiStyleScope(
-            style: UiStyle.material3,
-            child: Scaffold(
+            home: Scaffold(
               body: const AppIcon(CupertinoIcons.settings, size: 20),
             ),
-          ),
         ),
       );
       expect(find.byType(MiuixIcon), findsOneWidget);
@@ -361,12 +349,9 @@ void main() {
 
     testWidgets('AppSliderDialog：miuix 渲染 MiuixSlider 且确定返回当前值', (tester) async {
       double? result;
-      // 宿主复刻 main.dart：UiStyleScope 包在 MaterialApp 外层，
-      // 使 showDialog 路由（Navigator 层级）同样取到 miuix 风格。
+      // 宿主复刻 main.dart：MaterialApp + MiuixThemeScope。
       await tester.pumpWidget(
-        UiStyleScope(
-          style: UiStyle.miuix,
-          child: MaterialApp(
+        MaterialApp(
             home: MiuixThemeScope(
               isDark: false,
               child: Builder(
@@ -391,7 +376,6 @@ void main() {
                 ),
               ),
             ),
-          ),
         ),
       );
 
@@ -511,9 +495,7 @@ void main() {
     testWidgets('Toast：无 context 路径（showAppSnackBar）经宿主走 miuix 分支', (tester) async {
       // showAppSnackBar 无 context：miuix 路径经全局通道直达宿主，
       // 不再依赖 ScaffoldMessenger（其 context 位于 builder 链之上）。
-      UiStyleNotifier.instance.value = UiStyle.miuix;
       addTearDown(() {
-        UiStyleNotifier.instance.value = UiStyle.material3;
         miuixToastRequest.value = null;
       });
 

@@ -523,8 +523,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   children: [
                     ContrastIcon(
                       feedback.isForward
-                          ? AppIcons.fastForward(context)
-                          : AppIcons.fastRewind(context),
+                          ? AppIcons.fastForward()
+                          : AppIcons.fastRewind(),
                       color: Colors.white,
                       size: 28,
                       shadows: ContrastStyle.boldGlyphShadows,
@@ -570,7 +570,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ContrastIcon(
-                      AppIcons.fastForward(context),
+                      AppIcons.fastForward(),
                       color: biliPink,
                       size: 40,
                       shadows: ContrastStyle.boldGlyphShadows,
@@ -621,8 +621,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       children: [
                         ContrastIcon(
                           isForward
-                              ? AppIcons.fastForward(context)
-                              : AppIcons.fastRewind(context),
+                              ? AppIcons.fastForward()
+                              : AppIcons.fastRewind(),
                           color: biliPink,
                           size: 20,
                           shadows: ContrastStyle.glyphShadows,
@@ -665,7 +665,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
         backgroundColor: Colors.black.withValues(alpha: 0.45),
         child: IconButton(
           icon: ContrastIcon(
-            AppIcons.lock(context),
+            AppIcons.lock(),
             color: Colors.white,
             size: 32,
             shadows: ContrastStyle.boldGlyphShadows,
@@ -785,7 +785,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AppIcon(AppIcons.error(context), color: Colors.white70, size: 40),
+          AppIcon(AppIcons.error(), color: Colors.white70, size: 40),
           const SizedBox(height: Style.sm),
           Text(
             message,
@@ -824,8 +824,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 backgroundColor: Colors.black.withValues(alpha: 0.45),
                 child: ContrastIcon(
                   isCompleted
-                      ? AppIcons.replay(context)
-                      : AppIcons.play(context, active: true),
+                      ? AppIcons.replay()
+                      : AppIcons.play(active: true),
                   color: Colors.white,
                   size: 44,
                   shadows: ContrastStyle.boldGlyphShadows,
@@ -890,7 +890,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     const SizedBox(width: Style.sm),
                     _iconButton(
                       icon: Icon(
-                        AppIcons.sendDanmaku(context),
+                        AppIcons.sendDanmaku(),
                         shadows: ContrastStyle.glyphShadows,
                       ),
                       tooltip: '发弹幕',
@@ -898,7 +898,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     ),
                     _iconButton(
                       icon: Icon(
-                        AppIcons.danmakuTune(context),
+                        AppIcons.danmakuTune(),
                         shadows: ContrastStyle.glyphShadows,
                       ),
                       tooltip: '弹幕设置',
@@ -913,10 +913,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       builder: (context, vol, _) {
                         final Widget volIcon = Icon(
                           vol <= 0
-                              ? AppIcons.volumeOff(context)
+                              ? AppIcons.volumeOff()
                               : (vol > 100
-                                    ? AppIcons.volumeUp(context)
-                                    : AppIcons.volumeDown(context)),
+                                    ? AppIcons.volumeUp()
+                                    : AppIcons.volumeDown()),
                           shadows: ContrastStyle.glyphShadows,
                         );
                         return _iconButton(
@@ -929,7 +929,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     ),
                     _iconButton(
                       icon: Icon(
-                        AppIcons.lockOutline(context),
+                        AppIcons.lockOutline(),
                         shadows: ContrastStyle.glyphShadows,
                       ),
                       tooltip: '锁定控制条',
@@ -938,7 +938,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     if (!widget.fullscreen)
                       _iconButton(
                         icon: Icon(
-                          AppIcons.pip(context),
+                          AppIcons.pip(),
                           shadows: ContrastStyle.glyphShadows,
                         ),
                         tooltip: '画中画',
@@ -948,7 +948,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       _iconButton(
                         icon: Icon(
                           AppIcons.inAppFullscreen(
-                            context,
                             active: widget.inAppFullscreen,
                           ),
                           shadows: ContrastStyle.glyphShadows,
@@ -960,7 +959,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     if (widget.onToggleFullscreen != null)
                       _iconButton(
                         icon: Icon(
-                          AppIcons.fullscreen(context, active: widget.fullscreen),
+                          AppIcons.fullscreen(active: widget.fullscreen),
                           shadows: ContrastStyle.glyphShadows,
                         ),
                         tooltip: widget.fullscreen ? '退出全屏' : '全屏',
@@ -987,10 +986,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
         final isCompleted = c.completed.value;
         final icon = Icon(
           isPlaying
-              ? AppIcons.pause(context, active: true)
+              ? AppIcons.pause(active: true)
               : (isCompleted
-                    ? AppIcons.replay(context)
-                    : AppIcons.play(context, active: true)),
+                    ? AppIcons.replay()
+                    : AppIcons.play(active: true)),
           shadows: ContrastStyle.glyphShadows,
         );
         return _iconButton(
@@ -1417,7 +1416,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ContrastIcon(
-              AppIcons.danmaku(context, active: enabled),
+              AppIcons.danmaku(active: enabled),
               size: 16.5,
               color: enabled
                   ? const Color(0xFF00AEEC)
@@ -1475,7 +1474,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ContrastIcon(
-                  AppIcons.subtitle(context, active: isActive),
+                  AppIcons.subtitle(active: isActive),
                   size: 16.5,
                   color: isActive
                       ? const Color(0xFF00AEEC)
@@ -1726,7 +1725,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ContrastIcon(
-                  AppIcons.chapter(context, active: isOpen),
+                  AppIcons.chapter(active: isOpen),
                   size: 16.5,
                   color: isOpen
                       ? const Color(0xFF00AEEC)
@@ -1848,7 +1847,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                   child: Row(
                                     children: [
                                       Icon(
-                                        AppIcons.chapter(context),
+                                        AppIcons.chapter(),
                                         color: Colors.white,
                                         size: 18,
                                       ),
@@ -1872,7 +1871,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                           alpha: 0.12,
                                         ),
                                         child: Icon(
-                                          AppIcons.clear(context),
+                                          AppIcons.clear(),
                                           color: Colors.white70,
                                           size: 18,
                                         ),
@@ -1949,7 +1948,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                     child: isCurrent
                                                         ? Icon(
                                                             AppIcons.play(
-                                                              context,
                                                               active: true,
                                                             ),
                                                             color: biliBlue,
@@ -2156,10 +2154,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
               builder: (context, vol, _) {
                 return ContrastIcon(
                   vol <= 0
-                      ? AppIcons.volumeOff(context)
+                      ? AppIcons.volumeOff()
                       : (vol > 100
-                            ? AppIcons.volumeUp(context)
-                            : AppIcons.volumeDown(context)),
+                            ? AppIcons.volumeUp()
+                            : AppIcons.volumeDown()),
                   color: vol > 100 ? Colors.amberAccent : Colors.white,
                   size: 18,
                   shadows: ContrastStyle.glyphShadows,
@@ -2310,7 +2308,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                   Text('截图预览', style: Theme.of(context).textTheme.titleMedium),
                   const Spacer(),
                   IconButton(
-                    icon: AppIcon(AppIcons.clear(context)),
+                    icon: AppIcon(AppIcons.clear()),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -2348,7 +2346,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : AppIcon(AppIcons.download(context), size: 18),
+                        : AppIcon(AppIcons.download(), size: 18),
                     label: Text(_savedPath != null ? '已保存' : '保存'),
                   ),
                 ],

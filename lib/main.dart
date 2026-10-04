@@ -24,10 +24,7 @@ import 'pages/video/desktop_pip.dart';
 import 'theme/app_font_notifier.dart';
 import 'theme/app_theme.dart';
 import 'theme/colors.dart';
-import 'theme/inherited_ui_style.dart';
 import 'theme/miuix_theme_bridge.dart';
-import 'theme/ui_style.dart';
-import 'theme/ui_style_notifier.dart';
 import 'ui/app.dart';
 import 'utils/calc_window_position.dart';
 import 'utils/json_file_handler.dart';
@@ -123,7 +120,6 @@ void main() async {
         windowManager.ensureInitialized(),
     ]);
     ThemeNotifier.instance.refresh();
-    UiStyleNotifier.instance.refresh();
     AppFontNotifier.instance.refresh();
     TitleBarController.instance.update();
   } catch (error, stackTrace) {
@@ -203,25 +199,20 @@ class WinWinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 三层 ValueListenableBuilder — UI 风格 × 主题模式 × 应用字体。
-    // 任意一个变化都会重建 MaterialApp + UiStyleScope，实现热切换。
-    return ValueListenableBuilder<UiStyle>(
-      valueListenable: UiStyleNotifier.instance,
-      builder: (context, uiStyle, _) {
-        return ValueListenableBuilder<ThemeMode>(
+    // 两层 ValueListenableBuilder — 主题模式 × 应用字体，任一变化重建 MaterialApp。
+    // （阶段5d-L4-2：原 UI 风格层与 UiStyleScope 已随单轨化移除。）
+    return ValueListenableBuilder<ThemeMode>(
           valueListenable: ThemeNotifier.instance,
           builder: (context, themeMode, _) {
             return ValueListenableBuilder<String>(
               valueListenable: AppFontNotifier.instance,
               builder: (context, fontFamily, _) {
-                return UiStyleScope(
-                  style: uiStyle,
-                  child: MaterialApp(
+                return MaterialApp(
                     title: 'WinWin — BiliPai Desktop Port',
                     debugShowCheckedModeBanner: false,
                     scrollBehavior: const AppScrollBehavior(),
-                    theme: AppTheme.lightFor(uiStyle, fontFamily: fontFamily),
-                    darkTheme: AppTheme.darkFor(uiStyle, fontFamily: fontFamily),
+                    theme: AppTheme.lightFor(fontFamily: fontFamily),
+                    darkTheme: AppTheme.darkFor(fontFamily: fontFamily),
                     themeMode: themeMode,
                     navigatorKey: appNavigatorKey,
                     scaffoldMessengerKey: appScaffoldMessengerKey,
@@ -233,13 +224,10 @@ class WinWinApp extends StatelessWidget {
                     // 编译面不存在运行时可达到的 SDK MaterialLocalizations / Theme
                     // 消费者；摘除证据见 docs/material_ui兼容桥接摘除复盘-2026-10-02.md。
                     builder: (context, child) {
-                      final base = UiStyleScope(
-                        style: uiStyle,
-                        child: AppEscapeScope(
-                          navigatorKey: appNavigatorKey,
-                          observer: appEscapeObserver,
-                          child: child ?? const SizedBox.shrink(),
-                        ),
+                      final base = AppEscapeScope(
+                        navigatorKey: appNavigatorKey,
+                        observer: appEscapeObserver,
+                        child: child ?? const SizedBox.shrink(),
                       );
                       // 阶段5d-L4-1：风格入口退役后 MiuixThemeScope 恒启用
                       // （原 `uiStyle != UiStyle.miuix` 门控移除）。由
@@ -255,13 +243,10 @@ class WinWinApp extends StatelessWidget {
                       bootstrapError: bootstrapError,
                       child: const AppRoot(),
                     ),
-                  ),
                 );
               },
             );
           },
-        );
-      },
     );
   }
 }
@@ -309,7 +294,6 @@ class _AgreementGateState extends State<AgreementGate> {
     });
     ensureBootstrap().then((_) {
       ThemeNotifier.instance.refresh();
-      UiStyleNotifier.instance.refresh();
       AppFontNotifier.instance.refresh();
       if (!mounted) return;
       final acked = Pref.userAgreementAck;
@@ -330,7 +314,6 @@ class _AgreementGateState extends State<AgreementGate> {
 
   @override
   Widget build(BuildContext context) {
-    InheritedUiStyle.of(context);
     final bootstrapError = _bootstrapError;
     if (bootstrapError != null) {
       final isDark = Theme.of(context).brightness == Brightness.dark;

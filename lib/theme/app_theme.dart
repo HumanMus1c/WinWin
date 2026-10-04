@@ -5,9 +5,8 @@ import 'app_shapes.dart';
 import 'app_typography.dart';
 import 'colors.dart';
 import 'system_font_scanner.dart';
-import 'ui_style.dart';
 
-/// App theme — 按 [UiStyle] 解析三套 ThemeData。
+/// App theme — 阶段5d-L4-2 单轨化后恒解析 Miuix ThemeData。
 ///
 /// 参照 BiliPai 的 `PureBiliBiliTheme`：
 /// - **iOS**：沿用现有 iosBlue 配色，连续曲率圆角，扩散阴影。
@@ -21,11 +20,11 @@ import 'ui_style.dart';
 class AppTheme {
   /// 浅色主题（阶段5d-L2 固化：Token 与主题恒为 Miuix 取值；[style] 参数
   /// 保留以兼容调用签名，不再分支）。
-  static ThemeData lightFor(UiStyle style, {String? fontFamily}) =>
+  static ThemeData lightFor({String? fontFamily}) =>
       _applyFont(_miuixLight, fontFamily);
 
   /// 深色主题（阶段5d-L2 固化，同上）。
-  static ThemeData darkFor(UiStyle style, {String? fontFamily}) =>
+  static ThemeData darkFor({String? fontFamily}) =>
       _applyFont(_miuixDark, fontFamily);
 
   /// 将 [fontFamily]（或字体标识键）注入 [ThemeData] 的 textTheme / primaryTextTheme。
@@ -44,19 +43,19 @@ class AppTheme {
   /// 组装设计 Token（阶段5d-L2 固化：恒为 Miuix 取值），挂载到
   /// [ThemeData.extensions]，组件通过 `Theme.of(context).extension<AppShapes>()`
   /// 等读取。
-  static Iterable<ThemeExtension<dynamic>> _extensionsFor(UiStyle style) => [
+  static Iterable<ThemeExtension<dynamic>> _extensionsFor() => [
         AppShapes.miuix,
         AppTypography.miuix,
         AppChrome.miuix,
       ];
 
-  /// 全局操作图标主题：按 [UiStyle] 自动注入系统 BackButton 与 CloseButton 图标
-  static ActionIconThemeData _actionIconThemeFor(UiStyle style) =>
+  /// 全局操作图标主题：注入系统 BackButton 与 CloseButton 图标（Miuix 语义）。
+  static ActionIconThemeData _actionIconThemeFor() =>
       ActionIconThemeData(
         backButtonIconBuilder: (BuildContext context) =>
-            AppIcon(AppIcons.backOf(style)),
+            AppIcon(AppIcons.back()),
         closeButtonIconBuilder: (BuildContext context) =>
-            AppIcon(AppIcons.clearOf(style)),
+            AppIcon(AppIcons.clear()),
       );
 
 
@@ -130,8 +129,8 @@ class AppTheme {
             height: 1.4,
           ),
         ),
-        actionIconTheme: _actionIconThemeFor(UiStyle.miuix),
-        extensions: _extensionsFor(UiStyle.miuix),
+        actionIconTheme: _actionIconThemeFor(),
+        extensions: _extensionsFor(),
       );
 
   static ThemeData get _miuixDark => ThemeData(
@@ -194,19 +193,19 @@ class AppTheme {
             height: 1.4,
           ),
         ),
-        actionIconTheme: _actionIconThemeFor(UiStyle.miuix),
-        extensions: _extensionsFor(UiStyle.miuix),
+        actionIconTheme: _actionIconThemeFor(),
+        extensions: _extensionsFor(),
       );
 
   /// 通用：按风格返回圆角半径（阶段5d-L2 固化：恒为 Miuix 取值；[style]
   /// 参数保留以兼容调用签名）。
-  static Radius radiusSmall(UiStyle style) => _miuixRadiusSmall;
+  static Radius radiusSmall() => _miuixRadiusSmall;
 
-  static Radius radiusMedium(UiStyle style) => _miuixRadiusMedium;
+  static Radius radiusMedium() => _miuixRadiusMedium;
 
-  static Radius radiusLarge(UiStyle style) => _miuixRadiusLarge;
+  static Radius radiusLarge() => _miuixRadiusLarge;
 
-  static Radius radiusXLarge(UiStyle style) => _miuixRadiusXLarge;
+  static Radius radiusXLarge() => _miuixRadiusXLarge;
 
-  static Radius radiusFloating(UiStyle style) => _miuixRadiusFloating;
+  static Radius radiusFloating() => _miuixRadiusFloating;
 }

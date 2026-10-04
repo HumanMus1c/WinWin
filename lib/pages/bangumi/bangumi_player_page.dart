@@ -865,7 +865,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               ),
               IconButton(
                 icon: Icon(
-                  AppIcons.pip(context),
+                  AppIcons.pip(),
                   color: overVideo ? Colors.white : barContrast.contentColor,
                   shadows: overVideo ? ContrastStyle.glyphShadows : null,
                 ),
@@ -1122,8 +1122,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 },
                 icon: Icon(
                   _episodesDescending
-                      ? AppIcons.chevronDown(context)
-                      : AppIcons.chevronUp(context),
+                      ? AppIcons.chevronDown()
+                      : AppIcons.chevronUp(),
                   size: 16,
                 ),
                 label: Text(_episodesDescending ? '倒序' : '正序'),
@@ -1200,7 +1200,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                     color: Colors.black.withValues(alpha: 0.45),
                                     child: Center(
                                       child: Icon(
-                                        AppIcons.play(context, active: true),
+                                        AppIcons.play(active: true),
                                         color: Colors.white,
                                         size: 24,
                                       ),
@@ -1446,7 +1446,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                             spacing: 4,
                             children: [
                               Icon(
-                                AppIcons.like(context, active: reply.isLiked),
+                                AppIcons.like(active: reply.isLiked),
                                 size: 15,
                                 color: reply.isLiked
                                     ? biliPink
@@ -1467,7 +1467,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                         GestureDetector(
                           onTap: () => _toggleDislikeReply(reply),
                           child: Icon(
-                            AppIcons.dislike(context, active: reply.isDisliked),
+                            AppIcons.dislike(active: reply.isDisliked),
                             size: 15,
                             color: reply.isDisliked
                                 ? biliPink
@@ -1500,7 +1500,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                             spacing: 3,
                             children: [
                               Icon(
-                                AppIcons.reply(context),
+                                AppIcons.reply(),
                                 size: 15,
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -1529,8 +1529,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                 ),
                                 Icon(
                                   subReplies != null
-                                      ? AppIcons.chevronUp(context)
-                                      : AppIcons.expandMore(context),
+                                      ? AppIcons.chevronUp()
+                                      : AppIcons.expandMore(),
                                   size: 15,
                                   color: theme.colorScheme.primary,
                                 ),
@@ -1590,7 +1590,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       padding: const EdgeInsets.only(top: Style.xs),
                       child: TextButton.icon(
                         onPressed: () => _loadSubReplies(reply),
-                        icon: AppIcon(AppIcons.expandMore(context), size: 16),
+                        icon: AppIcon(AppIcons.expandMore(), size: 16),
                         label: Text(
                           '查看更多回复 ${reply.rcount != null ? "(${subReplies.length}/${reply.rcount})" : ""}',
                           style: const TextStyle(fontSize: 12),
@@ -1717,7 +1717,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                     spacing: 3,
                     children: [
                       Icon(
-                        AppIcons.like(context, active: sub.isLiked),
+                        AppIcons.like(active: sub.isLiked),
                         size: 13,
                         color: sub.isLiked
                             ? biliPink
@@ -1738,7 +1738,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 GestureDetector(
                   onTap: () => _toggleDislikeReply(sub),
                   child: Icon(
-                    AppIcons.dislike(context, active: sub.isDisliked),
+                    AppIcons.dislike(active: sub.isDisliked),
                     size: 13,
                     color: sub.isDisliked
                         ? biliPink
@@ -1774,7 +1774,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                     spacing: 2,
                     children: [
                       Icon(
-                        AppIcons.reply(context),
+                        AppIcons.reply(),
                         size: 13,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -1907,7 +1907,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       .withValues(alpha: 0.5),
                   suffixIcon: _replyRoot != null
                       ? IconButton(
-                          icon: AppIcon(AppIcons.clear(context), size: 16),
+                          icon: AppIcon(AppIcons.clear(), size: 16),
                           onPressed: _clearReplyTarget,
                         )
                       : null,
@@ -2020,7 +2020,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              AppIcons.favorite(context, active: _isFollowed),
+              AppIcons.favorite(active: _isFollowed),
               size: 16,
               color: _isFollowed ? Colors.pink : null,
             ),
@@ -2063,22 +2063,22 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           // 数据行（播放量、弹幕、时长、开播时间）
           Row(
             children: [
-              AppIcon(AppIcons.viewCount(context), size: 15, color: cs.onSurfaceVariant),
+              AppIcon(AppIcons.viewCount(), size: 15, color: cs.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(NumUtils.formatNum(stat?.views), style: grayStyle),
               const SizedBox(width: Style.md),
-              AppIcon(AppIcons.danmakuCount(context), size: 14, color: cs.onSurfaceVariant),
+              AppIcon(AppIcons.danmakuCount(), size: 14, color: cs.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(NumUtils.formatNum(stat?.danmakus), style: grayStyle),
               if (_currentEpisode.duration != null && _currentEpisode.duration! > 0) ...[
                 const SizedBox(width: Style.md),
-                AppIcon(AppIcons.duration(context), size: 14, color: cs.onSurfaceVariant),
+                AppIcon(AppIcons.duration(), size: 14, color: cs.onSurfaceVariant),
                 const SizedBox(width: 4),
                 Text(_currentEpisode.formattedDuration, style: grayStyle),
               ],
               if (_currentEpisode.pubTime != null || widget.detail.publish?.releaseDateShow != null) ...[
                 const SizedBox(width: Style.md),
-                AppIcon(AppIcons.calendar(context), size: 13, color: cs.onSurfaceVariant),
+                AppIcon(AppIcons.calendar(), size: 13, color: cs.onSurfaceVariant),
                 const SizedBox(width: 4),
                 Text(
                   _currentEpisode.pubTime != null

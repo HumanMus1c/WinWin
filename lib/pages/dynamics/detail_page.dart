@@ -238,7 +238,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         title: const Text('动态详情', style: TextStyle(fontSize: 16)),
         actions: [
           IconButton(
-            icon: AppIcon(AppIcons.refresh(context)),
+            icon: AppIcon(AppIcons.refresh()),
             tooltip: '重新加载',
             onPressed: _loadDetail,
           ),
@@ -626,7 +626,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                         if (reply.like != null &&
                                             reply.like! > 0) ...[
                                           Icon(
-                                            AppIcons.like(context),
+                                            AppIcons.like(),
                                             size: 12,
                                             color: cs.outline,
                                           ),

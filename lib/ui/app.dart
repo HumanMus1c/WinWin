@@ -8,7 +8,6 @@ import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/whisper/view.dart';
 import 'package:winwin/services/msg_unread_service.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'home/home_page.dart';
 import 'main_layout.dart';
 import 'profile/profile_page.dart';
@@ -56,7 +55,6 @@ class _AppRootState extends State<AppRoot> {
 
   @override
   Widget build(BuildContext context) {
-    InheritedUiStyle.of(context);
     // Esc 全局分层语义（返回上一级 / 取消输入聚焦 / 关闭对话框与二级浮层）
     // 由 main.dart 的 MaterialApp.builder 内 AppEscapeScope 统一处理，
     // 对任意路由（含压栈页面与对话框）生效。

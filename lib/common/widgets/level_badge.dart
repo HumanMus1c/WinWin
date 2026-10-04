@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/level_icon.dart';
 import 'package:winwin/theme/app_shapes.dart';
-import 'package:winwin/theme/ui_style.dart';
 import 'package:winwin/utils/num_utils.dart';
 
 export 'package:winwin/common/widgets/level_icon.dart';
@@ -67,7 +66,7 @@ class LevelBadge extends StatelessWidget {
 
 /// 用户经验进度条组件（当前经验 / 升级经验）。
 ///
-/// 遵循 [UiStyle] 自适应规范：
+/// 单轨视觉规范（阶段5d-L4-2）：
 /// - **Material 3**：4dp 标准 M3 进度指示器，带细边框与 M3 surfaceContainerHighest 背景；
 /// - **Miuix**：3dp 纯扁平全圆角进度条，无分割描边，紧凑布局。
 class LevelExpBar extends StatelessWidget {

@@ -844,7 +844,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     ),
                     actions: [
                       IconButton(
-                        icon: AppIcon(AppIcons.refresh(context)),
+                        icon: AppIcon(AppIcons.refresh()),
                         tooltip: '刷新直播流',
                         onPressed: _initLive,
                       ),

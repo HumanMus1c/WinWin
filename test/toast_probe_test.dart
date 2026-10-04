@@ -2,9 +2,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/core/app_messenger.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// Toast 宽度自适应探针（阶段5d-L1 后：Miuix 宿主为唯一实现）。
 ///
@@ -25,9 +23,7 @@ Future<void> _pumpAndShow(
     MaterialApp(
       home: MiuixThemeScope(
         isDark: false,
-        child: UiStyleScope(
-          style: UiStyle.miuix,
-          child: Scaffold(
+        child: Scaffold(
             body: MiuixToastHost(
               child: Builder(
                 builder: (context) => Center(
@@ -40,7 +36,6 @@ Future<void> _pumpAndShow(
             ),
           ),
         ),
-      ),
     ),
   );
   await tester.tap(find.text('show'));

@@ -92,7 +92,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                 Text('字幕设置', style: theme.textTheme.titleMedium),
                 const Spacer(),
                 IconButton(
-                  icon: AppIcon(AppIcons.clear(context)),
+                  icon: AppIcon(AppIcons.clear()),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -415,7 +415,7 @@ class _SliderRow extends StatelessWidget {
                 const SizedBox(width: 2),
                 IconButton(
                   tooltip: '恢复默认',
-                  icon: AppIcon(AppIcons.refresh(context), size: 15),
+                  icon: AppIcon(AppIcons.refresh(), size: 15),
                   color: Theme.of(context).colorScheme.outline,
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,

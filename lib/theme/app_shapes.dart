@@ -1,13 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'ui_style.dart';
 
-/// 形状 Token — 按 [UiStyle] 解析的圆角体系。
+/// 形状 Token — 圆角体系（阶段5d-L4-2 单轨化）。
 ///
 /// 参照 BiliPai 的 `BiliDesign.shapes`：iOS 连续曲率圆角，MD3 标准 M3
 /// 圆角 ×0.9 缩放，Miuix 扁平大圆角 ×1.15 缩放。作为 [ThemeExtension]
 /// 挂载到 [ThemeData]，组件通过 `Theme.of(context).extension<AppShapes>()`
-/// 读取，无需手动传递 [UiStyle]。
+/// 读取；阶段5d-L4-2 单轨化后无需风格参数。
 ///
 /// 同时提供 [Radius] 与 [BorderRadius] / [RoundedRectangleBorder] 三种形式，
 /// 覆盖卡片、按钮、容器、胶囊、输入框等场景。
@@ -21,7 +20,6 @@ class AppShapes extends ThemeExtension<AppShapes> {
     required this.extraLarge,
     required this.floating,
     required this.pill,
-    required this.style,
   });
 
   /// 最小圆角（角标 / tag）。
@@ -46,7 +44,6 @@ class AppShapes extends ThemeExtension<AppShapes> {
   final Radius pill;
 
   /// 当前风格（供组件做风格特判时使用）。
-  final UiStyle style;
 
   // ── Miuix（阶段5d-L2 起为唯一取值；×1.15 缩放，扁平大圆角，
   //   对齐 BiliPai MIUIX_CORNER_RADIUS_SCALE = 1.15f）──
@@ -58,7 +55,6 @@ class AppShapes extends ThemeExtension<AppShapes> {
     extraLarge: Radius.circular(23),
     floating: Radius.circular(32),
     pill: Radius.circular(100),
-    style: UiStyle.miuix,
   );
 
   /// 兼容旧代码：映射到 [miuix]（对齐 upstream 单向迁移规则）。
@@ -96,7 +92,6 @@ class AppShapes extends ThemeExtension<AppShapes> {
     Radius? extraLarge,
     Radius? floating,
     Radius? pill,
-    UiStyle? style,
   }) =>
       AppShapes(
         tiny: tiny ?? this.tiny,
@@ -106,7 +101,6 @@ class AppShapes extends ThemeExtension<AppShapes> {
         extraLarge: extraLarge ?? this.extraLarge,
         floating: floating ?? this.floating,
         pill: pill ?? this.pill,
-        style: style ?? this.style,
       );
 
   @override
@@ -120,7 +114,6 @@ class AppShapes extends ThemeExtension<AppShapes> {
       extraLarge: Radius.lerp(extraLarge, other.extraLarge, t) ?? extraLarge,
       floating: Radius.lerp(floating, other.floating, t) ?? floating,
       pill: Radius.lerp(pill, other.pill, t) ?? pill,
-      style: t < 0.5 ? style : other.style,
     );
   }
 }

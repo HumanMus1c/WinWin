@@ -1,8 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'ui_style.dart';
 
-/// 字体排印 Token — 按 [UiStyle] 解析的字重 / 字间距体系。
+/// 字体排印 Token — 字重 / 字间距体系（阶段5d-L4-2 单轨化）。
 ///
 /// 参照 BiliPai 的 `BiliDesign.typography`：
 /// - **iOS**：Segoe UI 适配版，轻微紧凑字间距（-0.1），semibold 字重。
@@ -22,7 +21,6 @@ class AppTypography extends ThemeExtension<AppTypography> {
     required this.headlineWeight,
     required this.titleWeight,
     required this.bodyWeight,
-    required this.style,
   });
 
   /// title 系列字间距（iOS 负值紧凑，MD3 正值规范，Miuix 0）。
@@ -44,7 +42,6 @@ class AppTypography extends ThemeExtension<AppTypography> {
   final FontWeight bodyWeight;
 
   /// 当前风格。
-  final UiStyle style;
 
   // ── Miuix（阶段5d-L2 起为唯一取值；扁平舒展，对齐 BiliMiuixTypography 视觉调性）──
   static const miuix = AppTypography(
@@ -54,7 +51,6 @@ class AppTypography extends ThemeExtension<AppTypography> {
     headlineWeight: FontWeight.w500,
     titleWeight: FontWeight.w500,
     bodyWeight: FontWeight.w400,
-    style: UiStyle.miuix,
   );
 
   /// 兼容旧代码：映射到 [miuix]（对齐 upstream 单向迁移规则）。
@@ -75,7 +71,6 @@ class AppTypography extends ThemeExtension<AppTypography> {
     FontWeight? headlineWeight,
     FontWeight? titleWeight,
     FontWeight? bodyWeight,
-    UiStyle? style,
   }) =>
       AppTypography(
         titleLetterSpacing: titleLetterSpacing ?? this.titleLetterSpacing,
@@ -84,7 +79,6 @@ class AppTypography extends ThemeExtension<AppTypography> {
         headlineWeight: headlineWeight ?? this.headlineWeight,
         titleWeight: titleWeight ?? this.titleWeight,
         bodyWeight: bodyWeight ?? this.bodyWeight,
-        style: style ?? this.style,
       );
 
   @override
@@ -102,7 +96,6 @@ class AppTypography extends ThemeExtension<AppTypography> {
       titleWeight:
           FontWeight.lerp(titleWeight, other.titleWeight, t) ?? titleWeight,
       bodyWeight: FontWeight.lerp(bodyWeight, other.bodyWeight, t) ?? bodyWeight,
-      style: t < 0.5 ? style : other.style,
     );
   }
 }

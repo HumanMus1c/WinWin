@@ -474,7 +474,7 @@ class VideoPopupMenu extends StatelessWidget {
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
         icon: Icon(
-          AppIcons.more(context),
+          AppIcons.more(),
           size: iconSize,
           color: cs.outline.withValues(alpha: 0.8),
         ),

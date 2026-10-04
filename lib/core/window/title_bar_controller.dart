@@ -4,7 +4,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:winwin/pages/setting/theme_notifier.dart';
-import 'package:winwin/theme/ui_style_notifier.dart';
 
 /// Windows 平台标题栏沉浸模式控制器（对标 PiliPlus）。
 ///
@@ -30,7 +29,6 @@ class TitleBarController with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addObserver(this);
     ThemeNotifier.instance.addListener(_onThemeChanged);
-    UiStyleNotifier.instance.addListener(_onThemeChanged);
 
     // 仅在明确检测到暗色环境时主动下发，避免在配置尚未载入时将原生默认暗色误置为浅色
     if (_isCurrentDark()) {
@@ -44,7 +42,6 @@ class TitleBarController with WidgetsBindingObserver {
     _initialized = false;
     WidgetsBinding.instance.removeObserver(this);
     ThemeNotifier.instance.removeListener(_onThemeChanged);
-    UiStyleNotifier.instance.removeListener(_onThemeChanged);
   }
 
   @override

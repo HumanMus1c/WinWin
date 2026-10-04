@@ -15,7 +15,6 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/date_utils.dart';
@@ -248,7 +247,6 @@ class _HistoryPageState extends State<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    InheritedUiStyle.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('历史记录'),
