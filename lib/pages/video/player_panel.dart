@@ -913,12 +913,18 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     _buildSubtitleChip(),
                     const SizedBox(width: Style.sm),
                     _iconButton(
-                      icon: AppIcons.sendDanmaku(context),
+                      icon: Icon(
+                        AppIcons.sendDanmaku(context),
+                        shadows: ContrastStyle.glyphShadows,
+                      ),
                       tooltip: '发弹幕',
                       onPressed: () => showSendDanmakuPanel(context, controller: c),
                     ),
                     _iconButton(
-                      icon: AppIcons.danmakuTune(context),
+                      icon: Icon(
+                        AppIcons.danmakuTune(context),
+                        shadows: ContrastStyle.glyphShadows,
+                      ),
                       tooltip: '弹幕设置',
                       onPressed: () => showDanmakuSettingsPanel(
                         context,
@@ -929,11 +935,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     ValueListenableBuilder<double>(
                       valueListenable: c.volume,
                       builder: (context, vol, _) {
-                        final IconData volIcon = vol <= 0
-                            ? AppIcons.volumeOff(context)
-                            : (vol > 100
-                                ? AppIcons.volumeUp(context)
-                                : AppIcons.volumeDown(context));
+                        final Widget volIcon = Icon(
+                          vol <= 0
+                              ? AppIcons.volumeOff(context)
+                              : (vol > 100
+                                    ? AppIcons.volumeUp(context)
+                                    : AppIcons.volumeDown(context)),
+                          shadows: ContrastStyle.glyphShadows,
+                        );
                         return _iconButton(
                           icon: volIcon,
                           tooltip: '音量',
@@ -943,21 +952,30 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       },
                     ),
                     _iconButton(
-                      icon: AppIcons.lockOutline(context),
+                      icon: Icon(
+                        AppIcons.lockOutline(context),
+                        shadows: ContrastStyle.glyphShadows,
+                      ),
                       tooltip: '锁定控制条',
                       onPressed: _toggleLock,
                     ),
                     if (!widget.fullscreen)
                       _iconButton(
-                        icon: AppIcons.pip(context),
+                        icon: Icon(
+                          AppIcons.pip(context),
+                          shadows: ContrastStyle.glyphShadows,
+                        ),
                         tooltip: '画中画',
                         onPressed: () => DesktopPipController.instance.togglePip(),
                       ),
                     if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
                       _iconButton(
-                        icon: AppIcons.inAppFullscreen(
-                          context,
-                          active: widget.inAppFullscreen,
+                        icon: Icon(
+                          AppIcons.inAppFullscreen(
+                            context,
+                            active: widget.inAppFullscreen,
+                          ),
+                          shadows: ContrastStyle.glyphShadows,
                         ),
                         tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
                         color: widget.inAppFullscreen ? biliBlue : null,
@@ -965,7 +983,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       ),
                     if (widget.onToggleFullscreen != null)
                       _iconButton(
-                        icon: AppIcons.fullscreen(context, active: widget.fullscreen),
+                        icon: Icon(
+                          AppIcons.fullscreen(context, active: widget.fullscreen),
+                          shadows: ContrastStyle.glyphShadows,
+                        ),
                         tooltip: widget.fullscreen ? '退出全屏' : '全屏',
                         color: widget.fullscreen ? biliBlue : null,
                         onPressed: widget.onToggleFullscreen!,
@@ -988,11 +1009,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
       builder: (context, _) {
         final isPlaying = c.playing.value;
         final isCompleted = c.completed.value;
-        final icon = isPlaying
-            ? AppIcons.pause(context, active: true)
-            : (isCompleted
-                  ? AppIcons.replay(context)
-                  : AppIcons.play(context, active: true));
+        final icon = Icon(
+          isPlaying
+              ? AppIcons.pause(context, active: true)
+              : (isCompleted
+                    ? AppIcons.replay(context)
+                    : AppIcons.play(context, active: true)),
+          shadows: ContrastStyle.glyphShadows,
+        );
         return _iconButton(
           icon: icon,
           tooltip: isCompleted ? '重新播放' : (isPlaying ? '暂停' : '播放'),
@@ -1005,7 +1029,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   /// 控制条图标按钮统一风格：默认 18px 规范图标 + 30px 点击区域 + 温和白亮度 + hover 平滑提亮。
   Widget _iconButton({
-    required IconData icon,
+    required Widget icon,
     required VoidCallback? onPressed,
     String? tooltip,
     Color? color,
@@ -2611,7 +2635,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
 
 /// 控制条专用图标按钮：统一尺寸、温和白默认亮度、hover 平滑提亮与高对比度阴影。
 class _PlayerBarIconButton extends StatefulWidget {
-  final IconData icon;
+  final Widget icon;
   final VoidCallback? onPressed;
   final String? tooltip;
   final Color? color;
@@ -2656,11 +2680,11 @@ class _PlayerBarIconButtonState extends State<_PlayerBarIconButton> {
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(6.0),
           ),
-          child: ContrastIcon(
-            widget.icon,
-            color: effectiveColor,
-            size: widget.size,
-            shadows: ContrastStyle.glyphShadows,
+          // 动态尺寸/亮度经 IconTheme 注入（hover 提亮）；字形阴影由传入
+          // 组件自带（调用点统一挂 ContrastStyle.glyphShadows）。
+          child: IconTheme(
+            data: IconThemeData(size: widget.size, color: effectiveColor),
+            child: widget.icon,
           ),
         ),
       ),

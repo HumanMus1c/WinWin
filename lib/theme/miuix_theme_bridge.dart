@@ -12,9 +12,12 @@
 /// 开关轨道本就依赖默认浅灰/深灰；实机对照后可按需增补。
 library;
 
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart' as legacy;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart';
+
 // ignore: deprecated_member_use
 import 'package:material_ui/material_ui.dart' show MaterialUiCompatibilityBridge;
 
@@ -139,6 +142,18 @@ class _MiuixThemeScopeState extends State<MiuixThemeScope> {
       'Coverage',
       'miuixAdopt: glass loaded=${MiuixGlassRendering.loadedPrograms.length} '
       'error=${MiuixGlassRendering.loadError ?? 'none'}',
+    );
+    // OS4 玻璃加载验证（阶段5c）：主动预载全部玻璃着色器（上游 `load()`
+    // 幂等、逐 shader 容错；缺失自动降级为非玻璃材质），完成后输出结果——
+    // 用于判定 Windows 端玻璃可用性与后续 A/B 启用评估。
+    unawaited(
+      MiuixGlassRendering.load().then((_) {
+        AppLogger.w(
+          'Coverage',
+          'miuixAdopt: glass preload loaded=${MiuixGlassRendering.loadedPrograms.length} '
+          'error=${MiuixGlassRendering.loadError ?? 'none'}',
+        );
+      }),
     );
   }
 
