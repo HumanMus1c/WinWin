@@ -73,43 +73,19 @@ class AppCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final r = radius ?? t.shapes.medium.x;
 
-    // Miuix 分支（阶段1）：原生 MiuixCard（squircle 圆角 + 无阴影扁平）。
+    // 阶段5d-L1：M3 分支已移除；原生 MiuixCard（squircle 圆角 + 无阴影扁平）。
     // 颜色显式取自 WinWin colorScheme（含 miuix 调色板），与替换前保持一致。
-    if (resolvePrimitiveRenderer(t.style) == PrimitiveRenderer.miuix) {
-      final card = MiuixCard(
-        cornerRadius: r,
-        insideMargin: padding ?? const EdgeInsets.all(12),
-        colors: MiuixCardColors(
-          color: color ?? cs.surfaceContainer,
-          contentColor: cs.onSurface,
-        ),
-        onPressed: onTap,
-        child: child,
-      );
-      return margin == null ? card : Padding(padding: margin!, child: card);
-    }
-
-    // MD3 分支：surfaceContainerHighest + M3 tonal elevation。
-    return Container(
-      margin: margin,
-      decoration: BoxDecoration(
-        color: color ?? cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(r),
+    final card = MiuixCard(
+      cornerRadius: r,
+      insideMargin: padding ?? const EdgeInsets.all(12),
+      colors: MiuixCardColors(
+        color: color ?? cs.surfaceContainer,
+        contentColor: cs.onSurface,
       ),
-      child: Material(
-        color: Colors.transparent,
-        elevation: t.chrome.elevation,
-        borderRadius: BorderRadius.circular(r),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(r),
-          child: Padding(
-            padding: padding ?? const EdgeInsets.all(12),
-            child: child,
-          ),
-        ),
-      ),
+      onPressed: onTap,
+      child: child,
     );
+    return margin == null ? card : Padding(padding: margin!, child: card);
   }
 }
 
@@ -132,64 +108,25 @@ class AppGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = _Tokens.of(context);
     final cs = Theme.of(context).colorScheme;
-    final renderer = resolvePrimitiveRenderer(t.style);
-
-    final r = switch (renderer) {
-      PrimitiveRenderer.material3 => t.chrome.containerRadius,
-      PrimitiveRenderer.miuix => t.shapes.large.x,
-    };
-
-    if (renderer == PrimitiveRenderer.miuix) {
-      return Container(
-        margin: margin,
-        child: ClipPath(
-          clipper: ShapeBorderClipper(
-            shape: MiuixSquircleBorder(cornerRadius: r),
-          ),
-          child: MiuixCard(
-            cornerRadius: r,
-            insideMargin: EdgeInsets.zero,
-            colors: MiuixCardColors(
-              color: cs.surface,
-              contentColor: cs.onSurface,
-            ),
-            child: Column(children: children),
-          ),
-        ),
-      );
-    }
-
+    // 阶段5d-L1：M3 分支已移除；MiuixCard + squircle 裁角（防按压溢出）。
+    final r = t.shapes.large.x;
     return Container(
       margin: margin,
-      child: Material(
-        color: cs.surfaceContainer,
-        borderRadius: BorderRadius.circular(r),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: t.chrome.showDividers ? _withDividers(context, children) : children,
+      child: ClipPath(
+        clipper: ShapeBorderClipper(
+          shape: MiuixSquircleBorder(cornerRadius: r),
+        ),
+        child: MiuixCard(
+          cornerRadius: r,
+          insideMargin: EdgeInsets.zero,
+          colors: MiuixCardColors(
+            color: cs.surface,
+            contentColor: cs.onSurface,
+          ),
+          child: Column(children: children),
         ),
       ),
     );
-  }
-
-  List<Widget> _withDividers(BuildContext context, List<Widget> items) {
-    final cs = Theme.of(context).colorScheme;
-    final result = <Widget>[];
-    for (var i = 0; i < items.length; i++) {
-      result.add(items[i]);
-      if (i < items.length - 1) {
-        result.add(
-          Padding(
-            padding: const EdgeInsets.only(left: 58),
-            child: Container(
-              height: 0.5,
-              color: cs.outlineVariant.withValues(alpha: 0.5),
-            ),
-          ),
-        );
-      }
-    }
-    return result;
   }
 }
 
@@ -219,61 +156,18 @@ class AppPrimaryButton extends StatefulWidget {
 }
 
 class _AppPrimaryButtonState extends State<AppPrimaryButton> {
-  bool _pressed = false;
-
   @override
   Widget build(BuildContext context) {
-    final t = _Tokens.of(context);
 
-    // Miuix 分支（阶段1）：原生 MiuixButton（纯色 + squircle + folme 按压）。
-    if (resolvePrimitiveRenderer(t.style) == PrimitiveRenderer.miuix) {
-      final button = MiuixButton(
-        onPressed: widget.onPressed,
-        colors: MiuixButtonDefaults.buttonColorsPrimary(context),
-        child: widget.child,
-      );
-      return widget.expanded
-          ? SizedBox(width: double.infinity, child: button)
-          : button;
-    }
-
-    final cs = Theme.of(context).colorScheme;
-    final enabled = widget.onPressed != null;
-
-    return GestureDetector(
-      onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
-      onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: widget.onPressed,
-      child: AnimatedScale(
-        scale: _pressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: Container(
-          constraints: widget.expanded
-              ? const BoxConstraints(minWidth: double.infinity)
-              : null,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          decoration: ShapeDecoration(
-            gradient: LinearGradient(
-              colors: [
-                cs.primary.withValues(alpha: enabled ? 1 : 0.4),
-                cs.tertiary.withValues(alpha: enabled ? 1 : 0.4),
-              ],
-            ),
-            shape: t.shapes.buttonShape,
-          ),
-          child: DefaultTextStyle.merge(
-            style: TextStyle(
-              color: cs.onPrimary,
-              fontWeight: t.typo.titleWeight,
-              fontSize: 15,
-            ),
-            child: Center(child: widget.child),
-          ),
-        ),
-      ),
+    // 阶段5d-L1：M3 分支已移除；原生 MiuixButton（纯色 + squircle + folme 按压）。
+    final button = MiuixButton(
+      onPressed: widget.onPressed,
+      colors: MiuixButtonDefaults.buttonColorsPrimary(context),
+      child: widget.child,
     );
+    return widget.expanded
+        ? SizedBox(width: double.infinity, child: button)
+        : button;
   }
 }
 
@@ -294,13 +188,8 @@ class AppSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = InheritedUiStyle.of(context);
-    switch (resolvePrimitiveRenderer(style)) {
-      case PrimitiveRenderer.material3:
-        return Switch(value: value, onChanged: onChanged);
-      case PrimitiveRenderer.miuix:
-        return MiuixSwitch(value: value, onChanged: onChanged);
-    }
+    // 阶段5d-L1：M3 分支已移除；原生 MiuixSwitch 恒用。
+    return MiuixSwitch(value: value, onChanged: onChanged);
   }
 }
 
@@ -335,39 +224,22 @@ class AppListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = _Tokens.of(context);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final tint = iconTint ?? cs.primary;
 
-    switch (resolvePrimitiveRenderer(t.style)) {
-      case PrimitiveRenderer.material3:
-        return ListTile(
-          shape: borderRadius != null
-              ? RoundedRectangleBorder(borderRadius: borderRadius!)
-              : null,
-          onTap: onTap,
-          leading: IconTheme(
-            data: IconThemeData(color: tint),
-            child: icon,
-          ),
-          title: Text(title),
-          subtitle: subtitle != null ? Text(subtitle!) : null,
-          trailing: trailing,
-        );
-      case PrimitiveRenderer.miuix:
-        return MiuixBasicComponent(
-          title: title,
-          summary: subtitle,
-          startAction: IconTheme(
-            data: IconThemeData(color: tint, size: 22),
-            child: icon,
-          ),
-          endActions: trailing == null ? null : [trailing!],
-          insideMargin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          onClick: onTap,
-        );
-    }
+    // 阶段5d-L1：M3 分支已移除；MiuixBasicComponent 恒用。
+    return MiuixBasicComponent(
+      title: title,
+      summary: subtitle,
+      startAction: IconTheme(
+        data: IconThemeData(color: tint, size: 22),
+        child: icon,
+      ),
+      endActions: trailing == null ? null : [trailing!],
+      insideMargin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      onClick: onTap,
+    );
   }
 }
 
@@ -394,30 +266,13 @@ class AppSegmentedControl<T extends Object> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = _Tokens.of(context);
-
-    switch (resolvePrimitiveRenderer(t.style)) {
-      case PrimitiveRenderer.material3:
-        return SegmentedButton<T>(
-          segments: segments
-              .map((e) => ButtonSegment<T>(
-                    value: e.$1,
-                    label: Text(e.$2),
-                  ))
-              .toList(),
-          selected: {value},
-          onSelectionChanged: (s) {
-            if (s.isNotEmpty) onChanged(s.first);
-          },
-        );
-      case PrimitiveRenderer.miuix:
-        final index = segments.indexWhere((e) => e.$1 == value);
-        return MiuixTabRow(
-          tabs: segments.map((e) => e.$2).toList(),
-          selectedTabIndex: index < 0 ? 0 : index,
-          onTabSelected: (i) => onChanged(segments[i].$1),
-        );
-    }
+    // 阶段5d-L1：M3 分支已移除；MiuixTabRow 恒用。
+    final index = segments.indexWhere((e) => e.$1 == value);
+    return MiuixTabRow(
+      tabs: segments.map((e) => e.$2).toList(),
+      selectedTabIndex: index < 0 ? 0 : index,
+      onTabSelected: (i) => onChanged(segments[i].$1),
+    );
   }
 }
 
@@ -517,64 +372,27 @@ class _AppTextFieldState extends State<AppTextField> {
 
   @override
   Widget build(BuildContext context) {
-    final t = _Tokens.of(context);
-    final cs = Theme.of(context).colorScheme;
-    final renderer = resolvePrimitiveRenderer(t.style);
-
-    // Miuix 分支（阶段2）：原生 MiuixTextField + 控制器层格式化桥接。
-    if (renderer == PrimitiveRenderer.miuix) {
-      final hasFormatters = widget.inputFormatters?.isNotEmpty ?? false;
-      final field = MiuixTextField(
-        controller: hasFormatters ? _ensureProxy() : widget.controller,
-        focusNode: widget.focusNode,
-        onChanged: widget.onChanged,
-        label: widget.label ?? widget.hint ?? '',
-        useLabelAsPlaceholder: widget.label == null && widget.hint != null,
-        leadingIcon: widget.prefix,
-        trailingIcon: widget.suffix,
-        singleLine: (widget.maxLines ?? 1) == 1,
-        minLines: widget.minLines,
-        maxLines: widget.maxLines,
-        keyboardType: widget.keyboardType,
-        onSubmitted: widget.onSubmitted,
-        obscureText: widget.obscureText,
-      );
-      // MiuixTextField 内部使用 SDK flutter/material 的 TextField：经
-      // MiuixCompat 提供 SDK Material 祖先与 ThemeData/MaterialLocalizations
-      // 桥接（缺失后者在 release 下会空断言崩溃，见阶段3复盘）。
-      return MiuixCompat(child: field);
-    }
-
-    return TextField(
-      controller: widget.controller,
+    // 阶段5d-L1：M3 分支已移除；原生 MiuixTextField + 控制器层格式化桥接。
+    final hasFormatters = widget.inputFormatters?.isNotEmpty ?? false;
+    final field = MiuixTextField(
+      controller: hasFormatters ? _ensureProxy() : widget.controller,
       focusNode: widget.focusNode,
-      obscureText: widget.obscureText,
       onChanged: widget.onChanged,
-      onSubmitted: widget.onSubmitted,
-      keyboardType: widget.keyboardType,
-      inputFormatters: widget.inputFormatters,
+      label: widget.label ?? widget.hint ?? '',
+      useLabelAsPlaceholder: widget.label == null && widget.hint != null,
+      leadingIcon: widget.prefix,
+      trailingIcon: widget.suffix,
+      singleLine: (widget.maxLines ?? 1) == 1,
       minLines: widget.minLines,
       maxLines: widget.maxLines,
-      decoration: InputDecoration(
-        labelText: widget.label,
-        hintText: widget.hint,
-        prefixIcon: widget.prefix,
-        suffixIcon: widget.suffix,
-        filled: false,
-        border: OutlineInputBorder(
-          borderRadius: t.shapes.smallBorder,
-          borderSide: BorderSide(color: cs.outline),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: t.shapes.smallBorder,
-          borderSide: BorderSide(color: cs.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: t.shapes.smallBorder,
-          borderSide: BorderSide(color: cs.primary, width: 2),
-        ),
-      ),
+      keyboardType: widget.keyboardType,
+      onSubmitted: widget.onSubmitted,
+      obscureText: widget.obscureText,
     );
+    // MiuixTextField 内部使用 SDK flutter/material 的 TextField：经
+    // MiuixCompat 提供 SDK Material 祖先与 ThemeData/MaterialLocalizations
+    // 桥接（缺失后者在 release 下会空断言崩溃，见阶段3复盘）。
+    return MiuixCompat(child: field);
   }
 }
 
@@ -686,13 +504,9 @@ class AppActionTile extends StatelessWidget {
     final t = _Tokens.of(context);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final renderer = resolvePrimitiveRenderer(t.style);
-
-    final (contentColor, spacing, radius) = switch (renderer) {
-      PrimitiveRenderer.material3 =>
-        (iconTint ?? cs.primary, 6.0, t.shapes.small),
-      PrimitiveRenderer.miuix => (iconTint ?? cs.onSurfaceVariant, 8.0, t.shapes.medium),
-    };
+    // 阶段5d-L1：M3 分支已移除。
+    final contentColor = iconTint ?? cs.onSurfaceVariant;
+    const spacing = 8.0;
 
     final tile = ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 80),
@@ -724,22 +538,11 @@ class AppActionTile extends StatelessWidget {
       ),
     );
 
-    // Miuix 分支（阶段4d）：按压反馈替换为原生 MiuixPressable（扁平按压、
-    // 无 ripple）；M3 分支保留 InkWell 圆角 ripple。
-    if (renderer == PrimitiveRenderer.miuix) {
-      return Flexible(
-        child: MiuixPressable(
-          onPressed: onTap,
-          enabled: onTap != null,
-          child: tile,
-        ),
-      );
-    }
-
+    // 阶段5d-L1：M3 分支已移除；按压反馈恒为原生 MiuixPressable。
     return Flexible(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.all(radius),
+      child: MiuixPressable(
+        onPressed: onTap,
+        enabled: onTap != null,
         child: tile,
       ),
     );
@@ -771,35 +574,18 @@ class AppProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = _Tokens.of(context);
     final cs = Theme.of(context).colorScheme;
-    final renderer = resolvePrimitiveRenderer(t.style);
-
     final v = (value == null || !value!.isFinite) ? 0.0 : value!.clamp(0.0, 1.0);
 
-    // Miuix 分支（阶段1）：原生 Miuix 线性进度条（自带全圆角轨道），
+    // 阶段5d-L1：M3 分支已移除；原生 Miuix 线性进度条（自带全圆角轨道），
     // 保留替换前的 tertiary 配色与 3px 高度。
-    if (renderer == PrimitiveRenderer.miuix) {
-      return MiuixLinearProgressIndicator(
-        progress: v,
-        height: height ?? 3.0,
-        colors: MiuixProgressIndicatorColors(
-          foregroundColor: cs.tertiary,
-          disabledForegroundColor: cs.tertiary,
-          backgroundColor: cs.surfaceContainerHighest,
-        ),
-      );
-    }
-
-    // MD3 分支：primary 色 + 4px 标准高度 + 圆角 2。
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(2),
-      child: LinearProgressIndicator(
-        value: v,
-        minHeight: height ?? 4.0,
+    return MiuixLinearProgressIndicator(
+      progress: v,
+      height: height ?? 3.0,
+      colors: MiuixProgressIndicatorColors(
+        foregroundColor: cs.tertiary,
+        disabledForegroundColor: cs.tertiary,
         backgroundColor: cs.surfaceContainerHighest,
-        valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-        stopIndicatorColor: Colors.transparent,
       ),
     );
   }

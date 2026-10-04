@@ -219,7 +219,7 @@ void main() {
       expect(find.text('20'), findsOneWidget);
     });
 
-    testWidgets('renders AppSwitch and AppSegmentedControl in both styles',
+    testWidgets('renders AppSwitch and AppSegmentedControl via flutter_miuix in both styles',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -261,10 +261,10 @@ void main() {
 
       expect(find.text('Tab1'), findsOneWidget);
       expect(find.text('TabA'), findsOneWidget);
-      // 阶段1（flutter_miuix）：miuix 侧 AppSwitch 渲染 MiuixSwitch，
-      // material3 侧保持 Material Switch。
-      expect(find.byType(MiuixSwitch), findsOneWidget);
-      expect(find.byType(Switch), findsOneWidget);
+      // 阶段5d-L1：M3 冻结分支已移除——两风格下均渲染 flutter_miuix 组件。
+      expect(find.byType(MiuixSwitch), findsNWidgets(2));
+      expect(find.byType(Switch), findsNothing);
+      expect(find.byType(MiuixTabRow), findsNWidgets(2));
     });
   });
 }

@@ -1,9 +1,6 @@
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'package:winwin/theme/inherited_ui_style.dart';
-import 'package:winwin/theme/ui_style.dart';
-
 /// 普通设置项：标题 + 副标题 + leading + trailing + onTap。
 ///
 /// 移植自 PiliPlus 的 `NormalItem`，去除 GetX 依赖。
@@ -42,48 +39,12 @@ class NormalItem extends StatefulWidget {
 class _NormalItemState extends State<NormalItem> {
   @override
   Widget build(BuildContext context) {
-    final style = InheritedUiStyle.of(context);
-    final renderer = resolvePrimitiveRenderer(style);
     final theme = Theme.of(context);
-    Widget? subtitle;
     final text = widget.subtitle ?? widget.getSubtitle?.call();
-    if (text != null) {
-      subtitle = Text(
-        text,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: theme.colorScheme.outline,
-        ),
-      );
-    }
     // trailing 限宽防溢出（对标 BiliPai 数值 maxWidth 200dp）。
     final trailing = widget.getTrailing?.call(theme);
 
-    switch (renderer) {
-      case PrimitiveRenderer.material3:
-        return ListTile(
-          shape: widget.borderRadius != null
-              ? RoundedRectangleBorder(borderRadius: widget.borderRadius!)
-              : null,
-          contentPadding: widget.contentPadding,
-          onTap: widget.onTap == null
-              ? null
-              : () => widget.onTap!(context, refresh),
-          title: Text(
-            widget.title ?? widget.getTitle!(),
-            style: widget.titleStyle ?? theme.textTheme.titleMedium,
-          ),
-          subtitle: subtitle,
-          leading: widget.leading,
-          trailing: trailing == null
-              ? null
-              : ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 200),
-                  child: trailing,
-                ),
-        );
-      case PrimitiveRenderer.miuix:
+    // 阶段5d-L1：M3 分支已移除；MiuixBasicComponent 恒用。
         final Color? customTitleColor = widget.titleStyle?.color;
         return MiuixBasicComponent(
           title: widget.title ?? widget.getTitle!(),
@@ -117,7 +78,6 @@ class _NormalItemState extends State<NormalItem> {
               ? null
               : () => widget.onTap!(context, refresh),
         );
-    }
   }
 
   void refresh() {

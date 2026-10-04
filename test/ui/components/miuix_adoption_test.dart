@@ -114,7 +114,7 @@ void main() {
       expect(toggled, isTrue);
     });
 
-    testWidgets('material3 风格：四类控件保持原实现（无 Miuix 组件）', (tester) async {
+    testWidgets('material3 风格：L1 后同样由 flutter_miuix 驱动（渐进退役）', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: UiStyleScope(
@@ -133,11 +133,13 @@ void main() {
         ),
       );
 
-      expect(find.byType(Switch), findsOneWidget);
-      expect(find.byType(MiuixSwitch), findsNothing);
-      expect(find.byType(MiuixButton), findsNothing);
-      expect(find.byType(MiuixCard), findsNothing);
-      expect(find.byType(MiuixLinearProgressIndicator), findsNothing);
+      // 阶段5d-L1：M3 冻结分支已移除——material3 风格下同样由 flutter_miuix
+      // 驱动（渐进退役的预期行为）。
+      expect(find.byType(MiuixSwitch), findsOneWidget);
+      expect(find.byType(Switch), findsNothing);
+      expect(find.byType(MiuixButton), findsOneWidget);
+      expect(find.byType(MiuixCard), findsOneWidget);
+      expect(find.byType(MiuixLinearProgressIndicator), findsOneWidget);
     });
   });
 
