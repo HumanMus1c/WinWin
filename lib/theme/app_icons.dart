@@ -526,10 +526,16 @@ class AppIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 阶段5d-L3：字形→Miuix 矢量映射恒启用（原 miuix 风格门控收敛移除）。
+    // 颜色优先级：显式 color > IconTheme（按钮/AppBar 等注入）> MiuixContentColor 链；
+    // 修复矢量路径不回读 IconTheme 导致的返回按钮等"不随主题反色"问题。
     if (shadows == null || shadows!.isEmpty) {
       final vector = miuixVectorForGlyph(icon);
       if (vector != null) {
-        return MiuixIcon(vector: vector, size: size, tint: color);
+        return MiuixIcon(
+          vector: vector,
+          size: size,
+          tint: color ?? IconTheme.of(context).color,
+        );
       }
     }
     return Icon(icon, size: size, color: color, shadows: shadows);
@@ -632,7 +638,12 @@ class AppBackButton extends StatelessWidget {
     final effectiveColor = color ?? theme.colorScheme.onSurface;
 
     return IconButton(
-      icon: AppIcon(iconData, size: size, shadows: shadows),
+      icon: AppIcon(
+        iconData,
+        size: size,
+        color: effectiveColor,
+        shadows: shadows,
+      ),
       color: effectiveColor,
       tooltip: tooltip ?? (isClose ? '关闭' : '返回'),
       padding: padding,

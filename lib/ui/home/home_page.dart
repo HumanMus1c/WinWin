@@ -10,6 +10,7 @@ import 'package:winwin/pages/rcmd/view.dart';
 import 'package:winwin/pages/search/search_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/theme/app_chrome.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/inherited_ui_style.dart';
@@ -149,8 +150,8 @@ class _HomeHeader extends StatelessWidget {
                         horizontal: Style.md,
                         vertical: 8,
                       ),
-                      prefixIcon: Icon(
-                        Icons.search,
+                      prefixIcon: AppIcon(
+                        AppIcons.search(context),
                         size: 20,
                         color: searchFg,
                       ),
@@ -167,8 +168,8 @@ class _HomeHeader extends StatelessWidget {
               const SizedBox(width: Style.sm),
               IconButton(
                 tooltip: '设置',
-                icon: Icon(
-                  Icons.settings,
+                icon: AppIcon(
+                  AppIcons.settings(context),
                   color: searchFg,
                   size: 22,
                 ),
