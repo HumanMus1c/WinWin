@@ -142,26 +142,26 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
 /// 单条条款数据。
 class _Clause {
   const _Clause(this.icon, this.title, this.desc);
-  final IconData icon;
+  final Widget icon;
   final String title;
   final String desc;
 }
 
 const List<_Clause> _clauses = [
   _Clause(
-    Icons.volunteer_activism_outlined,
+    Icon(Icons.volunteer_activism_outlined),
     '开源且免费',
     'WinWin 是基于 GPL-3.0 协议开源、完全免费的第三方哔哩哔哩桌面客户端，'
     '与哔哩哔哩官方无任何关联，仅供个人学习交流，不用于商业用途。',
   ),
   _Clause(
-    Icons.balance_outlined,
+    Icon(Icons.balance_outlined),
     '免责与版权',
     '应用内所有内容数据均来自公开接口，版权归原作者及平台所有。'
     '本工具仅供学习与研究，请勿用于任何违反当地法律法规的用途。',
   ),
   _Clause(
-    Icons.bug_report_outlined,
+    Icon(Icons.bug_report_outlined),
     '反馈与日志',
     '如遇崩溃或异常，本地会保存脱敏日志用于问题排查。'
     '欢迎通过项目仓库（GitHub）反馈问题以帮助改进。',
@@ -192,7 +192,10 @@ class _ClauseTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(clause.icon, size: 20, color: cs.primary),
+            IconTheme(
+              data: IconThemeData(size: 20, color: cs.primary),
+              child: clause.icon,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

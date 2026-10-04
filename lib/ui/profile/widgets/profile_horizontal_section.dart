@@ -233,7 +233,7 @@ class ProfileEmptyCard extends StatelessWidget {
     this.onTap,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String message;
   final String? actionText;
   final VoidCallback? onTap;
@@ -264,7 +264,10 @@ class ProfileEmptyCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 28, color: cs.outline),
+                IconTheme(
+                  data: IconThemeData(size: 28, color: cs.outline),
+                  child: icon,
+                ),
                 const SizedBox(width: 12),
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,

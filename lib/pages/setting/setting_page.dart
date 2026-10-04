@@ -27,26 +27,26 @@ class _SettingPageState extends State<SettingPage> {
     _SettingEntry(
       type: SettingType.styleSetting,
       subtitle: '主题模式、字重、界面缩放等',
-      icon: Icons.style_outlined,
+      icon: Icon(Icons.style_outlined),
     ),
     _SettingEntry(
       type: SettingType.playSetting,
       subtitle: '弹幕开关、自动播放、全屏等',
-      icon: Icons.touch_app_outlined,
+      icon: Icon(Icons.touch_app_outlined),
     ),
     _SettingEntry(
       type: SettingType.videoSetting,
       subtitle: '画质、音质、硬解、缓冲等',
-      icon: Icons.video_settings_outlined,
+      icon: Icon(Icons.video_settings_outlined),
     ),
     _SettingEntry(
       type: SettingType.extraSetting,
       subtitle: '网络、代理、日志等',
-      icon: Icons.extension_outlined,
+      icon: Icon(Icons.extension_outlined),
     ),
     _SettingEntry(
       type: SettingType.about,
-      icon: Icons.info_outline,
+      icon: Icon(Icons.info_outline),
     ),
   ];
 
@@ -111,7 +111,7 @@ class _SettingPageState extends State<SettingPage> {
   Widget _buildCategoryItem(ThemeData theme, _SettingEntry item) {
     final isSelected = item.type == _type;
     return AppListItem(
-      icon: Icon(item.icon),
+      icon: item.icon,
       title: item.type.title,
       subtitle: item.subtitle,
       iconTint: isSelected
@@ -135,7 +135,7 @@ class _SettingPageState extends State<SettingPage> {
 class _SettingEntry {
   final SettingType type;
   final String? subtitle;
-  final IconData icon;
+  final Widget icon;
 
   const _SettingEntry({
     required this.type,

@@ -144,7 +144,7 @@ class _WhisperPageState extends State<WhisperPage>
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _EntryItem(
-              icon: Icons.reply_rounded,
+              icon: Icon(Icons.reply_rounded),
               label: '回复我的',
               count: _replyUnread,
               color: iosBlue,
@@ -154,7 +154,7 @@ class _WhisperPageState extends State<WhisperPage>
               },
             ),
             _EntryItem(
-              icon: Icons.alternate_email_rounded,
+              icon: Icon(Icons.alternate_email_rounded),
               label: '艾特我的',
               count: _atUnread,
               color: iosOrange,
@@ -164,7 +164,7 @@ class _WhisperPageState extends State<WhisperPage>
               },
             ),
             _EntryItem(
-              icon: Icons.favorite_outline,
+              icon: Icon(Icons.favorite_outline),
               label: '点赞我的',
               count: _likeUnread,
               color: iosPink,
@@ -174,7 +174,7 @@ class _WhisperPageState extends State<WhisperPage>
               },
             ),
             _EntryItem(
-              icon: Icons.campaign_outlined,
+              icon: Icon(Icons.campaign_outlined),
               label: '系统消息',
               count: _sysUnread,
               color: iosTeal,
@@ -213,7 +213,7 @@ class _EntryItem extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String label;
   final int count;
   final Color color;
@@ -238,7 +238,10 @@ class _EntryItem extends StatelessWidget {
                   color: color.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: IconTheme(
+                  data: IconThemeData(color: color, size: 24),
+                  child: icon,
+                ),
               ),
               if (count > 0)
                 Positioned(

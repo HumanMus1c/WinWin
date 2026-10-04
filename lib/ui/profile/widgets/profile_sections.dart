@@ -103,7 +103,7 @@ class ProfileDownloadSectionState extends State<ProfileDownloadSection> {
           const ProfileCardSkeleton(height: 120)
         else
           ProfileEmptyCard(
-            icon: Icons.download_for_offline_outlined,
+            icon: Icon(Icons.download_for_offline_outlined),
             message: _downloadCount > 0
                 ? '已缓存 $_downloadCount 个项目'
                 : '暂无离线缓存视频',
@@ -210,21 +210,21 @@ class ProfileFavSectionState extends State<ProfileFavSection> {
           const ProfileCardSkeleton(height: 165)
         else if (_error == '请先登录')
           ProfileEmptyCard(
-            icon: Icons.account_circle_outlined,
+            icon: Icon(Icons.account_circle_outlined),
             message: '登录后可同步我的收藏',
             actionText: '点击去登录',
             onTap: () => LoginGuard.requireLogin(context),
           )
         else if (_error != null && _folders.isEmpty)
           ProfileEmptyCard(
-            icon: Icons.error_outline,
+            icon: Icon(Icons.error_outline),
             message: '收藏夹加载失败: $_error',
             actionText: '点击重试',
             onTap: reload,
           )
         else if (_folders.isEmpty)
           ProfileEmptyCard(
-            icon: Icons.folder_open_outlined,
+            icon: Icon(Icons.folder_open_outlined),
             message: '暂无收藏夹',
             actionText: '前往收藏夹 >',
             onTap: () => _openFavPage(context),
@@ -364,21 +364,21 @@ class ProfileHistorySectionState extends State<ProfileHistorySection> {
           const ProfileCardSkeleton(height: 180)
         else if (_error == '请先登录')
           ProfileEmptyCard(
-            icon: Icons.account_circle_outlined,
+            icon: Icon(Icons.account_circle_outlined),
             message: '登录后可同步观看历史',
             actionText: '点击去登录',
             onTap: () => LoginGuard.requireLogin(context),
           )
         else if (_error != null && _items.isEmpty)
           ProfileEmptyCard(
-            icon: Icons.error_outline,
+            icon: Icon(Icons.error_outline),
             message: '历史记录加载失败: $_error',
             actionText: '点击重试',
             onTap: reload,
           )
         else if (_items.isEmpty)
           ProfileEmptyCard(
-            icon: Icons.history_toggle_off,
+            icon: Icon(Icons.history_toggle_off),
             message: '暂无观看历史',
             actionText: '前往查看 >',
             onTap: () => _gotoHistory(context),
@@ -543,21 +543,21 @@ class ProfileToviewSectionState extends State<ProfileToviewSection> {
           const ProfileCardSkeleton(height: 180)
         else if (_error == '请先登录')
           ProfileEmptyCard(
-            icon: Icons.account_circle_outlined,
+            icon: Icon(Icons.account_circle_outlined),
             message: '登录后可查看稍后再看列表',
             actionText: '点击去登录',
             onTap: () => LoginGuard.requireLogin(context),
           )
         else if (_error != null && _items.isEmpty)
           ProfileEmptyCard(
-            icon: Icons.error_outline,
+            icon: Icon(Icons.error_outline),
             message: '稍后再看加载失败: $_error',
             actionText: '点击重试',
             onTap: reload,
           )
         else if (_items.isEmpty)
           ProfileEmptyCard(
-            icon: Icons.watch_later_outlined,
+            icon: Icon(Icons.watch_later_outlined),
             message: '暂无稍后再看视频',
             actionText: '前往稍后再看 >',
             onTap: () => _openToviewPage(context),
