@@ -10,9 +10,7 @@ import 'package:winwin/pages/danmaku/danmaku_options.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// 弹幕设置面板（移植自 PiliPlus `lib/pages/video/widgets/header_mixin.dart`
 /// 中的弹幕设置区）。
@@ -419,7 +417,6 @@ class _SliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Style.xs),
       child: Column(
@@ -454,31 +451,20 @@ class _SliderRow extends StatelessWidget {
               ],
             ],
           ),
-          if (isMiuix)
-            // MiuixSlider 内部 CustomPaint 不撑宽：宽松约束（如本行 Column）
-            // 下必须显式撑满，否则坍缩为 0 宽不可见（阶段3d 回归修复）。
-            SizedBox(
-              width: double.infinity,
-              child: MiuixSlider(
-                value: value.clamp(min, max),
-                min: min,
-                max: max,
-                steps: divisions > 1 ? divisions - 1 : 0,
-                onValueChanged: onChanged,
-                onValueChangeFinished: () =>
-                    onChangeEnd(value.clamp(min, max)),
-              ),
-            )
-          else
-            Slider(
+          // 阶段5d-L1：M3 分支已移除；MiuixSlider 内部 CustomPaint 不撑宽，
+          // 宽松约束（如本行 Column）下必须显式撑满（阶段3d 回归修复）。
+          SizedBox(
+            width: double.infinity,
+            child: MiuixSlider(
               value: value.clamp(min, max),
               min: min,
               max: max,
-              divisions: divisions,
-              activeColor: biliPink,
-              onChanged: onChanged,
-              onChangeEnd: onChangeEnd,
+              steps: divisions > 1 ? divisions - 1 : 0,
+              onValueChanged: onChanged,
+              onValueChangeFinished: () =>
+                  onChangeEnd(value.clamp(min, max)),
             ),
+          ),
         ],
       ),
     );
@@ -499,21 +485,14 @@ class _SwitchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Style.xs),
       child: Row(
         children: [
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
           const Spacer(),
-          if (isMiuix)
-            MiuixSwitch(value: value, onChanged: onChanged)
-          else
-            Switch(
-              value: value,
-              activeThumbColor: biliPink,
-              onChanged: onChanged,
-            ),
+          // 阶段5d-L1：M3 分支已移除。
+          MiuixSwitch(value: value, onChanged: onChanged),
         ],
       ),
     );

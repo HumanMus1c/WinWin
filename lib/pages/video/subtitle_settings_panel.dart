@@ -9,9 +9,7 @@ import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/subtitle_controller.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/inherited_ui_style.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/theme/ui_style.dart';
 
 /// 字幕选择 + 样式设置面板（Phase 4.4）。
 ///
@@ -109,7 +107,6 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
 
   Widget _buildList(ThemeData theme) {
     final sub = widget.controller.subtitle;
-    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
     void selectAi(SubtitlePreference pref) {
       setState(() => _aiPref = pref);
       _put(SettingBoxKey.subtitlePreferenceV2, pref.value);
@@ -154,43 +151,24 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
             // ── AI 偏好策略 ──
             Text('AI 字幕策略', style: theme.textTheme.labelLarge),
             const SizedBox(height: Style.xs),
-            if (isMiuix)
-              Column(
-                children: [
-                  for (final pref in SubtitlePreference.values)
-                    MiuixBasicComponent(
-                      startAction: MiuixRadioButton(
-                        selected: _aiPref == pref,
-                        onChanged: (_) => selectAi(pref),
-                      ),
-                      content: [Text(_aiPrefLabel(pref))],
-                      insideMargin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      onClick: () => selectAi(pref),
+            // 阶段5d-L1：M3 分支已移除。
+            Column(
+              children: [
+                for (final pref in SubtitlePreference.values)
+                  MiuixBasicComponent(
+                    startAction: MiuixRadioButton(
+                      selected: _aiPref == pref,
+                      onChanged: (_) => selectAi(pref),
                     ),
-                ],
-              )
-            else
-              RadioGroup<SubtitlePreference>(
-                groupValue: _aiPref,
-                onChanged: (v) {
-                  if (v == null) return;
-                  selectAi(v);
-                },
-                child: Column(
-                  children: [
-                    for (final pref in SubtitlePreference.values)
-                      RadioListTile<SubtitlePreference>(
-                        value: pref,
-                        activeColor: biliPink,
-                        dense: true,
-                        title: Text(_aiPrefLabel(pref)),
-                      ),
-                  ],
-                ),
-              ),
+                    content: [Text(_aiPrefLabel(pref))],
+                    insideMargin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    onClick: () => selectAi(pref),
+                  ),
+              ],
+            ),
             const Divider(height: Style.lg),
 
             // ── 样式设置 ──
@@ -375,27 +353,15 @@ class _SubtitleOptionTile extends StatelessWidget {
       ],
     );
 
-    if (InheritedUiStyle.of(context) == UiStyle.miuix) {
-      return MiuixBasicComponent(
-        startAction: MiuixRadioButton(
-          selected: selected,
-          onChanged: (_) => onTap(),
-        ),
-        content: [title],
-        insideMargin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        onClick: onTap,
-      );
-    }
-
-    return ListTile(
-      dense: true,
-      leading: AppIcon(
-        AppIcons.radio(context, selected: selected),
-        color: selected ? biliPink : null,
-        size: 20,
+    // 阶段5d-L1：M3 分支已移除。
+    return MiuixBasicComponent(
+      startAction: MiuixRadioButton(
+        selected: selected,
+        onChanged: (_) => onTap(),
       ),
-      title: title,
-      onTap: onTap,
+      content: [title],
+      insideMargin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      onClick: onTap,
     );
   }
 }
@@ -428,7 +394,6 @@ class _SliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMiuix = InheritedUiStyle.of(context) == UiStyle.miuix;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Style.xs),
       child: Column(
@@ -463,32 +428,20 @@ class _SliderRow extends StatelessWidget {
               ],
             ],
           ),
-          if (isMiuix)
-            // MiuixSlider 内部 CustomPaint 不撑宽：宽松约束（如本行 Column）
-            // 下必须显式撑满，否则坍缩为 0 宽不可见（阶段3d 回归修复）。
-            SizedBox(
-              width: double.infinity,
-              child: MiuixSlider(
-                value: value.clamp(min, max),
-                min: min,
-                max: max,
-                steps: divisions > 1 ? divisions - 1 : 0,
-                onValueChanged: onChanged,
-                onValueChangeFinished: () =>
-                    onChangeEnd(value.clamp(min, max)),
-              ),
-            )
-          else
-            Slider(
+          // 阶段5d-L1：M3 分支已移除；MiuixSlider 内部 CustomPaint 不撑宽，
+          // 宽松约束（如本行 Column）下必须显式撑满（阶段3d 回归修复）。
+          SizedBox(
+            width: double.infinity,
+            child: MiuixSlider(
               value: value.clamp(min, max),
               min: min,
               max: max,
-              divisions: divisions,
-              activeColor: biliPink,
-              inactiveColor: Colors.white24,
-              onChanged: onChanged,
-              onChangeEnd: onChangeEnd,
+              steps: divisions > 1 ? divisions - 1 : 0,
+              onValueChanged: onChanged,
+              onValueChangeFinished: () =>
+                  onChangeEnd(value.clamp(min, max)),
             ),
+          ),
         ],
       ),
     );
