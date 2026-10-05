@@ -277,6 +277,41 @@ void main() {
       );
       expect(tester.getSize(find.byType(MiuixIcon)), const Size(24, 24));
     });
+
+    testWidgets('修复R2/R2b：消息中心入口结构复刻——reply/favorite 矢量须为 24×24',
+        (tester) async {
+      await tester.pumpWidget(
+        wrapMiuix(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: IconTheme(
+                  data: const IconThemeData(color: Colors.blue, size: 24),
+                  child: AppIcon(AppIcons.reply()),
+                ),
+              ),
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: IconTheme(
+                  data: const IconThemeData(color: Colors.pink, size: 24),
+                  child: AppIcon(AppIcons.favorite(active: false)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      final sizes = tester
+          .widgetList<MiuixIcon>(find.byType(MiuixIcon))
+          .map((w) => w.size)
+          .toList();
+      expect(sizes, everyElement(24.0));
+      expect(tester.getSize(find.byType(MiuixIcon).first), const Size(24, 24));
+    });
   });
 
   group('Miuix 刷新（阶段3d）', () {
