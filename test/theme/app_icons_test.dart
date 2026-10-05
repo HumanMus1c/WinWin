@@ -113,14 +113,14 @@ void main() {
         equals(CupertinoIcons.share),
       );
 
-      // 稍后再看
+      // 稍后再看（L5-10：改用独立 time 字形，避免与历史导航 clock 冲突）
       expect(
         AppIcons.watchLater(active: false),
-        equals(CupertinoIcons.clock),
+        equals(CupertinoIcons.time),
       );
       expect(
         AppIcons.watchLater(active: true),
-        equals(CupertinoIcons.clock_fill),
+        equals(CupertinoIcons.time),
       );
     });
 

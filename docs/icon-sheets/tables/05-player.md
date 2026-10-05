@@ -22,9 +22,9 @@
 | `subtitle(on)` | 字幕开关（开） | ![曾用](icon-sheets/icons/subtitle-on-old.png) | ![现用](icon-sheets/icons/subtitle-on.png) | `captions_bubble_fill` | 官方矢量（Material Symbols） | ✅ |
 | `chapter()` | 章节 | ![曾用](icon-sheets/icons/chapter-old.png) | ![现用](icon-sheets/icons/chapter.png) | `bookmark` | 官方矢量（Material Symbols） | ✅ |
 | `chapter(on)` | 章节（展开） | ![曾用](icon-sheets/icons/chapter-on-old.png) | ![现用](icon-sheets/icons/chapter-on.png) | `bookmark_fill` | 官方矢量（Material Symbols） | ✅ |
-| `lock()` | 全屏锁定 | ![曾用](icon-sheets/icons/lock-old.png) | ![现用](icon-sheets/icons/lock.png) | `lock_fill` | lock | ✅ |
-| `lockOutline()` | 解锁 | ![曾用](icon-sheets/icons/lockOutline-old.png) | ![现用](icon-sheets/icons/lockOutline.png) | `lock` | lock | ✅ |
+| `lock()` | 全屏锁定 | ![曾用](icon-sheets/icons/lock-old.png) | ![现用](icon-sheets/icons/lock.png) | `lock_fill` | f4c9 | ✅ |
+| `lockOutline()` | 解锁 | ![曾用](icon-sheets/icons/lockOutline-old.png) | ![现用](icon-sheets/icons/lockOutline.png) | `lock` | f4c8 | ✅ |
 | `pin()` | 置顶 | ![曾用](icon-sheets/icons/pin-old.png) | ![现用](icon-sheets/icons/pin.png) | `pin_fill` | pin | ✅ |
 | `pin(on)` | 取消置顶 | ![曾用](icon-sheets/icons/pin-on-old.png) | ![现用](icon-sheets/icons/pin-on.png) | `pin_slash_fill` | unpin | ✅ |
-| `moreOptions()` | 更多选项（会话/用户空间） | ![曾用](icon-sheets/icons/moreOptions-old.png) | ![现用](icon-sheets/icons/moreOptions.png) | `ellipsis` | more | ✅ |
-| `more()` | 更多（通用） | ![曾用](icon-sheets/icons/more-old.png) | ![现用](icon-sheets/icons/more.png) | `ellipsis` | more | ✅ |
+| `moreOptions()` | 更多选项（会话/用户空间） | ![曾用](icon-sheets/icons/moreOptions-old.png) | ![现用](icon-sheets/icons/moreOptions.png) | `ellipsis` | f46a | ✅ |
+| `more()` | 更多（通用） | ![曾用](icon-sheets/icons/more-old.png) | ![现用](icon-sheets/icons/more.png) | `ellipsis` | f46a | ✅ |

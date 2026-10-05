@@ -3,6 +3,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'app_icons_art.dart';
+import 'app_icons_bdc.g.dart';
 import 'app_icons_bili.g.dart';
 import 'app_icons_builtin.g.dart';
 import 'app_icons_official.g.dart';
@@ -74,7 +75,7 @@ abstract final class AppIcons {
 
   /// 稍后再看
 
-  static IconData watchLater({bool active = false}) => active ? CupertinoIcons.clock_fill : CupertinoIcons.clock;
+  static IconData watchLater({bool active = false}) => CupertinoIcons.time;
 
   // ---------------------------------------------------------------------------
   // 3. 评论区互动操作
@@ -83,6 +84,14 @@ abstract final class AppIcons {
   /// 回复
 
   static IconData reply() => CupertinoIcons.reply;
+
+  /// 动态转发
+
+  static IconData repost() => CupertinoIcons.arrow_2_circlepath;
+
+  /// 评论（动态/文章/直播间入口）
+
+  static IconData comment() => CupertinoIcons.chat_bubble_text;
 
   /// 展开更多回复 / 下拉指示
 
@@ -428,16 +437,52 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
 
 /// 查询字形对应的 Miuix 矢量。
 ///
-/// 优先级：**B 站官网 Web 端素材**（L5-9：直接抓取官网页面内联 SVG）
-/// → B 站官网字体素材（L5-8）→ 官方美术（L5-7：Material Symbols）
-/// → 手绘新美术（L5-6）→ 三集映射 → 内置等价轮廓（L5-5）→ null（回退字形）。
+/// 优先级：**B 站官网 BDC 图标字体**（L5-10：消息/稍后再看/空间/评论区等）
+/// → B 站官网 Web 端素材（L5-9）→ B 站官网字体素材（L5-8）
+/// → 官方美术（L5-7）→ 手绘新美术（L5-6）→ 三集映射 → 内置等价轮廓（L5-5）
+/// → null（回退字形）。
 MiuixVectorIcon? miuixVectorForGlyph(IconData glyph) =>
+    miuixBdcIconFor(glyph) ??
     miuixWebIconFor(glyph) ??
     miuixBiliSiteIconFor(glyph) ??
     miuixOfficialIconFor(glyph) ??
     miuixArtIconFor(glyph) ??
     _miuixVectorByGlyph[glyph] ??
     miuixEquivalenceIconFor(glyph);
+
+final Map<IconData, MiuixVectorIcon> _bdcCache = {};
+
+/// 阶段5e-L5-10：**B 站官网 BDC 图标字体层**（svg-next：消息中心 / 稍后再看 /
+/// 空间页 freshspace / 视频页 inline SVG）。
+///
+/// 覆盖：互动六按钮（点赞/点踩/投币/收藏/分享/稍后再看）、评论区与动态
+/// （回复/转发/评论/展开）、消息中心四入口（点赞/艾特/系统/回复）、空间与
+/// 收藏夹/历史/稍后再看按钮（关注/锁/刷新/复制/删除/更多等）；
+/// 由 `tools/bili_bdc_icons_import.py` 预生成。"eo|" 前缀 = evenodd 填充。
+MiuixVectorIcon? miuixBdcIconFor(IconData glyph) {
+  final data = kBDCIconPaths[glyph.codePoint];
+  if (data == null) return null;
+  return _bdcCache.putIfAbsent(
+    glyph,
+    () {
+      final eo = data.startsWith('eo|');
+      final d = eo ? data.substring(3) : data;
+      return MiuixVectorIcon(
+        name: 'bdc.${glyph.codePoint.toRadixString(16)}.regular',
+        viewport: const Size(960, 960),
+        intrinsicSize: const Size(24, 24),
+        paths: [
+          MiuixVectorPath(
+            build: () => miuixParsePath(
+              d,
+              fillType: eo ? PathFillType.evenOdd : PathFillType.nonZero,
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
 
 final Map<IconData, MiuixVectorIcon> _webSiteCache = {};
 

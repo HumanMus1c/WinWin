@@ -150,7 +150,7 @@ class _WhisperPageState extends State<WhisperPage>
               },
             ),
             _EntryItem(
-              icon: Icon(Icons.alternate_email_rounded),
+              icon: AppIcon(Icons.alternate_email_rounded),
               label: '艾特我的',
               count: _atUnread,
               color: iosOrange,
@@ -160,7 +160,7 @@ class _WhisperPageState extends State<WhisperPage>
               },
             ),
             _EntryItem(
-              icon: AppIcon(AppIcons.favorite(active: false)),
+              icon: AppIcon(AppIcons.like(active: true)),
               label: '点赞我的',
               count: _likeUnread,
               color: iosPink,
@@ -170,7 +170,7 @@ class _WhisperPageState extends State<WhisperPage>
               },
             ),
             _EntryItem(
-              icon: Icon(Icons.campaign_outlined),
+              icon: AppIcon(Icons.campaign_outlined),
               label: '系统消息',
               count: _sysUnread,
               color: iosTeal,

@@ -117,7 +117,7 @@ class _DynActionBarState extends State<DynActionBar> {
       children: [
         _buildButton(
           icon: AppIcon(
-            AppIcons.reply(),
+            AppIcons.repost(),
             size: widget.iconSize,
             color: cs.outline,
           ),
@@ -128,7 +128,7 @@ class _DynActionBarState extends State<DynActionBar> {
         ),
         _buildButton(
           icon: AppIcon(
-            AppIcons.whisper(),
+            AppIcons.comment(),
             size: widget.iconSize,
             color: cs.outline,
           ),

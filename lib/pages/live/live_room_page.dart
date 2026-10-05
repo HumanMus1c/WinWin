@@ -1772,7 +1772,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                AppIcon(AppIcons.whisper(selected: false), size: 18),
+                AppIcon(AppIcons.comment(), size: 18),
                 const SizedBox(width: 6),
                 Text(
                   '实时互动',

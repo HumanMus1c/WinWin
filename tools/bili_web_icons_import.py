@@ -31,15 +31,8 @@ CACHE = os.path.join(os.environ.get("LOCALAPPDATA", ""),
 # 本项目字形名 → (页面, svg class 关键词, 第几个匹配, 来源模式)
 # 来源模式："http" = 直接抓 SSR HTML；"render" = Edge 无头渲染后 dump DOM
 # （部分图标 SSR 为空壳，运行时由 JS 注入）。
-# 说明：官网互动按钮**无双态变体**（同形变色）；本层按"官网观感优先"接入：
-#   · 点赞激活态 = 官网页实心拇指（常态描边保留官方 off_alt，满足常态描边要求）
-#   · 投币       = 官网 ¥ 硬币（描边造型，两态同形，与官网一致）
-#   · 分享/播放量/弹幕数 = 官网单形图标
+# 注：互动四件套/分享已由 L5-10（BDC 图标字体）覆盖；本层保留单态元数据图标。
 TARGETS = {
-    "hand_thumbsup_fill": (VIDEO_URL, "video-like-icon", 0, "http"),
-    "money_dollar_circle": (VIDEO_URL, "video-coin-icon", 0, "http"),
-    "money_dollar_circle_fill": (VIDEO_URL, "video-coin-icon", 0, "http"),
-    "share": (VIDEO_URL, "video-share-icon", 0, "http"),
     "play_circle": (VIDEO_URL, "view-icon", 0, "render"),
     "carrier_subtitles_outlined":
         (HOME_URL, "bili-video-card__stats--icon", 1, "render"),
