@@ -412,6 +412,13 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
   // ── 阶段5e-L5-3b 补充语义 ──
   CupertinoIcons.add: MiuixIcons.extended.byName('add')!,
   CupertinoIcons.eye: MiuixIcons.extended.byName('show')!,
+  // ── 阶段5e-L5-4 补齐（OS4 图集）：通知 / 气泡 / 发送 / 重播 ──
+  CupertinoIcons.bell: MiuixIcons.os4.byName('notifications')!,
+  CupertinoIcons.bell_fill: MiuixIcons.os4.byName('notifications')!,
+  CupertinoIcons.chat_bubble: MiuixIcons.os4.byName('messages')!,
+  CupertinoIcons.chat_bubble_fill: MiuixIcons.os4.byName('messages')!,
+  CupertinoIcons.bubble_left: MiuixIcons.os4.byName('send')!,
+  CupertinoIcons.restart: MiuixIcons.os4.byName('reset')!,
 };
 
 /// 查询字形对应的 Miuix 矢量（无对应返回 null）。

@@ -237,6 +237,11 @@ void main() {
       expect(miuixVectorForGlyph(CupertinoIcons.star_fill), isNotNull);
       expect(miuixVectorForGlyph(CupertinoIcons.ellipsis), isNotNull);
       expect(miuixVectorForGlyph(CupertinoIcons.person), isNull);
+      // 阶段5e-L5-4：OS4 图集补齐（通知/气泡/发送/重播）。
+      expect(miuixVectorForGlyph(CupertinoIcons.bell_fill), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.chat_bubble_fill), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.bubble_left), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.restart), isNotNull);
     });
 
     testWidgets('AppIcon：映射字形恒渲染 MiuixIcon；未映射回退 Icon（阶段5d-L3）',
