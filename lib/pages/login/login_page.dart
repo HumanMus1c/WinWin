@@ -871,10 +871,10 @@ class _QRLoginTabState extends State<_QRLoginTab> {
             if (!_loading)
               AppPrimaryButton(
                 onPressed: _refreshQR,
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.refresh, size: 18, color: Colors.white),
+                    AppIcon(AppIcons.refresh(), size: 18, color: Colors.white),
                     SizedBox(width: 8),
                     Text('刷新二维码'),
                   ],

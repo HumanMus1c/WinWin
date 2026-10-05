@@ -12,6 +12,7 @@ import 'package:winwin/utils/date_utils.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 用户合集/系列视频列表详情页面。
 class SeasonSeriesDetailPage extends StatefulWidget {
@@ -341,7 +342,7 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
                       ),
                       Row(
                         children: [
-                          Icon(Icons.play_circle_outlined, size: 12, color: cs.outline),
+                          AppIcon(AppIcons.viewCount(), size: 12, color: cs.outline),
                           const SizedBox(width: 2),
                           Text(
                             NumUtils.formatNum(item.play),

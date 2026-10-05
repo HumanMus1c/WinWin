@@ -7,6 +7,7 @@ import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/utils/image_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 弹出多图画廊全屏浏览弹窗。
 ///
@@ -352,7 +353,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.close_rounded),
+                  leading: AppIcon(AppIcons.clear()),
                   title: const Text('关闭预览'),
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -481,7 +482,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                         padding: const EdgeInsets.all(12),
                       ),
                       onPressed: _nextPage,
-                      icon: const Icon(Icons.chevron_right, size: 28),
+                      icon: AppIcon(AppIcons.chevronForward(), size: 28),
                       tooltip: '下一张 (→)',
                     ),
                   ),
@@ -579,7 +580,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                             foregroundColor: Colors.white,
                             hoverColor: Colors.black.withValues(alpha: 0.6),
                           ),
-                          icon: const Icon(Icons.close_rounded, size: 20),
+                          icon: AppIcon(AppIcons.clear(), size: 20),
                           tooltip: '关闭 (Esc)',
                           onPressed: () => Navigator.of(context).pop(),
                         ),

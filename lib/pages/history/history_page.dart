@@ -20,6 +20,7 @@ import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/date_utils.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 历史记录页面（移植自 PiliPlus `lib/pages/history/`，重构为自适应多列宫格排版）。
 void showHistoryPage(BuildContext context) {
@@ -519,7 +520,7 @@ class _HistoryCard extends StatelessWidget {
                               ),
                             const Spacer(),
                             IconButton(
-                              icon: const Icon(Icons.close, size: 14),
+                              icon: AppIcon(AppIcons.clear(), size: 14),
                               tooltip: '删除此记录',
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,

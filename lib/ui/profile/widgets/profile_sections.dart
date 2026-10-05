@@ -24,6 +24,7 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 import 'package:winwin/ui/profile/widgets/profile_horizontal_section.dart';
 import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 // ════════════════════════════════════════════════════════════════
 // 1. 离线缓存行 (ProfileDownloadSection)
@@ -217,7 +218,7 @@ class ProfileFavSectionState extends State<ProfileFavSection> {
           )
         else if (_error != null && _folders.isEmpty)
           ProfileEmptyCard(
-            icon: Icon(Icons.error_outline),
+            icon: AppIcon(AppIcons.error()),
             message: '收藏夹加载失败: $_error',
             actionText: '点击重试',
             onTap: reload,
@@ -371,7 +372,7 @@ class ProfileHistorySectionState extends State<ProfileHistorySection> {
           )
         else if (_error != null && _items.isEmpty)
           ProfileEmptyCard(
-            icon: Icon(Icons.error_outline),
+            icon: AppIcon(AppIcons.error()),
             message: '历史记录加载失败: $_error',
             actionText: '点击重试',
             onTap: reload,
@@ -550,14 +551,14 @@ class ProfileToviewSectionState extends State<ProfileToviewSection> {
           )
         else if (_error != null && _items.isEmpty)
           ProfileEmptyCard(
-            icon: Icon(Icons.error_outline),
+            icon: AppIcon(AppIcons.error()),
             message: '稍后再看加载失败: $_error',
             actionText: '点击重试',
             onTap: reload,
           )
         else if (_items.isEmpty)
           ProfileEmptyCard(
-            icon: Icon(Icons.watch_later_outlined),
+            icon: AppIcon(AppIcons.watchLater()),
             message: '暂无稍后再看视频',
             actionText: '前往稍后再看 >',
             onTap: () => _openToviewPage(context),

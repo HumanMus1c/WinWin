@@ -10,6 +10,7 @@ import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 关系列表类型：关注列表 / 粉丝列表。
 enum RelationType { followings, fans }
@@ -294,8 +295,7 @@ class _RelationCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
+              AppIcon(AppIcons.chevronForward(),
                 size: 18,
                 color: theme.colorScheme.outline.withValues(alpha: 0.6),
               ),

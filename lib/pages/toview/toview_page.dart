@@ -26,6 +26,7 @@ import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 稍后再看页面（移植自 PiliPlus `lib/pages/later/`，重构为自适应多列宫格排版）。
 void showToviewPage(BuildContext context) {
@@ -311,8 +312,8 @@ class _ToviewPageState extends State<ToviewPage> {
           : _error != null && _items.isEmpty
               ? _buildError()
               : _items.isEmpty
-                  ? const AppEmptyState(
-                      icon: Icon(Icons.watch_later_outlined),
+                  ? AppEmptyState(
+                      icon: AppIcon(AppIcons.watchLater()),
                       title: '稍后再看列表为空',
                       subtitle: '把想看的视频加入稍后再看吧',
                     )
@@ -588,8 +589,7 @@ class _ToviewCard extends StatelessWidget {
                         Row(
                           children: [
                             if (stat?.view != null) ...[
-                              Icon(
-                                Icons.play_circle_outlined,
+                              AppIcon(AppIcons.viewCount(),
                                 size: 12,
                                 color: cs.outline,
                               ),
@@ -603,8 +603,7 @@ class _ToviewCard extends StatelessWidget {
                               const SizedBox(width: 8),
                             ],
                             if (stat?.danmaku != null) ...[
-                              Icon(
-                                Icons.subtitles_outlined,
+                              AppIcon(AppIcons.danmakuCount(),
                                 size: 12,
                                 color: cs.outline,
                               ),
@@ -624,7 +623,7 @@ class _ToviewCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             IconButton(
-                              icon: const Icon(Icons.close, size: 14),
+                              icon: AppIcon(AppIcons.clear(), size: 14),
                               tooltip: '从稍后再看移除',
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,

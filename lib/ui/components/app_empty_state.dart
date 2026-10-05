@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 统一空状态组件（移植自 BiliPai v0.2.3-beta.3 `AppEmptyState`）。
 ///
@@ -48,7 +49,7 @@ class AppEmptyState extends StatelessWidget {
                 ),
                 child: IconTheme(
                   data: IconThemeData(size: 32, color: tint),
-                  child: icon ?? const Icon(Icons.search_rounded),
+                  child: icon ?? AppIcon(AppIcons.search()),
                 ),
               ),
               const SizedBox(height: 16),

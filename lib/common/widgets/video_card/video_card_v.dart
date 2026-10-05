@@ -7,6 +7,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 视频卡片 - 垂直布局（高性能适配版）。
 ///
@@ -200,13 +201,13 @@ class VideoCardV extends StatelessWidget {
     return Row(
       spacing: 2,
       children: [
-        Icon(Icons.play_circle_outlined, size: 13, color: color),
+        AppIcon(AppIcons.viewCount(), size: 13, color: color),
         Text(
           NumUtils.formatNum(data.playCount),
           style: style,
         ),
         const SizedBox(width: 4),
-        Icon(Icons.subtitles_outlined, size: 13, color: color),
+        AppIcon(AppIcons.danmakuCount(), size: 13, color: color),
         Text(
           NumUtils.formatNum(data.danmakuCount),
           style: style,

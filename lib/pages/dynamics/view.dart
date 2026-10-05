@@ -26,6 +26,7 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 推送动态页。
 void showDynamicsPage(BuildContext context) {
@@ -594,8 +595,7 @@ class _DynVideoCard extends StatelessWidget {
                     Row(
                       spacing: 3,
                       children: [
-                        Icon(
-                          Icons.play_circle_outlined,
+                        AppIcon(AppIcons.viewCount(),
                           size: 13,
                           color: theme.colorScheme.outline.withValues(alpha: 0.8),
                         ),
@@ -607,8 +607,7 @@ class _DynVideoCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(
-                          Icons.subtitles_outlined,
+                        AppIcon(AppIcons.danmakuCount(),
                           size: 13,
                           color: theme.colorScheme.outline.withValues(alpha: 0.8),
                         ),
@@ -733,8 +732,7 @@ class _DynPgcCard extends StatelessWidget {
                     Row(
                       spacing: 3,
                       children: [
-                        Icon(
-                          Icons.play_circle_outlined,
+                        AppIcon(AppIcons.viewCount(),
                           size: 13,
                           color: theme.colorScheme.outline.withValues(alpha: 0.8),
                         ),
@@ -747,8 +745,7 @@ class _DynPgcCard extends StatelessWidget {
                         ),
                         if (danmaku != null) ...[
                           const SizedBox(width: 4),
-                          Icon(
-                            Icons.subtitles_outlined,
+                          AppIcon(AppIcons.danmakuCount(),
                             size: 13,
                             color: theme.colorScheme.outline.withValues(alpha: 0.8),
                           ),
@@ -1158,7 +1155,7 @@ class _DynCard extends StatelessWidget {
                     Row(
                       children: [
                         if (pgc.play != null) ...[
-                          Icon(Icons.play_circle_outlined, size: 12, color: cs.outline),
+                          AppIcon(AppIcons.viewCount(), size: 12, color: cs.outline),
                           const SizedBox(width: 2),
                           Text(
                             NumUtils.formatNum(pgc.play),
@@ -1167,7 +1164,7 @@ class _DynCard extends StatelessWidget {
                         ],
                         if (pgc.danmaku != null) ...[
                           const SizedBox(width: 6),
-                          Icon(Icons.subtitles_outlined, size: 12, color: cs.outline),
+                          AppIcon(AppIcons.danmakuCount(), size: 12, color: cs.outline),
                           const SizedBox(width: 2),
                           Text(
                             NumUtils.formatNum(pgc.danmaku),
@@ -1718,8 +1715,7 @@ class _DynCard extends StatelessWidget {
                             ),
                           if (archive.play != null) ...[
                             const SizedBox(width: 8),
-                            const Icon(
-                              Icons.play_circle_outlined,
+                            AppIcon(AppIcons.viewCount(),
                               size: 12,
                               color: Colors.white70,
                             ),
@@ -1734,8 +1730,7 @@ class _DynCard extends StatelessWidget {
                           ],
                           if (archive.danmaku != null) ...[
                             const SizedBox(width: 8),
-                            const Icon(
-                              Icons.subtitles_outlined,
+                            AppIcon(AppIcons.danmakuCount(),
                               size: 12,
                               color: Colors.white70,
                             ),

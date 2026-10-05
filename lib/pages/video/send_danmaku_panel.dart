@@ -9,6 +9,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 弹幕发送面板（移植自 BiliPai `DanmakuSendDialog` + `DanmakuComposerPolicy`）。
 ///
@@ -245,7 +246,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.close, size: 20),
+                  icon: AppIcon(AppIcons.clear(), size: 20),
                   tooltip: '关闭',
                   onPressed: () => Navigator.of(context).pop(),
                 ),

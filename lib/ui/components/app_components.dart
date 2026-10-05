@@ -6,6 +6,7 @@ import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 export 'app_desktop_interaction.dart';
 export 'app_press_feedback.dart';
@@ -450,7 +451,7 @@ class AppSearchField extends StatelessWidget {
               builder: (context, value, _) {
                 if (value.text.isEmpty) return const SizedBox.shrink();
                 return IconButton(
-                  icon: const Icon(Icons.close, size: 18),
+                  icon: AppIcon(AppIcons.clear(), size: 18),
                   onPressed: () {
                     controller!.clear();
                     onChanged?.call('');

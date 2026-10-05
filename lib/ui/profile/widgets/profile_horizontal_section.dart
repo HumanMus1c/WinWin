@@ -6,6 +6,7 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 个人页各内容分区的统一标题行（对齐 PiliPlus `ListTile` 标题规范）。
 class ProfileSectionHeader extends StatelessWidget {
@@ -82,7 +83,7 @@ class ProfileSectionHeader extends StatelessWidget {
                         color: biliPink,
                       ),
                     )
-                  : const Icon(Icons.refresh, size: 20),
+                  : AppIcon(AppIcons.refresh(), size: 20),
             ),
         ],
       ),

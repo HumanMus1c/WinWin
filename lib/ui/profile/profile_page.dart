@@ -22,6 +22,7 @@ import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 import 'package:winwin/ui/profile/widgets/profile_sections.dart';
 import 'package:winwin/utils/image_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术单轨 Miuix（阶段5d-L4-2）。
 ///
@@ -388,8 +389,7 @@ class _UserInfoSection extends StatelessWidget {
               ),
               if (isLogin) ...[
                 const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right,
+                AppIcon(AppIcons.chevronForward(),
                   color: cs.outline.withValues(alpha: 0.5),
                   size: 22,
                 ),

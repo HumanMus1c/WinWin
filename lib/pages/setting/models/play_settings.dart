@@ -2,15 +2,16 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 播放器设置项列表。
 ///
 /// 移植自 PiliPlus 的 `playSettings`，仅保留桌面端适用项。
 List<SettingsModel> get playSettings => [
-      const SwitchModel(
+      SwitchModel(
         title: '弹幕开关',
         subtitle: '是否展示弹幕',
-        leading: Icon(Icons.subtitles_outlined),
+        leading: AppIcon(AppIcons.danmakuCount()),
         setKey: SettingBoxKey.enableShowDanmaku,
         defaultVal: true,
       ),
@@ -49,9 +50,9 @@ List<SettingsModel> get playSettings => [
         setKey: SettingBoxKey.enableQuickDouble,
         defaultVal: true,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '全屏显示锁定按钮',
-        leading: Icon(Icons.lock_outline),
+        leading: AppIcon(AppIcons.lockOutline()),
         setKey: SettingBoxKey.showFsLockBtn,
         defaultVal: true,
       ),

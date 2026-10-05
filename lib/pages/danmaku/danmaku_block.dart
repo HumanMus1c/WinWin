@@ -10,6 +10,7 @@ import 'package:winwin/pages/danmaku/controller.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/crc32.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 弹幕屏蔽规则管理页（移植自 PiliPlus `lib/pages/danmaku_block/view.dart`）。
 ///
@@ -186,7 +187,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
                   Text('弹幕屏蔽规则', style: theme.textTheme.titleMedium),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.refresh, size: 20),
+                    icon: AppIcon(AppIcons.refresh(), size: 20),
                     tooltip: '刷新',
                     onPressed: () {
                       setState(() => _loading = true);
@@ -194,7 +195,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: AppIcon(AppIcons.clear()),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],

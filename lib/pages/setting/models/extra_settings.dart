@@ -5,6 +5,7 @@ import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 其它设置项列表。
 ///
@@ -20,7 +21,7 @@ List<SettingsModel> get extraSettings => [
       ),
       NormalModel(
         title: '重试次数',
-        leading: const Icon(Icons.refresh),
+        leading: AppIcon(AppIcons.refresh()),
         getSubtitle: () => '当前：${Pref.retryCount} 次',
         onTap: (context, setState) async {
           final res = await showSelectDialog<int>(

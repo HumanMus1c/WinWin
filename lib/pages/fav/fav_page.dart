@@ -22,6 +22,7 @@ import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
 void showFavPage(BuildContext context) {
@@ -799,8 +800,7 @@ class _FavVideoCard extends StatelessWidget {
                         Row(
                           children: [
                             if (cnt?.play != null) ...[
-                              Icon(
-                                Icons.play_circle_outlined,
+                              AppIcon(AppIcons.viewCount(),
                                 size: 12,
                                 color: cs.outline,
                               ),
@@ -814,8 +814,7 @@ class _FavVideoCard extends StatelessWidget {
                               const SizedBox(width: 8),
                             ],
                             if (cnt?.danmaku != null) ...[
-                              Icon(
-                                Icons.subtitles_outlined,
+                              AppIcon(AppIcons.danmakuCount(),
                                 size: 12,
                                 color: cs.outline,
                               ),
@@ -964,7 +963,7 @@ class _FavPanelState extends State<_FavPanel> {
           AppBar(
             title: const Text('添加到收藏夹'),
             leading: IconButton(
-              icon: const Icon(Icons.close),
+              icon: AppIcon(AppIcons.clear()),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),

@@ -28,6 +28,7 @@ import 'theme/miuix_theme_bridge.dart';
 import 'ui/app.dart';
 import 'utils/calc_window_position.dart';
 import 'utils/json_file_handler.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 全局路由观察器，供 VideoDetailPage 监听 push/pop 事件，
 /// 在页面被覆盖时暂停播放器、返回时恢复播放。
@@ -352,9 +353,8 @@ class _AgreementGateState extends State<AgreementGate> {
                     color: Colors.redAccent.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.error_outline,
+                  child: Center(
+                    child: AppIcon(AppIcons.error(),
                       size: 28,
                       color: Colors.redAccent,
                     ),

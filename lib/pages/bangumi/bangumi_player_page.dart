@@ -2127,7 +2127,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.chevron_right, size: 16, color: cs.outline),
+                          AppIcon(AppIcons.chevronForward(), size: 16, color: cs.outline),
                         ],
                       ),
                       const SizedBox(height: 2),

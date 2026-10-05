@@ -7,6 +7,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:winwin/core/account/account.dart' show NoAccount;
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 极验验证码 JS 资源（gt.0.5.0.js 旧版 / fullpage 新版均可）。
 const _geetestJsUri =
@@ -262,7 +263,7 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            AppIcon(AppIcons.error(), size: 48, color: Colors.red),
             const SizedBox(height: 16),
             Text(
               message,

@@ -855,8 +855,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                               ),
                             if (archive.play != null) ...[
                               const SizedBox(width: 8),
-                              const Icon(
-                                Icons.play_circle_outlined,
+                              AppIcon(AppIcons.viewCount(),
                                 size: 12,
                                 color: Colors.white70,
                               ),

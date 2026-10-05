@@ -10,6 +10,7 @@ import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 打开离线缓存页面。
 void showDownloadPage(BuildContext context) {
@@ -141,7 +142,7 @@ class _DownloadPageState extends State<DownloadPage> {
           IconButton(
             tooltip: '刷新',
             onPressed: _loadCacheInfo,
-            icon: const Icon(Icons.refresh, size: 20),
+            icon: AppIcon(AppIcons.refresh(), size: 20),
           ),
         ],
       ),

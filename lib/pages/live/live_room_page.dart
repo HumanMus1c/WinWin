@@ -1511,7 +1511,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
             // 9. 刷新流
             IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white70, size: 20),
+              icon: AppIcon(AppIcons.refresh(), color: Colors.white70, size: 20),
               tooltip: '重新加载流',
               onPressed: _initLive,
             ),

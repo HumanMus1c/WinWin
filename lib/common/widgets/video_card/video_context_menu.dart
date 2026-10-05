@@ -86,7 +86,7 @@ List<VideoCustomAction> buildVideoCardActions({
     actions.add(
       VideoCustomAction(
         title: '稍后再看',
-        icon: const Icon(Icons.watch_later_outlined, size: 16),
+        icon: AppIcon(AppIcons.watchLater(), size: 16),
         onTap: () async {
           if (!Accounts.main.isLogin) {
             showToast(context, '请先登录');
@@ -156,7 +156,7 @@ List<VideoCustomAction> buildVideoCardActions({
     actions.add(
       VideoCustomAction(
         title: '不感兴趣',
-        icon: const Icon(Icons.thumb_down_outlined, size: 16),
+        icon: AppIcon(AppIcons.dislike(), size: 16),
         onTap: () {
           _showDislikeReasonsDialog(
             context: context,
@@ -170,7 +170,7 @@ List<VideoCustomAction> buildVideoCardActions({
     actions.add(
       VideoCustomAction(
         title: '不感兴趣',
-        icon: const Icon(Icons.thumb_down_outlined, size: 16),
+        icon: AppIcon(AppIcons.dislike(), size: 16),
         onTap: () async {
           final targetAid = aid ?? (bvid != null ? IdUtils.bv2av(bvid) : null);
           if (targetAid == null) return;

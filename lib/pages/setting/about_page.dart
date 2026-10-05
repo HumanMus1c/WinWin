@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/pages/onboarding/user_agreement_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 关于页面。
 ///
@@ -115,7 +116,7 @@ class AboutPage extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, size: 20),
+                        icon: AppIcon(AppIcons.clear(), size: 20),
                         tooltip: '关闭',
                         onPressed: () => Navigator.pop(dialogCtx),
                       ),

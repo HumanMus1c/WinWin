@@ -16,6 +16,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 搜索面板 — 单个 Tab 对应的结果列表。
 ///
@@ -403,7 +404,7 @@ class _SearchPanelState extends State<SearchPanel>
                         ),
                         errorBuilder: (_, _, _) => Container(
                           color: theme.colorScheme.surfaceContainer,
-                          child: const Icon(Icons.error_outline),
+                          child: AppIcon(AppIcons.error()),
                         ),
                       ),
                       Positioned(
@@ -516,7 +517,7 @@ class _SearchPanelState extends State<SearchPanel>
                     ),
                     errorBuilder: (_, _, _) => Container(
                       color: theme.colorScheme.surfaceContainer,
-                      child: const Icon(Icons.error_outline),
+                      child: AppIcon(AppIcons.error()),
                     ),
                   ),
                 ),
@@ -694,7 +695,7 @@ class _SearchPanelState extends State<SearchPanel>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.error_outline, size: 48),
+          AppIcon(AppIcons.error(), size: 48),
           const SizedBox(height: Style.sm),
           Text(_errorMsg!),
           const SizedBox(height: Style.md),

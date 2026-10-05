@@ -7,6 +7,7 @@ import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 视频卡片 - 水平布局（高性能适配版）。
 ///
@@ -185,14 +186,14 @@ class VideoCardH extends StatelessWidget {
           const SizedBox(height: 4),
           Row(
             children: [
-              Icon(Icons.play_circle_outlined, size: 13, color: cs.outline),
+              AppIcon(AppIcons.viewCount(), size: 13, color: cs.outline),
               const SizedBox(width: 3),
               Text(
                 NumUtils.formatNum(playCount),
                 style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.subtitles_outlined, size: 13, color: cs.outline),
+              AppIcon(AppIcons.danmakuCount(), size: 13, color: cs.outline),
               const SizedBox(width: 3),
               Text(
                 NumUtils.formatNum(danmakuCount),

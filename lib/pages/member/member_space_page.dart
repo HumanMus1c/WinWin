@@ -1110,7 +1110,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                         style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                       ),
                     ),
-                    Icon(Icons.chevron_right, size: 16, color: cs.outline),
+                    AppIcon(AppIcons.chevronForward(), size: 16, color: cs.outline),
                   ],
                 ),
               ),
@@ -1435,8 +1435,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(
-                        Icons.play_circle_outlined,
+                      AppIcon(AppIcons.viewCount(),
                         size: 13,
                         color: theme.colorScheme.outline.withValues(alpha: 0.8),
                       ),
@@ -1450,8 +1449,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       ),
                       if (item.danmaku != null) ...[
                         const SizedBox(width: 6),
-                        Icon(
-                          Icons.subtitles_outlined,
+                        AppIcon(AppIcons.danmakuCount(),
                           size: 13,
                           color: theme.colorScheme.outline.withValues(alpha: 0.8),
                         ),
@@ -1643,7 +1641,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+              AppIcon(AppIcons.chevronForward(), size: 20, color: Colors.grey),
             ],
           ),
         ),
@@ -2051,7 +2049,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                             PBadge(text: archive.durationText, type: PBadgeType.duration),
                           if (archive.play != null) ...[
                             const SizedBox(width: 6),
-                            const Icon(Icons.play_circle_outlined, size: 12, color: Colors.white70),
+                            AppIcon(AppIcons.viewCount(), size: 12, color: Colors.white70),
                             const SizedBox(width: 2),
                             Text(
                               NumUtils.formatNum(archive.play),
@@ -2892,8 +2890,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.lock_outline,
+              child: AppIcon(AppIcons.lockOutline(),
                 size: 48,
                 color: cs.outline,
               ),
@@ -2919,7 +2916,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               const SizedBox(height: Style.md),
               TextButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 16),
+                icon: AppIcon(AppIcons.refresh(), size: 16),
                 label: const Text('重试'),
               ),
             ],

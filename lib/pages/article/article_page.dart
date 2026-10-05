@@ -15,6 +15,7 @@ import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 专栏文章阅读页面。
 ///
@@ -158,7 +159,7 @@ class _ArticlePageState extends State<ArticlePage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: AppIcon(AppIcons.refresh()),
             tooltip: '重新加载',
             onPressed: _loadArticle,
           ),
@@ -321,7 +322,7 @@ class _ArticlePageState extends State<ArticlePage> {
                         const SizedBox(width: 12),
                       ],
                       if (article.likeCount != null) ...[
-                        Icon(Icons.thumb_up_outlined, size: 14, color: cs.outline),
+                        AppIcon(AppIcons.like(), size: 14, color: cs.outline),
                         const SizedBox(width: 3),
                         Text(
                           NumUtils.formatNum(article.likeCount),
@@ -518,8 +519,7 @@ class _ArticlePageState extends State<ArticlePage> {
                                         ),
                                       const Spacer(),
                                       if (reply.like != null && reply.like! > 0) ...[
-                                        Icon(
-                                          Icons.thumb_up_outlined,
+                                        AppIcon(AppIcons.like(),
                                           size: 12,
                                           color: cs.outline,
                                         ),
