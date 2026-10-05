@@ -340,7 +340,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.copy_rounded),
+                  leading: Icon(AppIcons.copy()),
                   title: const Text('复制图片直链'),
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -558,7 +558,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                             foregroundColor: Colors.white,
                             hoverColor: Colors.black.withValues(alpha: 0.6),
                           ),
-                          icon: const Icon(Icons.copy_rounded, size: 18),
+                          icon: Icon(AppIcons.copy(), size: 18),
                           tooltip: '复制图片链接',
                           onPressed: () {
                             final curUrl =

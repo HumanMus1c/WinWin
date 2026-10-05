@@ -313,7 +313,7 @@ class _ArticlePageState extends State<ArticlePage> {
                       ),
                       // 阅读量与点赞数
                       if (article.viewCount != null) ...[
-                        Icon(Icons.remove_red_eye_outlined, size: 14, color: cs.outline),
+                        Icon(AppIcons.eye(), size: 14, color: cs.outline),
                         const SizedBox(width: 3),
                         Text(
                           NumUtils.formatNum(article.viewCount),

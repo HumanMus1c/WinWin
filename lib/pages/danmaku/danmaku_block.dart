@@ -301,7 +301,7 @@ class _RuleListSection extends StatelessWidget {
               ),
               const SizedBox(width: Style.sm),
               IconButton.filled(
-                icon: const Icon(Icons.add),
+                icon: Icon(AppIcons.add()),
                 onPressed: () => onAdd(type),
                 style: IconButton.styleFrom(
                   backgroundColor: biliPink,

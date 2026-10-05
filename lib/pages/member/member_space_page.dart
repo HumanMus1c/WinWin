@@ -930,7 +930,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                         )
                       else ...[
                         Icon(
-                          _relationStatus != 0 ? Icons.check : Icons.add,
+                          _relationStatus != 0 ? AppIcons.check() : AppIcons.add(),
                           size: 16,
                         ),
                         const SizedBox(width: 4),

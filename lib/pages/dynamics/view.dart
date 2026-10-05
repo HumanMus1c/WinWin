@@ -1532,7 +1532,7 @@ class _DynCard extends StatelessWidget {
                           ),
                         if (live.watchedShow != null && live.watchedShow!.isNotEmpty) ...[
                           const Spacer(),
-                          Icon(Icons.remove_red_eye_outlined, size: 12, color: cs.outline),
+                          Icon(AppIcons.eye(), size: 12, color: cs.outline),
                           const SizedBox(width: 3),
                           Text(
                             live.watchedShow!,

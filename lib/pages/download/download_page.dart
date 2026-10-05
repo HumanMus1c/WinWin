@@ -173,7 +173,7 @@ class _DownloadPageState extends State<DownloadPage> {
                             const Spacer(),
                             TextButton.icon(
                               onPressed: _clearCache,
-                              icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                              icon: Icon(AppIcons.delete(), size: 16, color: Colors.red),
                               label: const Text('清空', style: TextStyle(color: Colors.red)),
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,

@@ -2484,7 +2484,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   ),
                 ),
                 onPressed: null,
-                icon: const Icon(Icons.add_rounded, size: 16),
+                icon: Icon(AppIcons.add(), size: 16),
                 label: const Text('关注', style: TextStyle(fontSize: 12.5)),
               ),
             ],
@@ -2686,16 +2686,16 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
 
     if (!widget.isFollowed) {
       label = _isHovered ? '开始关注' : '关注';
-      icon = Icons.add_rounded;
+      icon = AppIcons.add();
       color = _isHovered ? cs.primary : null;
     } else {
       if (_isHovered) {
         label = '取消关注';
-        icon = Icons.close_rounded;
+        icon = AppIcons.clear();
         color = Colors.red;
       } else {
         label = '已关注';
-        icon = Icons.check_rounded;
+        icon = AppIcons.check();
         color = cs.outline;
       }
     }

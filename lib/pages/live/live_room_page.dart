@@ -1272,7 +1272,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             // 1. 播放/暂停
             IconButton(
               icon: Icon(
-                _isPlaying ? Icons.pause : Icons.play_arrow,
+                _isPlaying ? AppIcons.pause(active: true) : AppIcons.play(active: true),
                 color: Colors.white,
                 size: 24,
               ),
@@ -1321,7 +1321,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             // 3. 弹幕开/关
             IconButton(
               icon: Icon(
-                _danmakuVisible ? Icons.subtitles : Icons.subtitles_off,
+                _danmakuVisible ? AppIcons.subtitle(active: true) : AppIcons.subtitle(active: false),
                 color: _danmakuVisible ? Colors.white : Colors.white54,
                 size: 20,
               ),
@@ -1481,7 +1481,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             // 8. 音量控制（静音图标 + 滑块）
             IconButton(
               icon: Icon(
-                _volume > 0 ? Icons.volume_up : Icons.volume_off,
+                _volume > 0 ? AppIcons.volumeUp() : AppIcons.volumeOff(),
                 color: Colors.white70,
                 size: 20,
               ),
@@ -1521,8 +1521,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               IconButton(
                 icon: Icon(
                   _inAppFullscreen
-                      ? Icons.crop_square
-                      : Icons.crop_square_outlined,
+                      ? AppIcons.inAppFullscreen(active: true)
+                      : AppIcons.inAppFullscreen(active: false),
                   color: Colors.white70,
                   size: 20,
                 ),
@@ -1533,7 +1533,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             // 11. 窗口原生全屏
             IconButton(
               icon: Icon(
-                _fullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                _fullscreen ? AppIcons.fullscreen(active: true) : AppIcons.fullscreen(active: false),
                 color: Colors.white70,
                 size: 22,
               ),
@@ -1557,15 +1557,15 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       badgeText = _liveDurationText.isNotEmpty
           ? '直播中 · 已播 $_liveDurationText'
           : '直播中';
-      icon = Icons.fiber_manual_record;
+      icon = AppIcons.recording();
     } else if (_liveStatus == 2) {
       badgeColor = Colors.orangeAccent;
       badgeText = '轮播中';
-      icon = Icons.replay_rounded;
+      icon = AppIcons.replay();
     } else {
       badgeColor = Colors.white54;
       badgeText = '未开播';
-      icon = Icons.radio_button_unchecked;
+      icon = AppIcons.radio(selected: false);
     }
 
     return Container(

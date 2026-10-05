@@ -297,6 +297,12 @@ abstract final class AppIcons {
 
   /// 主题 / 调色
   static IconData palette() => CupertinoIcons.paintbrush;
+
+  /// 新增 / 关注（追加语义）
+  static IconData add() => CupertinoIcons.add;
+
+  /// 浏览 / 阅读数（眼睛）
+  static IconData eye() => CupertinoIcons.eye;
 }
 
 /// 自适应图标部件：Miuix 风格下将具备 Miuix 矢量对应的字形升级为
@@ -403,6 +409,9 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
   CupertinoIcons.circle_fill: MiuixIcons.extended.byName('recording')!,
   CupertinoIcons.arrow_uturn_left: MiuixIcons.extended.byName('undo')!,
   CupertinoIcons.paintbrush: MiuixIcons.extended.byName('theme')!,
+  // ── 阶段5e-L5-3b 补充语义 ──
+  CupertinoIcons.add: MiuixIcons.extended.byName('add')!,
+  CupertinoIcons.eye: MiuixIcons.extended.byName('show')!,
 };
 
 /// 查询字形对应的 Miuix 矢量（无对应返回 null）。

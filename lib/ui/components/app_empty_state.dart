@@ -4,7 +4,7 @@ import 'package:winwin/theme/app_icons.dart';
 /// 统一空状态组件（移植自 BiliPai v0.2.3-beta.3 `AppEmptyState`）。
 ///
 /// 对标要点：
-/// - 空态默认用 [Icons.search_rounded]（BiliPai 本期把空态图标从信封改为搜索语义）。
+/// - 空态默认用 [AppIcons.search()]（BiliPai 本期把空态图标从信封改为搜索语义）。
 /// - 居中列布局，最大宽 520，支持主/次操作按钮。
 /// - 前景色用 onSurfaceVariant（低饱和），错误态可用 [iconColor] 覆盖为 error 色。
 class AppEmptyState extends StatelessWidget {

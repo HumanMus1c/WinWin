@@ -6,6 +6,7 @@ import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 会话设置入口（阶段 D）。
 ///
@@ -156,7 +157,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
             onTap: _report,
           ),
           ListTile(
-            leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+            leading: Icon(AppIcons.delete(), color: theme.colorScheme.error),
             title: Text('删除会话', style: TextStyle(color: theme.colorScheme.error)),
             onTap: _deleteSession,
           ),

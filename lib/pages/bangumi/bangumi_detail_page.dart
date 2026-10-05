@@ -363,7 +363,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label),
-          if (selected) const Icon(Icons.check, size: 18, color: Colors.blue),
+          if (selected) Icon(AppIcons.check(), size: 18, color: Colors.blue),
         ],
       ),
     );
@@ -1292,7 +1292,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.history_rounded,
+                                  AppIcons.history(selected: false),
                                   size: badgeFontSize * 1.15,
                                   color: Colors.white,
                                 ),
@@ -1440,7 +1440,7 @@ class _FollowButtonState extends State<_FollowButton> {
 
     if (!widget.isFollowed) {
       label = _isHovered ? '开始追番' : '追番';
-      icon = _isHovered ? Icons.favorite : Icons.favorite_border;
+      icon = _isHovered ? AppIcons.favorite(active: true) : AppIcons.favorite(active: false);
       color = _isHovered ? cs.primary : null;
     } else {
       if (_isHovered) {
@@ -1449,7 +1449,7 @@ class _FollowButtonState extends State<_FollowButton> {
         color = Colors.red;
       } else {
         label = '正在追番';
-        icon = Icons.favorite;
+        icon = AppIcons.favorite(active: true);
         color = Colors.pink;
       }
     }
