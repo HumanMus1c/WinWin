@@ -20,6 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_icons.dart';
+import 'package:flutter_miuix/miuix.dart';
 
 import 'cupertino_glyph_paths.g.dart';
 import 'material_glyph_paths.g.dart';
@@ -77,10 +78,13 @@ class _Cell {
 }
 
 class _Section {
-  const _Section(this.file, this.title, this.cells);
+  const _Section(this.file, this.title, this.cells, {this.artCompare = false});
   final String file;
   final String title;
   final List<_Cell> cells;
+
+  /// L5-6：为新美术候选节——额外产出「等价轮廓」对照图与专用表格。
+  final bool artCompare;
 }
 
 Widget _pngCell(_Cell c) => SizedBox(
@@ -302,6 +306,7 @@ String _standaloneSvg(_GlyphSvg g, {double size = 48}) =>
 String _vectorText(IconData glyph) {
   final vector = miuixVectorForGlyph(glyph);
   if (vector == null) return '—';
+  if (vector.name.startsWith('art.')) return '内置矢量（新美术）';
   if (vector.name.startsWith('builtin.')) return '内置矢量';
   final parts = vector.name.split('.');
   final src = parts.first;
@@ -373,6 +378,19 @@ String _tableMarkdown(_Section s) {
     sb.write('| `${c.label}` | ${c.usage} | $oldImg | $nowImg | '
         '${c.glyphText.isEmpty ? '—' : '`${c.glyphText}`'} | '
         '${_vectorText(c.glyph)} | $status |\n');
+  }
+  return sb.toString();
+}
+
+/// 美术候选表格（新美术 × 等价轮廓 并排）。
+String _artTableMarkdown(_Section s) {
+  final sb = StringBuffer()
+    ..write('| 语义 | 新美术（L5-6，当前生效） | 等价轮廓（L5-5 保底） | 说明 |\n')
+    ..write('|---|---|---|---|\n');
+  for (final c in s.cells) {
+    sb.write('| `${c.label}` | ![新美术](icon-sheets/icons/${c.key}.png) | '
+        '![等价](icon-sheets/icons/${c.key}-equiv.png) | '
+        '${c.usage.isEmpty ? '—' : c.usage} |\n');
   }
   return sb.toString();
 }
@@ -757,6 +775,45 @@ void main() {
           usage: '浏览/阅读数',
           glyphText: 'eye'),
     ]),
+    _Section(
+        '09-art-candidates.png',
+        '09 内置矢量：Miuix 新美术 vs 等价轮廓 · Art vs Equivalence',
+        [
+          _Cell('like()', AppIcons.like(), usage: '点赞'),
+          _Cell('like(on)', AppIcons.like(active: true), usage: '点赞（已赞）'),
+          _Cell('dislike()', AppIcons.dislike(), usage: '点踩'),
+          _Cell('dislike(on)', AppIcons.dislike(active: true),
+              usage: '点踩（已踩）'),
+          _Cell('coin()', AppIcons.coin(), usage: '投币'),
+          _Cell('coin(on)', AppIcons.coin(active: true), usage: '投币（已投）'),
+          _Cell('profile()', AppIcons.profile(), usage: '我的/头像（描边）'),
+          _Cell('profile(sel)', AppIcons.profile(selected: true),
+              usage: '我的（实心）'),
+          _Cell('fullscreen()', AppIcons.fullscreen(), usage: '全屏'),
+          _Cell('fullscreen(on)', AppIcons.fullscreen(active: true),
+              usage: '退出全屏'),
+          _Cell('inAppFullscreen()', AppIcons.inAppFullscreen(),
+              usage: '网页全屏'),
+          _Cell('pip()', AppIcons.pip(), usage: '画中画'),
+          _Cell('volumeDown()', AppIcons.volumeDown(), usage: '音量 — 小'),
+          _Cell('fastRewind()', AppIcons.fastRewind(), usage: '快退'),
+          _Cell('subtitle()', AppIcons.subtitle(), usage: '字幕'),
+          _Cell('subtitle(on)', AppIcons.subtitle(active: true),
+              usage: '字幕（开）'),
+          _Cell('chapter()', AppIcons.chapter(), usage: '章节'),
+          _Cell('chapter(on)', AppIcons.chapter(active: true),
+              usage: '章节（展开）'),
+          _Cell('radio(off)', AppIcons.radio(selected: false), usage: '单选框'),
+          _Cell('radio(on)', AppIcons.radio(selected: true),
+              usage: '单选框（选中）'),
+          _Cell('error()', AppIcons.error(), usage: '错误/告警'),
+          _Cell('viewCount()', AppIcons.viewCount(), usage: '播放量'),
+          _Cell('danmakuCount()', AppIcons.danmakuCount(), usage: '弹幕数'),
+          _Cell('calendar()', AppIcons.calendar(), usage: '发布日期'),
+          _Cell('notificationsOff()', AppIcons.notificationsOff(),
+              usage: '免打扰'),
+        ],
+        artCompare: true),
   ];
 
   testWidgets('生成 PNG/SVG 拼图 + 单图标切分 + 对照表格', (tester) async {
@@ -849,12 +906,22 @@ void main() {
           expect(oldPng, isNotNull, reason: '${c.label} 曾用 PNG 失败');
           _writeBytes(File('$_outDir/icons/${c.key}-old.png'), oldPng!);
         }
+        if (section.artCompare) {
+          final equiv = miuixEquivalenceIconFor(c.glyph);
+          expect(equiv, isNotNull, reason: '${c.label} 无等价轮廓');
+          final eqPng = await _captureIconPng(
+              tester, MiuixIcon(vector: equiv!, size: 22));
+          expect(eqPng, isNotNull, reason: '${c.label} 等价轮廓 PNG 失败');
+          _writeBytes(File('$_outDir/icons/${c.key}-equiv.png'), eqPng!);
+        }
       }
 
       // ④ 对照表格。
       _writeText(
           File('$_outDir/tables/${section.file.replaceAll('.png', '.md')}'),
-          _tableMarkdown(section));
+          section.artCompare
+              ? _artTableMarkdown(section)
+              : _tableMarkdown(section));
     }
 
     expect(iconCount, greaterThan(80));

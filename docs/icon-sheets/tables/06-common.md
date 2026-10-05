@@ -9,9 +9,9 @@
 | `filter()` | 排序/筛选 | ![曾用](icon-sheets/icons/filter-old.png) | ![现用](icon-sheets/icons/filter.png) | `slider_horizontal_3` | tune | ✅ |
 | `check()` | 勾选（多选/成功） | ![曾用](icon-sheets/icons/check-old.png) | ![现用](icon-sheets/icons/check.png) | `checkmark` | ok | ✅ |
 | `chevronForward()` | 前进箭头（列表行/个人页） | ![曾用](icon-sheets/icons/chevronForward-old.png) | ![现用](icon-sheets/icons/chevronForward.png) | `chevron_forward` | chevronForward | ✅ |
-| `radio(off)` | 单选框（SelectDialog） | ![曾用](icon-sheets/icons/radio-off-old.png) | ![现用](icon-sheets/icons/radio-off.png) | `circle` | 内置矢量 | ✅ |
-| `radio(on)` | 单选框（选中） | ![曾用](icon-sheets/icons/radio-on-old.png) | ![现用](icon-sheets/icons/radio-on.png) | `check_mark_circled_solid` | 内置矢量 | ✅ |
+| `radio(off)` | 单选框（SelectDialog） | ![曾用](icon-sheets/icons/radio-off-old.png) | ![现用](icon-sheets/icons/radio-off.png) | `circle` | 内置矢量（新美术） | ✅ |
+| `radio(on)` | 单选框（选中） | ![曾用](icon-sheets/icons/radio-on-old.png) | ![现用](icon-sheets/icons/radio-on.png) | `check_mark_circled_solid` | 内置矢量（新美术） | ✅ |
 | `block()` | 屏蔽/封禁 | ![曾用](icon-sheets/icons/block-old.png) | ![现用](icon-sheets/icons/block.png) | `slash_circle` | blocklist | ✅ |
-| `error()` | 错误/告警 | ![曾用](icon-sheets/icons/error-old.png) | ![现用](icon-sheets/icons/error.png) | `exclamationmark_circle` | 内置矢量 | ✅ |
-| `notificationsOff()` | 免打扰（关） | ![曾用](icon-sheets/icons/notificationsOff-old.png) | ![现用](icon-sheets/icons/notificationsOff.png) | `bell_slash` | 内置矢量 | ✅ |
+| `error()` | 错误/告警 | ![曾用](icon-sheets/icons/error-old.png) | ![现用](icon-sheets/icons/error.png) | `exclamationmark_circle` | 内置矢量（新美术） | ✅ |
+| `notificationsOff()` | 免打扰（关） | ![曾用](icon-sheets/icons/notificationsOff-old.png) | ![现用](icon-sheets/icons/notificationsOff.png) | `bell_slash` | 内置矢量（新美术） | ✅ |
 | `notificationsOff(on)` | 免打扰（开） | ![曾用](icon-sheets/icons/notificationsOff-on-old.png) | ![现用](icon-sheets/icons/notificationsOff-on.png) | `bell_fill` | notifications（OS4） | ✅ |

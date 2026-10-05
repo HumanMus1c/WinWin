@@ -2,6 +2,7 @@ import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'app_icons_art.dart';
 import 'app_icons_builtin.g.dart';
 
 /// 全局语义图标中心（阶段5d-L4-2 单轨化：原 `*Of(style)` 与 `*(context)` 双分发
@@ -429,13 +430,16 @@ MiuixVectorIcon? miuixVectorForGlyph(IconData glyph) =>
 
 final Map<IconData, MiuixVectorIcon> _builtinVectorCache = {};
 
-/// 阶段5e-L5-5：⚠️ 待补语义的**内置矢量**（点赞/点踩/投币/单人剪影/全屏系/
-/// 画中画/音量小/字幕/章节/单选框/错误/播放量/日历/免打扰铃铛等）。
+/// 阶段5e-L5-5/L5-6：⚠️ 待补语义的内置矢量。
 ///
-/// 轮廓与 Cupertino 回退字形等价（零视觉变更），但统一走矢量管线、
-/// 脱离字体依赖；数据由 `tools/glyph_outline_export.py` 预生成至
-/// `app_icons_builtin.g.dart`（viewport 1300×1300，坐标已平移防 tint 裁剪）。
-MiuixVectorIcon? _builtinVectorFor(IconData glyph) {
+/// **美术优先**：`app_icons_art.dart` 的 Miuix 风格自绘（L5-6）；
+/// **等价轮廓兜底**：`app_icons_builtin.g.dart`（L5-5，忠实回退字形，
+/// 供美术候选对照，零字体依赖）。
+MiuixVectorIcon? _builtinVectorFor(IconData glyph) =>
+    miuixArtIconFor(glyph) ?? miuixEquivalenceIconFor(glyph);
+
+/// 内置**等价轮廓**（L5-5 数据；美术候选对照用）。
+MiuixVectorIcon? miuixEquivalenceIconFor(IconData glyph) {
   final data = kBuiltinIconPaths[glyph.codePoint];
   if (data == null) return null;
   return _builtinVectorCache.putIfAbsent(
