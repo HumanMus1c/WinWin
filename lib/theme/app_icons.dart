@@ -315,15 +315,17 @@ class AppIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 阶段5d-L3：字形→Miuix 矢量映射恒启用（原 miuix 风格门控收敛移除）。
-    // 颜色优先级：显式 color > IconTheme（按钮/AppBar 等注入）> MiuixContentColor 链；
-    // 修复矢量路径不回读 IconTheme 导致的返回按钮等"不随主题反色"问题。
+    // 颜色/尺寸优先级：显式参数 > IconTheme（按钮/AppBar/自定义 IconTheme 等注入）
+    // > MiuixContentColor 链 / 24 默认——修复矢量路径不读 IconTheme 导致的
+    // 「返回按钮不反色」「消息中心入口图标巨大（矢量 intrinsic 尺寸）」问题。
     if (shadows == null || shadows!.isEmpty) {
       final vector = miuixVectorForGlyph(icon);
       if (vector != null) {
+        final iconTheme = IconTheme.of(context);
         return MiuixIcon(
           vector: vector,
-          size: size,
-          tint: color ?? IconTheme.of(context).color,
+          size: size ?? iconTheme.size ?? 24,
+          tint: color ?? iconTheme.color,
         );
       }
     }

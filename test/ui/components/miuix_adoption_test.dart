@@ -264,6 +264,19 @@ void main() {
       );
       expect(find.byType(MiuixIcon), findsOneWidget);
     });
+
+    testWidgets('修复R2：AppIcon 无显式 size 时继承 IconTheme 尺寸（不落矢量 intrinsic）',
+        (tester) async {
+      await tester.pumpWidget(
+        wrapMiuix(
+          const IconTheme(
+            data: IconThemeData(size: 24),
+            child: AppIcon(CupertinoIcons.settings),
+          ),
+        ),
+      );
+      expect(tester.getSize(find.byType(MiuixIcon)), const Size(24, 24));
+    });
   });
 
   group('Miuix 刷新（阶段3d）', () {
