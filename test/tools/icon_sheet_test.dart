@@ -26,6 +26,7 @@ import 'material_glyph_paths.g.dart';
 
 const _outDir = 'docs/icon-sheets';
 const _boundaryKey = Key('sheet');
+const _iconBoundaryKey = Key('icon');
 
 const _ink = '#111111';
 const _labelInk = '#333333';
@@ -171,6 +172,45 @@ void _writeBytes(File f, List<int> bytes) {
     }
   }
   throw last!;
+}
+
+/// 单图标 PNG 捕获（22×22 逻辑画布、透明底、1x 输出——行内尺寸精确）。
+Future<Uint8List?> _captureIconPng(
+    WidgetTester tester, Widget child) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Center(
+        child: RepaintBoundary(
+          key: _iconBoundaryKey,
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: Center(child: child),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(_iconBoundaryKey),
+  );
+  for (var i = 0; i < 3; i++) {
+    final data = await tester.runAsync(() async {
+      try {
+        final image = await boundary.toImage(pixelRatio: 1.0);
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        image.dispose();
+        return bytes;
+      } catch (_) {
+        return null;
+      }
+    });
+    if (data != null) return data.buffer.asUint8List();
+    await tester.pump(const Duration(milliseconds: 60));
+  }
+  return null;
 }
 
 /// 把 ui.Path 展平为 SVG path 数据（曲线按弧长采样，display 尺寸下不可辨）。
@@ -322,11 +362,11 @@ String _tableMarkdown(_Section s) {
         'Cupertino 字形 | 矢量 | 状态 |\n')
     ..write('|---|---|---|---|---|---|---|\n');
   for (final c in s.cells) {
-    // 用 Markdown 图片语法（内联 HTML 在部分渲染器中被净化/不渲染）；
-    // 单图标 SVG 画布即 22px，无需 width 属性即可精确控制行内尺寸。
+    // 用 Markdown 图片语法 + PNG（SGV 在部分编辑器预览中不渲染）；
+    // PNG 画布即 22px，无需 width 属性即可精确控制行内尺寸。
     final oldImg =
-        c.old == null ? '—' : '![曾用](icons/${c.key}-old.svg)';
-    final nowImg = '![现用](icons/${c.key}.svg)';
+        c.old == null ? '—' : '![曾用](icons/${c.key}-old.png)';
+    final nowImg = '![现用](icons/${c.key}.png)';
     final status = miuixVectorForGlyph(c.glyph) != null ? '✅' : '⚠️';
     sb.write('| `${c.label}` | ${c.usage} | $oldImg | $nowImg | '
         '${c.glyphText.isEmpty ? '—' : '`${c.glyphText}`'} | '
@@ -343,6 +383,11 @@ void main() {
       'packages/cupertino_icons/assets/CupertinoIcons.ttf',
       'C:/Users/SilverT1ger/AppData/Local/Pub/Cache/hosted/pub.dev/'
           'cupertino_icons-1.0.9/assets/CupertinoIcons.ttf',
+    ]);
+    // 曾用 Material 字形（单图标 PNG 直渲染）。
+    await _loadFont('MaterialIcons', [
+      'D:/flutter/bin/cache/artifacts/material_fonts/'
+          'materialicons-regular.otf',
     ]);
     await _loadFont('SheetCJK', ['C:/Windows/Fonts/simhei.ttf']);
   });
@@ -777,7 +822,7 @@ void main() {
       _writeText(File('$_outDir/${section.file.replaceAll('.png', '.svg')}'),
           svg);
 
-      // ③ 单图标切分（现用 + 曾用）。
+      // ③ 单图标切分（现用 + 曾用；SVG 全真矢量 + PNG 编辑器兼容版）。
       for (final c in section.cells) {
         final now = _glyphSvg(c.glyph);
         expect(now, isNotNull, reason: '${c.label} 现用字形无 SVG');
@@ -791,6 +836,16 @@ void main() {
           _writeText(File('$_outDir/icons/${c.key}-old.svg'),
               _standaloneSvg(old!, size: 22));
           oldCount++;
+        }
+        final nowPng = await _captureIconPng(
+            tester, AppIcon(c.glyph, size: 22));
+        expect(nowPng, isNotNull, reason: '${c.label} 现用 PNG 失败');
+        _writeBytes(File('$_outDir/icons/${c.key}.png'), nowPng!);
+        if (c.old != null) {
+          final oldPng = await _captureIconPng(
+              tester, Icon(c.old!, size: 22, color: const Color(0xFF111111)));
+          expect(oldPng, isNotNull, reason: '${c.label} 曾用 PNG 失败');
+          _writeBytes(File('$_outDir/icons/${c.key}-old.png'), oldPng!);
         }
       }
 
