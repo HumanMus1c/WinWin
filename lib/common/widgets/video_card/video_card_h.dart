@@ -4,9 +4,9 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
+import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
-import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 
 /// 视频卡片 - 水平布局（高性能适配版）。
@@ -112,6 +112,15 @@ class VideoCardH extends StatelessWidget {
                               type: PBadgeType.duration,
                             ),
                           ),
+                        if (showStat)
+                          Positioned(
+                            left: 4,
+                            bottom: 4,
+                            child: VideoCoverStatBadge(
+                              playCount: data.playCount,
+                              danmakuCount: data.danmakuCount,
+                            ),
+                          ),
                         if (progress != null && progress > 0)
                           Positioned(
                             left: 0,
@@ -145,8 +154,6 @@ class VideoCardH extends StatelessWidget {
     final String title = data.title;
     final cs = theme.colorScheme;
     final String ownerName = data.ownerName;
-    final int? playCount = data.playCount;
-    final int? danmakuCount = data.danmakuCount;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -158,9 +165,9 @@ class VideoCardH extends StatelessWidget {
           style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
         ),
         const SizedBox(height: 6),
-        if (ownerName.isNotEmpty)
-          Row(
-            children: [
+        Row(
+          children: [
+            if (ownerName.isNotEmpty) ...[
               AppIcon(AppIcons.profile(), size: 13, color: cs.outline),
               const SizedBox(width: 3),
               Expanded(
@@ -170,44 +177,20 @@ class VideoCardH extends StatelessWidget {
                     ownerName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+                    style:
+                        theme.textTheme.labelSmall?.copyWith(color: cs.outline),
                   ),
                 ),
               ),
-              if (!showStat)
-                VideoPopupMenu(
-                  data: data,
-                  videoItem: videoItem,
-                  onRemove: onRemove,
-                ),
-            ],
-          ),
-        if (showStat) ...[
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              AppIcon(AppIcons.viewCount(), size: 13, color: cs.outline),
-              const SizedBox(width: 3),
-              Text(
-                NumUtils.formatNum(playCount),
-                style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
-              ),
-              const SizedBox(width: 8),
-              AppIcon(AppIcons.danmakuCount(), size: 13, color: cs.outline),
-              const SizedBox(width: 3),
-              Text(
-                NumUtils.formatNum(danmakuCount),
-                style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
-              ),
+            ] else
               const Spacer(),
-              VideoPopupMenu(
-                data: data,
-                videoItem: videoItem,
-                onRemove: onRemove,
-              ),
-            ],
-          ),
-        ],
+            VideoPopupMenu(
+              data: data,
+              videoItem: videoItem,
+              onRemove: onRemove,
+            ),
+          ],
+        ),
       ],
     );
   }

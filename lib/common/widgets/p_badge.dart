@@ -139,6 +139,38 @@ class PBadge extends StatelessWidget {
   }
 }
 
+// ── 封面叠层通用角标容器：黑底半透明白字（时长/统计等共用） ──
+class POverlayBadge extends StatelessWidget {
+  const POverlayBadge({
+    super.key,
+    required this.child,
+    this.padding,
+    this.radius,
+  });
+
+  /// 角标内容（文本或图标+文本组合）。
+  final Widget child;
+
+  /// 自定义内边距（默认与时长角标一致：horizontal 5 / vertical 1）。
+  final EdgeInsetsGeometry? padding;
+
+  /// 自定义圆角（默认取主题 [AppShapes.tiny]）。
+  final Radius? radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.miuix;
+    return Container(
+      padding: padding ?? const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.70),
+        borderRadius: BorderRadius.all(radius ?? shapes.tiny),
+      ),
+      child: child,
+    );
+  }
+}
+
 // ── 时长角标：黑底（65%~80% 不透明）白字 ──
 class _DurationBadge extends StatelessWidget {
   const _DurationBadge({
@@ -155,12 +187,9 @@ class _DurationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: padding ?? const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.70),
-        borderRadius: BorderRadius.all(radius),
-      ),
+    return POverlayBadge(
+      radius: radius,
+      padding: padding,
       child: Text(
         text,
         style: TextStyle(fontSize: fontSize, color: Colors.white, height: 1.2),

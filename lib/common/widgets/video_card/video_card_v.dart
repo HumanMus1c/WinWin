@@ -3,11 +3,10 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
+import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
-import 'package:winwin/utils/num_utils.dart';
-import 'package:winwin/theme/app_icons.dart';
 
 /// 视频卡片 - 垂直布局（高性能适配版）。
 ///
@@ -97,6 +96,14 @@ class VideoCardV extends StatelessWidget {
                               type: PBadgeType.duration,
                             ),
                           ),
+                        Positioned(
+                          left: 7,
+                          bottom: 6,
+                          child: VideoCoverStatBadge(
+                            playCount: data.playCount,
+                            danmakuCount: data.danmakuCount,
+                          ),
+                        ),
                       ],
                     );
                   },
@@ -132,7 +139,6 @@ class VideoCardV extends StatelessWidget {
                 style: const TextStyle(height: 1.38),
               ),
             ),
-            _videoStat(theme, data),
             Row(
               spacing: 2,
               children: [
@@ -192,27 +198,6 @@ class VideoCardV extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _videoStat(ThemeData theme, VideoCardData data) {
-    final Color color = theme.colorScheme.outline.withValues(alpha: 0.8);
-    final TextStyle style = TextStyle(fontSize: 12, color: color);
-    return Row(
-      spacing: 2,
-      children: [
-        AppIcon(AppIcons.viewCount(), size: 13, color: color),
-        Text(
-          NumUtils.formatNum(data.playCount),
-          style: style,
-        ),
-        const SizedBox(width: 4),
-        AppIcon(AppIcons.danmakuCount(), size: 13, color: color),
-        Text(
-          NumUtils.formatNum(data.danmakuCount),
-          style: style,
-        ),
-      ],
     );
   }
 }
