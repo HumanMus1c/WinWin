@@ -2,4 +2,4 @@
 |---|---|---|---|---|---|---|
 | `reply()` | 转发/回复 | ![曾用](icon-sheets/icons/reply-old.png) | ![现用](icon-sheets/icons/reply.png) | `reply` | reply | ✅ |
 | `whisper()` | 评论 | ![曾用](icon-sheets/icons/whisper-old.png) | ![现用](icon-sheets/icons/whisper.png) | `chat_bubble_2` | messages | ✅ |
-| `like()` | 点赞 | ![曾用](icon-sheets/icons/like-old.png) | ![现用](icon-sheets/icons/like.png) | `hand_thumbsup` | — | ⚠️ |
+| `like()` | 点赞 | ![曾用](icon-sheets/icons/like-old.png) | ![现用](icon-sheets/icons/like.png) | `hand_thumbsup` | 内置矢量 | ✅ |

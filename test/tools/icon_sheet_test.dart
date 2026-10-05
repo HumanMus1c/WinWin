@@ -302,6 +302,7 @@ String _standaloneSvg(_GlyphSvg g, {double size = 48}) =>
 String _vectorText(IconData glyph) {
   final vector = miuixVectorForGlyph(glyph);
   if (vector == null) return '—';
+  if (vector.name.startsWith('builtin.')) return '内置矢量';
   final parts = vector.name.split('.');
   final src = parts.first;
   final name = parts.length >= 2 ? parts[1] : vector.name;

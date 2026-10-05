@@ -141,6 +141,90 @@ def export(ttf_path: str, codepoints: dict, out_path: str, header: str) -> None:
     print(f"OK: {len(codepoints)} 字形 (upm={upm}) → {out_path}")
 
 
+# ── 3. 内置矢量补齐（⚠️ 待补 16 语义 → 项目自有 MiuixVectorIcon 数据） ──
+# 轮廓与 Cupertino 回退字形等价（零视觉变更），但统一走矢量管线、脱离字体依赖。
+BUILTIN_WANTED = [
+    "hand_thumbsup", "hand_thumbsup_fill",
+    "hand_thumbsdown", "hand_thumbsdown_fill",
+    "money_dollar_circle", "money_dollar_circle_fill",
+    "person", "person_fill",
+    "fullscreen", "fullscreen_exit",
+    "square", "square_fill", "tv",
+    "speaker_1_fill", "backward_fill",
+    "captions_bubble", "captions_bubble_fill",
+    "bookmark", "bookmark_fill",
+    "circle", "check_mark_circled_solid",
+    "exclamationmark_circle", "play_circle", "calendar", "bell_slash",
+]
+
+
+def expand_hv(d: str) -> str:
+    """规范化为 M/L/Q/C/Z 绝对命令（miuixParsePath 仅支持这些）。
+
+    处理两件事：① H/V 简写展开为 L；② 隐式参数续行（如 ``M x y x y`` →
+    第二对坐标按 L 处理、``L``/``Q``/``C`` 的重复参数组同理）。
+    """
+    toks = d.split()
+    out = []
+    i = 0
+    cx = cy = sx = sy = 0.0
+    n = len(toks)
+
+    def is_num(t: str) -> bool:
+        try:
+            float(t)
+            return True
+        except ValueError:
+            return False
+
+    while i < n:
+        cmd = toks[i]
+        i += 1
+        if cmd in ("M", "L"):
+            first = cmd == "M"
+            while i + 1 < n and is_num(toks[i]):
+                x, y = float(toks[i]), float(toks[i + 1])
+                i += 2
+                if first:
+                    cx, cy = sx, sy = x, y
+                    out += ["M", f"{x:.1f}", f"{y:.1f}"]
+                    first = False
+                else:
+                    cx, cy = x, y
+                    out += ["L", f"{x:.1f}", f"{y:.1f}"]
+        elif cmd == "Q":
+            while i + 3 < n and is_num(toks[i]):
+                x1, y1, x, y = (float(v) for v in toks[i:i + 4])
+                i += 4
+                cx, cy = x, y
+                out += ["Q", f"{x1:.1f}", f"{y1:.1f}", f"{x:.1f}", f"{y:.1f}"]
+        elif cmd == "C":
+            while i + 5 < n and is_num(toks[i]):
+                x1, y1, x2, y2, x, y = (float(v) for v in toks[i:i + 6])
+                i += 6
+                cx, cy = x, y
+                out += ["C", f"{x1:.1f}", f"{y1:.1f}", f"{x2:.1f}",
+                        f"{y2:.1f}", f"{x:.1f}", f"{y:.1f}"]
+        elif cmd == "H":
+            while i < n and is_num(toks[i]):
+                cx = float(toks[i])
+                i += 1
+                out += ["L", f"{cx:.1f}", f"{cy:.1f}"]
+        elif cmd == "V":
+            while i < n and is_num(toks[i]):
+                cy = float(toks[i])
+                i += 1
+                out += ["L", f"{cx:.1f}", f"{cy:.1f}"]
+        elif cmd == "Z":
+            cx, cy = sx, sy
+            out += ["Z"]
+        else:
+            raise ValueError(
+                f"未知命令 {cmd!r} @ {i - 1}/{n}: "
+                f"{toks[max(0, i - 5):i + 5]}")
+    return " ".join(out)
+
+
 def main() -> int:
     # Cupertino
     ttf = glob.glob(os.path.join(
@@ -155,6 +239,44 @@ def main() -> int:
         os.path.join("test", "tools", "cupertino_glyph_paths.g.dart"),
         "// GENERATED — 由 tools/glyph_outline_export.py 生成，勿手改。\n"
         "// 来源：cupertino_icons (MIT, Vladimir Kharlampidi) CupertinoIcons.ttf")
+
+    # 内置矢量补齐（lib/：coords 平移 +150 → viewport 0..1300，避免 tint
+    # saveLayer 边界裁剪；绘制路径与 Cupertino 回退字形等价）。
+    font = TTFont(ttf[0])
+    upm = font["head"].unitsPerEm
+    cmap = font.getBestCmap()
+    glyph_set = font.getGlyphSet()
+    scale = 1000.0 / upm
+    builtin_lines = [
+        "// GENERATED — 由 tools/glyph_outline_export.py 生成，勿手改。",
+        "// 来源：cupertino_icons (MIT, Vladimir Kharlampidi) CupertinoIcons.ttf",
+        "// 用途：⚠️ 待补语义的内置矢量轮廓（等价回退字形，脱离字体依赖）。",
+        "// 坐标：em=1000 平移 +150，y 轴翻转；viewport 1300×1300。",
+        "",
+        "/// Cupertino 码点 → 内置矢量路径（项目自有 MiuixVectorIcon 数据源）。",
+        "const Map<int, String> kBuiltinIconPaths = {",
+    ]
+    for name in BUILTIN_WANTED:
+        cp = parse_codepoints(icons[0], [name])[name]
+        gname = cmap.get(cp)
+        pen = SVGPathPen(glyph_set, ntos=lambda v: f"{v:.1f}")
+        glyph_set[gname].draw(TransformPen(
+            pen, Transform(scale, 0, 0, -scale, 150, 1150)))
+        d = pen.getCommands()
+        if not d:
+            print(f"内置字形 {name} 路径为空", file=sys.stderr)
+            return 1
+        # miuixParsePath 要求命令字母独立成 token（空格分隔）且仅 M/L/Q/C/Z：
+        # fontTools 输出为 "M643.2 717.4Q..." 粘连格式并带 H/V 简写，此处规范化。
+        d = " ".join(re.sub(r"([A-Za-z])", r" \1 ", d).split())
+        d = expand_hv(d)
+        builtin_lines.append(f"  0x{cp:x}: '{d}',")
+    builtin_lines.append("};")
+    builtin_lines.append("")
+    builtin_path = os.path.join("lib", "theme", "app_icons_builtin.g.dart")
+    open(builtin_path, "w", encoding="utf-8", newline="\n").write(
+        "\n".join(builtin_lines))
+    print(f"OK: {len(BUILTIN_WANTED)} 内置字形 → {builtin_path}")
 
     # Material
     m_icons = glob.glob(os.path.join(

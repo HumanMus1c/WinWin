@@ -2,6 +2,8 @@ import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'app_icons_builtin.g.dart';
+
 /// 全局语义图标中心（阶段5d-L4-2 单轨化：原 `*Of(style)` 与 `*(context)` 双分发
 /// 已收敛为无参静态方法，字形恒定 Miuix / Apple 图标集；字形→Miuix 矢量映射
 /// 由 [AppIcon] 统一处理）。
@@ -421,9 +423,33 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
   CupertinoIcons.restart: MiuixIcons.os4.byName('reset')!,
 };
 
-/// 查询字形对应的 Miuix 矢量（无对应返回 null）。
+/// 查询字形对应的 Miuix 矢量（内置三集 → 项目内置补齐，均为 null 时回退字形）。
 MiuixVectorIcon? miuixVectorForGlyph(IconData glyph) =>
-    _miuixVectorByGlyph[glyph];
+    _miuixVectorByGlyph[glyph] ?? _builtinVectorFor(glyph);
+
+final Map<IconData, MiuixVectorIcon> _builtinVectorCache = {};
+
+/// 阶段5e-L5-5：⚠️ 待补语义的**内置矢量**（点赞/点踩/投币/单人剪影/全屏系/
+/// 画中画/音量小/字幕/章节/单选框/错误/播放量/日历/免打扰铃铛等）。
+///
+/// 轮廓与 Cupertino 回退字形等价（零视觉变更），但统一走矢量管线、
+/// 脱离字体依赖；数据由 `tools/glyph_outline_export.py` 预生成至
+/// `app_icons_builtin.g.dart`（viewport 1300×1300，坐标已平移防 tint 裁剪）。
+MiuixVectorIcon? _builtinVectorFor(IconData glyph) {
+  final data = kBuiltinIconPaths[glyph.codePoint];
+  if (data == null) return null;
+  return _builtinVectorCache.putIfAbsent(
+    glyph,
+    () => MiuixVectorIcon(
+      name: 'builtin.${glyph.codePoint.toRadixString(16)}.regular',
+      viewport: const Size(1300, 1300),
+      intrinsicSize: const Size(24, 24),
+      paths: [
+        MiuixVectorPath(build: () => miuixParsePath(data)),
+      ],
+    ),
+  );
+}
 
 /// 全局通用的自适应返回按钮。
 ///

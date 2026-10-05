@@ -236,7 +236,11 @@ void main() {
       expect(miuixVectorForGlyph(CupertinoIcons.house_fill), isNotNull);
       expect(miuixVectorForGlyph(CupertinoIcons.star_fill), isNotNull);
       expect(miuixVectorForGlyph(CupertinoIcons.ellipsis), isNotNull);
-      expect(miuixVectorForGlyph(CupertinoIcons.person), isNull);
+      // 阶段5e-L5-5：⚠️ 待补语义已内置矢量（等价轮廓），person 不再回退。
+      expect(miuixVectorForGlyph(CupertinoIcons.person), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.hand_thumbsup), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.play_circle), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.calendar), isNotNull);
       // 阶段5e-L5-4：OS4 图集补齐（通知/气泡/发送/重播）。
       expect(miuixVectorForGlyph(CupertinoIcons.bell_fill), isNotNull);
       expect(miuixVectorForGlyph(CupertinoIcons.chat_bubble_fill), isNotNull);
@@ -251,13 +255,14 @@ void main() {
           Column(
             children: const [
               AppIcon(CupertinoIcons.settings, size: 20),
-              AppIcon(CupertinoIcons.person, size: 20),
+              // 仍未映射的字形（三集与内置均无）→ 回退 Icon 渲染。
+              AppIcon(CupertinoIcons.alarm, size: 20),
             ],
           ),
         ),
       );
       expect(find.byType(MiuixIcon), findsOneWidget);
-      expect(find.byIcon(CupertinoIcons.person), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.alarm), findsOneWidget);
 
       // 阶段5d-L3/L4-2：映射恒启用（单轨）。
       await tester.pumpWidget(
