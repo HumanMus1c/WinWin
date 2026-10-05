@@ -430,7 +430,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   Widget _buildInlineSettingsButton(ThemeData theme) {
     return Builder(
       builder: (ctx) => IconButton(
-        icon: const Icon(Icons.palette_outlined, size: 20),
+        icon: AppIcon(AppIcons.palette(), size: 20),
         tooltip: '弹幕样式',
         onPressed: () => _showInlineSettings(ctx),
       ),
@@ -504,8 +504,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
             alignment: Alignment.bottomRight,
             child: MiuixOverlayPanel(
               title: '弹幕样式',
-              icon: Icon(
-                Icons.palette_outlined,
+              icon: AppIcon(AppIcons.palette(),
                 size: 16,
                 color: theme.colorScheme.primary,
               ),

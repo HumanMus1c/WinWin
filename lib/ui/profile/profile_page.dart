@@ -547,7 +547,7 @@ class _SettingsGroup extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: Style.lg),
           children: [
             NormalItem(
-              leading: Icon(Icons.settings, color: cs.primary),
+              leading: AppIcon(AppIcons.settings(), color: cs.primary),
               title: '设置',
               getTrailing: trailingChevron,
               borderRadius: BorderRadius.all(r),

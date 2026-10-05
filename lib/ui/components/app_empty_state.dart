@@ -95,7 +95,7 @@ class AppErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return AppEmptyState(
-      icon: const Icon(Icons.error_outline_rounded),
+      icon: AppIcon(AppIcons.error()),
       iconColor: cs.error,
       title: '加载失败',
       subtitle: message,

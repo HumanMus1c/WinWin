@@ -331,7 +331,7 @@ class _RuleListSection extends StatelessWidget {
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: Style.lg),
                         color: Colors.red,
-                        child: const Icon(Icons.delete, color: Colors.white),
+                        child: AppIcon(AppIcons.delete(), color: Colors.white),
                       ),
                       confirmDismiss: (_) async {
                         onDelete(type, r);

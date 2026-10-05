@@ -8,6 +8,7 @@ import 'package:winwin/models/common/cdn_type.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
 import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 音视频设置项列表。
 ///
@@ -127,7 +128,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: '视频同步模式',
-        leading: const Icon(Icons.sync),
+        leading: AppIcon(AppIcons.refresh()),
         getSubtitle: () => '当前模式：${Pref.videoSync}',
         onTap: (context, setState) async {
           final res = await showSelectDialog<String>(
@@ -191,9 +192,9 @@ List<SettingsModel> get videoSettings => [
           }
         },
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '显示在线人数',
-        leading: Icon(Icons.people_outline),
+        leading: AppIcon(AppIcons.people()),
         setKey: SettingBoxKey.enableOnlineTotal,
         defaultVal: false,
       ),

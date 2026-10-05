@@ -443,7 +443,7 @@ class AppSearchField extends StatelessWidget {
       hint: hint,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
-      prefix: Icon(Icons.search, color: cs.onSurfaceVariant, size: 20),
+      prefix: AppIcon(AppIcons.search(), color: cs.onSurfaceVariant, size: 20),
       suffix: controller == null
           ? null
           : ValueListenableBuilder<TextEditingValue>(

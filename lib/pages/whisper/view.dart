@@ -14,6 +14,7 @@ import 'package:winwin/services/msg_unread_service.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/hover_container.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 消息页（Phase 7.7.3）。
 ///
@@ -139,7 +140,7 @@ class _WhisperPageState extends State<WhisperPage>
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _EntryItem(
-              icon: Icon(Icons.reply_rounded),
+              icon: AppIcon(AppIcons.reply()),
               label: '回复我的',
               count: _replyUnread,
               color: iosBlue,
@@ -159,7 +160,7 @@ class _WhisperPageState extends State<WhisperPage>
               },
             ),
             _EntryItem(
-              icon: Icon(Icons.favorite_outline),
+              icon: AppIcon(AppIcons.favorite(active: false)),
               label: '点赞我的',
               count: _likeUnread,
               color: iosPink,

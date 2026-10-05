@@ -162,7 +162,7 @@ class _DownloadPageState extends State<DownloadPage> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.folder_outlined, color: biliPink, size: 22),
+                            AppIcon(AppIcons.folder(), color: biliPink, size: 22),
                             const SizedBox(width: 8),
                             Text(
                               '缓存目录与空间',

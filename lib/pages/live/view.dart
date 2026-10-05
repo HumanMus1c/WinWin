@@ -12,6 +12,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 直播二级分类导航条目。
 class LiveCategoryTab {
@@ -692,11 +693,10 @@ class _LiveCard extends StatelessWidget {
                             color: Colors.red.withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.fiber_manual_record,
+                              AppIcon(AppIcons.recording(),
                                 size: 10,
                                 color: Colors.white,
                               ),
@@ -729,8 +729,7 @@ class _LiveCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
-                                Icons.people_alt_outlined,
+                              AppIcon(AppIcons.people(),
                                 size: 10,
                                 color: Colors.white,
                               ),

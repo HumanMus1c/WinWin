@@ -1565,7 +1565,7 @@ class _DynCard extends StatelessWidget {
       child: Row(
         spacing: 6,
         children: [
-          Icon(Icons.info_outline, size: 16, color: cs.outline),
+          AppIcon(AppIcons.info(), size: 16, color: cs.outline),
           Expanded(
             child: Text(
               none.tips ?? '动态内容已失效',

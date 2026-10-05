@@ -845,8 +845,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                     : const SizedBox.shrink(),
               ),
               IconButton(
-                icon: Icon(
-                  Icons.info_outline,
+                icon: AppIcon(AppIcons.info(),
                   color: overVideo ? Colors.white : barContrast.contentColor,
                   shadows: overVideo ? ContrastStyle.glyphShadows : null,
                 ),
@@ -2134,7 +2133,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       Row(
                         children: [
                           if (widget.detail.rating != null && widget.detail.rating!.score > 0) ...[
-                            const Icon(Icons.star_rounded, color: Colors.amber, size: 15),
+                            AppIcon(AppIcons.favorite(active: true), color: Colors.amber, size: 15),
                             const SizedBox(width: 2),
                             Text(
                               widget.detail.rating!.score.toStringAsFixed(1),

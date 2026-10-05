@@ -192,8 +192,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.people_outline,
+          AppIcon(AppIcons.people(),
             size: 48,
             color: theme.colorScheme.outline,
           ),

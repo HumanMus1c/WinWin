@@ -164,7 +164,7 @@ class _ArticlePageState extends State<ArticlePage> {
             onPressed: _loadArticle,
           ),
           IconButton(
-            icon: const Icon(Icons.copy),
+            icon: AppIcon(AppIcons.copy()),
             tooltip: '复制专栏链接',
             onPressed: () {
               Clipboard.setData(

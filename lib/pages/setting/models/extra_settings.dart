@@ -12,7 +12,7 @@ import 'package:winwin/theme/app_icons.dart';
 /// 移植自 PiliPlus 的 `extraSettings`，仅保留桌面端适用项。
 List<SettingsModel> get extraSettings => [
       // 网络设置
-      const SwitchModel(
+      SwitchModel(
         title: '启用 HTTP/2',
         subtitle: '使用 HTTP/2 协议，可能提升连接速度',
         leading: Icon(Icons.http),
@@ -72,7 +72,7 @@ List<SettingsModel> get extraSettings => [
         setKey: SettingBoxKey.enableSystemProxy,
         defaultVal: false,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '禁用 SSL 证书验证',
         subtitle: '⚠️ 不安全，仅在调试时使用',
         leading: Icon(Icons.security),
@@ -90,9 +90,9 @@ List<SettingsModel> get extraSettings => [
       ),
 
       // 弹幕设置
-      const SwitchModel(
+      SwitchModel(
         title: '显示会员彩色弹幕',
-        leading: Icon(Icons.palette_outlined),
+        leading: AppIcon(AppIcons.palette()),
         setKey: SettingBoxKey.showVipDanmaku,
         defaultVal: true,
       ),

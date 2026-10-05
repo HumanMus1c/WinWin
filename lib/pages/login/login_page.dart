@@ -629,7 +629,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.phone, color: cs.onSurfaceVariant),
+                          AppIcon(AppIcons.call(), color: cs.onSurfaceVariant),
                           const SizedBox(width: 4),
                           Text('+$_countryId'),
                           const Icon(Icons.arrow_drop_down),
@@ -654,7 +654,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.send),
+                  : AppIcon(AppIcons.send()),
               label: Text(
                 _cooldown > 0 ? '等待$_cooldown秒' : '获取验证码',
               ),

@@ -849,7 +849,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                         onPressed: _initLive,
                       ),
                       IconButton(
-                        icon: const Icon(Icons.copy),
+                        icon: AppIcon(AppIcons.copy()),
                         tooltip: '复制直播间链接',
                         onPressed: () {
                           Clipboard.setData(
@@ -1104,7 +1104,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               ),
             const SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.fullscreen_exit, color: Colors.white),
+              icon: AppIcon(AppIcons.fullscreen(active: true), color: Colors.white),
               tooltip: '退出全屏',
               onPressed: _handleEscape,
             ),
@@ -1290,8 +1290,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.fiber_manual_record, size: 8, color: Colors.white),
+                children: [
+                  AppIcon(AppIcons.recording(), size: 8, color: Colors.white),
                   SizedBox(width: 3),
                   Text(
                     'LIVE',
@@ -2113,7 +2113,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   ),
                   if (_danmakuInputCtrl.text.isNotEmpty)
                     IconButton(
-                      icon: const Icon(Icons.clear, size: 16),
+                      icon: AppIcon(AppIcons.clear(), size: 16),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(
                         minWidth: 24,
@@ -2156,12 +2156,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                         color: Colors.white,
                       ),
                     )
-                  : const Row(
+                  : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text('发送', style: TextStyle(fontSize: 13)),
                         SizedBox(width: 4),
-                        Icon(Icons.send_rounded, size: 14),
+                        AppIcon(AppIcons.send(), size: 14),
                       ],
                     ),
             ),

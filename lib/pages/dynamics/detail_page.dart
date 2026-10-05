@@ -243,7 +243,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
             onPressed: _loadDetail,
           ),
           IconButton(
-            icon: const Icon(Icons.copy),
+            icon: AppIcon(AppIcons.copy()),
             tooltip: '复制动态链接',
             onPressed: () {
               Clipboard.setData(

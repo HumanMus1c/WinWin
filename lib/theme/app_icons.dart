@@ -251,6 +251,52 @@ abstract final class AppIcons {
   /// 日历 / 发布日期
 
   static IconData calendar() => CupertinoIcons.calendar;
+
+  // ---------------------------------------------------------------------------
+  // 8. 阶段5e-L5-2 新增语义（B 类字形归一：裸 Icons 直参收敛）
+  // ---------------------------------------------------------------------------
+
+  /// 文件夹 / 收藏夹
+  static IconData folder() => CupertinoIcons.folder;
+
+  /// 复制
+  static IconData copy() => CupertinoIcons.doc_on_doc;
+
+  /// 链接
+  static IconData link() => CupertinoIcons.link;
+
+  /// 信息 / 说明
+  static IconData info() => CupertinoIcons.info;
+
+  /// 发送
+  static IconData send() => CupertinoIcons.paperplane;
+
+  /// 图片 / 相册
+  static IconData image() => CupertinoIcons.photo;
+
+  /// 用户群组
+  static IconData people() => CupertinoIcons.person_2;
+
+  /// 邮件 / 私信
+  static IconData mail() => CupertinoIcons.mail;
+
+  /// 电话 / 客服
+  static IconData call() => CupertinoIcons.phone;
+
+  /// 定位 / 位置
+  static IconData location() => CupertinoIcons.location;
+
+  /// 定时 / 计时
+  static IconData timer() => CupertinoIcons.timer;
+
+  /// 录制中（实心圆点）
+  static IconData recording() => CupertinoIcons.circle_fill;
+
+  /// 撤销
+  static IconData undo() => CupertinoIcons.arrow_uturn_left;
+
+  /// 主题 / 调色
+  static IconData palette() => CupertinoIcons.paintbrush;
 }
 
 /// 自适应图标部件：Miuix 风格下将具备 Miuix 矢量对应的字形升级为
@@ -329,6 +375,22 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
   CupertinoIcons.pin_fill: MiuixIcons.extended.byName('pin')!,
   CupertinoIcons.pin_slash_fill: MiuixIcons.extended.byName('unpin')!,
   CupertinoIcons.slash_circle: MiuixIcons.extended.byName('blocklist')!,
+  // ── 阶段5e-L5-2 新增语义（B 类字形归一） ──
+  CupertinoIcons.folder: MiuixIcons.extended.byName('folder')!,
+  CupertinoIcons.folder_open: MiuixIcons.extended.byName('folder')!,
+  CupertinoIcons.doc_on_doc: MiuixIcons.extended.byName('copy')!,
+  CupertinoIcons.link: MiuixIcons.extended.byName('link')!,
+  CupertinoIcons.info: MiuixIcons.extended.byName('info')!,
+  CupertinoIcons.paperplane: MiuixIcons.extended.byName('send')!,
+  CupertinoIcons.photo: MiuixIcons.extended.byName('image')!,
+  CupertinoIcons.person_2: MiuixIcons.extended.byName('contacts')!,
+  CupertinoIcons.mail: MiuixIcons.extended.byName('email')!,
+  CupertinoIcons.phone: MiuixIcons.extended.byName('phone')!,
+  CupertinoIcons.location: MiuixIcons.extended.byName('location')!,
+  CupertinoIcons.timer: MiuixIcons.extended.byName('timer')!,
+  CupertinoIcons.circle_fill: MiuixIcons.extended.byName('recording')!,
+  CupertinoIcons.arrow_uturn_left: MiuixIcons.extended.byName('undo')!,
+  CupertinoIcons.paintbrush: MiuixIcons.extended.byName('theme')!,
 };
 
 /// 查询字形对应的 Miuix 矢量（无对应返回 null）。

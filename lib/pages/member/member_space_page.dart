@@ -905,7 +905,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     _copyToClipboard('UID: ${widget.mid}', '用户已选择');
                   },
                   tooltip: '私信',
-                  icon: const Icon(Icons.mail_outline, size: 20),
+                  icon: AppIcon(AppIcons.mail(), size: 20),
                 ),
                 const SizedBox(width: Style.sm),
                 FilledButton.tonal(
@@ -1127,9 +1127,9 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 borderRadius: BorderRadius.circular(Style.radiusSm),
                 border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.block, size: 16, color: Colors.red),
+                  AppIcon(AppIcons.block(), size: 16, color: Colors.red),
                   SizedBox(width: Style.sm),
                   Text('该账号当前处于封禁状态', style: TextStyle(color: Colors.red, fontSize: 12)),
                 ],
@@ -2597,10 +2597,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                           color: Colors.black.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.lock, size: 10, color: Colors.white),
+                            AppIcon(AppIcons.lock(), size: 10, color: Colors.white),
                             SizedBox(width: 2),
                             Text('私密', style: TextStyle(color: Colors.white, fontSize: 10)),
                           ],

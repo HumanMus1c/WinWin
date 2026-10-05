@@ -1103,8 +1103,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         ),
                       ),
                       const SizedBox(width: 2),
-                      ContrastIcon(
-                        Icons.chevron_right_rounded,
+                      ContrastIcon(AppIcons.chevronForward(),
                         size: 14,
                         color: _chapterPanelOpen ? biliBlue : Colors.white54,
                         shadows: ContrastStyle.glyphShadows,

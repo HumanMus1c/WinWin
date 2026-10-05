@@ -225,7 +225,7 @@ class ProfileFavSectionState extends State<ProfileFavSection> {
           )
         else if (_folders.isEmpty)
           ProfileEmptyCard(
-            icon: Icon(Icons.folder_open_outlined),
+            icon: AppIcon(AppIcons.folder()),
             message: '暂无收藏夹',
             actionText: '前往收藏夹 >',
             onTap: () => _openFavPage(context),

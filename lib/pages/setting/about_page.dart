@@ -40,8 +40,7 @@ class AboutPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(Style.radiusLg),
               color: theme.colorScheme.primaryContainer,
             ),
-            child: Icon(
-              Icons.play_circle_filled,
+            child: AppIcon(AppIcons.play(active: true),
               size: 48,
               color: theme.colorScheme.primary,
             ),

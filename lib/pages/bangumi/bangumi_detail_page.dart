@@ -752,7 +752,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
               if (detail.rating != null && detail.rating!.score > 0)
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                    AppIcon(AppIcons.favorite(active: true), color: Colors.amber, size: 20),
                     const SizedBox(width: 4),
                     Text(
                       detail.rating!.score.toStringAsFixed(1),
@@ -1031,7 +1031,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                 // 精准跳转
                 TextButton.icon(
                   onPressed: () => _showJumpDialog(all),
-                  icon: const Icon(Icons.near_me_outlined, size: 15),
+                  icon: AppIcon(AppIcons.location(), size: 15),
                   label: const Text('跳转'),
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,

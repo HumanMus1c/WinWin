@@ -17,6 +17,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 聊天详情入口（阶段 D）。
 ///
@@ -203,7 +204,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.more_vert),
+            icon: AppIcon(AppIcons.more()),
             tooltip: '会话设置',
             onPressed: () => showSessionSettingsPage(
               context,
@@ -318,7 +319,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Icon(Icons.send, size: 20),
+                  : AppIcon(AppIcons.send(), size: 20),
             ),
           ],
         ),

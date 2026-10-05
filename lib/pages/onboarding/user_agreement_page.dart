@@ -3,6 +3,7 @@ import 'dart:io' show exit;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 用户协议门禁页（移植自 BiliPai v0.2.3-beta.3 `OnboardingScreen`）。
 ///
@@ -54,8 +55,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ── 顶部：品牌 + 标题 ──
-                  Icon(
-                    Icons.play_circle_fill_rounded,
+                  AppIcon(AppIcons.play(active: true),
                     size: 56,
                     color: cs.primary,
                   ),

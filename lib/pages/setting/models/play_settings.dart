@@ -15,35 +15,35 @@ List<SettingsModel> get playSettings => [
         setKey: SettingBoxKey.enableShowDanmaku,
         defaultVal: true,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '自动播放',
         subtitle: '进入详情页自动播放',
         leading: Icon(Icons.motion_photos_auto_outlined),
         setKey: SettingBoxKey.autoPlayEnable,
         defaultVal: false,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '自动进入全屏',
         subtitle: '进入详情页自动全屏播放',
-        leading: Icon(Icons.fullscreen),
+        leading: AppIcon(AppIcons.fullscreen(active: false)),
         setKey: SettingBoxKey.enableAutoEnter,
         defaultVal: false,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '自动退出全屏',
         subtitle: '视频结束自动退出全屏',
-        leading: Icon(Icons.fullscreen_exit),
+        leading: AppIcon(AppIcons.fullscreen(active: true)),
         setKey: SettingBoxKey.enableAutoExit,
         defaultVal: true,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '后台播放',
         subtitle: '窗口最小化时继续播放音频',
-        leading: Icon(Icons.picture_in_picture_alt_outlined),
+        leading: AppIcon(AppIcons.pip()),
         setKey: SettingBoxKey.enableBackgroundPlay,
         defaultVal: true,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '双击快退/快进',
         subtitle: '左侧双击快退/右侧双击快进，关闭则双击均为暂停/播放',
         leading: Icon(Icons.touch_app_outlined),
@@ -56,7 +56,7 @@ List<SettingsModel> get playSettings => [
         setKey: SettingBoxKey.showFsLockBtn,
         defaultVal: true,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '全屏显示截图按钮',
         leading: Icon(Icons.photo_camera_outlined),
         setKey: SettingBoxKey.showFsScreenshotBtn,
@@ -69,17 +69,17 @@ List<SettingsModel> get playSettings => [
         setKey: SettingBoxKey.keyboardControl,
         defaultVal: true,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '暂停时最小化',
         subtitle: '窗口最小化时自动暂停播放',
-        leading: Icon(Icons.pause_circle_outline),
+        leading: AppIcon(AppIcons.pause(active: false)),
         setKey: SettingBoxKey.pauseOnMinimize,
         defaultVal: false,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '播放器折叠时自动暂停',
         subtitle: '详情页滚动使播放器收缩为小窗时自动暂停，展开后自动恢复',
-        leading: Icon(Icons.picture_in_picture_outlined),
+        leading: AppIcon(AppIcons.pip()),
         setKey: SettingBoxKey.collapseAutoPause,
         defaultVal: true,
       ),

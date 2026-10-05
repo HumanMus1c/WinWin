@@ -5,6 +5,7 @@ import 'package:winwin/pages/setting/common_setting.dart';
 import 'package:winwin/pages/setting/setting_type.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 设置主页面 — 桌面端双栏布局。
 ///
@@ -22,7 +23,7 @@ class SettingPage extends StatefulWidget {
 class _SettingPageState extends State<SettingPage> {
   SettingType _type = SettingType.styleSetting;
 
-  static const List<_SettingEntry> _items = [
+  static final List<_SettingEntry> _items = [
     _SettingEntry(
       type: SettingType.styleSetting,
       subtitle: '主题模式、字重、界面缩放等',
@@ -45,7 +46,7 @@ class _SettingPageState extends State<SettingPage> {
     ),
     _SettingEntry(
       type: SettingType.about,
-      icon: Icon(Icons.info_outline),
+      icon: AppIcon(AppIcons.info()),
     ),
   ];
 

@@ -73,7 +73,7 @@ List<VideoCustomAction> buildVideoCardActions({
     actions.add(
       VideoCustomAction(
         title: '复制视频链接',
-        icon: const Icon(Icons.link, size: 16),
+        icon: AppIcon(AppIcons.link(), size: 16),
         onTap: () {
           final url = 'https://www.bilibili.com/video/$bvid';
           Utils.copyText(url);
@@ -133,7 +133,7 @@ List<VideoCustomAction> buildVideoCardActions({
     actions.add(
       VideoCustomAction(
         title: '查看/保存封面',
-        icon: const Icon(Icons.image_outlined, size: 16),
+        icon: AppIcon(AppIcons.image(), size: 16),
         onTap: () {
           showVideoCoverDialog(
             context: context,
@@ -199,7 +199,7 @@ List<VideoCustomAction> buildVideoCardActions({
     actions.add(
       VideoCustomAction(
         title: '拉黑 UP 主：${ownerName.isNotEmpty ? ownerName : mid}',
-        icon: const Icon(Icons.block_outlined, size: 16),
+        icon: AppIcon(AppIcons.block(), size: 16),
         onTap: () {
           showDialog(
             context: context,
@@ -390,8 +390,7 @@ class _MiuixContextMenuOverlayState extends State<_MiuixContextMenuOverlay>
         alignment: Alignment.topLeft,
         child: MiuixOverlayPanel(
           title: '更多操作',
-          icon: Icon(
-            Icons.more_horiz,
+          icon: AppIcon(AppIcons.more(),
             size: 16,
             color: theme.colorScheme.primary,
           ),
@@ -551,7 +550,7 @@ void showVideoCoverDialog({
                       children: [
                         // 复制封面链接
                         OutlinedButton.icon(
-                          icon: const Icon(Icons.link, size: 16),
+                          icon: AppIcon(AppIcons.link(), size: 16),
                           label: const Text('复制链接'),
                           style: OutlinedButton.styleFrom(
                             visualDensity: VisualDensity.compact,
@@ -564,7 +563,7 @@ void showVideoCoverDialog({
                         const SizedBox(width: 8),
                         // 另存为图片文件
                         FilledButton.tonalIcon(
-                          icon: const Icon(Icons.download, size: 16),
+                          icon: AppIcon(AppIcons.download(), size: 16),
                           label: const Text('保存封面'),
                           style: FilledButton.styleFrom(
                             visualDensity: VisualDensity.compact,
@@ -694,7 +693,7 @@ void _showDislikeReasonsDialog({
           const Divider(),
           Center(
             child: TextButton.icon(
-              icon: const Icon(Icons.undo, size: 16),
+              icon: AppIcon(AppIcons.undo(), size: 16),
               label: const Text('撤销不感兴趣'),
               style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
               onPressed: () async {
