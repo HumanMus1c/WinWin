@@ -362,11 +362,12 @@ String _tableMarkdown(_Section s) {
         'Cupertino 字形 | 矢量 | 状态 |\n')
     ..write('|---|---|---|---|---|---|---|\n');
   for (final c in s.cells) {
-    // 用 Markdown 图片语法 + PNG（SGV 在部分编辑器预览中不渲染）；
-    // PNG 画布即 22px，无需 width 属性即可精确控制行内尺寸。
-    final oldImg =
-        c.old == null ? '—' : '![曾用](icons/${c.key}-old.png)';
-    final nowImg = '![现用](icons/${c.key}.png)';
+    // 图片引用为「文档相对路径」（docs/ 下的总表直接可用）；
+    // PNG = 编辑器预览全兼容版；SVG 全真矢量版同 key 并列存放。
+    final oldImg = c.old == null
+        ? '—'
+        : '![曾用](icon-sheets/icons/${c.key}-old.png)';
+    final nowImg = '![现用](icon-sheets/icons/${c.key}.png)';
     final status = miuixVectorForGlyph(c.glyph) != null ? '✅' : '⚠️';
     sb.write('| `${c.label}` | ${c.usage} | $oldImg | $nowImg | '
         '${c.glyphText.isEmpty ? '—' : '`${c.glyphText}`'} | '
