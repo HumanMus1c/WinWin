@@ -152,6 +152,7 @@ BUILTIN_WANTED = [
     "square", "square_fill", "tv",
     "speaker_1_fill", "backward_fill",
     "captions_bubble", "captions_bubble_fill",
+    "chat_bubble", "chat_bubble_fill",
     "bookmark", "bookmark_fill",
     "circle", "check_mark_circled_solid",
     "exclamationmark_circle", "play_circle", "calendar", "bell_slash",

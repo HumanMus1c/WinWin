@@ -14,8 +14,8 @@
 | `fullscreen(on)` | 退出全屏 | ![曾用](icon-sheets/icons/fullscreen-on-old.png) | ![现用](icon-sheets/icons/fullscreen-on.png) | `fullscreen_exit` | 内置矢量（新美术） | ✅ |
 | `inAppFullscreen()` | 网页全屏 | ![曾用](icon-sheets/icons/inAppFullscreen-old.png) | ![现用](icon-sheets/icons/inAppFullscreen.png) | `square` | 内置矢量（新美术） | ✅ |
 | `pip()` | 画中画 | ![曾用](icon-sheets/icons/pip-old.png) | ![现用](icon-sheets/icons/pip.png) | `tv` | 内置矢量（新美术） | ✅ |
-| `danmaku()` | 弹幕开关 | ![曾用](icon-sheets/icons/danmaku-old.png) | ![现用](icon-sheets/icons/danmaku.png) | `chat_bubble` | messages（OS4） | ✅ |
-| `danmaku(on)` | 弹幕开关（开） | ![曾用](icon-sheets/icons/danmaku-on-old.png) | ![现用](icon-sheets/icons/danmaku-on.png) | `chat_bubble_fill` | messages（OS4） | ✅ |
+| `danmaku()` | 弹幕开关 | ![曾用](icon-sheets/icons/danmaku-old.png) | ![现用](icon-sheets/icons/danmaku.png) | `chat_bubble` | 内置矢量（新美术） | ✅ |
+| `danmaku(on)` | 弹幕开关（开） | ![曾用](icon-sheets/icons/danmaku-on-old.png) | ![现用](icon-sheets/icons/danmaku-on.png) | `chat_bubble_fill` | 内置矢量（新美术） | ✅ |
 | `sendDanmaku()` | 发送弹幕 | ![曾用](icon-sheets/icons/sendDanmaku-old.png) | ![现用](icon-sheets/icons/sendDanmaku.png) | `bubble_left` | send（OS4） | ✅ |
 | `danmakuTune()` | 弹幕设置 | ![曾用](icon-sheets/icons/danmakuTune-old.png) | ![现用](icon-sheets/icons/danmakuTune.png) | `slider_horizontal_3` | tune | ✅ |
 | `subtitle()` | 字幕开关 | ![曾用](icon-sheets/icons/subtitle-old.png) | ![现用](icon-sheets/icons/subtitle.png) | `captions_bubble` | 内置矢量（新美术） | ✅ |

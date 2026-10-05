@@ -16,6 +16,8 @@
 | `fastRewind()` | ![新美术](icon-sheets/icons/fastRewind.png) | ![等价](icon-sheets/icons/fastRewind-equiv.png) | 快退 |
 | `subtitle()` | ![新美术](icon-sheets/icons/subtitle.png) | ![等价](icon-sheets/icons/subtitle-equiv.png) | 字幕 |
 | `subtitle(on)` | ![新美术](icon-sheets/icons/subtitle-on.png) | ![等价](icon-sheets/icons/subtitle-on-equiv.png) | 字幕（开） |
+| `danmaku()` | ![新美术](icon-sheets/icons/danmaku.png) | ![等价](icon-sheets/icons/danmaku-equiv.png) | 弹幕开关 |
+| `danmaku(on)` | ![新美术](icon-sheets/icons/danmaku-on.png) | ![等价](icon-sheets/icons/danmaku-on-equiv.png) | 弹幕开关（开） |
 | `chapter()` | ![新美术](icon-sheets/icons/chapter.png) | ![等价](icon-sheets/icons/chapter-equiv.png) | 章节 |
 | `chapter(on)` | ![新美术](icon-sheets/icons/chapter-on.png) | ![等价](icon-sheets/icons/chapter-on-equiv.png) | 章节（展开） |
 | `radio(off)` | ![新美术](icon-sheets/icons/radio-off.png) | ![等价](icon-sheets/icons/radio-off-equiv.png) | 单选框 |

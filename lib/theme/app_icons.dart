@@ -424,19 +424,15 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
   CupertinoIcons.restart: MiuixIcons.os4.byName('reset')!,
 };
 
-/// 查询字形对应的 Miuix 矢量（内置三集 → 项目内置补齐，均为 null 时回退字形）。
+/// 查询字形对应的 Miuix 矢量。
+///
+/// 优先级：**新美术**（L5-6）→ 三集映射 → 内置等价轮廓（L5-5）→ null（回退字形）。
 MiuixVectorIcon? miuixVectorForGlyph(IconData glyph) =>
-    _miuixVectorByGlyph[glyph] ?? _builtinVectorFor(glyph);
+    miuixArtIconFor(glyph) ??
+    _miuixVectorByGlyph[glyph] ??
+    miuixEquivalenceIconFor(glyph);
 
 final Map<IconData, MiuixVectorIcon> _builtinVectorCache = {};
-
-/// 阶段5e-L5-5/L5-6：⚠️ 待补语义的内置矢量。
-///
-/// **美术优先**：`app_icons_art.dart` 的 Miuix 风格自绘（L5-6）；
-/// **等价轮廓兜底**：`app_icons_builtin.g.dart`（L5-5，忠实回退字形，
-/// 供美术候选对照，零字体依赖）。
-MiuixVectorIcon? _builtinVectorFor(IconData glyph) =>
-    miuixArtIconFor(glyph) ?? miuixEquivalenceIconFor(glyph);
 
 /// 内置**等价轮廓**（L5-5 数据；美术候选对照用）。
 MiuixVectorIcon? miuixEquivalenceIconFor(IconData glyph) {

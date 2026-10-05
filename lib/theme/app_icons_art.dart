@@ -34,9 +34,10 @@ MiuixVectorPath _stroke(ui.Path Function() build, [double width = 1.8]) =>
 ui.Path Function() _evenOdd(ui.Path Function() build) =>
     () => build()..fillType = ui.PathFillType.evenOdd;
 
-// ── 点赞 / 点踩（点踩 = 同形纵向镜像） ─────────────────────────────
+// ── 点赞 / 点踩（off=描边 / on=实心；点踩 = 同形纵向镜像） ──────────
 
-ui.Path _thumbPath() {
+/// 实心拇指（on 态）。
+ui.Path _thumbFilledPath() {
   final p = ui.Path();
   // 袖口
   p.addRRect(ui.RRect.fromRectAndRadius(
@@ -57,21 +58,54 @@ ui.Path _thumbPath() {
   return p;
 }
 
-MiuixVectorIcon _thumbsUp() => _icon('thumbUp', [_fill(_thumbPath)]);
+/// 描边拇指（off 态）：袖口 + 手掌单轮廓，避免描边叠缝。
+ui.Path _thumbOutlinePath() {
+  final p = ui.Path();
+  p.addRRect(ui.RRect.fromRectAndRadius(
+      const Rect.fromLTRB(2.6, 10.9, 5.2, 20.5), const Radius.circular(0.9)));
+  p.moveTo(6.6, 20.5);
+  p.lineTo(6.6, 11.1);
+  p.quadraticBezierTo(8.7, 9.2, 9.9, 5.6);
+  p.quadraticBezierTo(10.5, 4.1, 11.6, 4.4);
+  p.quadraticBezierTo(12.7, 4.7, 12.6, 6.3);
+  p.quadraticBezierTo(12.5, 7.6, 12.1, 9.0);
+  p.quadraticBezierTo(12.0, 9.6, 12.6, 9.6);
+  p.lineTo(16.3, 9.6);
+  p.quadraticBezierTo(18.2, 9.6, 17.9, 11.4);
+  p.lineTo(16.9, 18.7);
+  p.quadraticBezierTo(16.5, 20.5, 14.6, 20.5);
+  p.close();
+  return p;
+}
 
-MiuixVectorIcon _thumbsDown() => _icon('thumbDown', [
-      MiuixVectorPath(
-        build: _thumbPath,
-        style: PaintingStyle.fill,
-        groupTransform: Matrix4.identity()
-          ..translateByDouble(0, 24, 0, 1)
-          ..scaleByDouble(1, -1, 1, 1),
-      ),
-    ]);
+/// 纵向镜像（点踩 = 点赞镜像）。
+MiuixVectorPath _mirrorV(MiuixVectorPath base) => MiuixVectorPath(
+      build: base.build,
+      style: base.style,
+      color: base.color,
+      alpha: base.alpha,
+      strokeWidth: base.strokeWidth,
+      strokeCap: base.strokeCap,
+      groupTransform: Matrix4.identity()
+        ..translateByDouble(0, 24, 0, 1)
+        ..scaleByDouble(1, -1, 1, 1),
+    );
 
-// ── 投币（¥ 硬币） ───────────────────────────────────────────────
+MiuixVectorIcon _thumbsUpOutline() =>
+    _icon('thumbUp', [_stroke(_thumbOutlinePath, 1.5)]);
 
-MiuixVectorIcon _coin() => _icon('coin', [
+MiuixVectorIcon _thumbsUpFilled() =>
+    _icon('thumbUpFill', [_fill(_thumbFilledPath)]);
+
+MiuixVectorIcon _thumbsDownOutline() =>
+    _icon('thumbDown', [_mirrorV(_stroke(_thumbOutlinePath, 1.5))]);
+
+MiuixVectorIcon _thumbsDownFilled() =>
+    _icon('thumbDownFill', [_mirrorV(_fill(_thumbFilledPath))]);
+
+// ── 投币（off=描边 ¥ 硬币 / on=实心 ¥ 硬币，布尔差集挖空） ─────────
+
+MiuixVectorIcon _coinOutline() => _icon('coin', [
       _stroke(() => ui.Path()
         ..addOval(const Rect.fromLTRB(4.2, 4.2, 19.8, 19.8)), 1.9),
       _stroke(() {
@@ -104,6 +138,44 @@ MiuixVectorIcon _coin() => _icon('coin', [
           ..lineTo(14.5, 14.5);
         return p;
       }, 1.7),
+    ]);
+
+MiuixVectorIcon _coinFilled() => _icon('coinFill', [
+      _fill(() {
+        final circle =
+            ui.Path()..addOval(const Rect.fromLTRB(4.0, 4.0, 20.0, 20.0));
+        // ¥ 挖空：两斜臂多边形 + 竖杆 + 两横杆（先 union 再 difference，
+        // 避免 even-odd 交叠返实）。
+        final armL = ui.Path()
+          ..moveTo(11.4, 7.2)
+          ..lineTo(12.0, 7.95)
+          ..lineTo(10.55, 10.4)
+          ..lineTo(9.95, 10.4)
+          ..close();
+        final armR = ui.Path()
+          ..moveTo(12.6, 7.2)
+          ..lineTo(12.0, 7.95)
+          ..lineTo(13.45, 10.4)
+          ..lineTo(14.05, 10.4)
+          ..close();
+        final stem = ui.Path()
+          ..addRRect(ui.RRect.fromRectAndRadius(
+              const Rect.fromLTRB(11.32, 10.4, 12.68, 16.1),
+              const Radius.circular(0.68)));
+        final bar1 = ui.Path()
+          ..addRRect(ui.RRect.fromRectAndRadius(
+              const Rect.fromLTRB(9.4, 12.0, 14.6, 13.1),
+              const Radius.circular(0.55)));
+        final bar2 = ui.Path()
+          ..addRRect(ui.RRect.fromRectAndRadius(
+              const Rect.fromLTRB(9.4, 13.8, 14.6, 14.9),
+              const Radius.circular(0.55)));
+        var yen = armL;
+        for (final part in [armR, stem, bar1, bar2]) {
+          yen = ui.Path.combine(ui.PathOperation.union, yen, part);
+        }
+        return ui.Path.combine(ui.PathOperation.difference, circle, yen);
+      }),
     ]);
 
 // ── 单人剪影（描边 / 实心） ───────────────────────────────────────
@@ -458,18 +530,64 @@ MiuixVectorIcon _bellSlash() => _icon('bellSlash', [
       }, 2.0),
     ]);
 
+// ── 弹幕开关（off=描边气泡 / on=实心气泡挖空三点） ────────────────
+
+ui.Path _bubbleBodyPath() {
+  final p = ui.Path();
+  p.moveTo(6.6, 4.6);
+  p.lineTo(17.4, 4.6);
+  p.quadraticBezierTo(21.0, 4.6, 21.0, 8.2);
+  p.lineTo(21.0, 13.2);
+  p.quadraticBezierTo(21.0, 16.8, 17.4, 16.8);
+  p.lineTo(9.9, 16.8);
+  p.lineTo(7.0, 20.3);
+  p.quadraticBezierTo(6.6, 20.75, 6.6, 20.0);
+  p.lineTo(6.6, 16.8);
+  p.quadraticBezierTo(3.0, 16.8, 3.0, 13.2);
+  p.lineTo(3.0, 8.2);
+  p.quadraticBezierTo(3.0, 4.6, 6.6, 4.6);
+  p.close();
+  return p;
+}
+
+MiuixVectorIcon _bubbleOutline() =>
+    _icon('bubble', [_stroke(_bubbleBodyPath, 1.8)]);
+
+MiuixVectorIcon _bubbleFilled() => _icon('bubbleFill', [
+      _fill(() {
+        var dots = ui.Path()
+          ..addOval(const Rect.fromLTRB(7.9, 8.5, 10.3, 10.9));
+        dots = ui.Path.combine(
+            ui.PathOperation.union,
+            dots,
+            ui.Path()..addOval(const Rect.fromLTRB(11.8, 8.5, 14.2, 10.9)));
+        dots = ui.Path.combine(
+            ui.PathOperation.union,
+            dots,
+            ui.Path()..addOval(const Rect.fromLTRB(15.7, 8.5, 18.1, 10.9)));
+        return ui.Path.combine(
+            ui.PathOperation.difference, _bubbleBodyPath(), dots);
+      }),
+    ]);
+
 // ── 字形 → 新美术 映射 ───────────────────────────────────────────
 
 MiuixVectorIcon? _artFor(IconData glyph) {
   final cp = glyph.codePoint;
   return switch (cp) {
-    _ when cp == CupertinoIcons.hand_thumbsup.codePoint => _thumbsUp(),
-    _ when cp == CupertinoIcons.hand_thumbsup_fill.codePoint => _thumbsUp(),
-    _ when cp == CupertinoIcons.hand_thumbsdown.codePoint => _thumbsDown(),
+    _ when cp == CupertinoIcons.hand_thumbsup.codePoint => _thumbsUpOutline(),
+    _ when cp == CupertinoIcons.hand_thumbsup_fill.codePoint =>
+      _thumbsUpFilled(),
+    _ when cp == CupertinoIcons.hand_thumbsdown.codePoint =>
+      _thumbsDownOutline(),
     _ when cp == CupertinoIcons.hand_thumbsdown_fill.codePoint =>
-      _thumbsDown(),
-    _ when cp == CupertinoIcons.money_dollar_circle.codePoint => _coin(),
-    _ when cp == CupertinoIcons.money_dollar_circle_fill.codePoint => _coin(),
+      _thumbsDownFilled(),
+    _ when cp == CupertinoIcons.money_dollar_circle.codePoint =>
+      _coinOutline(),
+    _ when cp == CupertinoIcons.money_dollar_circle_fill.codePoint =>
+      _coinFilled(),
+    _ when cp == CupertinoIcons.chat_bubble.codePoint => _bubbleOutline(),
+    _ when cp == CupertinoIcons.chat_bubble_fill.codePoint => _bubbleFilled(),
     _ when cp == CupertinoIcons.person.codePoint => _personOutline(),
     _ when cp == CupertinoIcons.person_fill.codePoint => _personFilled(),
     _ when cp == CupertinoIcons.fullscreen.codePoint => _fullscreen(),
