@@ -363,8 +363,7 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.account_circle_outlined,
+          AppIcon(AppIcons.profile(),
             size: 56,
             color: cs.onSurfaceVariant,
           ),
@@ -779,8 +778,7 @@ class _LiveCard extends StatelessWidget {
                       },
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.person_outline,
+                          AppIcon(AppIcons.profile(),
                             size: 12,
                             color: cs.outline,
                           ),

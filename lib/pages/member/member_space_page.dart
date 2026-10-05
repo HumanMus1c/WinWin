@@ -870,11 +870,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                             memCacheHeight:
                                 ImageUtils.decodeClamp(78, context, max: 256),
                             placeholder: (_, _) => const SkeletonBox(),
-                            errorBuilder: (_, _, _) => const Icon(Icons.person, size: 40),
+                            errorBuilder: (_, _, _) => AppIcon(AppIcons.profile(), size: 40),
                           )
                         : (card == null
                             ? const SkeletonBox()
-                            : const Icon(Icons.person, size: 40)),
+                            : AppIcon(AppIcons.profile(), size: 40)),
                   ),
                   if (card?.officialVerify?.isOfficial ?? false)
                     Positioned(

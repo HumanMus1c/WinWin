@@ -211,7 +211,7 @@ class ProfileFavSectionState extends State<ProfileFavSection> {
           const ProfileCardSkeleton(height: 165)
         else if (_error == '请先登录')
           ProfileEmptyCard(
-            icon: Icon(Icons.account_circle_outlined),
+            icon: AppIcon(AppIcons.profile()),
             message: '登录后可同步我的收藏',
             actionText: '点击去登录',
             onTap: () => LoginGuard.requireLogin(context),
@@ -365,7 +365,7 @@ class ProfileHistorySectionState extends State<ProfileHistorySection> {
           const ProfileCardSkeleton(height: 180)
         else if (_error == '请先登录')
           ProfileEmptyCard(
-            icon: Icon(Icons.account_circle_outlined),
+            icon: AppIcon(AppIcons.profile()),
             message: '登录后可同步观看历史',
             actionText: '点击去登录',
             onTap: () => LoginGuard.requireLogin(context),
@@ -544,7 +544,7 @@ class ProfileToviewSectionState extends State<ProfileToviewSection> {
           const ProfileCardSkeleton(height: 180)
         else if (_error == '请先登录')
           ProfileEmptyCard(
-            icon: Icon(Icons.account_circle_outlined),
+            icon: AppIcon(AppIcons.profile()),
             message: '登录后可查看稍后再看列表',
             actionText: '点击去登录',
             onTap: () => LoginGuard.requireLogin(context),

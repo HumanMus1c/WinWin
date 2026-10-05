@@ -267,8 +267,8 @@ class _FavPageState extends State<FavPage> {
   /// 错误/未登录态：未登录用语义空态，其余用统一错误态（含重试）。
   Widget _buildError() {
     if (_error == '请先登录') {
-      return const AppEmptyState(
-        icon: Icon(Icons.account_circle_outlined),
+      return AppEmptyState(
+        icon: AppIcon(AppIcons.profile()),
         title: '请先登录',
         subtitle: '登录后可查看我的收藏',
       );
@@ -319,10 +319,10 @@ class _FavFolderCard extends StatelessWidget {
                         )
                       : Container(
                           color: cs.secondaryContainer.withValues(alpha: 0.4),
-                          child: Icon(
+                          child: AppIcon(
                             folder.isPublic
-                                ? Icons.folder_outlined
-                                : Icons.lock_outline,
+                                ? AppIcons.folder()
+                                : AppIcons.lock(),
                             size: 32,
                             color: biliPink,
                           ),
@@ -782,7 +782,7 @@ class _FavVideoCard extends StatelessWidget {
                         if (upper?.name != null && upper!.name!.isNotEmpty)
                           Row(
                             children: [
-                              Icon(Icons.person_outline, size: 12, color: cs.outline),
+                              AppIcon(AppIcons.profile(), size: 12, color: cs.outline),
                               const SizedBox(width: 2),
                               Flexible(
                                 child: Text(
@@ -986,8 +986,8 @@ class _FavPanelState extends State<_FavPanel> {
                             }),
                     title: Text(f.title),
                     subtitle: Text('${f.mediaCount} 个内容'),
-                    secondary: Icon(
-                      f.isPublic ? Icons.folder_outlined : Icons.lock_outline,
+                    secondary: AppIcon(
+                      f.isPublic ? AppIcons.folder() : AppIcons.lock(),
                       color: biliPink,
                     ),
                   );

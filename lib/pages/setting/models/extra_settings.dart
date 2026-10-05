@@ -44,7 +44,7 @@ List<SettingsModel> get extraSettings => [
       ),
       NormalModel(
         title: '重试间隔',
-        leading: const Icon(Icons.timer),
+        leading: AppIcon(AppIcons.timer()),
         getSubtitle: () => '当前：${Pref.retryDelay} ms',
         onTap: (context, setState) async {
           final res = await showSelectDialog<int>(

@@ -161,7 +161,7 @@ class VideoCardH extends StatelessWidget {
         if (ownerName.isNotEmpty)
           Row(
             children: [
-              Icon(Icons.person_outline, size: 13, color: cs.outline),
+              AppIcon(AppIcons.profile(), size: 13, color: cs.outline),
               const SizedBox(width: 3),
               Expanded(
                 child: Align(

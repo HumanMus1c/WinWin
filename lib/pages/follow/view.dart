@@ -10,6 +10,7 @@ import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 关注动态视频流页（移植自 PiliPlus 关注动态流）。
 ///
@@ -194,8 +195,7 @@ class _FollowPageState extends State<FollowPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.account_circle_outlined,
+          AppIcon(AppIcons.profile(),
             size: 56,
             color: cs.onSurfaceVariant,
           ),

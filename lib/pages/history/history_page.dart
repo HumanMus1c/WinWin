@@ -365,8 +365,8 @@ class _HistoryPageState extends State<HistoryPage> {
   /// 错误/未登录态：未登录用语义空态，其余用统一错误态（含重试）。
   Widget _buildError() {
     if (_error == '请先登录') {
-      return const AppEmptyState(
-        icon: Icon(Icons.account_circle_outlined),
+      return AppEmptyState(
+        icon: AppIcon(AppIcons.profile()),
         title: '请先登录',
         subtitle: '登录后可查看历史记录',
       );
@@ -492,7 +492,7 @@ class _HistoryCard extends StatelessWidget {
                             },
                             child: Row(
                               children: [
-                                Icon(Icons.person_outline, size: 12, color: cs.outline),
+                                AppIcon(AppIcons.profile(), size: 12, color: cs.outline),
                                 const SizedBox(width: 2),
                                 Flexible(
                                   child: Text(

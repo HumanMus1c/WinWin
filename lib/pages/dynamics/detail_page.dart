@@ -504,7 +504,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                     padding: const EdgeInsets.only(bottom: Style.md),
                     child: Row(
                       children: [
-                        const Icon(Icons.chat_bubble_outline, size: 18),
+                        AppIcon(AppIcons.whisper(selected: false), size: 18),
                         const SizedBox(width: 6),
                         Text(
                           '全部评论 ${item.stat?.comment != null ? '(${NumUtils.formatNum(item.stat!.comment)})' : ''}',

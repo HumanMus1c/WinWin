@@ -335,14 +335,12 @@ class _SearchPageState extends State<SearchPage> {
                               placeholder: (_, _) => Container(
                                 color: cs.surfaceContainerHigh,
                               ),
-                              errorBuilder: (_, _, _) => Icon(
-                                Icons.person,
+                              errorBuilder: (_, _, _) => AppIcon(AppIcons.profile(),
                                 size: 16,
                                 color: cs.onSurfaceVariant,
                               ),
                             )
-                          : Icon(
-                              Icons.person,
+                          : AppIcon(AppIcons.profile(),
                               size: 16,
                               color: cs.onSurfaceVariant,
                             ),

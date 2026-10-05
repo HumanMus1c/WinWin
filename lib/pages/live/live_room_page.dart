@@ -1772,7 +1772,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                const Icon(Icons.chat_bubble_outline, size: 18),
+                AppIcon(AppIcons.whisper(selected: false), size: 18),
                 const SizedBox(width: 6),
                 Text(
                   '实时互动',
@@ -1970,7 +1970,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 shape: BoxShape.circle,
                 color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
               ),
-              child: Icon(Icons.person, size: 14, color: cs.outline),
+              child: AppIcon(AppIcons.profile(), size: 14, color: cs.outline),
             ),
           const SizedBox(width: 8),
           Expanded(

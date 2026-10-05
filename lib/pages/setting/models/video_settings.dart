@@ -172,7 +172,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: '缓冲时长',
-        leading: const Icon(Icons.timer),
+        leading: AppIcon(AppIcons.timer()),
         getSubtitle: () => '当前：${Pref.bufferSec.toStringAsFixed(0)} 秒',
         onTap: (context, setState) async {
           final res = await showDialog<double>(

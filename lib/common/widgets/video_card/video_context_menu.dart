@@ -114,7 +114,7 @@ List<VideoCustomAction> buildVideoCardActions({
     actions.add(
       VideoCustomAction(
         title: '访问 UP 主：${ownerName.isNotEmpty ? ownerName : mid}',
-        icon: const Icon(Icons.account_circle_outlined, size: 16),
+        icon: AppIcon(AppIcons.profile(), size: 16),
         onTap: () {
           Navigator.push(
             context,

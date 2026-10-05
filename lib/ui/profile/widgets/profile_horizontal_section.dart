@@ -60,8 +60,7 @@ class ProfileSectionHeader extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward_ios,
+                    AppIcon(AppIcons.chevronForward(),
                       size: 14,
                       color: cs.outline,
                     ),
@@ -143,7 +142,7 @@ class ProfileHorizontalList extends StatelessWidget {
                       backgroundColor: cs.secondaryContainer.withValues(alpha: 0.6),
                     ),
                     onPressed: onMore,
-                    icon: const Icon(Icons.arrow_forward_ios, size: 18, color: biliPink),
+                    icon: AppIcon(AppIcons.chevronForward(), size: 18, color: biliPink),
                   ),
                 ),
               );
@@ -355,8 +354,8 @@ class ProfileFavFolderCard extends StatelessWidget {
                         )
                       : Container(
                           color: cs.secondaryContainer.withValues(alpha: 0.4),
-                          child: Icon(
-                            isPublic ? Icons.folder_outlined : Icons.lock_outline,
+                          child: AppIcon(
+                            isPublic ? AppIcons.folder() : AppIcons.lock(),
                             size: 32,
                             color: biliPink,
                           ),

@@ -426,7 +426,7 @@ class _ArticlePageState extends State<ArticlePage> {
                   padding: const EdgeInsets.only(bottom: Style.md),
                   child: Row(
                     children: [
-                      const Icon(Icons.chat_bubble_outline, size: 18),
+                      AppIcon(AppIcons.whisper(selected: false), size: 18),
                       const SizedBox(width: 6),
                       Text(
                         '评论区 ${article.replyCount != null ? '(${NumUtils.formatNum(article.replyCount)})' : ''}',

@@ -332,7 +332,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   ),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.download_rounded),
+                  leading: AppIcon(AppIcons.download()),
                   title: const Text('保存图片到本地'),
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -541,7 +541,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                             foregroundColor: Colors.white,
                             hoverColor: Colors.black.withValues(alpha: 0.6),
                           ),
-                          icon: const Icon(Icons.download_rounded, size: 18),
+                          icon: AppIcon(AppIcons.download(), size: 18),
                           tooltip: '保存图片',
                           onPressed: () {
                             final curUrl =

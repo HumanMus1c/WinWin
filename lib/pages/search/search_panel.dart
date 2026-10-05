@@ -280,7 +280,7 @@ class _SearchPanelState extends State<SearchPanel>
                   ),
                   errorBuilder: (_, _, _) => Container(
                     color: theme.colorScheme.surfaceContainer,
-                    child: const Icon(Icons.person),
+                    child: AppIcon(AppIcons.profile()),
                   ),
                 ),
               ),
@@ -442,7 +442,7 @@ class _SearchPanelState extends State<SearchPanel>
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(Icons.person_outline,
+                        AppIcon(AppIcons.profile(),
                             size: 13, color: theme.colorScheme.outline),
                         const SizedBox(width: 3),
                         Flexible(

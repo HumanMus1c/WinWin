@@ -9,6 +9,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/image_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 消息流加载器（游标分页）：回复我 / 艾特我 / 点赞我 共用此签名。
 typedef MsgFeedLoader = Future<LoadingState<Map<String, dynamic>>> Function({
@@ -248,7 +249,7 @@ class MsgFeedAvatar extends StatelessWidget {
         height: size,
         color: cs.surfaceContainerHighest,
         alignment: Alignment.center,
-        child: Icon(Icons.person, color: cs.outline, size: size * 0.5),
+        child: AppIcon(AppIcons.profile(), color: cs.outline, size: size * 0.5),
       );
 }
 

@@ -15,6 +15,7 @@ import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 番剧二级分类枚举
 enum PgcSubTab {
@@ -536,8 +537,7 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.account_circle_outlined,
+          AppIcon(AppIcons.profile(),
             size: 56,
             color: cs.onSurfaceVariant,
           ),

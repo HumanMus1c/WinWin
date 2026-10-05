@@ -286,13 +286,13 @@ class _UserInfoSection extends StatelessWidget {
                               color: Colors.grey,
                               child: SizedBox.expand(),
                             ),
-                            errorBuilder: (_, _, _) => const Center(
-                              child: Icon(Icons.person,
+                            errorBuilder: (_, _, _) => Center(
+                              child: AppIcon(AppIcons.profile(),
                                   color: Colors.white, size: 28),
                             ),
                             fit: BoxFit.cover,
                           )
-                        : const Icon(Icons.person,
+                        : AppIcon(AppIcons.profile(),
                             color: Colors.white, size: 28),
                   ),
                   if (isVip)
@@ -505,8 +505,7 @@ class _SettingsGroup extends StatelessWidget {
     // 阶段5d-L1：M3 分支已移除。
     final r = Radius.circular(shapes.large.x);
 
-    Widget trailingChevron(ThemeData theme) => Icon(
-          Icons.arrow_forward_ios,
+    Widget trailingChevron(ThemeData theme) => AppIcon(AppIcons.chevronForward(),
           size: 14,
           color: theme.colorScheme.outline,
         );
