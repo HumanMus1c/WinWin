@@ -12,7 +12,8 @@
 y 轴翻转 → 绝对 M/L/Q/C/Z（空格分隔，适配 miuixParsePath）。
 内联 SVG 走同一归一化后直接输出（evenodd 以 "eo|" 前缀标注）。
 
-输出：lib/theme/app_icons_bdc.g.dart（按本项目调色板码点索引）
+输出：lib/theme/app_icons_bdc.g.dart（按"字体族:码点"复合键索引，
+避免跨字体同码点撞车，如 checkmark/subtitles_outlined 同为 0xF3FD）
 运行：python tools/bili_bdc_icons_import.py
 """
 import glob
@@ -340,9 +341,11 @@ def main() -> int:
         "//   + 视频页内联 SVG（官方设计组件 BDC / freshspace）。",
         "// 坐标：viewport 960×960（bbox 归一化居中），绝对值 M/L/Q/C/Z；",
         "// \"eo|\" 前缀 = evenodd 填充。",
+        "// 键 = \"字体族:码点\"（cupertino=cupertino_ui / material=material_ui），",
+        "//   避免跨字体同码点撞车（如 checkmark 与 subtitles_outlined 同为 0xf3fd）。",
         "",
-        "/// 本项目字形码点 → B 站官网 BDC 图标矢量路径。",
-        "const Map<int, String> kBDCIconPaths = {",
+        "/// 本项目字形（字体族:码点）→ B 站官网 BDC 图标矢量路径。",
+        "const Map<String, String> kBDCIconPaths = {",
     ]
     count = 0
     for name, kind, fam, cls in ENTRIES:
@@ -360,19 +363,24 @@ def main() -> int:
             if not m:
                 print(f"未找到 SVG {cls}", file=sys.stderr)
                 return 1
-            d = None
+            # 收集全部填充型 <path> 并合并（对齐 L5-9 工具）：官方图标的
+            # 外圈与内部图形是多个子路径，只取第一个会丢失内部结构
+            # （曾导致「稍后再看」只剩开口圆环）。
+            parts = []
             eo = False
             for pm in re.finditer(r"<path\b([^>]*?)/?>", m.group(1)):
                 attrs = pm.group(1)
                 dm = re.search(r'\bd="([^"]+)"', attrs)
-                if dm:
-                    d = dm.group(1)
-                    eo = "evenodd" in attrs
-                    break
-            if d is None:
+                if not dm:
+                    continue
+                if 'fill="none"' in attrs:
+                    continue  # 描边型 path 不支持（与 L5-9 一致）
+                eo = eo or ("evenodd" in attrs)
+                parts.append(dm.group(1))
+            if not parts:
                 print(f"SVG {cls} 无 path", file=sys.stderr)
                 return 1
-            data = ("eo|" if eo else "") + normalize_svg_path(d)
+            data = ("eo|" if eo else "") + normalize_svg_path(" ".join(parts))
             note = f"svg:{cls}"
         else:
             font_cp = classes[fam].get(cls)
@@ -381,7 +389,7 @@ def main() -> int:
                 return 1
             data = font_extract(fonts[fam], font_cp)
             note = f"{fam}:U+{font_cp:04X}"
-        lines.append(f"  0x{cp:x}: '{data}',")
+        lines.append(f"  '{kind}:0x{cp:x}': '{data}',")
         count += 1
         print(f"OK  {name:<28} <- {cls} [{note}]")
     lines.append("};")

@@ -452,6 +452,15 @@ MiuixVectorIcon? miuixVectorForGlyph(IconData glyph) =>
 
 final Map<IconData, MiuixVectorIcon> _bdcCache = {};
 
+/// 字形字体族标签：与生成器复合键前缀（cupertino/material）保持一致。
+/// cupertino_ui 的 CupertinoIcons 字体族为 'CupertinoIcons'，
+/// material_ui 的 Icons 为 'MaterialIcons'（均已核实）。
+String _glyphFontTag(IconData glyph) {
+  if (glyph.fontFamily == 'CupertinoIcons') return 'cupertino';
+  if (glyph.fontFamily == 'MaterialIcons') return 'material';
+  return 'unknown';
+}
+
 /// 阶段5e-L5-10：**B 站官网 BDC 图标字体层**（svg-next：消息中心 / 稍后再看 /
 /// 空间页 freshspace / 视频页 inline SVG）。
 ///
@@ -459,8 +468,13 @@ final Map<IconData, MiuixVectorIcon> _bdcCache = {};
 /// （回复/转发/评论/展开）、消息中心四入口（点赞/艾特/系统/回复）、空间与
 /// 收藏夹/历史/稍后再看按钮（关注/锁/刷新/复制/删除/更多等）；
 /// 由 `tools/bili_bdc_icons_import.py` 预生成。"eo|" 前缀 = evenodd 填充。
+///
+/// L5-10b：查表键为「字体族:码点」复合键——此前仅按 codePoint 查询，
+/// 他层字形与 BDC 条目同码点时会错误截胡（如 `Icons.subtitles_outlined`
+/// 0xf3fd 撞 `CupertinoIcons.checkmark`，弹幕数被渲染成对勾）。
 MiuixVectorIcon? miuixBdcIconFor(IconData glyph) {
-  final data = kBDCIconPaths[glyph.codePoint];
+  final data = kBDCIconPaths[
+      '${_glyphFontTag(glyph)}:0x${glyph.codePoint.toRadixString(16)}'];
   if (data == null) return null;
   return _bdcCache.putIfAbsent(
     glyph,

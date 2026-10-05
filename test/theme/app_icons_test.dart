@@ -232,6 +232,30 @@ void main() {
     });
   });
 
+  group('L5-10b 图标层跨字体撞码点回归', () {
+    test('弹幕数载体不再被 BDC 对勾截胡（0xf3fd 复合键）', () {
+      // CupertinoIcons.checkmark 仍由 BDC 供给对勾。
+      expect(miuixBdcIconFor(CupertinoIcons.checkmark), isNotNull);
+      // Material 的 subtitles_outlined 与 checkmark 同码点但字体族不同：
+      // BDC 层应放行，落到 Web 层「弹幕数」图形。
+      expect(miuixBdcIconFor(Icons.subtitles_outlined), isNull);
+      final vector = miuixVectorForGlyph(Icons.subtitles_outlined);
+      expect(vector, isNotNull);
+      expect(vector!.name, startsWith('webSite.f3fd'));
+    });
+
+    test('BDC 层 material 白名单字形不受复合键改造影响', () {
+      expect(miuixBdcIconFor(Icons.alternate_email_rounded), isNotNull);
+      expect(miuixBdcIconFor(Icons.campaign_outlined), isNotNull);
+    });
+
+    test('稍后再看载体字形仍命中 BDC（完整图形由生成器保证）', () {
+      final vector = miuixVectorForGlyph(CupertinoIcons.time);
+      expect(vector, isNotNull);
+      expect(vector!.name, startsWith('bdc.f402'));
+    });
+  });
+
   group('AppBackButton 组件测试', () {
     testWidgets('渲染 Miuix 矢量返回图标（阶段5d-L4-2 单轨）', (tester) async {
       await tester.pumpWidget(
