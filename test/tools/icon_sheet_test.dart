@@ -140,6 +140,39 @@ String _escape(String s) => s
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;');
 
+/// 落地文件（Windows 防御：外部进程——编辑器/索引器/杀软——可能持有
+/// 内存映射句柄导致 errno 1224；内容相同则跳过写入，否则重试退避）。
+void _writeText(File f, String content) {
+  try {
+    if (f.existsSync() && f.readAsStringSync() == content) return;
+  } catch (_) {}
+  Object? last;
+  for (var i = 0; i < 5; i++) {
+    try {
+      f.writeAsStringSync(content);
+      return;
+    } catch (e) {
+      last = e;
+      sleep(const Duration(milliseconds: 150));
+    }
+  }
+  throw last!;
+}
+
+void _writeBytes(File f, List<int> bytes) {
+  Object? last;
+  for (var i = 0; i < 5; i++) {
+    try {
+      f.writeAsBytesSync(bytes);
+      return;
+    } catch (e) {
+      last = e;
+      sleep(const Duration(milliseconds: 150));
+    }
+  }
+  throw last!;
+}
+
 /// 把 ui.Path 展平为 SVG path 数据（曲线按弧长采样，display 尺寸下不可辨）。
 String _flatten(ui.Path path, double step) {
   final sb = StringBuffer();
@@ -289,11 +322,11 @@ String _tableMarkdown(_Section s) {
         'Cupertino 字形 | 矢量 | 状态 |\n')
     ..write('|---|---|---|---|---|---|---|\n');
   for (final c in s.cells) {
-    final oldImg = c.old == null
-        ? '—'
-        : '<img src="icons/${c.key}-old.svg" width="22" alt="old">';
-    final nowImg =
-        '<img src="icons/${c.key}.svg" width="22" alt="now">';
+    // 用 Markdown 图片语法（内联 HTML 在部分渲染器中被净化/不渲染）；
+    // 单图标 SVG 画布即 22px，无需 width 属性即可精确控制行内尺寸。
+    final oldImg =
+        c.old == null ? '—' : '![曾用](icons/${c.key}-old.svg)';
+    final nowImg = '![现用](icons/${c.key}.svg)';
     final status = miuixVectorForGlyph(c.glyph) != null ? '✅' : '⚠️';
     sb.write('| `${c.label}` | ${c.usage} | $oldImg | $nowImg | '
         '${c.glyphText.isEmpty ? '—' : '`${c.glyphText}`'} | '
@@ -684,7 +717,11 @@ void main() {
     final iconsDir = Directory('$_outDir/icons');
     if (iconsDir.existsSync()) {
       for (final f in iconsDir.listSync()) {
-        f.deleteSync();
+        try {
+          f.deleteSync();
+        } catch (_) {
+          // 被外部句柄占用时忽略（后续同内容跳过 / 覆写重试兜底）。
+        }
       }
     }
     iconsDir.createSync(recursive: true);
@@ -709,15 +746,27 @@ void main() {
       final boundary = tester.renderObject<RenderRepaintBoundary>(
         find.byKey(_boundaryKey),
       );
-      final bytes = await tester.runAsync(() async {
-        final image = await boundary.toImage(pixelRatio: 2.0);
-        final data = await image.toByteData(format: ui.ImageByteFormat.png);
-        image.dispose();
-        return data;
-      });
-      expect(bytes, isNotNull, reason: '${section.file} PNG 渲染失败');
+      // 并行测试负载下 toImage 偶发失败（返回空）：重试三次加固。
+      Uint8List? pngBytes;
+      for (var attempt = 0; attempt < 3 && pngBytes == null; attempt++) {
+        final data = await tester.runAsync(() async {
+          try {
+            final image = await boundary.toImage(pixelRatio: 2.0);
+            final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+            image.dispose();
+            return bytes;
+          } catch (_) {
+            return null;
+          }
+        });
+        pngBytes = data?.buffer.asUint8List();
+        if (pngBytes == null) {
+          await tester.pump(const Duration(milliseconds: 60));
+        }
+      }
+      expect(pngBytes, isNotNull, reason: '${section.file} PNG 渲染失败');
       final pngFile = File('$_outDir/${section.file}');
-      pngFile.writeAsBytesSync(bytes!.buffer.asUint8List());
+      _writeBytes(pngFile, pngBytes!);
       expect(pngFile.lengthSync(), greaterThan(1000),
           reason: '${section.file} PNG 落盘异常');
 
@@ -725,29 +774,30 @@ void main() {
       final svg = _svgSheet(section);
       expect(svg.contains('<path'), isTrue,
           reason: '${section.file} SVG 无路径内容');
-      File('$_outDir/${section.file.replaceAll('.png', '.svg')}')
-          .writeAsStringSync(svg);
+      _writeText(File('$_outDir/${section.file.replaceAll('.png', '.svg')}'),
+          svg);
 
       // ③ 单图标切分（现用 + 曾用）。
       for (final c in section.cells) {
         final now = _glyphSvg(c.glyph);
         expect(now, isNotNull, reason: '${c.label} 现用字形无 SVG');
-        File('$_outDir/icons/${c.key}.svg')
-            .writeAsStringSync(_standaloneSvg(now!));
+        _writeText(File('$_outDir/icons/${c.key}.svg'),
+            _standaloneSvg(now!, size: 22));
         iconCount++;
         if (c.old != null) {
           final old = _oldGlyphSvg(c.old!);
           expect(old, isNotNull,
               reason: '${c.label} 曾用字形无轮廓（检查 material_glyph_paths）');
-          File('$_outDir/icons/${c.key}-old.svg')
-              .writeAsStringSync(_standaloneSvg(old!));
+          _writeText(File('$_outDir/icons/${c.key}-old.svg'),
+              _standaloneSvg(old!, size: 22));
           oldCount++;
         }
       }
 
       // ④ 对照表格。
-      File('$_outDir/tables/${section.file.replaceAll('.png', '.md')}')
-          .writeAsStringSync(_tableMarkdown(section));
+      _writeText(
+          File('$_outDir/tables/${section.file.replaceAll('.png', '.md')}'),
+          _tableMarkdown(section));
     }
 
     expect(iconCount, greaterThan(80));
