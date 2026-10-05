@@ -6,6 +6,7 @@ import 'app_icons_art.dart';
 import 'app_icons_bili.g.dart';
 import 'app_icons_builtin.g.dart';
 import 'app_icons_official.g.dart';
+import 'app_icons_web.g.dart';
 
 /// 全局语义图标中心（阶段5d-L4-2 单轨化：原 `*Of(style)` 与 `*(context)` 双分发
 /// 已收敛为无参静态方法，字形恒定 Miuix / Apple 图标集；字形→Miuix 矢量映射
@@ -427,14 +428,49 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
 
 /// 查询字形对应的 Miuix 矢量。
 ///
-/// 优先级：**B 站官网素材**（L5-8）→ 官方美术（L5-7：Material Symbols）
+/// 优先级：**B 站官网 Web 端素材**（L5-9：直接抓取官网页面内联 SVG）
+/// → B 站官网字体素材（L5-8）→ 官方美术（L5-7：Material Symbols）
 /// → 手绘新美术（L5-6）→ 三集映射 → 内置等价轮廓（L5-5）→ null（回退字形）。
 MiuixVectorIcon? miuixVectorForGlyph(IconData glyph) =>
+    miuixWebIconFor(glyph) ??
     miuixBiliSiteIconFor(glyph) ??
     miuixOfficialIconFor(glyph) ??
     miuixArtIconFor(glyph) ??
     _miuixVectorByGlyph[glyph] ??
     miuixEquivalenceIconFor(glyph);
+
+final Map<IconData, MiuixVectorIcon> _webSiteCache = {};
+
+/// 阶段5e-L5-9：**B 站官网 Web 端素材层**（直接抓取 www.bilibili.com 页面内联
+/// SVG：视频详情页互动栏/元数据 + 首页卡片统计）。
+///
+/// 覆盖：点赞（激活态=官网实心拇指）/ 投币（官网 ¥ 硬币）/ 分享 /
+/// 播放量 / 弹幕数；由 `tools/bili_web_icons_import.py` 预生成
+/// （bbox 归一化居中于 960 视口）。"eo|" 前缀 = evenodd 填充。
+MiuixVectorIcon? miuixWebIconFor(IconData glyph) {
+  final data = kWebIconPaths[glyph.codePoint];
+  if (data == null) return null;
+  return _webSiteCache.putIfAbsent(
+    glyph,
+    () {
+      final eo = data.startsWith('eo|');
+      final d = eo ? data.substring(3) : data;
+      return MiuixVectorIcon(
+        name: 'webSite.${glyph.codePoint.toRadixString(16)}.regular',
+        viewport: const Size(960, 960),
+        intrinsicSize: const Size(24, 24),
+        paths: [
+          MiuixVectorPath(
+            build: () => miuixParsePath(
+              d,
+              fillType: eo ? PathFillType.evenOdd : PathFillType.nonZero,
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
 
 final Map<IconData, MiuixVectorIcon> _biliSiteCache = {};
 
