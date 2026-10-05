@@ -312,6 +312,29 @@ void main() {
       expect(sizes, everyElement(24.0));
       expect(tester.getSize(find.byType(MiuixIcon).first), const Size(24, 24));
     });
+
+    testWidgets('修复R2c：宽松槽位（prefixIcon 场景）中 AppIcon 不得膨胀',
+        (tester) async {
+      await tester.pumpWidget(
+        wrapMiuix(
+          SizedBox(
+            width: 400,
+            child: Row(
+              children: [
+                ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(minWidth: 48, maxWidth: 400),
+                  child: AppIcon(AppIcons.search(), size: 20),
+                ),
+                const Expanded(child: Text('内容')),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(tester.getSize(find.byType(AppIcon)).width, 48);
+      expect(tester.getSize(find.byType(MiuixIcon)), const Size(20, 20));
+    });
   });
 
   group('Miuix 刷新（阶段3d）', () {

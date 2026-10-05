@@ -322,11 +322,15 @@ class AppIcon extends StatelessWidget {
       final vector = miuixVectorForGlyph(icon);
       if (vector != null) {
         final iconTheme = IconTheme.of(context);
-        // 修复R2b：以 Center 向 MiuixIcon 传递**宽松约束**——紧约束父级
-        // （如消息中心 52×52 Container）会把内部 SizedBox(size) 撑满，FittedBox
-        // 随之把矢量放大铺满；Center 后矢量保持 size 并在可用空间内居中，
-        // 与普通 Icon 的字形渲染行为对齐。
+        // 修复R2b/R2c：向 MiuixIcon 传递**宽松约束**并防止自身膨胀。
+        // - 紧约束父级（52×52 Container）会撑满内部 SizedBox，FittedBox 将矢量
+        //   放大铺满 → 以 Center 居中解决；
+        // - 但裸 Center 在宽松槽位（如 InputDecoration.prefixIcon：minWidth 48 +
+        //   max 全宽）会贪心膨胀到整行宽（挤没输入区）→ 以 widthFactor/heightFactor
+        //   = 1 收缩为「图标尺寸（下限受槽位约束）」，与 Icon 的占位行为对齐。
         return Center(
+          widthFactor: 1,
+          heightFactor: 1,
           child: MiuixIcon(
             vector: vector,
             size: size ?? iconTheme.size ?? 24,
