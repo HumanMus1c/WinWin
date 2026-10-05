@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -397,98 +398,125 @@ class _SessionTile extends StatelessWidget {
 
   String get _avatar => SessionAccountResolver.displayAvatar(session);
 
+  bool get _isPinned => ((session['top_ts'] as num?)?.toInt() ?? 0) > 0;
+
+  bool get _isDnd => (session['is_dnd'] as num?)?.toInt() == 1;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final unread = (session['unread_count'] as num?)?.toInt() ?? 0;
-    final isPinned = ((session['top_ts'] as num?)?.toInt() ?? 0) > 0;
-    final isDnd = (session['is_dnd'] as num?)?.toInt() == 1;
+    final isPinned = _isPinned;
+    final isDnd = _isDnd;
     final isSpecial = SessionAccountResolver.isSpecialFollow(session);
     final msgType = (_lastMsg?['msg_type'] as num?)?.toInt() ?? 1;
     final content = _lastMsg?['content']?.toString();
     final ts = (_lastMsg?['timestamp'] as num?)?.toInt();
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: Style.safeSpace,
-        vertical: Style.xs,
-      ),
-      onTap: () => showChatDetailPage(
-        context,
-        talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
-        sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
-        title: _name,
-      ),
-      leading: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          MsgFeedAvatar(src: _avatar),
-          if (unread > 0)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 18),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.error,
-                  border: Border.all(
-                    color: theme.scaffoldBackgroundColor,
-                    width: 1.5,
+    return GestureDetector(
+      onSecondaryTapUp: (details) =>
+          _openMoreMenu(context, details.globalPosition),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: Style.safeSpace,
+          vertical: Style.xs,
+        ),
+        onTap: () => showChatDetailPage(
+          context,
+          talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
+          sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
+          title: _name,
+        ),
+        leading: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            MsgFeedAvatar(src: _avatar),
+            if (unread > 0)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  constraints: const BoxConstraints(minWidth: 18),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.error,
+                    border: Border.all(
+                      color: theme.scaffoldBackgroundColor,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(100),
                   ),
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: Text(
-                  unread > 99 ? '99+' : '$unread',
-                  style: const TextStyle(color: Colors.white, fontSize: 10),
+                  child: Text(
+                    unread > 99 ? '99+' : '$unread',
+                    style: const TextStyle(color: Colors.white, fontSize: 10),
+                  ),
                 ),
               ),
+          ],
+        ),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(
+                _name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyLarge,
+              ),
             ),
-        ],
-      ),
-      title: Row(
-        children: [
-          Flexible(
-            child: Text(
-              _name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyLarge,
-            ),
+            if (isPinned) _flag(theme, '置顶'),
+            if (isSpecial) _flag(theme, '特别关注', color: biliPink),
+            if (isDnd) _flag(theme, '免打扰'),
+          ],
+        ),
+        subtitle: Text(
+          MessagePreviewParser.parseSessionPreview(content, msgType),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
-          if (isPinned) _flag(theme, '置顶'),
-          if (isSpecial) _flag(theme, '特别关注', color: biliPink),
-          if (isDnd) _flag(theme, '免打扰'),
-        ],
-      ),
-      subtitle: Text(
-        MessagePreviewParser.parseSessionPreview(content, msgType),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (ts != null && ts > 0)
+              Text(
+                msgFeedTime(ts),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            SessionMoreMenuButton(
+              isPinned: isPinned,
+              isDnd: isDnd,
+              onToggleTop: () => onToggleTop(index),
+              onToggleDnd: () => onToggleDnd(index),
+              onRemove: () => _confirmRemove(context),
+            ),
+          ],
         ),
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (ts != null && ts > 0)
-            Text(
-              msgFeedTime(ts),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.outline,
-              ),
-            ),
-          SessionMoreMenuButton(
-            isPinned: isPinned,
-            isDnd: isDnd,
-            onToggleTop: () => onToggleTop(index),
-            onToggleDnd: () => onToggleDnd(index),
-            onRemove: () => _confirmRemove(context),
-          ),
-        ],
-      ),
     );
+  }
+
+  /// 右键弹出与三点按钮一致的「更多选项」菜单（删除走二次确认）。
+  Future<void> _openMoreMenu(BuildContext context, Offset position) async {
+    final selected = await showMiuixContextMenu(
+      context: context,
+      position: position,
+      actions: buildSessionMenuActions(
+        context: context,
+        isPinned: _isPinned,
+        isDnd: _isDnd,
+        onToggleTop: () => onToggleTop(index),
+        onToggleDnd: () => onToggleDnd(index),
+        onRemove: () => _confirmRemove(context),
+      ),
+      title: '更多选项',
+    );
+    selected?.call();
   }
 
   Widget _flag(ThemeData theme, String text, {Color? color}) {

@@ -1,19 +1,14 @@
-import 'dart:async';
-import 'dart:math' as math;
 import 'dart:typed_data' show Uint8List;
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
-import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
-import 'package:winwin/common/widgets/miuix_popup_menu.dart';
+import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
-import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
@@ -32,36 +27,26 @@ String _errMsg(LoadingState state, [String fallback = '操作失败']) {
   return fallback;
 }
 
-/// 视频卡片自定义交互动作结构体（对齐 PiliPlus `_VideoCustomAction`）。
-class VideoCustomAction {
-  final String title;
-  final Widget icon;
-  final VoidCallback onTap;
-
-  const VideoCustomAction({
-    required this.title,
-    required this.icon,
-    required this.onTap,
-  });
-}
-
 /// 构建视频稿件卡片的交互动作列表（移植自 PiliPlus `VideoPopupMenu`）。
-List<VideoCustomAction> buildVideoCardActions({
+///
+/// 图标不设显式尺寸：右键菜单浮层统一按行文本尺寸（bodyMedium）驱动，
+/// 保证「图标与选项文本同大小」。
+List<ContextMenuAction> buildVideoCardActions({
   required BuildContext context,
   required VideoCardData data,
   dynamic videoItem,
   VoidCallback? onRemove,
 }) {
-  final actions = <VideoCustomAction>[];
+  final actions = <ContextMenuAction>[];
   final bvid = data.bvid;
   final aid = data.aid ?? (bvid != null ? IdUtils.bv2av(bvid) : null);
 
   // 1. 复制 BV 号
   if (bvid != null && bvid.isNotEmpty) {
     actions.add(
-      VideoCustomAction(
+      ContextMenuAction(
         title: '复制 BV 号 ($bvid)',
-        icon: const Icon(Icons.tag, size: 16),
+        icon: AppIcon(AppIcons.copy()),
         onTap: () {
           Utils.copyText(bvid);
           showToast(context, '已复制 BV 号：$bvid');
@@ -71,9 +56,9 @@ List<VideoCustomAction> buildVideoCardActions({
 
     // 2. 复制视频链接
     actions.add(
-      VideoCustomAction(
+      ContextMenuAction(
         title: '复制视频链接',
-        icon: AppIcon(AppIcons.link(), size: 16),
+        icon: AppIcon(AppIcons.link()),
         onTap: () {
           final url = 'https://www.bilibili.com/video/$bvid';
           Utils.copyText(url);
@@ -84,9 +69,9 @@ List<VideoCustomAction> buildVideoCardActions({
 
     // 3. 稍后再看
     actions.add(
-      VideoCustomAction(
+      ContextMenuAction(
         title: '稍后再看',
-        icon: AppIcon(AppIcons.watchLater(), size: 16),
+        icon: AppIcon(AppIcons.watchLater()),
         onTap: () async {
           if (!Accounts.main.isLogin) {
             showToast(context, '请先登录');
@@ -112,9 +97,9 @@ List<VideoCustomAction> buildVideoCardActions({
   final ownerName = data.ownerName;
   if (mid != null && mid > 0) {
     actions.add(
-      VideoCustomAction(
+      ContextMenuAction(
         title: '访问 UP 主：${ownerName.isNotEmpty ? ownerName : mid}',
-        icon: AppIcon(AppIcons.profile(), size: 16),
+        icon: AppIcon(AppIcons.profile()),
         onTap: () {
           Navigator.push(
             context,
@@ -131,9 +116,9 @@ List<VideoCustomAction> buildVideoCardActions({
   final cover = data.cover;
   if (cover != null && cover.isNotEmpty) {
     actions.add(
-      VideoCustomAction(
+      ContextMenuAction(
         title: '查看/保存封面',
-        icon: AppIcon(AppIcons.image(), size: 16),
+        icon: AppIcon(AppIcons.image()),
         onTap: () {
           showVideoCoverDialog(
             context: context,
@@ -154,9 +139,9 @@ List<VideoCustomAction> buildVideoCardActions({
 
   if (hasDislikeReasons) {
     actions.add(
-      VideoCustomAction(
+      ContextMenuAction(
         title: '不感兴趣',
-        icon: AppIcon(AppIcons.dislike(), size: 16),
+        icon: AppIcon(AppIcons.dislike()),
         onTap: () {
           _showDislikeReasonsDialog(
             context: context,
@@ -168,9 +153,9 @@ List<VideoCustomAction> buildVideoCardActions({
     );
   } else if (aid != null || (bvid != null && bvid.isNotEmpty)) {
     actions.add(
-      VideoCustomAction(
+      ContextMenuAction(
         title: '不感兴趣',
-        icon: AppIcon(AppIcons.dislike(), size: 16),
+        icon: AppIcon(AppIcons.dislike()),
         onTap: () async {
           final targetAid = aid ?? (bvid != null ? IdUtils.bv2av(bvid) : null);
           if (targetAid == null) return;
@@ -197,9 +182,9 @@ List<VideoCustomAction> buildVideoCardActions({
   // 7. 拉黑 UP 主（带二次确认弹窗）
   if (mid != null && mid > 0) {
     actions.add(
-      VideoCustomAction(
+      ContextMenuAction(
         title: '拉黑 UP 主：${ownerName.isNotEmpty ? ownerName : mid}',
-        icon: AppIcon(AppIcons.block(), size: 16),
+        icon: AppIcon(AppIcons.block()),
         onTap: () {
           showDialog(
             context: context,
@@ -271,179 +256,12 @@ Future<void> showVideoContextMenu({
   if (actions.isEmpty) return;
 
   // 阶段5d-L1：M3 冻结分支（showMenu）已移除，自绘浮层为唯一实现。
-  final selectedAction = await _showMiuixContextMenu(
+  final selectedAction = await showMiuixContextMenu(
     context: context,
     position: position,
     actions: actions,
   );
   selectedAction?.call();
-}
-
-// ── Miuix 右键菜单浮层（复用共用壳与行交互） ──
-
-/// 以点击位置为锚点弹出 Miuix 右键菜单；返回所选动作（未选返回 null）。
-Future<VoidCallback?> _showMiuixContextMenu({
-  required BuildContext context,
-  required Offset position,
-  required List<VideoCustomAction> actions,
-}) {
-  final overlay = Overlay.maybeOf(context, rootOverlay: true);
-  if (overlay == null) return Future.value(null);
-
-  final completer = Completer<VoidCallback?>();
-  late OverlayEntry entry;
-  var closed = false;
-  void close(VoidCallback? result) {
-    if (closed) return;
-    closed = true;
-    entry.remove();
-    if (!completer.isCompleted) completer.complete(result);
-  }
-
-  entry = OverlayEntry(
-    builder: (_) => _MiuixContextMenuOverlay(
-      position: position,
-      actions: actions,
-      onDismiss: () => close(null),
-      onSelect: (action) {
-        // 点击先即时反馈（行按压态），130ms 后关闭并回调所选动作。
-        Future.delayed(const Duration(milliseconds: 130), () => close(action));
-      },
-    ),
-  );
-  overlay.insert(entry);
-  return completer.future;
-}
-
-class _MiuixContextMenuOverlay extends StatefulWidget {
-  const _MiuixContextMenuOverlay({
-    required this.position,
-    required this.actions,
-    required this.onDismiss,
-    required this.onSelect,
-  });
-
-  final Offset position;
-  final List<VideoCustomAction> actions;
-  final VoidCallback onDismiss;
-  final ValueChanged<VoidCallback> onSelect;
-
-  @override
-  State<_MiuixContextMenuOverlay> createState() =>
-      _MiuixContextMenuOverlayState();
-}
-
-class _MiuixContextMenuOverlayState extends State<_MiuixContextMenuOverlay>
-    with SingleTickerProviderStateMixin {
-  VoidCallback? _escUnregister;
-  late final AnimationController _anim = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 180),
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _escUnregister = EscapeLayerRegistry.instance.register(() {
-      widget.onDismiss();
-      return true;
-    });
-    _anim.forward(from: 0);
-  }
-
-  @override
-  void dispose() {
-    _escUnregister?.call();
-    _anim.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final baseColors = MiuixDropdownDefaults.dropdownColors(context);
-    final contentColor = baseColors.contentColor;
-    final selectedContentColor = baseColors.selectedContentColor;
-    // 文本基底（覆写黄绿双下划线错误样式）+ 反色行配色（与弹层壳一致）。
-    final rowTextStyle =
-        (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
-      decoration: TextDecoration.none,
-    );
-
-    final media = MediaQuery.of(context);
-    const gap = 4.0;
-    final width = math.min(300.0, media.size.width - 16);
-    final left = widget.position.dx
-        .clamp(8.0, math.max(8.0, media.size.width - width - 8))
-        .toDouble();
-    final top = widget.position.dy
-        .clamp(8.0, math.max(8.0, media.size.height - 160))
-        .toDouble();
-
-    final curved =
-        CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic);
-    // 对角线展开：以点击点为面板左上角（topLeft 锚点）缩放展开。
-    final panel = FadeTransition(
-      opacity: curved,
-      child: ScaleTransition(
-        scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
-        alignment: Alignment.topLeft,
-        child: MiuixOverlayPanel(
-          title: '更多操作',
-          icon: AppIcon(AppIcons.more(),
-            size: 16,
-            color: theme.colorScheme.primary,
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: math.max(120.0, media.size.height - top - 24),
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final action in widget.actions)
-                    MiuixPopupMenuRow(
-                      text: action.title,
-                      leading: IconTheme(
-                        data: IconThemeData(color: contentColor, size: 16),
-                        child: action.icon,
-                      ),
-                      enabled: true,
-                      selected: false,
-                      textStyle: rowTextStyle,
-                      contentColor: contentColor,
-                      selectedContentColor: selectedContentColor,
-                      onTap: () => widget.onSelect(action.onTap),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    return Stack(
-      children: [
-        // 点击外部关闭。
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onDismiss,
-            child: const SizedBox.expand(),
-          ),
-        ),
-        Positioned(
-          left: left,
-          top: top + gap,
-          width: width,
-          child: panel,
-        ),
-      ],
-    );
-  }
 }
 
 /// 视频卡片三点更多按钮（对齐 PiliPlus `VideoPopupMenu`）。

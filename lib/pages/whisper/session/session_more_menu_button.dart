@@ -1,17 +1,55 @@
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/theme/app_icons.dart';
 
+/// 构建会话「更多选项」动作列表（三点菜单与右键菜单共用）。
+///
+/// 图标不设显式尺寸：弹层壳/右键浮层统一按行文本尺寸驱动，
+/// 保证与选项文本大小一致。
+List<ContextMenuAction> buildSessionMenuActions({
+  required BuildContext context,
+  required bool isPinned,
+  required bool isDnd,
+  required VoidCallback onToggleTop,
+  required VoidCallback onToggleDnd,
+  required VoidCallback onRemove,
+}) {
+  final cs = Theme.of(context).colorScheme;
+  return [
+    ContextMenuAction(
+      title: isPinned ? '取消置顶' : '置顶会话',
+      icon: AppIcon(
+        AppIcons.pin(active: isPinned),
+        color: isPinned ? cs.primary : null,
+      ),
+      onTap: onToggleTop,
+    ),
+    ContextMenuAction(
+      title: isDnd ? '关闭免打扰' : '开启免打扰',
+      icon: AppIcon(
+        AppIcons.notificationsOff(active: isDnd),
+        color: isDnd ? cs.primary : null,
+      ),
+      onTap: onToggleDnd,
+    ),
+    ContextMenuAction(
+      title: '删除会话',
+      icon: AppIcon(AppIcons.delete(), color: cs.error),
+      onTap: onRemove,
+    ),
+  ];
+}
+
 /// 会话列表项右侧的现代化更多操作菜单按钮。
 ///
-/// - MD3：[MenuAnchor] + [MenuItemButton]（原实现保留）；
-/// - Miuix：[MiuixWindowIconDropdownMenu]（阶段3a 起替换自绘 MenuStyle 近似，
-///   获得原生菜单揭示动效与分组分隔线）。受上游 API 限制，菜单项文本颜色
-///   无法逐项定制——「删除会话」保留红色图标，文本退化为默认内容色
-///   （见阶段3 复盘"已知差异"）。
-/// 图标经 [AppIcon] 分发：Miuix 风格下升级为 Miuix 矢量（阶段3c）。
+/// - 弹层壳为自研 [MiuixPopupMenu]（阶段4h 起替代上游组件）；
+/// - 菜单项文本颜色保持统一内容色，「删除会话」以红色图标区分
+///   （见阶段3 复盘"已知差异"）；
+/// - 图标经 [AppIcon] 分发为 Miuix 矢量，尺寸随行文本（不再硬编码 18）；
+/// - 动作列表由 [buildSessionMenuActions] 构建，与右键菜单共用。
 class SessionMoreMenuButton extends StatelessWidget {
   const SessionMoreMenuButton({
     super.key,
@@ -31,6 +69,14 @@ class SessionMoreMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final actions = buildSessionMenuActions(
+      context: context,
+      isPinned: isPinned,
+      isDnd: isDnd,
+      onToggleTop: onToggleTop,
+      onToggleDnd: onToggleDnd,
+      onRemove: onRemove,
+    );
     // 阶段5d-L1：M3 冻结分支已移除，弹层壳为唯一实现。
     return MiuixPopupMenu(
         title: '更多选项',
@@ -38,35 +84,23 @@ class SessionMoreMenuButton extends StatelessWidget {
           MiuixDropdownEntry(
             items: [
               MiuixDropdownItem(
-                text: isPinned ? '取消置顶' : '置顶会话',
-                icon: AppIcon(
-                  AppIcons.pin(active: isPinned),
-                  size: 18,
-                  color: isPinned ? theme.colorScheme.primary : null,
-                ),
-                onClick: onToggleTop,
+                text: actions[0].title,
+                icon: actions[0].icon,
+                onClick: actions[0].onTap,
               ),
               MiuixDropdownItem(
-                text: isDnd ? '关闭免打扰' : '开启免打扰',
-                icon: AppIcon(
-                  AppIcons.notificationsOff(active: isDnd),
-                  size: 18,
-                  color: isDnd ? theme.colorScheme.primary : null,
-                ),
-                onClick: onToggleDnd,
+                text: actions[1].title,
+                icon: actions[1].icon,
+                onClick: actions[1].onTap,
               ),
             ],
           ),
           MiuixDropdownEntry(
             items: [
               MiuixDropdownItem(
-                text: '删除会话',
-                icon: AppIcon(
-                  AppIcons.delete(),
-                  size: 18,
-                  color: theme.colorScheme.error,
-                ),
-                onClick: onRemove,
+                text: actions[2].title,
+                icon: actions[2].icon,
+                onClick: actions[2].onTap,
               ),
             ],
           ),

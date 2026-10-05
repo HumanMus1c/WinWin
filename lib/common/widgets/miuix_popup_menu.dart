@@ -308,6 +308,17 @@ class _PopupOverlay extends StatelessWidget {
         rows.add(
           MiuixPopupMenuRow(
             text: item.text,
+            // L5-10b：补传条目图标（此前自绘壳未接 leading，图标不渲染），
+            // 尺寸随行文本（不再依赖调用方硬编码）。
+            leading: item.icon == null
+                ? null
+                : IconTheme(
+                    data: IconThemeData(
+                      color: contentColor,
+                      size: rowTextStyle.fontSize ?? 14,
+                    ),
+                    child: item.icon!,
+                  ),
             enabled: entry.enabled && item.enabled,
             selected: item.selected,
             textStyle: rowTextStyle,
