@@ -1,4 +1,4 @@
-| 语义 | 官方美术（L5-7，当前生效） | 等价轮廓（L5-5 保底） | 说明 |
+| 语义 | 当前生效（L5-8 官网 / L5-7 官方） | 等价轮廓（L5-5 保底） | 说明 |
 |---|---|---|---|
 | `like()` | ![新美术](icon-sheets/icons/like.png) | ![等价](icon-sheets/icons/like-equiv.png) | 点赞 |
 | `like(on)` | ![新美术](icon-sheets/icons/like-on.png) | ![等价](icon-sheets/icons/like-on-equiv.png) | 点赞（已赞） |
@@ -24,6 +24,6 @@
 | `radio(on)` | ![新美术](icon-sheets/icons/radio-on.png) | ![等价](icon-sheets/icons/radio-on-equiv.png) | 单选框（选中） |
 | `error()` | ![新美术](icon-sheets/icons/error.png) | ![等价](icon-sheets/icons/error-equiv.png) | 错误/告警 |
 | `viewCount()` | ![新美术](icon-sheets/icons/viewCount.png) | ![等价](icon-sheets/icons/viewCount-equiv.png) | 播放量 |
-| `danmakuCount()` | ![新美术](icon-sheets/icons/danmakuCount.png) | ![等价](icon-sheets/icons/danmakuCount-equiv.png) | 弹幕数 |
+| `danmakuCount()` | ![新美术](icon-sheets/icons/danmakuCount.png) | — | 弹幕数 |
 | `calendar()` | ![新美术](icon-sheets/icons/calendar.png) | ![等价](icon-sheets/icons/calendar-equiv.png) | 发布日期 |
 | `notificationsOff()` | ![新美术](icon-sheets/icons/notificationsOff.png) | ![等价](icon-sheets/icons/notificationsOff-equiv.png) | 免打扰 |

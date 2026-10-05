@@ -225,7 +225,8 @@ void main() {
       expect(AppIcons.error(), equals(CupertinoIcons.exclamationmark_circle));
 
       expect(AppIcons.viewCount(), equals(CupertinoIcons.play_circle));
-      expect(AppIcons.danmakuCount(), equals(CupertinoIcons.captions_bubble));
+      // 阶段5e-L5-8：弹幕数改用载体字形（渲染为 B 站官网"弹幕数"矢量）。
+      expect(AppIcons.danmakuCount(), equals(Icons.subtitles_outlined));
       expect(AppIcons.duration(), equals(CupertinoIcons.clock));
       expect(AppIcons.calendar(), equals(CupertinoIcons.calendar));
     });

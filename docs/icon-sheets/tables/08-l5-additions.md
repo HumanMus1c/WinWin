@@ -1,6 +1,6 @@
 | 语义 | 使用位置 | 曾用（Material） | 现用（最终视觉） | Cupertino 字形 | 矢量 | 状态 |
 |---|---|---|---|---|---|---|
-| `folder()` | 收藏夹/公开私密 | ![曾用](icon-sheets/icons/folder-old.png) | ![现用](icon-sheets/icons/folder.png) | `folder` | folder | ✅ |
+| `folder()` | 收藏夹/公开私密 | ![曾用](icon-sheets/icons/folder-old.png) | ![现用](icon-sheets/icons/folder.png) | `folder` | f434 | ✅ |
 | `copy()` | 复制 UID/链接 | ![曾用](icon-sheets/icons/copy-old.png) | ![现用](icon-sheets/icons/copy.png) | `doc_on_doc` | copy | ✅ |
 | `link()` | 打开链接 | ![曾用](icon-sheets/icons/link-old.png) | ![现用](icon-sheets/icons/link.png) | `link` | link | ✅ |
 | `info()` | 关于/开源协议 | ![曾用](icon-sheets/icons/info-old.png) | ![现用](icon-sheets/icons/info.png) | `info` | info | ✅ |

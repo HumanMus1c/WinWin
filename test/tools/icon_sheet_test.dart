@@ -383,14 +383,15 @@ String _tableMarkdown(_Section s) {
   return sb.toString();
 }
 
-/// 美术候选表格（官方美术 × 等价轮廓 并排）。
+/// 美术候选表格（当前生效 × 等价轮廓 并排）。
 String _artTableMarkdown(_Section s) {
   final sb = StringBuffer()
-    ..write('| 语义 | 官方美术（L5-7，当前生效） | 等价轮廓（L5-5 保底） | 说明 |\n')
+    ..write('| 语义 | 当前生效（L5-8 官网 / L5-7 官方） | 等价轮廓（L5-5 保底） | 说明 |\n')
     ..write('|---|---|---|---|\n');
   for (final c in s.cells) {
+    final equiv = miuixEquivalenceIconFor(c.glyph);
     sb.write('| `${c.label}` | ![新美术](icon-sheets/icons/${c.key}.png) | '
-        '![等价](icon-sheets/icons/${c.key}-equiv.png) | '
+        '${equiv == null ? '—' : '![等价](icon-sheets/icons/${c.key}-equiv.png)'} | '
         '${c.usage.isEmpty ? '—' : c.usage} |\n');
   }
   return sb.toString();
@@ -778,7 +779,7 @@ void main() {
     ]),
     _Section(
         '09-art-candidates.png',
-        '09 官方美术（Material Symbols）vs 等价轮廓 · Official vs Equivalence',
+        '09 美术来源对照：官网/官方 vs 等价轮廓 · Sources vs Equivalence',
         [
           _Cell('like()', AppIcons.like(), usage: '点赞'),
           _Cell('like(on)', AppIcons.like(active: true), usage: '点赞（已赞）'),
@@ -912,11 +913,12 @@ void main() {
         }
         if (section.artCompare) {
           final equiv = miuixEquivalenceIconFor(c.glyph);
-          expect(equiv, isNotNull, reason: '${c.label} 无等价轮廓');
-          final eqPng = await _captureIconPng(
-              tester, MiuixIcon(vector: equiv!, size: 22));
-          expect(eqPng, isNotNull, reason: '${c.label} 等价轮廓 PNG 失败');
-          _writeBytes(File('$_outDir/icons/${c.key}-equiv.png'), eqPng!);
+          if (equiv != null) {
+            final eqPng = await _captureIconPng(
+                tester, MiuixIcon(vector: equiv, size: 22));
+            expect(eqPng, isNotNull, reason: '${c.label} 等价轮廓 PNG 失败');
+            _writeBytes(File('$_outDir/icons/${c.key}-equiv.png'), eqPng!);
+          }
         }
       }
 

@@ -3,6 +3,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'app_icons_art.dart';
+import 'app_icons_bili.g.dart';
 import 'app_icons_builtin.g.dart';
 import 'app_icons_official.g.dart';
 
@@ -244,9 +245,8 @@ abstract final class AppIcons {
 
   static IconData viewCount() => CupertinoIcons.play_circle;
 
-  /// 视频弹幕数
-
-  static IconData danmakuCount() => CupertinoIcons.captions_bubble;
+  /// 视频弹幕数（载体字形 → B 站官网"弹幕数"矢量，L5-8）
+  static IconData danmakuCount() => Icons.subtitles_outlined;
 
   /// 视频时长
 
@@ -427,13 +427,37 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
 
 /// 查询字形对应的 Miuix 矢量。
 ///
-/// 优先级：**官方美术**（L5-7：Material Symbols 导入）→ 手绘新美术（L5-6）
-/// → 三集映射 → 内置等价轮廓（L5-5）→ null（回退字形）。
+/// 优先级：**B 站官网素材**（L5-8）→ 官方美术（L5-7：Material Symbols）
+/// → 手绘新美术（L5-6）→ 三集映射 → 内置等价轮廓（L5-5）→ null（回退字形）。
 MiuixVectorIcon? miuixVectorForGlyph(IconData glyph) =>
+    miuixBiliSiteIconFor(glyph) ??
     miuixOfficialIconFor(glyph) ??
     miuixArtIconFor(glyph) ??
     _miuixVectorByGlyph[glyph] ??
     miuixEquivalenceIconFor(glyph);
+
+final Map<IconData, MiuixVectorIcon> _biliSiteCache = {};
+
+/// 阶段5e-L5-8：**B 站官网素材层**（A+B：bilifont 主站 + vanfont 详情页）。
+///
+/// 覆盖：点赞/点踩/投币/收藏/分享（互动行）、播放数/弹幕数（元数据行）、
+/// 搜索/收藏夹/下载等；由 `tools/bili_site_assets_import.py` 预生成
+/// （bbox 归一化居中于 960 视口，视觉重量与其余矢量对齐）。
+MiuixVectorIcon? miuixBiliSiteIconFor(IconData glyph) {
+  final data = kBiliSiteIconPaths[glyph.codePoint];
+  if (data == null) return null;
+  return _biliSiteCache.putIfAbsent(
+    glyph,
+    () => MiuixVectorIcon(
+      name: 'biliSite.${glyph.codePoint.toRadixString(16)}.regular',
+      viewport: const Size(960, 960),
+      intrinsicSize: const Size(24, 24),
+      paths: [
+        MiuixVectorPath(build: () => miuixParsePath(data)),
+      ],
+    ),
+  );
+}
 
 final Map<IconData, MiuixVectorIcon> _officialVectorCache = {};
 
