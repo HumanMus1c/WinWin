@@ -1,4 +1,4 @@
-| 语义 | 新美术（L5-6，当前生效） | 等价轮廓（L5-5 保底） | 说明 |
+| 语义 | 官方美术（L5-7，当前生效） | 等价轮廓（L5-5 保底） | 说明 |
 |---|---|---|---|
 | `like()` | ![新美术](icon-sheets/icons/like.png) | ![等价](icon-sheets/icons/like-equiv.png) | 点赞 |
 | `like(on)` | ![新美术](icon-sheets/icons/like-on.png) | ![等价](icon-sheets/icons/like-on-equiv.png) | 点赞（已赞） |

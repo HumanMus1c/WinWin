@@ -306,6 +306,7 @@ String _standaloneSvg(_GlyphSvg g, {double size = 48}) =>
 String _vectorText(IconData glyph) {
   final vector = miuixVectorForGlyph(glyph);
   if (vector == null) return '—';
+  if (vector.name.startsWith('official.')) return '官方矢量（Material Symbols）';
   if (vector.name.startsWith('art.')) return '内置矢量（新美术）';
   if (vector.name.startsWith('builtin.')) return '内置矢量';
   final parts = vector.name.split('.');
@@ -382,10 +383,10 @@ String _tableMarkdown(_Section s) {
   return sb.toString();
 }
 
-/// 美术候选表格（新美术 × 等价轮廓 并排）。
+/// 美术候选表格（官方美术 × 等价轮廓 并排）。
 String _artTableMarkdown(_Section s) {
   final sb = StringBuffer()
-    ..write('| 语义 | 新美术（L5-6，当前生效） | 等价轮廓（L5-5 保底） | 说明 |\n')
+    ..write('| 语义 | 官方美术（L5-7，当前生效） | 等价轮廓（L5-5 保底） | 说明 |\n')
     ..write('|---|---|---|---|\n');
   for (final c in s.cells) {
     sb.write('| `${c.label}` | ![新美术](icon-sheets/icons/${c.key}.png) | '
@@ -777,7 +778,7 @@ void main() {
     ]),
     _Section(
         '09-art-candidates.png',
-        '09 内置矢量：Miuix 新美术 vs 等价轮廓 · Art vs Equivalence',
+        '09 官方美术（Material Symbols）vs 等价轮廓 · Official vs Equivalence',
         [
           _Cell('like()', AppIcons.like(), usage: '点赞'),
           _Cell('like(on)', AppIcons.like(active: true), usage: '点赞（已赞）'),

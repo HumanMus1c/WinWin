@@ -9,5 +9,5 @@
 | `history(sel)` | 底栏/侧栏「历史」选中 | ![曾用](icon-sheets/icons/history-sel-old.png) | ![现用](icon-sheets/icons/history-sel.png) | `clock_fill` | recent | ✅ |
 | `whisper()` | 底栏/侧栏「消息」+ 动态评论数 | ![曾用](icon-sheets/icons/whisper-old.png) | ![现用](icon-sheets/icons/whisper.png) | `chat_bubble_2` | messages | ✅ |
 | `whisper(sel)` | 底栏/侧栏「消息」选中 | ![曾用](icon-sheets/icons/whisper-sel-old.png) | ![现用](icon-sheets/icons/whisper-sel.png) | `chat_bubble_2_fill` | messages | ✅ |
-| `profile()` | 底栏/侧栏「我的」+ 头像占位 | ![曾用](icon-sheets/icons/profile-old.png) | ![现用](icon-sheets/icons/profile.png) | `person` | 内置矢量（新美术） | ✅ |
-| `profile(sel)` | 底栏/侧栏「我的」选中 | ![曾用](icon-sheets/icons/profile-sel-old.png) | ![现用](icon-sheets/icons/profile-sel.png) | `person_fill` | 内置矢量（新美术） | ✅ |
+| `profile()` | 底栏/侧栏「我的」+ 头像占位 | ![曾用](icon-sheets/icons/profile-old.png) | ![现用](icon-sheets/icons/profile.png) | `person` | 官方矢量（Material Symbols） | ✅ |
+| `profile(sel)` | 底栏/侧栏「我的」选中 | ![曾用](icon-sheets/icons/profile-sel-old.png) | ![现用](icon-sheets/icons/profile-sel.png) | `person_fill` | 官方矢量（Material Symbols） | ✅ |

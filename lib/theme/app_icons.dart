@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'app_icons_art.dart';
 import 'app_icons_builtin.g.dart';
+import 'app_icons_official.g.dart';
 
 /// 全局语义图标中心（阶段5d-L4-2 单轨化：原 `*Of(style)` 与 `*(context)` 双分发
 /// 已收敛为无参静态方法，字形恒定 Miuix / Apple 图标集；字形→Miuix 矢量映射
@@ -426,11 +427,36 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
 
 /// 查询字形对应的 Miuix 矢量。
 ///
-/// 优先级：**新美术**（L5-6）→ 三集映射 → 内置等价轮廓（L5-5）→ null（回退字形）。
+/// 优先级：**官方美术**（L5-7：Material Symbols 导入）→ 手绘新美术（L5-6）
+/// → 三集映射 → 内置等价轮廓（L5-5）→ null（回退字形）。
 MiuixVectorIcon? miuixVectorForGlyph(IconData glyph) =>
+    miuixOfficialIconFor(glyph) ??
     miuixArtIconFor(glyph) ??
     _miuixVectorByGlyph[glyph] ??
     miuixEquivalenceIconFor(glyph);
+
+final Map<IconData, MiuixVectorIcon> _officialVectorCache = {};
+
+/// 阶段5e-L5-7：**官方美术**（Material Symbols，Apache-2.0）。
+///
+/// 覆盖 L5-6 手绘的 27 个字形（"仅换自绘部分"）；来源为 BiliPai 本地
+/// VectorDrawable（12 个）与 Google 官方仓库补缺（15 个），由
+/// `tools/official_symbols_import.py` 预生成至 `app_icons_official.g.dart`。
+MiuixVectorIcon? miuixOfficialIconFor(IconData glyph) {
+  final data = kOfficialIconPaths[glyph.codePoint];
+  if (data == null) return null;
+  return _officialVectorCache.putIfAbsent(
+    glyph,
+    () => MiuixVectorIcon(
+      name: 'official.${glyph.codePoint.toRadixString(16)}.regular',
+      viewport: const Size(960, 960),
+      intrinsicSize: const Size(24, 24),
+      paths: [
+        MiuixVectorPath(build: () => miuixParsePath(data)),
+      ],
+    ),
+  );
+}
 
 final Map<IconData, MiuixVectorIcon> _builtinVectorCache = {};
 
