@@ -29,18 +29,20 @@ CACHE = os.path.join(os.environ.get("LOCALAPPDATA", ""),
 BILIPAI_DRAWABLE = ("D:/Documents/GitHub/BiliPai/app/src/main/res/drawable")
 GOOGLE_RAW = ("https://raw.githubusercontent.com/google/material-design-icons/"
               "master/symbols/web/{name}/materialsymbolsrounded/"
-              "{name}_24px.svg")
+              "{file}_24px.svg")
 
 # 字形名（Cupertino 常量名） → 来源候选列表：
 #   ("local", "<drawable 前缀>") | ("net", "<symbol 名>", "<回退名>...")
 SOURCES = {
     "hand_thumbsup": [("local", "ms_thumb_up_off_alt_24")],
     "hand_thumbsup_fill": [("local", "ms_thumb_up_fill_24")],
+    # 点踩：官方对（outlined 24 + fill1 24）
     "hand_thumbsdown": [("net", "thumb_down")],
-    "hand_thumbsdown_fill": [("net", "thumb_down")],
-    "money_dollar_circle": [("net", "monetization_on"), ("net", "paid"),
-                            ("net", "toll")],
-    "money_dollar_circle_fill": [("net", "monetization_on"), ("net", "paid")],
+    "hand_thumbsdown_fill": [("net", "thumb_down", "thumb_down_fill1")],
+    # 投币：官方对（monetization_on + fill1）
+    "money_dollar_circle": [("net", "monetization_on")],
+    "money_dollar_circle_fill":
+        [("net", "monetization_on", "monetization_on_fill1")],
     "person": [("local", "ms_person_24")],
     "person_fill": [("local", "ms_person_fill_24")],
     "fullscreen": [("local", "ms_fullscreen_24")],
@@ -195,14 +197,32 @@ def from_local(name: str) -> str:
     return d.attrib["{http://schemas.android.com/apk/res/android}pathData"]
 
 
-def from_net(name: str) -> str:
-    url = GOOGLE_RAW.format(name=name)
+def from_net(name: str, stem: str | None = None) -> str:
+    """取 Google Material Symbols SVG（folder=name，文件名默认同 name；
+    填充变体形如 `<name>_fill1_24px.svg`，以 stem 传入）。"""
+    stem = stem or name
+    url = GOOGLE_RAW.format(name=name, file=stem)
     with urllib.request.urlopen(url, timeout=30) as resp:
         svg = resp.read().decode("utf-8")
     m = re.search(r'<path d="([^"]+)"', svg)
     if not m:
         raise ValueError(f"{name}: SVG 无 path")
     return m.group(1)
+
+
+def flip_y_abs(d: str) -> str:
+    """把绝对 M/L/Q/C/Z 路径按 y' = 960 - y 竖直镜像（点踩 = 镜像拇指）。"""
+    toks = d.split()
+    out = []
+    i = 0
+    while i < len(toks):
+        cmd = toks[i]; i += 1
+        out.append(cmd)
+        pairs = {"M": 1, "L": 1, "Q": 2, "C": 3}.get(cmd, 0)
+        for _ in range(pairs):
+            out.append(toks[i]); i += 1                      # x 原样
+            out.append(f"{960 - float(toks[i]):.1f}"); i += 1  # y 镜像
+    return " ".join(out)
 
 
 def main() -> int:
@@ -218,15 +238,18 @@ def main() -> int:
     for glyph, candidates in SOURCES.items():
         raw = None
         used = None
+        flip = False
         for cand in candidates:
             try:
                 if cand[0] == "local":
                     raw = from_local(cand[1])
                     y_off = 0.0        # Android VD：y 已向下、0..960
+                    used = cand[1]
                 else:
-                    raw = from_net(cand[1])
+                    raw = from_net(cand[1], cand[2] if len(cand) > 2 else None)
                     y_off = 960.0      # Google SVG：viewBox 0 -960 960 960
-                used = cand[1]
+                    used = cand[2] if len(cand) > 2 else cand[1]
+                flip = len(cand) > 3 and cand[3] == "flipy"
                 break
             except Exception as e:  # noqa: BLE001
                 continue
@@ -234,8 +257,10 @@ def main() -> int:
             unresolved.append(glyph)
             continue
         d = normalize_commands(raw, y_off)
+        if flip:
+            d = flip_y_abs(d)
         entries.append((cps[glyph], glyph, used, d))
-        print(f"OK  {glyph:<26} <- {used}")
+        print(f"OK  {glyph:<26} <- {used}{' (flipY)' if flip else ''}")
 
     lines = [
         "// GENERATED — 由 tools/official_symbols_import.py 生成，勿手改。",

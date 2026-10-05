@@ -35,23 +35,21 @@ BILIFONT_URL = ("https://raw.githubusercontent.com/molefish3614/"
 
 # 目标：本项目字形名 → (字体, 码点)
 # vanfont = 官网视频详情页（B 组）；bilifont = 主站 iconfont（A 组）
+#
+# 注：官网字体多为**单形**（无 off 描边/on 实心对）。双态语义
+# （点赞/点踩/投币/收藏）保留 Material Symbols 官方双态对（L5-7）；
+# 本层仅覆盖**单态**语义，避免常态失去描边版/造型歧义（如 usemo≠硬币）。
 TARGETS = {
-    # B 组（vanfont）
-    "hand_thumbsup": ("van", 0xE6E0),          # videodetails_like 点赞
-    "hand_thumbsup_fill": ("van", 0xE6E0),
-    "hand_thumbsdown": ("van", 0xE638),        # cai 踩
-    "hand_thumbsdown_fill": ("van", 0xE638),
-    "money_dollar_circle": ("van", 0xE6E2),    # videodetails_usemo 投币
-    "money_dollar_circle_fill": ("van", 0xE6E2),
-    "star": ("van", 0xE6E1),                   # videodetails_collec 收藏
-    "star_fill": ("van", 0xE6E1),
+    # 互动行（单态）
     "share": ("van", 0xE70F),                  # videodetails_share 分享
+    # 元数据行
     "play_circle": ("van", 0xE6E6),            # info_playnumber 播放数
+    # 通用
     "arrow_down_to_line": ("van", 0xE744),     # download 下载
     # A 组（bilifont 主站）
     "search": ("bili", 0xE635),                # general_search 搜索
     "folder": ("bili", 0xE730),                # icon_dingdao_shoucangjia 收藏夹
-    # 弹幕数（经载体字形 Icons.subtitles_outlined，码点 0xf0902）
+    # 弹幕数（经载体字形 Icons.subtitles_outlined，码点 0xf3fd）
     "carrier_subtitles_outlined": ("van", 0xE6E7),  # info_barragenumber 弹幕数
 }
 
