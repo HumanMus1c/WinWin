@@ -181,14 +181,17 @@ class _ImmersiveTitleBarShellState extends State<ImmersiveTitleBarShell>
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          'WinWin',
+                        // 覆写 WidgetsApp 默认「黄绿双下划线」错误文本样式
+                        // （壳层位于 Material 之外，与 app_messenger.dart 同款处理）。
+                        DefaultTextStyle(
                           style: TextStyle(
                             fontSize: 12,
                             height: 1.1,
                             fontWeight: FontWeight.w500,
                             color: foreground,
+                            decoration: TextDecoration.none,
                           ),
+                          child: const Text('WinWin'),
                         ),
                       ],
                     ),
@@ -201,7 +204,11 @@ class _ImmersiveTitleBarShellState extends State<ImmersiveTitleBarShell>
           ),
         ),
         _dim(
+          // ValueKey 随底色亮度变化强制重建：window_manager 的按钮字形画笔
+          // shouldRepaint 恒返回 false，仅在重建后才会以新颜色重新绘制
+          // （否则底色翻转后图标颜色要等到鼠标掠过重绘才更新）。
           Row(
+            key: ValueKey(brightness),
             mainAxisSize: MainAxisSize.min,
             children: [
               WindowCaptionButton.minimize(

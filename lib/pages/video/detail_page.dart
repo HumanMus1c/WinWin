@@ -852,14 +852,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
   }
 
-  /// 全屏/网页全屏浮层返回按钮：与普通顶栏返回按钮语义一致（返回上一级）。
-  void _handleFullscreenBack() {
-    SyncTrace.log('DetailPage', 'fullscreen back button pressed');
-    playerController?.pause();
-    playerController?.detachListeners();
-    Navigator.maybePop(context);
-  }
-
   // ─────────────────────────── 布局 ───────────────────────────
 
   @override
@@ -879,7 +871,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     onToggleFullscreen: _toggleFullscreen,
                     onToggleInAppFullscreen: _toggleInAppFullscreen,
                     onEscape: _handleEscape,
-                    onBack: _handleFullscreenBack,
                   ),
                 ),
               ],
@@ -1322,7 +1313,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       onToggleFullscreen: _toggleFullscreen,
       onToggleInAppFullscreen: _toggleInAppFullscreen,
       onEscape: _handleEscape,
-      onBack: _handleFullscreenBack,
     );
   }
 

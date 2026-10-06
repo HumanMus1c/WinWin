@@ -52,7 +52,6 @@ class PlayerPanel extends StatefulWidget {
     this.onToggleFullscreen,
     this.onToggleInAppFullscreen,
     this.onEscape,
-    this.onBack,
   });
 
   final WinWinPlayerController controller;
@@ -66,9 +65,6 @@ class PlayerPanel extends StatefulWidget {
 
   /// Esc 键回调（固定语义：返回上一级）。
   final VoidCallback? onEscape;
-
-  /// 全屏/网页全屏浮层返回按钮回调（普通布局由页面顶栏返回按钮承担，不显示浮层按钮）。
-  final VoidCallback? onBack;
 
   @override
   State<PlayerPanel> createState() => _PlayerPanelState();
@@ -269,6 +265,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   // ── 交互 ──
 
+  /// Esc 键与全屏浮层返回按钮的统一语义：
+  /// 二级浮层（章节面板 / 音量弹层 / 弹幕样式…）优先关闭，本次不再级联；
+  /// 否则交由页面处理（页面语义：优先退出显示器全屏 → 退出网页全屏 → 返回上一级）。
+  void _handleEscape() {
+    if (EscapeLayerRegistry.instance.closeTopmost()) return;
+    widget.onEscape?.call();
+  }
+
   void _onVideoTap() {
     widget.controller.playOrPause();
     _onPointerActivity();
@@ -393,11 +397,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
       onSpeedChange: _onLongPressSpeedChange,
       onToggleFullscreen: widget.onToggleFullscreen,
       onToggleInAppFullscreen: widget.onToggleInAppFullscreen,
-      onEscape: () {
-        // 二级浮层（章节面板 / 音量弹层 / 弹幕样式…）优先关闭，本次 Esc 不再级联。
-        if (EscapeLayerRegistry.instance.closeTopmost()) return;
-        widget.onEscape?.call();
-      },
+      onEscape: _handleEscape,
       onToggleDanmaku: _toggleDanmaku,
       onLockToggle: (locked) => setState(() {
         _locked = locked;
@@ -505,8 +505,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                     color: Colors.white,
                                     shadows: ContrastStyle.glyphShadows,
                                     size: 22,
-                                    tooltip: '返回',
-                                    onPressed: widget.onBack,
+                                    tooltip: widget.fullscreen
+                                        ? '退出全屏（Esc）'
+                                        : '退出网页全屏（Esc）',
+                                    onPressed: _handleEscape,
                                   ),
                                 ),
                               ),
