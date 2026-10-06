@@ -47,7 +47,7 @@
 | 替换风险控制 | ✅ 文件无调用方（git grep 确认）；与上游结构同源（diff 18 行） |
 | 首个正式发布 | ✅ `v0.1.0+26100601` 转正（Latest） |
 | CI 二跑修复（icon_sheet） | ✅ 缺字体**模拟**场景通过（诊断输出 + 无溢出）；正常字体产物**零 diff** |
-| 云端复验（force dispatch） | <结果见补记 C> |
+| 云端复验（force dispatch） | ✅ **全绿**（`37510585800`）：probe 48s → gate 17m43s（36 包升级 → analyze ✓ → test ✓ → Debug 构建 ✓ → artifact `WinWin_windows_x64_debug_0.1.0+26100601.zip`） |
 
 ### 3.1 云端运行全景（本轮全部运行）
 
@@ -90,4 +90,4 @@
   - `efd9303` —— `[fix](grpc): 移植上游新版 rpc.pb.dart + protobuf 6.1.0——消除 create 弃用，升级兼容闭环`
   - `7511df4` —— `[ci](deps): 静态分析门槛放宽——info 不拦（--no-fatal-infos），warning / error 仍为门禁`
   - `bb5f555` —— `[fix](test): icon_sheet 生成器跨环境健壮化——字体候选链动态化 + 渲染视口高度余量`
-  - 本复盘提交 hash：<待回填>
+  - 本复盘提交 `efcf282`；云端复验结果（全绿）已回填 §3；[docs] 补记提交 hash 见 git log（按全局开发规定补记）
