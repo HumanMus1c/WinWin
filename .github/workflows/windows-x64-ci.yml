@@ -1,0 +1,164 @@
+name: CI（依赖更新探测）
+
+# 触发改造（2026-10-06，恢复自 f4afc24 移除的 CI 工作流并改造）：
+#   定时（每 6 小时）用 `flutter pub outdated` 探测「不改 pubspec 即可升级到」的依赖；
+#   与上次快照（actions/cache）对比出现新增 / 变化时，自动运行质量门禁（升级验证）。
+# 节流闸：concurrency（cancel-in-progress: false）——同一时刻至多 1 个运行，
+#   前一个完成（失败或成功）后才开始下一个排队触发。
+# 根因防护：固定 PUB_HOSTED_URL 与本地 pubspec.lock 同源 + --enforce-lockfile
+#   （见 docs/云端CI失败根因与处置复盘-2026-10-04.md）。
+# 产物治理：CI 产物 = artifact（7 天）；正式发布走 tag → Release（永久），不设分支。
+
+on:
+  schedule:
+    # 每 6 小时（UTC 0/6/12/18 = 北京 8/14/20/2 点）
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "跳过探测，强制运行质量门禁"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: winwin-deps-ci
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: 依赖版本探测
+    runs-on: ubuntu-latest
+    env:
+      PUB_HOSTED_URL: https://pub.flutter-io.cn
+    outputs:
+      has_updates: ${{ steps.detect.outputs.has_updates }}
+    steps:
+      - name: 代码迁出
+        uses: actions/checkout@v7
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.0"
+          cache: true
+
+      - name: 拉取依赖（严格遵循 pubspec.lock）
+        run: flutter pub get --enforce-lockfile
+
+      - name: 恢复上次探测快照
+        uses: actions/cache/restore@v4
+        with:
+          path: probe_snapshot.txt
+          key: dep-probe-${{ github.run_id }}
+          restore-keys: |
+            dep-probe-
+
+      - name: 探测可升级依赖（resolvable > current）
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub outdated --json > outdated.json
+          # 提取「不改 pubspec 即可升级到」的包：resolvable 与 current 不同（含传递依赖）
+          jq -r '.packages[]
+            | select(.current.version != null and .resolvable.version != null)
+            | select(.resolvable.version != .current.version)
+            | "\(.package) \(.resolvable.version)"' outdated.json | sort > probe_snapshot_new.txt
+
+          if [ -f probe_snapshot.txt ] && cmp -s probe_snapshot.txt probe_snapshot_new.txt; then
+            echo "has_updates=false" >> "$GITHUB_OUTPUT"
+            echo "探测结果：与上次快照一致，无新增可升级依赖（存量可升级项：$(wc -l < probe_snapshot_new.txt) 条）。" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has_updates=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "## 依赖探测：发现新增 / 变化的可升级项"
+              echo ""
+              if [ -f probe_snapshot.txt ]; then
+                echo "新增 / 变化（相对上次快照）："
+                echo '```'
+                comm -13 probe_snapshot.txt probe_snapshot_new.txt | head -50 || true
+                echo '```'
+              else
+                echo "首次运行（无历史快照），当前可升级项（最多 50 条）："
+                echo '```'
+                head -50 probe_snapshot_new.txt
+                echo '```'
+              fi
+              echo ""
+              echo "可升级项共：$(wc -l < probe_snapshot_new.txt) 条"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          mv probe_snapshot_new.txt probe_snapshot.txt
+
+      - name: 保存探测快照
+        if: steps.detect.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: probe_snapshot.txt
+          key: dep-probe-${{ github.run_id }}
+
+  gate:
+    name: 质量门禁（升级验证：analyze + test + Debug 构建）
+    needs: probe
+    if: ${{ needs.probe.outputs.has_updates == 'true' || inputs.force == true }}
+    runs-on: windows-latest
+    env:
+      PUB_HOSTED_URL: https://pub.flutter-io.cn
+    steps:
+      - name: 代码迁出
+        uses: actions/checkout@v7
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.0"
+          cache: true
+
+      - name: 拉取依赖（严格遵循 pubspec.lock）
+        run: flutter pub get --enforce-lockfile
+
+      - name: 升级依赖到可解析最新（验证升级兼容性）
+        run: flutter pub upgrade
+
+      - name: 升级明细（pubspec.lock diff）
+        shell: pwsh
+        run: |
+          git diff --stat pubspec.lock
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "## 依赖升级明细（pubspec.lock）"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '```text'
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value (git diff --stat pubspec.lock)
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '```'
+
+      - name: 静态分析
+        run: flutter analyze
+
+      - name: 单元测试
+        run: flutter test
+
+      - name: 构建 Windows（Debug）
+        run: flutter build windows --debug
+
+      - name: 读取版本号（含版本代码）
+        shell: pwsh
+        run: |
+          $line = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+          echo "app_version=$line" >> $env:GITHUB_ENV
+
+      - name: 压缩打包
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "build/windows/x64/runner/Debug/*" -DestinationPath "WinWin_windows_x64_debug_${{ env.app_version }}.zip"
+
+      - name: 上传产物（artifact · 7 天）
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          name: Windows-x64-debug
+          path: WinWin_windows_x64_debug_*.zip
+          retention-days: 7
