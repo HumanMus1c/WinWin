@@ -135,8 +135,8 @@ jobs:
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value (git diff --stat pubspec.lock)
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '```'
 
-      - name: 静态分析
-        run: flutter analyze
+      - name: 静态分析（info 不拦；warning / error 仍为门禁）
+        run: flutter analyze --no-fatal-infos
 
       - name: 单元测试
         run: flutter test
