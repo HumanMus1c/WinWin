@@ -126,39 +126,82 @@ class _ImmersiveTitleBarShellState extends State<ImmersiveTitleBarShell>
           : const [ResizeEdge.topLeft, ResizeEdge.top, ResizeEdge.topRight],
       child: ValueListenableBuilder<Color?>(
         valueListenable: titleBarBackdrop,
-        builder: (context, backdrop, _) => ColoredBox(
-          color: backdrop ?? Theme.of(context).scaffoldBackgroundColor,
-          child: Column(
-            children: [
-              if (!_isFullScreen)
-                SizedBox(
-                  height: kWindowCaptionHeight,
-                  child: _buildTitleBarRow(context),
-                ),
-              Expanded(child: widget.child),
-            ],
-          ),
-        ),
+        builder: (context, backdrop, _) {
+          final stripColor =
+              backdrop ?? Theme.of(context).scaffoldBackgroundColor;
+          return ColoredBox(
+            color: stripColor,
+            child: Column(
+              children: [
+                if (!_isFullScreen)
+                  SizedBox(
+                    height: kWindowCaptionHeight,
+                    child: _buildTitleBarRow(context, stripColor),
+                  ),
+                Expanded(child: widget.child),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  /// 32px 透明标题条：左侧拖动区（含右键系统菜单）+ 右侧窗口控制三键。
-  Widget _buildTitleBarRow(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
+  /// 32px 透明标题条：程序图标 + 名称 + 拖动区（含右键系统菜单）+ 右侧窗口控制三键。
+  ///
+  /// 条带为深色（如视频全屏纯黑）时，图标/名称/按钮自动切换为浅色（反色），保证可见。
+  Widget _buildTitleBarRow(BuildContext context, Color stripColor) {
+    final onDark = stripColor.computeLuminance() < 0.5;
+    final brightness = onDark ? Brightness.dark : Brightness.light;
+    final foreground = onDark
+        ? Colors.white.withValues(alpha: 0.92)
+        : Colors.black.withValues(alpha: 0.78);
     return Row(
       children: [
         Expanded(
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onSecondaryTap: () => windowManager.popUpWindowMenu(),
-            child: const DragToMoveArea(child: SizedBox.expand()),
+            child: DragToMoveArea(
+              child: Row(
+                children: [
+                  const SizedBox(width: 10),
+                  _dim(
+                    Row(
+                      children: [
+                        // 程序图标（左键 = 系统菜单，与原生标题栏行为一致）。
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => windowManager.popUpWindowMenu(),
+                          child: Image.asset(
+                            'assets/app_icon.png',
+                            width: 16,
+                            height: 16,
+                            filterQuality: FilterQuality.medium,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'WinWin',
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.1,
+                            fontWeight: FontWeight.w500,
+                            color: foreground,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(child: SizedBox.expand()),
+                ],
+              ),
+            ),
           ),
         ),
-        AnimatedOpacity(
-          opacity: _isFocused ? 1 : 0.6,
-          duration: const Duration(milliseconds: 150),
-          child: Row(
+        _dim(
+          Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               WindowCaptionButton.minimize(
@@ -185,4 +228,11 @@ class _ImmersiveTitleBarShellState extends State<ImmersiveTitleBarShell>
       ],
     );
   }
+
+  /// 窗口失焦时整体淡显（对齐原生标题栏的非激活观感）。
+  Widget _dim(Widget child) => AnimatedOpacity(
+        opacity: _isFocused ? 1 : 0.6,
+        duration: const Duration(milliseconds: 150),
+        child: child,
+      );
 }

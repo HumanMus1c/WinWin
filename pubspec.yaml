@@ -65,3 +65,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    # 沉浸式标题栏程序图标（与 windows/runner/resources/app_icon.ico 同源，
+    # 替换品牌图标时需同步更新两处）。
+    - assets/app_icon.png

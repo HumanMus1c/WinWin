@@ -52,6 +52,7 @@ class PlayerPanel extends StatefulWidget {
     this.onToggleFullscreen,
     this.onToggleInAppFullscreen,
     this.onEscape,
+    this.onBack,
   });
 
   final WinWinPlayerController controller;
@@ -65,6 +66,9 @@ class PlayerPanel extends StatefulWidget {
 
   /// Esc 键回调（固定语义：返回上一级）。
   final VoidCallback? onEscape;
+
+  /// 全屏/网页全屏浮层返回按钮回调（普通布局由页面顶栏返回按钮承担，不显示浮层按钮）。
+  final VoidCallback? onBack;
 
   @override
   State<PlayerPanel> createState() => _PlayerPanelState();
@@ -473,6 +477,38 @@ class _PlayerPanelState extends State<PlayerPanel> {
                               child: IgnorePointer(
                                 ignoring: !visible,
                                 child: _buildControlBar(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  // 全屏/网页全屏浮层返回按钮：与播放器控件同步显隐（鼠标活动出现、
+                  // 3 秒无操作自动隐藏），普通布局由页面顶栏返回按钮承担。
+                  if (!_locked && (widget.fullscreen || widget.inAppFullscreen))
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      child: SafeArea(
+                        bottom: false,
+                        child: ValueListenableBuilder<bool>(
+                          valueListenable: _controlsVisible,
+                          builder: (context, visible, _) {
+                            return AnimatedOpacity(
+                              opacity: visible ? 1.0 : 0.0,
+                              duration: const Duration(milliseconds: 200),
+                              child: IgnorePointer(
+                                ignoring: !visible,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: AppBackButton(
+                                    color: Colors.white,
+                                    shadows: ContrastStyle.glyphShadows,
+                                    size: 22,
+                                    tooltip: '返回',
+                                    onPressed: widget.onBack,
+                                  ),
+                                ),
                               ),
                             );
                           },
