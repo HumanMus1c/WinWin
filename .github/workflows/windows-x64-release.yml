@@ -5,6 +5,7 @@ name: Release（Windows x64）
 #   BiliPai   Build.yml —— SHA-256 校验和证据、草稿→发布两段式
 # 安装器资产移植自 PiliPlus windows/packaging/exe/（make_config.yaml / inno_setup.iss / ChineseSimplified.isl）
 # 签名：与上游 PiliPlus 一致，本项目不进行代码签名（见 docs/Windows安装器与代码签名评估-2026-10-04.md）
+# 版本纪律：构建前执行版本代码单调递增审查（tools/version_tool.dart，见 docs/版本号管理规范-2026-10-06.md）
 
 on:
   push:
@@ -44,11 +45,14 @@ jobs:
       - name: 拉取依赖（严格遵循 pubspec.lock，防云端重解析）
         run: flutter pub get --enforce-lockfile
 
-      - name: 读取版本号
+      - name: 版本纪律审查（版本代码单调递增门禁）
+        run: dart run tools/version_tool.dart check
+
+      - name: 读取版本号（含版本代码）
         shell: pwsh
         run: |
           $line = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
-          echo "app_version=$($line.Split('+')[0])" >> $env:GITHUB_ENV
+          echo "app_version=$line" >> $env:GITHUB_ENV
 
       - name: 安装 Inno Setup 与 fastforge
         shell: pwsh
