@@ -86,15 +86,28 @@ jobs:
             Set-Content -Encoding ascii checksums.txt
           Get-Content checksums.txt
 
-      - name: 上传产物
+      # 注：archive: false 时每个步骤只允许上传单个文件（glob 须展开为 1 个），
+      # 故按上游 PiliPlus 模式拆分步骤；首跑曾因三步合一被 upload-artifact 拒绝。
+      - name: 上传产物（便携包）
         uses: actions/upload-artifact@v7
         with:
           archive: false
-          name: Windows-x64-release
-          path: |
-            WinWin_windows_*.zip
-            WinWin-Setup/WinWin_windows_*.exe
-            checksums.txt
+          name: Windows-portable-release
+          path: WinWin_windows_*.zip
+
+      - name: 上传产物（安装器）
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          name: Windows-setup-release
+          path: WinWin-Setup/WinWin_windows_*.exe
+
+      - name: 上传产物（校验和）
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          name: Windows-checksums
+          path: checksums.txt
 
       - name: 发布（草稿）
         if: ${{ github.ref_type == 'tag' || github.event.inputs.tag != '' }}
