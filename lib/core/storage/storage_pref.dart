@@ -446,6 +446,16 @@ abstract final class Pref {
   }
 
   // ---------- desktop ----------
-  static bool get showWindowTitleBar =>
-      _setting.get(SettingBoxKey.showWindowTitleBar, defaultValue: true) as bool;
+  /// 是否使用系统原生标题栏（默认否 = 沉浸式透明标题栏，见 ImmersiveTitleBarShell）。
+  static bool get useNativeTitleBar =>
+      _setting.get(SettingBoxKey.useNativeTitleBar, defaultValue: false) as bool;
+
+  /// 是否启用沉浸式透明标题栏（bootstrap 未就绪等异常场景按启用处理）。
+  static bool get immersiveTitleBar {
+    try {
+      return !useNativeTitleBar;
+    } catch (_) {
+      return true;
+    }
+  }
 }

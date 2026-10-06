@@ -26,6 +26,7 @@ import 'theme/app_theme.dart';
 import 'theme/colors.dart';
 import 'theme/miuix_theme_bridge.dart';
 import 'ui/app.dart';
+import 'ui/components/immersive_title_bar.dart';
 import 'utils/calc_window_position.dart';
 import 'utils/json_file_handler.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -135,7 +136,7 @@ void main() async {
     final windowOptions = WindowOptions(
       minimumSize: const Size(640, 400),
       skipTaskbar: false,
-      titleBarStyle: Pref.showWindowTitleBar
+      titleBarStyle: Pref.useNativeTitleBar
           ? TitleBarStyle.normal
           : TitleBarStyle.hidden,
       title: 'WinWin',
@@ -237,7 +238,9 @@ class WinWinApp extends StatelessWidget {
                       return MiuixThemeScope(
                         isDark: Theme.of(context).brightness == Brightness.dark,
                         fontFamily: fontFamily,
-                        child: MiuixToastHost(child: base),
+                        child: MiuixToastHost(
+                          child: ImmersiveTitleBarShell(child: base),
+                        ),
                       );
                     },
                     home: AgreementGate(

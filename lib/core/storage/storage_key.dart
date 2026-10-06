@@ -162,7 +162,7 @@ abstract final class SettingBoxKey {
       windowSize = 'windowSize',
       windowPosition = 'windowPosition',
       isWindowMaximized = 'isWindowMaximized',
-      showWindowTitleBar = 'showWindowTitleBar',
+      useNativeTitleBar = 'useNativeTitleBar',
       desktopVolume = 'desktopVolume',
       showTrayIcon = 'showTrayIcon',
       uiScale = 'uiScale',

@@ -124,12 +124,13 @@ List<SettingsModel> get styleSettings => [
         },
       ),
 
-      // 显示窗口标题栏（桌面端）
+      // 使用系统原生标题栏（桌面端）
       const SwitchModel(
-        title: '显示窗口标题栏',
+        title: '使用系统原生标题栏',
+        subtitle: '关闭时使用应用自绘的沉浸式透明标题栏（需重启）',
         leading: Icon(Icons.window),
-        setKey: SettingBoxKey.showWindowTitleBar,
-        defaultVal: true,
+        setKey: SettingBoxKey.useNativeTitleBar,
+        defaultVal: false,
         needReboot: true,
       ),
 

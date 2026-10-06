@@ -41,6 +41,7 @@ import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/ui/components/glass_contrast_widgets.dart';
+import 'package:winwin/ui/components/immersive_title_bar.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 
@@ -171,6 +172,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     _scrollRatio.dispose();
     SyncTrace.log('DetailPage', 'dispose enter');
     routeObserver.unsubscribe(this);
+    // 沉浸标题条：回收本页推送的背景覆写（覆盖 pushReplacement 等未走 didPop 的路径）。
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => clearTitleBarBackdrop(this));
     windowManager.removeListener(this);
     _rightTabCtrl.dispose();
     // 退出时如果处于 PiP 模式，恢复窗口。
@@ -217,6 +221,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 旧 media 卸载产生的事件不会污染本页 controller 的状态。
   @override
   void didPushNext() {
+    clearTitleBarBackdrop(this);
     final ctrl = playerController;
     if (ctrl != null) {
       _wasPlaying = ctrl.playing.value;
@@ -228,11 +233,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
   }
 
+  @override
+  void didPop() {
+    clearTitleBarBackdrop(this);
+  }
+
   /// 上一个页面 pop 回到本页时：重新挂载事件监听。
   /// 若播放器仍保持就绪态（未被其他页面释放或换源），直接复用现有已缓冲媒体与解码器，
   /// 彻底杜绝从作者空间等页面返回时的重新拉流与重复加载（对标 PiliPlus didPopNext）。
   @override
   void didPopNext() {
+    _syncTitleBarBackdrop();
     final ctrl = playerController;
     if (ctrl != null) {
       ctrl.attachListeners();
@@ -256,6 +267,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       ctrl.reloadDanmaku();
       _wasPlaying = false;
       _savedPosition = Duration.zero;
+    }
+  }
+
+  // ─────────────────────────── 沉浸标题条配色 ───────────────────────────
+
+  /// 全屏/网页全屏时标题条转纯黑（与播放器底色一致）；其余沿用主题背景。
+  void _syncTitleBarBackdrop() {
+    if (_fullscreen || _inAppFullscreen) {
+      pushTitleBarBackdrop(this, Colors.black);
+    } else {
+      clearTitleBarBackdrop(this);
     }
   }
 
@@ -797,6 +819,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (playerController == null) return;
     final next = !_fullscreen;
     setState(() => _fullscreen = next);
+    _syncTitleBarBackdrop();
     if (next) {
       await DesktopFullscreen.enter();
     } else {
@@ -807,6 +830,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   void _toggleInAppFullscreen() {
     if (playerController == null) return;
     setState(() => _inAppFullscreen = !_inAppFullscreen);
+    _syncTitleBarBackdrop();
   }
 
   /// Esc 键固定语义：返回上一级。
@@ -816,9 +840,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         'escape pressed, fullscreen=$_fullscreen, inAppFullscreen=$_inAppFullscreen');
     if (_fullscreen) {
       setState(() => _fullscreen = false);
+      _syncTitleBarBackdrop();
       DesktopFullscreen.exit();
     } else if (_inAppFullscreen) {
       setState(() => _inAppFullscreen = false);
+      _syncTitleBarBackdrop();
     } else {
       playerController?.pause();
       playerController?.detachListeners();
