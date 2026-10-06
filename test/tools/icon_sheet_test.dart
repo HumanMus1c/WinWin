@@ -32,11 +32,14 @@ const _iconBoundaryKey = Key('icon');
 const _ink = '#111111';
 const _labelInk = '#333333';
 
+/// 加载字体（跨环境容错：逐候选尝试，全部缺失时静默回退并输出诊断）。
 Future<void> _loadFont(String family, List<String> candidates) async {
   ByteData? data;
+  String? loadedFrom;
   for (final path in candidates) {
     try {
       data = await rootBundle.load(path);
+      loadedFrom = path;
       break;
     } catch (_) {
       try {
@@ -44,14 +47,37 @@ Future<void> _loadFont(String family, List<String> candidates) async {
         if (file.existsSync()) {
           final bytes = file.readAsBytesSync();
           data = ByteData.view(Uint8List.fromList(bytes).buffer);
+          loadedFrom = path;
           break;
         }
       } catch (_) {}
     }
   }
-  if (data == null) return;
+  if (data == null) {
+    debugPrint('[icon-sheet] 字体 $family 未找到（候选 ${candidates.length} 个），将使用回退度量');
+    return;
+  }
+  debugPrint('[icon-sheet] 字体 $family ← $loadedFrom');
   final loader = FontLoader(family)..addFont(Future.value(data));
   await loader.load();
+}
+
+/// 在 pub 缓存中动态定位包资产（跨 host / 跨版本；找不到返回 null）。
+String? _cachedPackageFile(String pubCache, String package, String asset) {
+  if (pubCache.isEmpty) return null;
+  for (final host in const ['pub.dev', 'pub.flutter-io.cn', 'pub.dartlang.org']) {
+    final hostDir = Directory('$pubCache/hosted/$host');
+    if (!hostDir.existsSync()) continue;
+    for (final entry in hostDir.listSync()) {
+      if (entry is! Directory) continue;
+      final name = entry.path.replaceAll('\\', '/').split('/').last;
+      if (name == package || name.startsWith('$package-')) {
+        final file = File('${entry.path}/$asset');
+        if (file.existsSync()) return file.path;
+      }
+    }
+  }
+  return null;
 }
 
 class _Cell {
@@ -400,18 +426,35 @@ String _artTableMarkdown(_Section s) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  // 跨环境字体定位（本机 / CI）：环境变量优先，保留历史硬编码路径作回退。
+  final env = Platform.environment;
+  final flutterRoot = env['FLUTTER_ROOT'] ?? 'D:/flutter';
+  final pubCache = env['PUB_CACHE'] ??
+      (env['LOCALAPPDATA'] == null ? '' : '${env['LOCALAPPDATA']}/Pub/Cache');
+  final cupertinoFont = _cachedPackageFile(
+      pubCache, 'cupertino_icons', 'assets/CupertinoIcons.ttf');
+
   setUpAll(() async {
     await _loadFont('packages/cupertino_icons/CupertinoIcons', [
       'packages/cupertino_icons/assets/CupertinoIcons.ttf',
+      ?cupertinoFont,
       'C:/Users/SilverT1ger/AppData/Local/Pub/Cache/hosted/pub.dev/'
           'cupertino_icons-1.0.9/assets/CupertinoIcons.ttf',
     ]);
     // 曾用 Material 字形（单图标 PNG 直渲染）。
     await _loadFont('MaterialIcons', [
+      '$flutterRoot/bin/cache/artifacts/material_fonts/'
+          'materialicons-regular.otf',
       'D:/flutter/bin/cache/artifacts/material_fonts/'
           'materialicons-regular.otf',
     ]);
-    await _loadFont('SheetCJK', ['C:/Windows/Fonts/simhei.ttf']);
+    // SheetCJK：按可用性依次回退（CI runner 常见为准入雅黑 / 宋体）。
+    await _loadFont('SheetCJK', [
+      'C:/Windows/Fonts/simhei.ttf',
+      'C:/Windows/Fonts/msyh.ttc',
+      'C:/Windows/Fonts/simsun.ttc',
+      'C:/Windows/Fonts/Deng.ttf',
+    ]);
   });
 
   final sections = <_Section>[
@@ -822,6 +865,10 @@ void main() {
   ];
 
   testWidgets('生成 PNG/SVG 拼图 + 单图标切分 + 对照表格', (tester) async {
+    // 渲染画布加高：宽度保持默认 800（不改变 _pngSheet 既有布局与产物尺寸），
+    // 仅留高度余量——跨环境字体度量差异（CI 回退字体行高更大）曾在 600 高下溢出。
+    await tester.binding.setSurfaceSize(const Size(800, 1024));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     Directory(_outDir).createSync(recursive: true);
     final iconsDir = Directory('$_outDir/icons');
     if (iconsDir.existsSync()) {
