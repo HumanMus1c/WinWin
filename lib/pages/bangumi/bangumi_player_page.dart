@@ -9,6 +9,7 @@ import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
+import 'package:winwin/common/widgets/demo_player_chrome.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/core/account/login_guard.dart';
@@ -817,13 +818,14 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
-  /// 演示模式：播放区域使用灰色静态占位（不加载、不播放真实视频）。
+  /// 演示模式：本地演示播放器（灰画面 + 全要素控制栏 + 本地播放状态；不加载媒体）。
   Widget _withDemoOverlay(Widget child) {
     return ValueListenableBuilder<bool>(
       valueListenable: Pref.demoModeNotifier,
       builder: (context, demo, _) => demo
-          ? ColoredBox(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          ? DemoPlayerChrome(
+              seed: _currentEpisode.bvid?.hashCode ??
+                  _currentEpisode.id.hashCode,
             )
           : child,
     );

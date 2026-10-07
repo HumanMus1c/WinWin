@@ -18,6 +18,7 @@ import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/log/sync_trace.dart';
 import 'package:winwin/common/widgets/demo_editable.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
+import 'package:winwin/common/widgets/demo_player_chrome.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/follow.dart';
@@ -72,6 +73,166 @@ class VideoDetailPage extends StatefulWidget {
 
   @override
   State<VideoDetailPage> createState() => _VideoDetailPageState();
+}
+
+/// 演示模式：评论条目 —— 文本灰色占位；点赞/点踩可切换、点赞数随机（双击可编辑）；
+/// 互动按钮与正常模式一致（点赞、点踩、回复、展开 N 条回复）。
+class _DemoReplyTile extends StatefulWidget {
+  const _DemoReplyTile({required this.bvid, required this.seed});
+
+  final String bvid;
+  final int seed;
+
+  @override
+  State<_DemoReplyTile> createState() => _DemoReplyTileState();
+}
+
+class _DemoReplyTileState extends State<_DemoReplyTile> {
+  bool _liked = false;
+  bool _disliked = false;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final outline = theme.colorScheme.onSurfaceVariant;
+    final grayStyle = TextStyle(fontSize: 12, color: outline);
+    final key = 'demo.reply.${widget.bvid}.${widget.seed}';
+    final subCount = DemoOverrides.count('$key.sub', min: 0, max: 5);
+    return Container(
+      margin: const EdgeInsets.only(top: Style.sm),
+      padding: const EdgeInsets.all(Style.md),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(Style.mdRadius),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonCircle(size: 38),
+          const SizedBox(width: Style.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const SkeletonLine(width: 90, height: 13),
+                    const Spacer(),
+                    const SkeletonLine(width: 40, height: 11),
+                  ],
+                ),
+                const SizedBox(height: Style.xs),
+                const SkeletonLine(width: double.infinity, height: 12),
+                const SizedBox(height: 6),
+                const SkeletonLine(width: 200, height: 12),
+                const SizedBox(height: Style.sm),
+                Row(
+                  spacing: Style.lg,
+                  children: [
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _liked = !_liked;
+                        if (_liked) _disliked = false;
+                      }),
+                      child: Row(
+                        spacing: 4,
+                        children: [
+                          Icon(
+                            AppIcons.like(active: _liked),
+                            size: 15,
+                            color: _liked ? biliPink : outline,
+                          ),
+                          DemoInlineEditNumber(
+                            overrideKey: '$key.like',
+                            value: DemoOverrides.count(
+                              '$key.like',
+                              min: 10,
+                              max: 99999,
+                            ),
+                            builder: (context, v) => Text(
+                              NumUtils.formatNum(v?.toInt()),
+                              style: grayStyle.copyWith(
+                                fontSize: 12,
+                                color: _liked ? biliPink : outline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _disliked = !_disliked;
+                        if (_disliked) _liked = false;
+                      }),
+                      child: Icon(
+                        AppIcons.dislike(active: _disliked),
+                        size: 15,
+                        color: _disliked ? biliPink : outline,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {},
+                      child: Row(
+                        spacing: 3,
+                        children: [
+                          Icon(AppIcons.reply(), size: 15, color: outline),
+                          Text('回复', style: grayStyle.copyWith(fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    if (subCount > 0)
+                      GestureDetector(
+                        onTap: () => setState(() => _expanded = !_expanded),
+                        child: Row(
+                          spacing: 2,
+                          children: [
+                            Text(
+                              _expanded
+                                  ? '收起 $subCount条回复'
+                                  : '展开 $subCount条回复',
+                              style: grayStyle.copyWith(
+                                fontSize: 12,
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Icon(
+                              _expanded
+                                  ? AppIcons.chevronUp()
+                                  : AppIcons.expandMore(),
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                if (_expanded) ...[
+                  const SizedBox(height: Style.sm),
+                  const Padding(
+                    padding: EdgeInsets.only(left: 30),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SkeletonLine(width: 70, height: 11),
+                        SizedBox(height: 6),
+                        SkeletonLine(width: double.infinity, height: 11),
+                        SizedBox(height: 4),
+                        SkeletonLine(width: 160, height: 11),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _VideoDetailPageState extends State<VideoDetailPage>
@@ -983,7 +1144,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                 if (index == 0) return _buildInfoSectionDemo();
                                 if (index == 1) return _buildDescSectionDemo();
                                 if (index == 2) return _buildTagsSectionDemo();
-                                return _buildReplyTileDemo(index - 3);
+                                return _DemoReplyTile(bvid: widget.bvid, seed: index - 3);
                               }
                               if (isLoading) {
                                 if (index == 0) {
@@ -1333,9 +1494,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   Widget _buildPlayerContentInner(VideoDetailData? data) {
-    // 演示模式：灰色静态画面 + 播放控制栏（布局对齐正常模式；不加载视频）。
+    // 演示模式：本地演示播放器（灰画面 + 全要素控制栏 + 本地播放状态；不加载媒体）。
     if (Pref.demoMode) {
-      return _buildDemoPlayerChrome();
+      return DemoPlayerChrome(seed: widget.bvid.hashCode);
     }
     final controller = playerController;
     if (controller == null) {
@@ -2524,126 +2685,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   // ─────────────────────────── 局部骨架屏 / 错误态 ───────────────────────────
 
-  /// 演示模式：灰色静态画面 + 播放控制栏（对齐正常模式播放器布局）。
-  Widget _buildDemoPlayerChrome() {
-    const glyphShadow = ContrastStyle.glyphShadows;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ColoredBox(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        ),
-        // 中央播放按钮（对齐暂停态）。
-        Center(
-          child: Icon(
-            AppIcons.play(active: true),
-            size: 56,
-            color: Colors.white,
-            shadows: glyphShadow,
-          ),
-        ),
-        // 底部控制栏（渐变 + 进度条 + 按钮行，对齐正常模式）。
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                stops: [0.0, 0.55, 1.0],
-                colors: [
-                  Color(0x73000000),
-                  Color(0x28000000),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 14.0, bottom: Style.xs),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 第一行：进度条（静止于起点）。
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: Style.sm),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Expanded(
-                          child: Divider(
-                            height: 3,
-                            thickness: 3,
-                            color: Color(0x47FFFFFF),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                    ),
-                  ),
-                  // 第二行：控制按钮（对齐正常模式左右分区）。
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: Style.sm),
-                    child: Row(
-                      children: [
-                        Icon(
-                          AppIcons.play(active: true),
-                          size: 20,
-                          color: Colors.white,
-                          shadows: glyphShadow,
-                        ),
-                        const SizedBox(width: Style.sm),
-                        const Text(
-                          '00:00 / 00:00',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            shadows: glyphShadow,
-                          ),
-                        ),
-                        const SizedBox(width: Style.md),
-                        Icon(
-                          AppIcons.danmaku(active: true),
-                          size: 18,
-                          color: Colors.white,
-                          shadows: glyphShadow,
-                        ),
-                        const Spacer(),
-                        for (final icon in [
-                          AppIcons.volumeDown(),
-                          AppIcons.lockOutline(),
-                          AppIcons.pip(),
-                          AppIcons.fullscreen(),
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(left: Style.md),
-                            child: Icon(
-                              icon,
-                              size: 18,
-                              color: Colors.white,
-                              shadows: glyphShadow,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   /// 演示模式：打开本地演示视频详情（不拉取云端数据）。
   void _openDemoVideo(BuildContext context, int index) {
     Navigator.push(
@@ -2766,77 +2807,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             borderRadius: BorderRadius.all(Radius.circular(100)),
           ),
         ),
-      ),
-    );
-  }
-
-  /// 演示模式：评论条目 —— 文本灰色占位，点赞数随机（双击可编辑），保留互动按钮。
-  Widget _buildReplyTileDemo(int index) {
-    final bvid = widget.bvid;
-    final outline = Theme.of(context).colorScheme.outline;
-    return _card(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SkeletonCircle(size: 38),
-          const SizedBox(width: Style.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SkeletonLine(width: 90, height: 13),
-                const SizedBox(height: 8),
-                const SkeletonLine(width: double.infinity, height: 12),
-                const SizedBox(height: 6),
-                const SkeletonLine(width: 200, height: 12),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    InkWell(
-                      onTap: () {},
-                      borderRadius: BorderRadius.circular(4),
-                      child: Padding(
-                        padding: const EdgeInsets.all(2),
-                        child: AppIcon(
-                          AppIcons.like(),
-                          size: 14,
-                          color: outline,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    DemoInlineEditNumber(
-                      overrideKey: 'demo.reply.$bvid.$index.like',
-                      value: DemoOverrides.count(
-                        'demo.reply.$bvid.$index.like',
-                        min: 10,
-                        max: 99999,
-                      ),
-                      builder: (context, v) => Text(
-                        NumUtils.formatNum(v?.toInt()),
-                        style: TextStyle(fontSize: 11, color: outline),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Padding(
-                      padding: const EdgeInsets.all(2),
-                      child: AppIcon(
-                        AppIcons.reply(),
-                        size: 14,
-                        color: outline,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '回复',
-                      style: TextStyle(fontSize: 11, color: outline),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -9,6 +9,7 @@ import 'package:fvp/mdk.dart' as mdk;
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
+import 'package:winwin/common/widgets/demo_player_chrome.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
@@ -987,15 +988,13 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   /// 视频播放器区域（普通窗口模式）
   Widget _buildPlayerBox() {
-    // 演示模式：播放器区域使用灰色静态占位符（不连接/播放真实直播流）。
+    // 演示模式：本地演示播放器（灰画面 + 全要素控制栏 + 本地播放状态；不连流）。
     if (Pref.demoMode) {
       return AspectRatio(
         aspectRatio: 16 / 9,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(Style.radiusMd),
-          ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          child: DemoPlayerChrome(seed: widget.roomId),
         ),
       );
     }
@@ -1053,11 +1052,9 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   /// 全屏/网页全屏模式播放器
   Widget _buildFullscreenPlayer() {
-    // 演示模式：灰色静态占位（不连接/播放真实直播流）。
+    // 演示模式：本地演示播放器（灰画面 + 全要素控制栏；不连流）。
     if (Pref.demoMode) {
-      return ColoredBox(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      );
+      return DemoPlayerChrome(seed: widget.roomId);
     }
     return MouseRegion(
       onHover: (_) => _onHoverPlayer(),
