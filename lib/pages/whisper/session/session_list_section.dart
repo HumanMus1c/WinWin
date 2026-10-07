@@ -1,10 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart'
@@ -283,7 +285,17 @@ class SessionListSectionState extends State<SessionListSection> {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 // 会话列表
-                if (_loading && _sessions.isEmpty)
+                if (Pref.demoMode)
+                  const SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 480,
+                      child: DemoListSkeleton(
+                        coverWidth: 44,
+                        coverHeight: 44,
+                      ),
+                    ),
+                  )
+                else if (_loading && _sessions.isEmpty)
                   const SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.all(Style.xxl),

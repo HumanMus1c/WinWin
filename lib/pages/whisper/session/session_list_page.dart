@@ -1,9 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart'
@@ -285,7 +287,9 @@ class _SessionListPageState extends State<SessionListPage> {
           const Divider(height: 1),
           // 会话列表
           Expanded(
-            child: _loading && _sessions.isEmpty
+            child: Pref.demoMode
+                ? const DemoListSkeleton(coverWidth: 44, coverHeight: 44)
+                : _loading && _sessions.isEmpty
                 ? const Center(
                     child: CircularProgressIndicator(color: biliPink),
                   )

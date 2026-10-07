@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/video_card/video_card_v.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
@@ -42,8 +43,11 @@ class _HotPageState extends State<HotPage>
             SliverPadding(
               // 顶部留白避开浮动顶栏(52) + 分类标签行(36)
               padding: const EdgeInsets.only(top: 120, bottom: 100),
-              sliver: Obx(
-                () => _buildBody(colorScheme, controller.loadingState.value),
+              sliver: DemoMask(
+                skeleton: () => _buildSkeleton,
+                child: () => Obx(
+                  () => _buildBody(colorScheme, controller.loadingState.value),
+                ),
               ),
             ),
           ],

@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -120,5 +122,25 @@ List<SettingsModel> get extraSettings => [
         leading: Icon(Icons.history_toggle_off),
         setKey: 'historyPause',
         defaultVal: false,
+      ),
+
+      // 演示模式（README 截图）：隐藏云端内容，账号标识替换为程序默认值。
+      SwitchModel(
+        title: '演示模式',
+        subtitle: '云端内容以骨架屏显示；账号头像/昵称替换为程序默认值，'
+            '其余账号数据照常展示并可在演示期即时编辑；不影响真实数据',
+        leading: const Icon(Icons.slideshow),
+        setKey: SettingBoxKey.demoMode,
+        defaultVal: false,
+        onChanged: Pref.setDemoMode,
+      ),
+      NormalModel(
+        title: '重置演示自定义',
+        subtitle: '清除演示模式下的数值与类型自定义，恢复为真实数据展示',
+        leading: AppIcon(AppIcons.refresh()),
+        onTap: (context, setState) async {
+          await DemoOverrides.clearAll();
+          if (context.mounted) showToast(context, '已重置演示自定义');
+        },
       ),
     ];

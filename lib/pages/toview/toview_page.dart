@@ -14,6 +14,7 @@ import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/event/event_bus.dart';
 import 'package:winwin/core/log/api_blackbox.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/toview.dart';
 import 'package:winwin/models/toview/toview_models.dart';
@@ -60,6 +61,12 @@ class _ToviewPageState extends State<ToviewPage> {
     _scrollController.addListener(_onScroll);
     _initWatchLaterSubscription();
     _load(refresh: true);
+    // 演示模式切换时重建（骨架即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+  }
+
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
   }
 
   void _initWatchLaterSubscription() {
@@ -87,6 +94,7 @@ class _ToviewPageState extends State<ToviewPage> {
     _watchLaterSubscription?.cancel();
     _watchLaterSubscription = null;
     AccountService().removeListener(_onAccountChanged);
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -307,7 +315,7 @@ class _ToviewPageState extends State<ToviewPage> {
               label: const Text('播放全部'),
             )
           : null,
-      body: _loading && _items.isEmpty
+      body: Pref.demoMode || (_loading && _items.isEmpty)
           ? _buildSkeleton()
           : _error != null && _items.isEmpty
               ? _buildError()

@@ -167,7 +167,10 @@ abstract final class SettingBoxKey {
       showTrayIcon = 'showTrayIcon',
       uiScale = 'uiScale',
       // 用户协议确认（版本化 key：升级条款时可换 V2 让老用户重新确认）
-      userAgreementAckV1 = 'userAgreementAckV1';
+      userAgreementAckV1 = 'userAgreementAckV1',
+
+      // 演示模式（README 截图）：隐藏云端内容与账号标识，支持演示期即时编辑。
+      demoMode = 'demoMode';
 
   static const String subtitlePreferenceV2 = 'subtitlePreferenceV2',
       subtitleEnabled = 'subtitleEnabled',
@@ -255,7 +258,10 @@ abstract final class LocalCacheKey {
       mixinKey = 'mixinKey',
       timeStamp = 'timeStamp',
       buvid = 'buvid',
-      userInfoCache = 'userInfoCache';
+      userInfoCache = 'userInfoCache',
+
+      // 演示模式自定义覆盖值（JSON Map：数值/类型微调）。
+      demoOverrides = 'demoOverrides';
 }
 
 abstract final class VideoBoxKey {

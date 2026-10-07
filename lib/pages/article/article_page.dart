@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/article.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
@@ -152,7 +154,7 @@ class _ArticlePageState extends State<ArticlePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _state.dataOrNull?.title ?? fallbackTitle,
+          Pref.demoMode ? '专栏文章' : (_state.dataOrNull?.title ?? fallbackTitle),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 16),
@@ -180,7 +182,9 @@ class _ArticlePageState extends State<ArticlePage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: switch (_state) {
+      body: Pref.demoMode
+          ? const DemoListSkeleton()
+          : switch (_state) {
         Loading() => const Center(child: CircularProgressIndicator()),
         Error(:final errMsg) => Center(
             child: Column(

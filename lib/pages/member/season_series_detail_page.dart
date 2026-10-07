@@ -1,9 +1,11 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
 import 'package:winwin/pages/video/detail_page.dart';
@@ -107,13 +109,15 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.title,
+          Pref.demoMode ? (widget.isSeason ? '合集' : '系列') : widget.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
-      body: AppRefreshIndicator(
+      body: Pref.demoMode
+          ? const DemoListSkeleton()
+          : AppRefreshIndicator(
         onRefresh: () => _loadVideos(refresh: true),
         child: CustomScrollView(
           slivers: [

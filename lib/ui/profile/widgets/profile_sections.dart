@@ -9,6 +9,7 @@ import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/fav.dart';
 import 'package:winwin/http/history.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -100,7 +101,7 @@ class ProfileDownloadSectionState extends State<ProfileDownloadSection> {
           onRefresh: reload,
           isRefreshing: _isRefreshing,
         ),
-        if (_loading)
+        if (Pref.demoMode || _loading)
           const ProfileCardSkeleton(height: 120)
         else
           ProfileEmptyCard(
@@ -207,7 +208,7 @@ class ProfileFavSectionState extends State<ProfileFavSection> {
           onRefresh: reload,
           isRefreshing: _isRefreshing,
         ),
-        if (_loading && _folders.isEmpty)
+        if (Pref.demoMode || (_loading && _folders.isEmpty))
           const ProfileCardSkeleton(height: 165)
         else if (_error == '请先登录')
           ProfileEmptyCard(
@@ -361,7 +362,7 @@ class ProfileHistorySectionState extends State<ProfileHistorySection> {
           onRefresh: reload,
           isRefreshing: _isRefreshing,
         ),
-        if (_loading && _items.isEmpty)
+        if (Pref.demoMode || (_loading && _items.isEmpty))
           const ProfileCardSkeleton(height: 180)
         else if (_error == '请先登录')
           ProfileEmptyCard(
@@ -540,7 +541,7 @@ class ProfileToviewSectionState extends State<ProfileToviewSection> {
           onRefresh: reload,
           isRefreshing: _isRefreshing,
         ),
-        if (_loading && _items.isEmpty)
+        if (Pref.demoMode || (_loading && _items.isEmpty))
           const ProfileCardSkeleton(height: 180)
         else if (_error == '请先登录')
           ProfileEmptyCard(

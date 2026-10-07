@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:fvp/mdk.dart' as mdk;
 
+import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
@@ -115,10 +117,17 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     AppLogger.w('Coverage', 'live room entered roomId=${widget.roomId}');
     _startHideControlsTimer();
     _initLive();
+    // 演示模式切换时重建（播放遮罩/标题占位/弹幕面板即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+  }
+
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     _controlsTimer?.cancel();
     _watchdogTimer?.cancel();
     _liveDurationTimer?.cancel();
@@ -661,7 +670,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     switch (res) {
       case Success():
         _danmakuInputCtrl.clear();
-        final userInfo = AccountService().userInfo;
+        // 演示模式：发言昵称/头像走程序默认值（displayUserInfo 已替换）。
+        final userInfo = AccountService().displayUserInfo;
         final myUname = userInfo?.name ?? '我';
         final myAvatar = userInfo?.face;
         final myLevel = userInfo?.level;
@@ -758,8 +768,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final displayTitle = _roomInfo?.title ?? widget.title ?? '直播间 $_realRoomId';
-    final hostName = _roomInfo?.uname ?? widget.uname ?? 'UP 主';
+    final displayTitle = Pref.demoMode
+        ? '直播间'
+        : (_roomInfo?.title ?? widget.title ?? '直播间 $_realRoomId');
+    final hostName =
+        Pref.demoMode ? '主播' : (_roomInfo?.uname ?? widget.uname ?? 'UP 主');
     final hostAvatar = _roomInfo?.face;
     final isFillWindow = _fullscreen || _inAppFullscreen;
 
@@ -988,6 +1001,9 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               // 屏幕弹幕悬浮层
               if (_danmakuVisible && _isLiving) _buildDanmakuOverlay(),
 
+              // 演示模式：画面遮罩（覆盖视频帧与弹幕，不暂停播放）
+              if (Pref.demoMode) const DemoVideoOverlay(),
+
               // 暂停状态大居中播放按钮
               if (_isLiving && !_isPlaying && !_loading && _errorMessage == null)
                 _buildCenterPlayButton(),
@@ -1023,6 +1039,9 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         children: [
           _buildVideoSurface(),
           if (_danmakuVisible && _isLiving) _buildDanmakuOverlay(),
+
+          // 演示模式：画面遮罩（覆盖视频帧与弹幕，不暂停播放）
+          if (Pref.demoMode) const DemoVideoOverlay(),
           if (_isLiving && !_isPlaying && !_loading && _errorMessage == null)
             _buildCenterPlayButton(),
           if (_loading && _isLiving && _errorMessage == null)
@@ -1046,7 +1065,9 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   /// 全屏模式顶部标题栏浮层
   Widget _buildFullscreenTopBar() {
-    final displayTitle = _roomInfo?.title ?? widget.title ?? '直播间 $_realRoomId';
+    final displayTitle = Pref.demoMode
+        ? '直播间'
+        : (_roomInfo?.title ?? widget.title ?? '直播间 $_realRoomId');
     return Positioned(
       top: 0,
       left: 0,
@@ -1752,6 +1773,36 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     );
   }
 
+  /// 演示模式：互动面板骨架（弹幕行占位）。
+  Widget _buildChatSkeleton() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: Style.sm, vertical: 6),
+      itemCount: 10,
+      itemBuilder: (context, index) => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 5),
+        child: Skeleton(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonCircle(size: 20),
+              SizedBox(width: Style.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonLine(width: 70, height: 10),
+                    SizedBox(height: 5),
+                    SkeletonLine(width: double.infinity, height: 12),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// 实时互动面板（含云端与实时弹幕列表 + 底部发送弹幕输入交互条）
   Widget _buildChatPanel(ColorScheme cs, ThemeData theme) {
     return Container(
@@ -1805,25 +1856,28 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
           // 弹幕列表（富文本支持头像、粉丝牌、UL等级铭牌与官方Emoji图文混排）
           Expanded(
-            child: _danmakuList.isEmpty
-                ? Center(
-                    child: Text(
-                      _isLiving ? '弹幕加载中，等待新发言...' : '直播未开启，暂无弹幕',
-                      style: TextStyle(color: cs.outline, fontSize: 12),
+            child: DemoMask(
+              skeleton: _buildChatSkeleton,
+              child: () => _danmakuList.isEmpty
+                  ? Center(
+                      child: Text(
+                        _isLiving ? '弹幕加载中，等待新发言...' : '直播未开启，暂无弹幕',
+                        style: TextStyle(color: cs.outline, fontSize: 12),
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: _chatScrollCtrl,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Style.sm,
+                        vertical: 6,
+                      ),
+                      itemCount: _danmakuList.length,
+                      itemBuilder: (context, index) {
+                        final item = _danmakuList[index];
+                        return _buildDanmakuItem(item, cs, theme);
+                      },
                     ),
-                  )
-                : ListView.builder(
-                    controller: _chatScrollCtrl,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: Style.sm,
-                      vertical: 6,
-                    ),
-                    itemCount: _danmakuList.length,
-                    itemBuilder: (context, index) {
-                      final item = _danmakuList[index];
-                      return _buildDanmakuItem(item, cs, theme);
-                    },
-                  ),
+            ),
           ),
 
           // 底部互动发送条（输入框与发送按钮高度严格对齐）

@@ -1,8 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/video_card/video_card_h.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/search.dart';
 import 'package:winwin/models/search/result.dart';
@@ -166,6 +168,9 @@ class _SearchPanelState extends State<SearchPanel>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    if (Pref.demoMode) {
+      return const DemoListSkeleton();
+    }
     if (!_firstLoaded && _loading) {
       return const Center(child: CircularProgressIndicator());
     }

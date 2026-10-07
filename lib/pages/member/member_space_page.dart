@@ -16,9 +16,13 @@ import 'package:winwin/common/widgets/medal_widget.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
+import 'package:winwin/common/widgets/demo_editable.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/event/event_bus.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/fav.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -66,6 +70,245 @@ enum _SpaceTabType {
 
   final String label;
   const _SpaceTabType(this.label);
+}
+
+/// 演示模式粉丝牌预设配色选项。
+const List<(int, String)> _kMedalColorOptions = [
+  (0, '默认'),
+  (1, '粉色'),
+  (2, '蓝色'),
+  (3, '青色'),
+  (4, '紫色'),
+  (5, '金色'),
+  (6, '红色'),
+];
+
+/// 演示模式粉丝牌预设配色值。
+const Map<int, Color> _kMedalColors = {
+  1: Color(0xFFFB7299),
+  2: Color(0xFF5C9CE6),
+  3: Color(0xFF42B8B0),
+  4: Color(0xFF9B6BE0),
+  5: Color(0xFFD9A03F),
+  6: Color(0xFFE05E5E),
+};
+
+/// 演示模式下可编辑的粉丝牌（牌子名 / 等级 / 配色，仅演示期生效）。
+class _DemoMedalEdit extends StatefulWidget {
+  const _DemoMedalEdit({
+    required this.visible,
+    required this.medalName,
+    required this.level,
+    this.backgroundColor,
+    this.nameColor,
+  });
+
+  final bool visible;
+  final String medalName;
+  final int level;
+  final Color? backgroundColor;
+  final Color? nameColor;
+
+  @override
+  State<_DemoMedalEdit> createState() => _DemoMedalEditState();
+}
+
+class _DemoMedalEditState extends State<_DemoMedalEdit> {
+  bool _hovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Pref.demoModeNotifier.addListener(_onChanged);
+    DemoOverrides.revision.addListener(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    Pref.demoModeNotifier.removeListener(_onChanged);
+    DemoOverrides.revision.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  void _onChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _edit() {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _DemoMedalDialog(
+        name: DemoOverrides.text('space.medal.name') ?? widget.medalName,
+        level: DemoOverrides.choice('space.medal.level') ?? widget.level,
+        colorIndex: DemoOverrides.choice('space.medal.color') ?? 0,
+        canReset: DemoOverrides.text('space.medal.name') != null ||
+            DemoOverrides.choice('space.medal.level') != null ||
+            DemoOverrides.choice('space.medal.color') != null,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Pref.demoMode) {
+      if (!widget.visible) return const SizedBox.shrink();
+      return MedalWidget(
+        medalName: widget.medalName,
+        level: widget.level,
+        backgroundColor: widget.backgroundColor ?? biliPink,
+        nameColor: widget.nameColor ?? Colors.white,
+        onTap: () {
+          showToast(context, '粉丝勋章: ${widget.medalName} Lv.${widget.level}');
+        },
+      );
+    }
+    // 演示模式：悬停高亮、点击编辑（覆盖值 ?? 真实值）。
+    final name = DemoOverrides.text('space.medal.name') ?? widget.medalName;
+    final level = DemoOverrides.choice('space.medal.level') ?? widget.level;
+    final colorIndex = DemoOverrides.choice('space.medal.color') ?? 0;
+    final bg = _kMedalColors[colorIndex] ?? widget.backgroundColor ?? biliPink;
+    final hasOverride = DemoOverrides.text('space.medal.name') != null ||
+        DemoOverrides.choice('space.medal.level') != null ||
+        DemoOverrides.choice('space.medal.color') != null;
+    final cs = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: '演示模式：点击编辑',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _edit,
+          child: IgnorePointer(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+              decoration: BoxDecoration(
+                color: _hovered
+                    ? cs.primary.withValues(alpha: 0.10)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: (widget.visible || hasOverride)
+                  ? MedalWidget(
+                      medalName: name,
+                      level: level,
+                      backgroundColor: bg,
+                      nameColor: widget.nameColor ?? Colors.white,
+                    )
+                  : const SizedBox(width: 64, height: 16),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 粉丝牌编辑弹层（牌子名 + 等级 + 配色）。
+class _DemoMedalDialog extends StatefulWidget {
+  const _DemoMedalDialog({
+    required this.name,
+    required this.level,
+    required this.colorIndex,
+    required this.canReset,
+  });
+
+  final String name;
+  final int level;
+  final int colorIndex;
+  final bool canReset;
+
+  @override
+  State<_DemoMedalDialog> createState() => _DemoMedalDialogState();
+}
+
+class _DemoMedalDialogState extends State<_DemoMedalDialog> {
+  late final TextEditingController _nameCtrl =
+      TextEditingController(text: widget.name);
+  late final TextEditingController _levelCtrl =
+      TextEditingController(text: '${widget.level}');
+  late int _colorIndex = widget.colorIndex;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _levelCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _apply() async {
+    final level = int.tryParse(_levelCtrl.text.trim());
+    if (level == null || level < 0) {
+      showToast(context, '请输入非负整数等级');
+      return;
+    }
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      showToast(context, '牌子名不能为空');
+      return;
+    }
+    await DemoOverrides.set('space.medal.name', name);
+    await DemoOverrides.set('space.medal.level', level);
+    await DemoOverrides.set('space.medal.color', _colorIndex);
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _reset() async {
+    await DemoOverrides.clear('space.medal.name');
+    await DemoOverrides.clear('space.medal.level');
+    await DemoOverrides.clear('space.medal.color');
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('编辑粉丝牌'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _nameCtrl,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: '牌子名'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _levelCtrl,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(labelText: '等级'),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final (idx, label) in _kMedalColorOptions)
+                ChoiceChip(
+                  label: Text(label, style: const TextStyle(fontSize: 12)),
+                  selected: _colorIndex == idx,
+                  onSelected: (_) => setState(() => _colorIndex = idx),
+                ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        if (widget.canReset)
+          TextButton(onPressed: _reset, child: const Text('恢复默认')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(onPressed: _apply, child: const Text('确定')),
+      ],
+    );
+  }
 }
 
 /// 用户空间页（对齐 PiliPlus 与 BiliPai 全面设计规范）。
@@ -212,6 +455,9 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     _tabController = TabController(length: _availableTabs.length, vsync: this);
     _initFollowSubscription();
     _loadAll();
+    // 演示模式/自定义覆盖变更时重建（遮罩与替换值即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+    DemoOverrides.revision.addListener(_onDemoChanged);
   }
 
   void _initFollowSubscription() {
@@ -232,9 +478,15 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     });
   }
 
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     _isDisposed = true;
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
+    DemoOverrides.revision.removeListener(_onDemoChanged);
     _followSubscription?.cancel();
     _followSubscription = null;
     for (final c in _pendingDisposeControllers) {
@@ -678,7 +930,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               ),
             ),
             SliverToBoxAdapter(
-              child: _buildUserDetailCard(context, card, data?.silence),
+              // 演示模式：他人空间整块头部用加载态骨架替代（含头像/昵称/签名等）。
+              child: _buildUserDetailCard(
+                context,
+                (Pref.demoMode && !isOwner) ? null : card,
+                data?.silence,
+              ),
             ),
             SliverPersistentHeader(
               pinned: true,
@@ -730,22 +987,49 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildTabContent(_SpaceTabType type, MemberCard? card) {
-    switch (type) {
-      case _SpaceTabType.video:
-        return _buildVideosTab();
-      case _SpaceTabType.seasons:
-        return _buildSeasonsTab();
-      case _SpaceTabType.dynamics:
-        return _buildDynamicsTab();
-      case _SpaceTabType.fav:
-        return _buildFavTab();
-      case _SpaceTabType.bangumi:
-        return _buildBangumiTab();
-      case _SpaceTabType.liked:
-        return _buildLikedTab();
-      case _SpaceTabType.about:
-        return _buildAboutTab(card);
-    }
+    final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
+    final Widget content = switch (type) {
+      _SpaceTabType.video => _buildVideosTab(),
+      _SpaceTabType.seasons => _buildSeasonsTab(),
+      _SpaceTabType.dynamics => _buildDynamicsTab(),
+      _SpaceTabType.fav => _buildFavTab(),
+      _SpaceTabType.bangumi => _buildBangumiTab(),
+      _SpaceTabType.liked => _buildLikedTab(),
+      _SpaceTabType.about => _buildAboutTab(card),
+    };
+    // 演示模式：除「自己的空间·详细资料」外，页签内容一律以骨架显示。
+    if (isOwner && type == _SpaceTabType.about) return content;
+    return DemoMask(skeleton: _buildSpaceTabSkeleton, child: () => content);
+  }
+
+  /// 空间页签通用骨架（演示模式占位）。
+  Widget _buildSpaceTabSkeleton() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(Style.safeSpace),
+      itemCount: 6,
+      itemBuilder: (context, index) => const Padding(
+        padding: EdgeInsets.only(bottom: Style.md),
+        child: Skeleton(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox(width: 150, height: 84),
+              SizedBox(width: Style.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonLine(width: double.infinity, height: 14),
+                    SizedBox(height: 8),
+                    SkeletonLine(width: 120, height: 12),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// 顶部横幅与头像背景
@@ -755,6 +1039,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     MemberImages? images,
   ) {
     final theme = Theme.of(context);
+    // 演示模式：横幅图片（云端内容）替换为默认渐变占位。
+    if (Pref.demoMode) return _defaultHeaderGradient(theme);
     String? topPhoto = images?.topPhoto ??
         images?.imgUrl ??
         _extraTopPhoto?.topPhoto ??
@@ -824,9 +1110,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   Widget _buildUserDetailCard(BuildContext context, MemberCard? card, int? silence) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isVip = card?.vip?.isVip ?? false;
+    // 演示模式：VIP 类型/等级读取覆盖值（无覆盖回退真实值）。
+    final realVip = (card?.vip?.isVip ?? false) ? 1 : 0;
+    final isVip = (DemoOverrides.choice('profile.vipType') ?? realVip) > 0;
     final vipColor = cs.primary;
-    final level = card?.level ?? _cardInfo?.currentLevel ?? 0;
+    final level = DemoOverrides.choice('profile.level') ??
+        card?.level ??
+        _cardInfo?.currentLevel ??
+        0;
     final isSenior = card?.levelInfo?.isSeniorMember ?? false;
     final medal = card?.liveFansWearing?.detailV2;
     final followedUpper = card?.followingsFollowedUpper;
@@ -860,21 +1151,25 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       ],
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: (card?.face?.isNotEmpty ?? false)
-                        ? CachedNetworkImage(
-                            imageUrl: ImageUtils.thumbnailUrl(card!.face,
-                                type: 'avatar'),
-                            fit: BoxFit.cover,
-                            memCacheWidth:
-                                ImageUtils.decodeClamp(78, context, max: 256),
-                            memCacheHeight:
-                                ImageUtils.decodeClamp(78, context, max: 256),
-                            placeholder: (_, _) => const SkeletonBox(),
-                            errorBuilder: (_, _, _) => AppIcon(AppIcons.profile(), size: 40),
-                          )
-                        : (card == null
-                            ? const SkeletonBox()
-                            : AppIcon(AppIcons.profile(), size: 40)),
+                    child: Pref.demoMode
+                        ? (isOwner
+                            ? AppIcon(AppIcons.profile(), size: 40)
+                            : const SkeletonBox())
+                        : (card?.face?.isNotEmpty ?? false)
+                            ? CachedNetworkImage(
+                                imageUrl: ImageUtils.thumbnailUrl(card!.face,
+                                    type: 'avatar'),
+                                fit: BoxFit.cover,
+                                memCacheWidth:
+                                    ImageUtils.decodeClamp(78, context, max: 256),
+                                memCacheHeight:
+                                    ImageUtils.decodeClamp(78, context, max: 256),
+                                placeholder: (_, _) => const SkeletonBox(),
+                                errorBuilder: (_, _, _) => AppIcon(AppIcons.profile(), size: 40),
+                              )
+                            : (card == null
+                                ? const SkeletonBox()
+                                : AppIcon(AppIcons.profile(), size: 40)),
                   ),
                   if (card?.officialVerify?.isOfficial ?? false)
                     Positioned(
@@ -962,9 +1257,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 GestureDetector(
-                  onTap: () => _copyToClipboard(card.name ?? '', '昵称已复制'),
+                  onTap: () => _copyToClipboard(
+                    Pref.demoMode ? kDemoDisplayName : (card.name ?? ''),
+                    '昵称已复制',
+                  ),
                   child: Text(
-                    card.name ?? '未知用户',
+                    Pref.demoMode ? kDemoDisplayName : (card.name ?? '未知用户'),
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: isVip ? vipColor : null,
@@ -977,15 +1275,13 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     type: PBadgeType.vip,
                   ),
                 LevelBadge(level: level, isSenior: isSenior),
-                if (medal != null)
-                  MedalWidget(
-                    medalName: medal.medalName ?? '勋章',
-                    level: medal.level ?? 1,
-                    backgroundColor: medal.parsedBackgroundColor,
-                    nameColor: medal.parsedTextColor,
-                    onTap: () {
-                      showToast(context, '粉丝勋章: ${medal.medalName} Lv.${medal.level}');
-                    },
+                if (medal != null || (isOwner && Pref.demoMode))
+                  _DemoMedalEdit(
+                    visible: medal != null,
+                    medalName: medal?.medalName ?? '勋章',
+                    level: medal?.level ?? 1,
+                    backgroundColor: medal?.parsedBackgroundColor,
+                    nameColor: medal?.parsedTextColor,
                   ),
               ],
             )
@@ -1065,13 +1361,26 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             spacing: Style.md,
             runSpacing: Style.xs,
             children: [
-              GestureDetector(
-                onTap: () => _copyToClipboard(widget.mid.toString(), 'UID 已复制'),
-                child: Text(
-                  'UID: ${widget.mid}',
-                  style: TextStyle(fontSize: 12, color: cs.outline),
+              if (Pref.demoMode && !isOwner)
+                const SkeletonLine(width: 90, height: 12)
+              else if (isOwner && Pref.demoMode)
+                DemoEditableNumber(
+                  overrideKey: 'space.uid',
+                  value: widget.mid,
+                  title: 'UID',
+                  builder: (context, v) => Text(
+                    'UID: ${v?.round() ?? widget.mid}',
+                    style: TextStyle(fontSize: 12, color: cs.outline),
+                  ),
+                )
+              else
+                GestureDetector(
+                  onTap: () => _copyToClipboard(widget.mid.toString(), 'UID 已复制'),
+                  child: Text(
+                    'UID: ${widget.mid}',
+                    style: TextStyle(fontSize: 12, color: cs.outline),
+                  ),
                 ),
-              ),
               if (card?.spaceTags.isNotEmpty ?? false)
                 for (final tag in card!.spaceTags)
                   Text(
@@ -1080,8 +1389,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   ),
             ],
           ),
-          // “我关注的人也在关注”
-          if (followedUpper != null && followedUpper.items.isNotEmpty) ...[
+          // “我关注的人也在关注”（演示模式：第三方内容隐藏）
+          if (!Pref.demoMode &&
+              followedUpper != null &&
+              followedUpper.items.isNotEmpty) ...[
             const SizedBox(height: Style.sm),
             InkWell(
               onTap: () {
@@ -1140,8 +1451,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           const SizedBox(height: Style.md),
           Row(
             children: [
-              _statItem(
+              _statWithDemoEdit(
                 context,
+                overrideKey: 'profile.following',
+                title: '关注数',
                 label: '关注',
                 count: card?.following,
                 onTap: card != null
@@ -1153,8 +1466,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     : null,
               ),
               const SizedBox(width: Style.xxl),
-              _statItem(
+              _statWithDemoEdit(
                 context,
+                overrideKey: 'profile.follower',
+                title: '粉丝数',
                 label: '粉丝',
                 count: card?.fans ?? _cardInfo?.follower,
                 onTap: card != null
@@ -1166,8 +1481,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     : null,
               ),
               const SizedBox(width: Style.xxl),
-              _statItem(
+              _statWithDemoEdit(
                 context,
+                overrideKey: 'profile.likes',
+                title: '获赞数',
                 label: '获赞',
                 count: card?.likes?.likeNum ?? _cardInfo?.likeNum,
               ),
@@ -1211,6 +1528,32 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  /// 演示模式：自己的空间统计项接入即时编辑（他人空间保持原样）。
+  Widget _statWithDemoEdit(
+    BuildContext context, {
+    required String overrideKey,
+    required String title,
+    required String label,
+    required int? count,
+    VoidCallback? onTap,
+  }) {
+    final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
+    if (!isOwner) {
+      return _statItem(context, label: label, count: count, onTap: onTap);
+    }
+    return DemoEditableNumber(
+      overrideKey: overrideKey,
+      value: count,
+      title: title,
+      builder: (context, v) => _statItem(
+        context,
+        label: label,
+        count: v?.toInt(),
+        onTap: onTap,
       ),
     );
   }
@@ -2929,7 +3272,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   /// 详细资料 Tab
   Widget _buildAboutTab(MemberCard? card) {
     final theme = Theme.of(context);
-    final level = card?.level ?? _cardInfo?.currentLevel;
+    final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
+    final level = DemoOverrides.choice('profile.level') ??
+        card?.level ??
+        _cardInfo?.currentLevel;
     final isSenior = card?.levelInfo?.isSeniorMember ?? false;
 
     return ListView(
@@ -2943,8 +3289,26 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               children: [
                 Text('基本信息', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: Style.md),
-                _infoRow('UID', '${widget.mid}'),
-                _infoRow('昵称', card?.name),
+                _infoRow(
+                  'UID',
+                  '${widget.mid}',
+                  customValue: (isOwner && Pref.demoMode)
+                      ? DemoEditableNumber(
+                          overrideKey: 'space.uid',
+                          value: widget.mid,
+                          title: 'UID',
+                          builder: (context, v) => SelectableText(
+                            '${v?.round() ?? widget.mid}',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        )
+                      : null,
+                ),
+                _infoRow(
+                  '昵称',
+                  (isOwner && Pref.demoMode) ? kDemoDisplayName : card?.name,
+                ),
                 _infoRow('等级', level != null ? 'Lv.$level ${isSenior ? '(硬核会员)' : ''}' : null),
                 if (_cardInfo?.currentExp != null)
                   _infoRow('当前经验', '${_cardInfo!.currentExp} / ${_cardInfo!.nextExp ?? 'MAX'}'),

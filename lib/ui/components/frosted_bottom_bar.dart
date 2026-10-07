@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:winwin/core/account/account_service.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/services/msg_unread_service.dart';
 import 'package:winwin/theme/colors.dart';
 
@@ -75,7 +76,9 @@ class NavDestinationIcon extends StatelessWidget {
         listenable: AccountService(),
         builder: (context, _) {
           final account = AccountService();
-          if (account.isLogin && account.face.isNotEmpty) {
+          // 演示模式下头像走程序默认图标（displayUserInfo.face 已置空）。
+          final face = account.displayUserInfo?.face ?? '';
+          if (account.isLogin && face.isNotEmpty) {
             return Container(
               width: size,
               height: size,
@@ -88,7 +91,7 @@ class NavDestinationIcon extends StatelessWidget {
               ),
               child: ClipOval(
                 child: CachedNetworkImage(
-                  imageUrl: ImageUtils.thumbnailUrl(account.face, type: 'avatar'),
+                  imageUrl: ImageUtils.thumbnailUrl(face, type: 'avatar'),
                   fit: BoxFit.cover,
                   memCacheWidth: ImageUtils.decodeClamp(size, context, max: 256),
                   memCacheHeight: ImageUtils.decodeClamp(size, context, max: 256),
@@ -122,8 +125,10 @@ class NavDestinationIcon extends StatelessWidget {
 
     if (destination.page == AppPage.whisper) {
       return ListenableBuilder(
-        listenable: MsgUnreadService(),
+        listenable: Listenable.merge([MsgUnreadService(), Pref.demoModeNotifier]),
         builder: (context, _) {
+          // 演示模式：不显示未读角标（账号数据脱敏）。
+          if (Pref.demoMode) return baseIcon;
           final unreadCount = MsgUnreadService().totalInteractiveUnread;
           final label = unreadCount > 99 ? '99+' : unreadCount.toString();
 

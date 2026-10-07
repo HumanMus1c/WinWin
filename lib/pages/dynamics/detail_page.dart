@@ -9,7 +9,9 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
@@ -85,10 +87,17 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         if (mounted) _commentFocus.requestFocus();
       });
     }
+    // 演示模式切换时重建（内容骨架即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+  }
+
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     _commentCtrl.dispose();
     _commentFocus.dispose();
     super.dispose();
@@ -259,7 +268,9 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: switch (_state) {
+      body: Pref.demoMode
+          ? const DemoListSkeleton()
+          : switch (_state) {
         Loading() => const Center(child: CircularProgressIndicator()),
         Error(:final errMsg) => Center(
             child: Column(

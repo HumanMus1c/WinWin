@@ -445,6 +445,28 @@ abstract final class Pref {
     _setting.put(SettingBoxKey.bangumiEpisodesDescending, value);
   }
 
+  // ---------- demo mode ----------
+  /// 演示模式开关（热切换，用于 README 截图）。
+  ///
+  /// 构造期不读 Hive（bootstrap 前访问安全，默认关闭），
+  /// bootstrap 完成后由 [refreshDemoMode] 从存储恢复。
+  static final ValueNotifier<bool> demoModeNotifier = ValueNotifier<bool>(false);
+
+  static bool get demoMode => demoModeNotifier.value;
+
+  static void setDemoMode(bool value) {
+    if (demoModeNotifier.value != value) {
+      demoModeNotifier.value = value;
+    }
+    _setting.put(SettingBoxKey.demoMode, value);
+  }
+
+  /// bootstrap 后从 Hive 恢复演示模式状态（与 ThemeNotifier.refresh 同模式）。
+  static void refreshDemoMode() {
+    demoModeNotifier.value =
+        _setting.get(SettingBoxKey.demoMode, defaultValue: false) as bool;
+  }
+
   // ---------- desktop ----------
   /// 是否使用系统原生标题栏（默认否 = 沉浸式透明标题栏，见 ImmersiveTitleBarShell）。
   static bool get useNativeTitleBar =>

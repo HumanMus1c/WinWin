@@ -1,8 +1,10 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/theme/colors.dart';
@@ -135,7 +137,9 @@ class _MsgFeedPageState extends State<MsgFeedPage> {
         title: Text(widget.title),
         actions: widget.actions,
       ),
-      body: _loading && _items.isEmpty
+      body: Pref.demoMode
+          ? const DemoListSkeleton(coverWidth: 40, coverHeight: 40)
+          : _loading && _items.isEmpty
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
               ? MsgFeedErrorView(error: _error!, onRetry: () => _load(refresh: true))

@@ -16,6 +16,7 @@ import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/app_messenger.dart' as app_messenger;
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/log/sync_trace.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/follow.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -156,6 +157,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     _loadDetail();
     _loadRelated();
     _loadTags();
+    // 演示模式切换时重建（播放器遮罩与分区骨架即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+  }
+
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -169,6 +176,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   @override
   void dispose() {
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     _scrollRatio.dispose();
     SyncTrace.log('DetailPage', 'dispose enter');
     routeObserver.unsubscribe(this);
@@ -909,7 +917,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
 
     final response = _detailState.dataOrNull;
-    final isLoading = _detailState is Loading;
+    // 演示模式：分区一律以骨架（加载态）显示。
+    final isLoading = _detailState is Loading || Pref.demoMode;
 
     return Column(
       children: [
@@ -1024,7 +1033,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         if (appendRelated)
           _buildCommentInputBar(
             enabled: !isLoading,
-            disabledHint: isLoading ? '正在加载视频...' : null,
+            disabledHint: isLoading
+                ? (Pref.demoMode ? '演示模式' : '正在加载视频...')
+                : null,
           ),
       ],
     );
@@ -1204,7 +1215,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     ? Opacity(
                         opacity: opacity,
                         child: Text(
-                          (upName?.isNotEmpty ?? false) ? upName! : '视频详情',
+                          (Pref.demoMode || !(upName?.isNotEmpty ?? false))
+                              ? '视频详情'
+                              : upName!,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: barContrast.contentColor,
@@ -1289,6 +1302,21 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 播放器内容（Phase 7.6.4：封面加 Hero 共享元素转场）。
   /// VideoHeader 负责裁切/圆角/尺寸，此处只返回原始内容。
   Widget _buildPlayerContent(VideoDetailData? data) {
+    final content = _buildPlayerContentInner(data);
+    // 演示模式：播放器画面覆盖占位遮罩（不暂停、不改播放状态）。
+    return ValueListenableBuilder<bool>(
+      valueListenable: Pref.demoModeNotifier,
+      builder: (context, demo, _) => Stack(
+        fit: StackFit.expand,
+        children: [
+          content,
+          if (demo) const DemoVideoOverlay(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayerContentInner(VideoDetailData? data) {
     final controller = playerController;
     if (controller == null) {
       final coverWidget = NetworkImgLayer(
@@ -2223,9 +2251,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           ),
           tabs: [
             Tab(
-              text: replyCount != null
-                  ? '评论 ${NumUtils.formatNum(replyCount)}'
-                  : '评论',
+              text: (Pref.demoMode || replyCount == null)
+                  ? '评论'
+                  : '评论 ${NumUtils.formatNum(replyCount)}',
             ),
             const Tab(text: '相关推荐'),
           ],
@@ -2244,38 +2272,38 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 最热/最新排序行 + 评论列表 + 底部输入栏。
   /// 稿件信息未就绪（无 aid）时评论不可用，展示占位提示。
   Widget _buildCommentTab() {
-    if (_detailState.dataOrNull == null) {
-      return switch (_detailState) {
-        Loading() => Column(
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(Style.sm, Style.xs, Style.sm, 0),
-                child: _buildCommentSortRow(),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(
-                    Style.cardSpace,
-                    Style.xs,
-                    Style.safeSpace,
-                    Style.md,
-                  ),
-                  itemCount: 4,
-                  itemBuilder: (_, _) => _buildReplyTileSkeleton(),
+    if (_detailState.dataOrNull == null || Pref.demoMode) {
+      if (Pref.demoMode || _detailState is Loading) {
+        return Column(
+          children: [
+            Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(Style.sm, Style.xs, Style.sm, 0),
+              child: _buildCommentSortRow(),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(
+                  Style.cardSpace,
+                  Style.xs,
+                  Style.safeSpace,
+                  Style.md,
                 ),
+                itemCount: 4,
+                itemBuilder: (_, _) => _buildReplyTileSkeleton(),
               ),
-              _buildCommentInputBar(
-                enabled: false,
-                disabledHint: '正在加载评论...',
-              ),
-            ],
-          ),
-        _ => const AppEmptyState(
-            title: '评论区不可用',
-            subtitle: '稿件信息加载失败',
-          ),
-      };
+            ),
+            _buildCommentInputBar(
+              enabled: false,
+              disabledHint: Pref.demoMode ? '演示模式' : '正在加载评论...',
+            ),
+          ],
+        );
+      }
+      return const AppEmptyState(
+        title: '评论区不可用',
+        subtitle: '稿件信息加载失败',
+      );
     }
     return Column(
       children: [
@@ -2341,6 +2369,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 相关推荐列表主体（宽栏 Tab 与降级右栏共用）。
   Widget _buildRelatedBody() {
+    if (Pref.demoMode) return _buildRightSkeleton();
     return switch (_relatedState) {
       Loading() => _buildRightSkeleton(),
       Error(:final errMsg) => _buildError(errMsg, _loadRelated),
@@ -2411,15 +2440,25 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           ),
         ),
       ),
-      switch (_relatedState) {
-        Loading() => SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
-            sliver: SliverList.separated(
-              itemCount: 6,
-              separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
-              itemBuilder: (context, index) => _buildRelatedSkeletonItem(),
-            ),
+      if (Pref.demoMode)
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+          sliver: SliverList.separated(
+            itemCount: 6,
+            separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
+            itemBuilder: (context, index) => _buildRelatedSkeletonItem(),
           ),
+        )
+      else
+        switch (_relatedState) {
+          Loading() => SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+              sliver: SliverList.separated(
+                itemCount: 6,
+                separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
+                itemBuilder: (context, index) => _buildRelatedSkeletonItem(),
+              ),
+            ),
         Error(:final errMsg) => SliverToBoxAdapter(
             child: SizedBox(
               height: 240,

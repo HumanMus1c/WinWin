@@ -123,6 +123,7 @@ void main() async {
     ]);
     ThemeNotifier.instance.refresh();
     AppFontNotifier.instance.refresh();
+    Pref.refreshDemoMode();
     TitleBarController.instance.update();
   } catch (error, stackTrace) {
     bootstrapError = error;
@@ -299,6 +300,7 @@ class _AgreementGateState extends State<AgreementGate> {
     ensureBootstrap().then((_) {
       ThemeNotifier.instance.refresh();
       AppFontNotifier.instance.refresh();
+      Pref.refreshDemoMode();
       if (!mounted) return;
       final acked = Pref.userAgreementAck;
       setState(() {

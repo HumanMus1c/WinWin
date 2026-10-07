@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/models/search/search_type.dart';
 import 'package:winwin/pages/search/search_panel.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -52,7 +54,7 @@ class _SearchResultPageState extends State<SearchResultPage>
           tabs: _tabs.map((t) => Tab(text: t.label)).toList(),
         ),
       ),
-      body: TabBarView(
+      body: Pref.demoMode ? const DemoListSkeleton() : TabBarView(
         controller: _tabController,
         children: _tabs
             .map((t) => SearchPanel(

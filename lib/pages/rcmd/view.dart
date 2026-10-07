@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/video_card/video_card_v.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
@@ -40,8 +41,11 @@ class _RcmdPageState extends State<RcmdPage>
               // Extra top padding (120) to clear the floating top bar (52)
               // and the category tabs row (~36) rendered above in a Stack.
               padding: const EdgeInsets.only(top: 120, bottom: 100),
-              sliver: Obx(
-                () => _buildBody(colorScheme, controller.loadingState.value),
+              sliver: DemoMask(
+                skeleton: () => _buildSkeleton,
+                child: () => Obx(
+                  () => _buildBody(colorScheme, controller.loadingState.value),
+                ),
               ),
             ),
           ],

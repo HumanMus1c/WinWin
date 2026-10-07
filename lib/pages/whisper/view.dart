@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/whisper/msg_feed/at_me_page.dart';
@@ -43,10 +44,17 @@ class _WhisperPageState extends State<WhisperPage>
     super.initState();
     AccountService().addListener(_onAccountChanged);
     _load();
+    // 演示模式切换时重建（未读角标与列表占位即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+  }
+
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     AccountService().removeListener(_onAccountChanged);
     super.dispose();
   }
@@ -142,7 +150,7 @@ class _WhisperPageState extends State<WhisperPage>
             _EntryItem(
               icon: AppIcon(AppIcons.reply()),
               label: '回复我的',
-              count: _replyUnread,
+              count: Pref.demoMode ? 0 : _replyUnread,
               color: iosBlue,
               onTap: () {
                 _clearFeedUnread('reply');
@@ -152,7 +160,7 @@ class _WhisperPageState extends State<WhisperPage>
             _EntryItem(
               icon: AppIcon(Icons.alternate_email_rounded),
               label: '艾特我的',
-              count: _atUnread,
+              count: Pref.demoMode ? 0 : _atUnread,
               color: iosOrange,
               onTap: () {
                 _clearFeedUnread('at');
@@ -162,7 +170,7 @@ class _WhisperPageState extends State<WhisperPage>
             _EntryItem(
               icon: AppIcon(AppIcons.like(active: true)),
               label: '点赞我的',
-              count: _likeUnread,
+              count: Pref.demoMode ? 0 : _likeUnread,
               color: iosPink,
               onTap: () {
                 _clearFeedUnread('like');
@@ -172,7 +180,7 @@ class _WhisperPageState extends State<WhisperPage>
             _EntryItem(
               icon: AppIcon(Icons.campaign_outlined),
               label: '系统消息',
-              count: _sysUnread,
+              count: Pref.demoMode ? 0 : _sysUnread,
               color: iosTeal,
               onTap: () {
                 _clearFeedUnread('system');

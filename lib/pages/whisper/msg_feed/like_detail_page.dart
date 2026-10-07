@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
@@ -93,7 +95,9 @@ class _LikeDetailPageState extends State<LikeDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('点赞详情')),
-      body: _loading && _items.isEmpty
+      body: Pref.demoMode
+          ? const DemoListSkeleton(coverWidth: 40, coverHeight: 40)
+          : _loading && _items.isEmpty
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
               ? MsgFeedErrorView(error: _error!, onRetry: () => _load(refresh: true))

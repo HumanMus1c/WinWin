@@ -7,6 +7,8 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
+import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/core/account/login_guard.dart';
@@ -747,17 +749,19 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         onKeyEvent: _handleKey,
         child: Scaffold(
           backgroundColor: Colors.black,
-          body: playerController != null
-              ? PlayerPanel(
-                  controller: playerController!,
-                  cover: _currentEpisode.cover ?? widget.detail.cover,
-                  fullscreen: _fullscreen,
-                  inAppFullscreen: _inAppFullscreen,
-                  onToggleFullscreen: _toggleFullscreen,
-                  onToggleInAppFullscreen: _toggleInAppFullscreen,
-                  onEscape: _handleEscape,
-                )
-              : const Center(child: CircularProgressIndicator()),
+          body: _withDemoOverlay(
+            playerController != null
+                ? PlayerPanel(
+                    controller: playerController!,
+                    cover: _currentEpisode.cover ?? widget.detail.cover,
+                    fullscreen: _fullscreen,
+                    inAppFullscreen: _inAppFullscreen,
+                    onToggleFullscreen: _toggleFullscreen,
+                    onToggleInAppFullscreen: _toggleInAppFullscreen,
+                    onEscape: _handleEscape,
+                  )
+                : const Center(child: CircularProgressIndicator()),
+          ),
         ),
       );
     }
@@ -777,19 +781,35 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   Widget _buildPlayerContent() {
-    return Container(
-      color: Colors.black,
-      child: playerController != null
-          ? PlayerPanel(
-              controller: playerController!,
-              cover: _currentEpisode.cover ?? widget.detail.cover,
-              fullscreen: false,
-              inAppFullscreen: false,
-              onToggleFullscreen: _toggleFullscreen,
-              onToggleInAppFullscreen: _toggleInAppFullscreen,
-              onEscape: _handleEscape,
-            )
-          : const Center(child: CircularProgressIndicator()),
+    return _withDemoOverlay(
+      Container(
+        color: Colors.black,
+        child: playerController != null
+            ? PlayerPanel(
+                controller: playerController!,
+                cover: _currentEpisode.cover ?? widget.detail.cover,
+                fullscreen: false,
+                inAppFullscreen: false,
+                onToggleFullscreen: _toggleFullscreen,
+                onToggleInAppFullscreen: _toggleInAppFullscreen,
+                onEscape: _handleEscape,
+              )
+            : const Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+
+  /// 演示模式：播放画面覆盖占位遮罩（不暂停、不改播放状态）。
+  Widget _withDemoOverlay(Widget child) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: Pref.demoModeNotifier,
+      builder: (context, demo, _) => Stack(
+        fit: StackFit.expand,
+        children: [
+          child,
+          if (demo) const DemoVideoOverlay(),
+        ],
+      ),
     );
   }
 
@@ -994,7 +1014,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 },
               ),
               _buildGradientTopBar(
-                '${widget.detail.title} · ${_currentEpisode.displayTitle}',
+                Pref.demoMode ? '番剧详情' : '${widget.detail.title} · ${_currentEpisode.displayTitle}',
               ),
             ],
           ),
@@ -1009,16 +1029,22 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               TabBar(
                 controller: _wideTabCtrl,
                 tabs: [
-                  Tab(text: '选集 (${_episodes.length})'),
-                  Tab(text: '评论 (${_replies.length})'),
+                  Tab(text: Pref.demoMode ? '选集' : '选集 (${_episodes.length})'),
+                  Tab(text: Pref.demoMode ? '评论' : '评论 (${_replies.length})'),
                 ],
               ),
               Expanded(
                 child: TabBarView(
                   controller: _wideTabCtrl,
                   children: [
-                    _buildEpisodesSidebar(cs),
-                    _buildCommentsSidebar(cs),
+                    DemoMask(
+                      skeleton: _buildPanelSkeleton,
+                      child: () => _buildEpisodesSidebar(cs),
+                    ),
+                    DemoMask(
+                      skeleton: _buildPanelSkeleton,
+                      child: () => _buildCommentsSidebar(cs),
+                    ),
                   ],
                 ),
               ),
@@ -1061,9 +1087,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                     TabBar(
                       controller: _narrowTabCtrl,
                       tabs: [
-                        Tab(text: '选集 (${_episodes.length})'),
+                        Tab(text: Pref.demoMode ? '选集' : '选集 (${_episodes.length})'),
                         const Tab(text: '简介与互动'),
-                        Tab(text: '评论 (${_replies.length})'),
+                        Tab(text: Pref.demoMode ? '评论' : '评论 (${_replies.length})'),
                       ],
                     ),
                     color: Theme.of(context).scaffoldBackgroundColor,
@@ -1073,29 +1099,68 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               body: TabBarView(
                 controller: _narrowTabCtrl,
                 children: [
-                  _buildEpisodesSidebar(cs),
-                  SingleChildScrollView(
-                    padding: const EdgeInsets.all(Style.safeSpace),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildInfoSection(cs),
-                        _buildDescSection(cs),
-                        _buildTagsSection(cs),
-                        const SizedBox(height: 32),
-                      ],
+                  DemoMask(
+                    skeleton: _buildPanelSkeleton,
+                    child: () => _buildEpisodesSidebar(cs),
+                  ),
+                  DemoMask(
+                    skeleton: _buildPanelSkeleton,
+                    child: () => SingleChildScrollView(
+                      padding: const EdgeInsets.all(Style.safeSpace),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildInfoSection(cs),
+                          _buildDescSection(cs),
+                          _buildTagsSection(cs),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
                     ),
                   ),
-                  _buildCommentsSidebar(cs),
+                  DemoMask(
+                    skeleton: _buildPanelSkeleton,
+                    child: () => _buildCommentsSidebar(cs),
+                  ),
                 ],
               ),
             );
           },
         ),
         _buildGradientTopBar(
-          '${widget.detail.title} · ${_currentEpisode.displayTitle}',
+          Pref.demoMode ? '番剧详情' : '${widget.detail.title} · ${_currentEpisode.displayTitle}',
         ),
       ],
+    );
+  }
+
+  /// 演示模式：右栏/内容区通用骨架。
+  Widget _buildPanelSkeleton() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(Style.md),
+      itemCount: 8,
+      itemBuilder: (context, index) => const Padding(
+        padding: EdgeInsets.only(bottom: Style.sm),
+        child: Skeleton(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox(width: 96, height: 56),
+              SizedBox(width: Style.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonLine(width: double.infinity, height: 12),
+                    SizedBox(height: 6),
+                    SkeletonLine(width: 100, height: 10),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

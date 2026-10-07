@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
@@ -149,6 +151,47 @@ class _PgcPageState extends State<PgcPage>
   }
 }
 
+/// 演示模式：番剧页骨架网格（近似 _PgcCard / _MyBangumiCard 布局）。
+Widget _buildPgcSkeletonGrid(SliverGridDelegate gridDelegate, {int count = 12}) {
+  return CustomScrollView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    slivers: [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(
+          Style.safeSpace,
+          Style.xs,
+          Style.safeSpace,
+          Style.md,
+        ),
+        sliver: SliverGrid(
+          gridDelegate: gridDelegate,
+          delegate: SliverChildBuilderDelegate(
+            (context, i) => const Skeleton(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: SkeletonBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      borderRadius: BorderRadius.all(Radius.circular(6)),
+                    ),
+                  ),
+                  SizedBox(height: Style.sm),
+                  SkeletonLine(width: double.infinity, height: 12),
+                  SizedBox(height: 6),
+                  SkeletonLine(width: 80, height: 10),
+                ],
+              ),
+            ),
+            childCount: count,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
 /// 热门追番视图：全站高热度番剧索引网格。
 class _HotBangumiView extends StatefulWidget {
   const _HotBangumiView();
@@ -260,44 +303,47 @@ class _HotBangumiViewState extends State<_HotBangumiView>
           }
           return false;
         },
-        child: switch (_state) {
-          Loading() => const Center(child: CircularProgressIndicator()),
-          Error(:final errMsg) => _buildError(errMsg),
-          Success() => _items.isEmpty
-              ? _buildEmpty()
-              : CustomScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        Style.safeSpace,
-                        Style.xs,
-                        Style.safeSpace,
-                        Style.md,
-                      ),
-                      sliver: SliverGrid(
-                        gridDelegate: gridDelegate,
-                        delegate: SliverChildBuilderDelegate(
-                          (context, i) {
-                            if (i >= _items.length - 2) {
-                              _onScroll();
-                            }
-                            return _PgcCard(item: _items[i]);
-                          },
-                          childCount: _items.length,
+        child: DemoMask(
+          skeleton: () => _buildPgcSkeletonGrid(gridDelegate),
+          child: () => switch (_state) {
+            Loading() => const Center(child: CircularProgressIndicator()),
+            Error(:final errMsg) => _buildError(errMsg),
+            Success() => _items.isEmpty
+                ? _buildEmpty()
+                : CustomScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          Style.safeSpace,
+                          Style.xs,
+                          Style.safeSpace,
+                          Style.md,
+                        ),
+                        sliver: SliverGrid(
+                          gridDelegate: gridDelegate,
+                          delegate: SliverChildBuilderDelegate(
+                            (context, i) {
+                              if (i >= _items.length - 2) {
+                                _onScroll();
+                              }
+                              return _PgcCard(item: _items[i]);
+                            },
+                            childCount: _items.length,
+                          ),
                         ),
                       ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: _buildTrailer(),
-                    ),
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: Style.xxl * 2),
-                    ),
-                  ],
-                ),
-        },
+                      SliverToBoxAdapter(
+                        child: _buildTrailer(),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: Style.xxl * 2),
+                      ),
+                    ],
+                  ),
+          },
+        ),
       ),
     );
   }
@@ -489,44 +535,47 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
           }
           return false;
         },
-        child: switch (_state) {
-          Loading() => const Center(child: CircularProgressIndicator()),
-          Error(:final errMsg) => _buildError(errMsg),
-          Success() => _items.isEmpty
-              ? _buildEmpty()
-              : CustomScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        Style.safeSpace,
-                        Style.xs,
-                        Style.safeSpace,
-                        Style.md,
-                      ),
-                      sliver: SliverGrid(
-                        gridDelegate: gridDelegate,
-                        delegate: SliverChildBuilderDelegate(
-                          (context, i) {
-                            if (i >= _items.length - 2) {
-                              _onScroll();
-                            }
-                            return _MyBangumiCard(item: _items[i]);
-                          },
-                          childCount: _items.length,
+        child: DemoMask(
+          skeleton: () => _buildPgcSkeletonGrid(gridDelegate),
+          child: () => switch (_state) {
+            Loading() => const Center(child: CircularProgressIndicator()),
+            Error(:final errMsg) => _buildError(errMsg),
+            Success() => _items.isEmpty
+                ? _buildEmpty()
+                : CustomScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          Style.safeSpace,
+                          Style.xs,
+                          Style.safeSpace,
+                          Style.md,
+                        ),
+                        sliver: SliverGrid(
+                          gridDelegate: gridDelegate,
+                          delegate: SliverChildBuilderDelegate(
+                            (context, i) {
+                              if (i >= _items.length - 2) {
+                                _onScroll();
+                              }
+                              return _MyBangumiCard(item: _items[i]);
+                            },
+                            childCount: _items.length,
+                          ),
                         ),
                       ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: _buildTrailer(),
-                    ),
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: Style.xxl * 2),
-                    ),
-                  ],
-                ),
-        },
+                      SliverToBoxAdapter(
+                        child: _buildTrailer(),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: Style.xxl * 2),
+                      ),
+                    ],
+                  ),
+          },
+        ),
       ),
     );
   }

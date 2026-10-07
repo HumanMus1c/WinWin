@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
@@ -10,6 +11,7 @@ import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/log/api_blackbox.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/fav.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/fav/fav_models.dart';
@@ -53,11 +55,18 @@ class _FavPageState extends State<FavPage> {
     AccountService().addListener(_onAccountChanged);
     _scrollController.addListener(_onScroll);
     _load(refresh: true);
+    // 演示模式切换时重建（骨架即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+  }
+
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     AccountService().removeListener(_onAccountChanged);
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -184,7 +193,9 @@ class _FavPageState extends State<FavPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('我的收藏')),
-      body: _loading && _folders.isEmpty
+      body: Pref.demoMode
+          ? const DemoListSkeleton()
+          : _loading && _folders.isEmpty
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _error != null && _folders.isEmpty
               ? _buildError()
@@ -394,10 +405,17 @@ class _FavDetailPageState extends State<FavDetailPage> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _load(refresh: true);
+    // 演示模式切换时重建（骨架即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+  }
+
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -503,7 +521,9 @@ class _FavDetailPageState extends State<FavDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.folder.title)),
+      appBar: AppBar(
+        title: Text(Pref.demoMode ? '收藏夹' : widget.folder.title),
+      ),
       floatingActionButton: _items.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: _playAll,
@@ -513,7 +533,9 @@ class _FavDetailPageState extends State<FavDetailPage> {
               label: const Text('播放全部'),
             )
           : null,
-      body: _loading && _items.isEmpty
+      body: Pref.demoMode
+          ? const DemoListSkeleton()
+          : _loading && _items.isEmpty
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _items.isEmpty
               ? const AppEmptyState(

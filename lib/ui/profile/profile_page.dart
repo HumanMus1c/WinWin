@@ -5,6 +5,7 @@ import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/account/login_utils.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/models/user/user_info.dart';
 import 'package:winwin/pages/dynamics/view.dart';
@@ -17,6 +18,7 @@ import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/common/widgets/demo_editable.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
@@ -103,7 +105,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final service = AccountService();
-    final info = service.userInfo;
+    final info = service.displayUserInfo;
     final isLogin = service.isLogin;
     return Scaffold(
       body: SafeArea(
@@ -194,31 +196,80 @@ class _ProfilePageState extends State<ProfilePage> {
 // 用户信息行 — 头像 + 用户名/等级 + 硬币/经验 + 进度条
 // ════════════════════════════════════════════════════════════════
 
-class _UserInfoSection extends StatelessWidget {
+/// 演示模式：VIP 类型下拉选项。
+const List<(int, String)> _kVipOptions = [
+  (0, '无'),
+  (1, '月度大会员'),
+  (2, '年度大会员'),
+];
+
+/// 演示模式：等级下拉选项。
+const List<(int, String)> _kLevelOptions = [
+  (0, 'LV0'),
+  (1, 'LV1'),
+  (2, 'LV2'),
+  (3, 'LV3'),
+  (4, 'LV4'),
+  (5, 'LV5'),
+  (6, 'LV6'),
+];
+
+class _UserInfoSection extends StatefulWidget {
   const _UserInfoSection({required this.info, required this.isLogin});
 
   final UserInfoModel? info;
   final bool isLogin;
 
   @override
+  State<_UserInfoSection> createState() => _UserInfoSectionState();
+}
+
+class _UserInfoSectionState extends State<_UserInfoSection> {
+  @override
+  void initState() {
+    super.initState();
+    // 覆盖值变更时联动重建（经验条/昵称颜色跟随编辑值）。
+    DemoOverrides.revision.addListener(_onOverrideChanged);
+  }
+
+  @override
+  void dispose() {
+    DemoOverrides.revision.removeListener(_onOverrideChanged);
+    super.dispose();
+  }
+
+  void _onOverrideChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final info = widget.info;
+    final isLogin = widget.isLogin;
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.miuix;
 
     final levelInfo = info?.levelInfo;
     final hasLevel = levelInfo?.currentLevel != null;
-    final isVip = info?.isVip ?? false;
-    final nextExp = levelInfo?.nextExp;
-    final curExp = levelInfo?.currentExp;
+
+    // 演示模式覆盖值：无覆盖时回退真实值。
+    final realVip = (info?.isVip ?? false)
+        ? ((info?.isYearVip ?? false) ? 2 : 1)
+        : 0;
+    final displayVip = DemoOverrides.choice('profile.vipType') ?? realVip;
+    final displayCurExp =
+        DemoOverrides.number('profile.exp') ?? levelInfo?.currentExp;
+    final displayNextExp =
+        DemoOverrides.number('profile.expNext') ?? levelInfo?.nextExp;
     // 进度：常规为 curExp/nextExp；LV6（nextExp 为 null/"–"）但经验有值时
     // 渲染满格——原先返回 null 会渲染为空轨道（复测反馈：经验条不可见）。
     final progress = (hasLevel &&
-            nextExp != null &&
-            nextExp > 0 &&
-            curExp != null)
-        ? (curExp / nextExp).clamp(0.0, 1.0)
-        : (curExp != null && curExp > 0 ? 1.0 : null);
+            displayNextExp != null &&
+            displayNextExp > 0 &&
+            displayCurExp != null)
+        ? (displayCurExp / displayNextExp).clamp(0.0, 1.0)
+        : (displayCurExp != null && displayCurExp > 0 ? 1.0 : null);
 
     final coinLabelStyle = theme.textTheme.labelMedium?.copyWith(
       color: cs.outline,
@@ -295,27 +346,35 @@ class _UserInfoSection extends StatelessWidget {
                         : AppIcon(AppIcons.profile(),
                             color: Colors.white, size: 28),
                   ),
-                  if (isVip)
+                  if (isLogin)
                     Positioned(
                       right: -2,
                       bottom: -2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: biliPink,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                              color: cs.surface, width: 1),
-                        ),
-                        child: const Text(
-                          'VIP',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      child: DemoEditableChoice(
+                        overrideKey: 'profile.vipType',
+                        value: realVip,
+                        options: _kVipOptions,
+                        title: 'VIP 类型',
+                        builder: (context, vip) => (vip ?? 0) > 0
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: biliPink,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                      color: cs.surface, width: 1),
+                                ),
+                                child: const Text(
+                                  'VIP',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            : const SizedBox(width: 30, height: 16),
                       ),
                     ),
                 ],
@@ -337,39 +396,56 @@ class _UserInfoSection extends StatelessWidget {
                             style: theme.textTheme.titleMedium?.copyWith(
                               height: 1,
                               fontWeight: typo.titleWeight,
-                              color: isVip && (info?.isYearVip ?? false)
-                                  ? biliPink
-                                  : null,
+                              color: displayVip == 2 ? biliPink : null,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (hasLevel)
-                          LevelBadge(level: levelInfo!.currentLevel!, height: 12),
+                          DemoEditableChoice(
+                            overrideKey: 'profile.level',
+                            value: levelInfo!.currentLevel,
+                            options: _kLevelOptions,
+                            title: '等级',
+                            builder: (context, level) => LevelBadge(
+                              level: level ?? 0,
+                              height: 12,
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     if (isLogin)
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(text: '硬币 ', style: coinLabelStyle),
-                            TextSpan(
-                              text: _fmtNum(info?.money?.toInt() ?? info?.coins),
-                              style: coinValStyle,
-                            ),
-                            TextSpan(text: '      经验 ', style: coinLabelStyle),
-                            TextSpan(
-                              text: _fmtNum(curExp),
-                              style: coinValStyle,
-                            ),
-                            TextSpan(
-                              text: '/${_fmtNum(nextExp)}',
-                              style: coinLabelStyle,
-                            ),
-                          ],
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('硬币 ', style: coinLabelStyle),
+                          DemoEditableNumber(
+                            overrideKey: 'profile.coins',
+                            value: info?.money?.toInt() ?? info?.coins,
+                            title: '硬币数',
+                            builder: (context, v) =>
+                                Text(_fmtNum(v), style: coinValStyle),
+                          ),
+                          const SizedBox(width: 16),
+                          Text('经验 ', style: coinLabelStyle),
+                          DemoEditableNumber(
+                            overrideKey: 'profile.exp',
+                            value: levelInfo?.currentExp,
+                            title: '经验值（当前）',
+                            builder: (context, v) =>
+                                Text(_fmtNum(v), style: coinValStyle),
+                          ),
+                          Text('/', style: coinLabelStyle),
+                          DemoEditableNumber(
+                            overrideKey: 'profile.expNext',
+                            value: levelInfo?.nextExp,
+                            title: '经验值（升级上限）',
+                            builder: (context, v) =>
+                                Text(_fmtNum(v), style: coinLabelStyle),
+                          ),
+                        ],
                       )
                     else
                       Text(
@@ -434,31 +510,46 @@ class _StatsRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          AppActionTile(
-            count: isLogin ? _fmt(info?.dynamicCount) : dash,
-            label: '动态',
-            // 切换到根导航「动态」tab，与导航栏入口共用同一实例。
-            onTap: () => onGuarded(
-              context,
-              (ctx) => onNavigate != null
-                  ? onNavigate!(AppPage.dynamic)
-                  : showDynamicsPage(ctx),
+          DemoEditableNumber(
+            overrideKey: 'profile.dynamic',
+            value: info?.dynamicCount,
+            title: '动态数',
+            builder: (context, v) => AppActionTile(
+              count: isLogin ? _fmt(v) : dash,
+              label: '动态',
+              // 切换到根导航「动态」tab，与导航栏入口共用同一实例。
+              onTap: () => onGuarded(
+                context,
+                (ctx) => onNavigate != null
+                    ? onNavigate!(AppPage.dynamic)
+                    : showDynamicsPage(ctx),
+              ),
             ),
           ),
-          AppActionTile(
-            count: isLogin ? _fmt(info?.following) : dash,
-            label: '关注',
-            onTap: () => onGuarded(
-              context,
-              (ctx) => _gotoRelation(ctx, RelationType.followings),
+          DemoEditableNumber(
+            overrideKey: 'profile.following',
+            value: info?.following,
+            title: '关注数',
+            builder: (context, v) => AppActionTile(
+              count: isLogin ? _fmt(v) : dash,
+              label: '关注',
+              onTap: () => onGuarded(
+                context,
+                (ctx) => _gotoRelation(ctx, RelationType.followings),
+              ),
             ),
           ),
-          AppActionTile(
-            count: isLogin ? _fmt(info?.follower) : dash,
-            label: '粉丝',
-            onTap: () => onGuarded(
-              context,
-              (ctx) => _gotoRelation(ctx, RelationType.fans),
+          DemoEditableNumber(
+            overrideKey: 'profile.follower',
+            value: info?.follower,
+            title: '粉丝数',
+            builder: (context, v) => AppActionTile(
+              count: isLogin ? _fmt(v) : dash,
+              label: '粉丝',
+              onTap: () => onGuarded(
+                context,
+                (ctx) => _gotoRelation(ctx, RelationType.fans),
+              ),
             ),
           ),
         ],

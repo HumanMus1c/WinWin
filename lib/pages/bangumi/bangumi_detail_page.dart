@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_guard.dart';
@@ -436,10 +437,13 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _detail?.title ?? widget.title ?? '番剧详情',
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        title: ValueListenableBuilder<bool>(
+          valueListenable: Pref.demoModeNotifier,
+          builder: (context, demo, _) => Text(
+            demo ? '番剧详情' : (_detail?.title ?? widget.title ?? '番剧详情'),
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
         ),
         leading: const AppBackButton(),
         actions: [
@@ -464,18 +468,21 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: switch (_state) {
-        Loading() => _buildSkeleton(cs),
-        Error(:final errMsg) => _buildError(errMsg),
-        Success(:final response) => LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= kDetailNarrowBreakpoint;
-              return isWide
-                  ? _buildWideLayout(response, cs)
-                  : _buildNarrowLayout(response, cs);
-            },
-          ),
-      },
+      body: DemoMask(
+        skeleton: () => _buildSkeleton(cs),
+        child: () => switch (_state) {
+          Loading() => _buildSkeleton(cs),
+          Error(:final errMsg) => _buildError(errMsg),
+          Success(:final response) => LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= kDetailNarrowBreakpoint;
+                return isWide
+                    ? _buildWideLayout(response, cs)
+                    : _buildNarrowLayout(response, cs);
+              },
+            ),
+        },
+      ),
     );
   }
 

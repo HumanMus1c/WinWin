@@ -1,7 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/fan.dart';
 import 'package:winwin/http/follow.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -116,10 +118,13 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final totalLabel = _total != null ? ' $_total' : '';
+    final totalLabel =
+        (!Pref.demoMode && _total != null) ? ' $_total' : '';
     return Scaffold(
       appBar: AppBar(title: Text('$_title$totalLabel')),
-      body: _loading && _items.isEmpty
+      body: Pref.demoMode
+          ? const DemoListSkeleton(coverWidth: 44, coverHeight: 44)
+          : _loading && _items.isEmpty
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
               ? _buildErrorView()

@@ -11,6 +11,7 @@ import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/article/article_page.dart';
@@ -140,11 +141,18 @@ class _DynTabPageState extends State<_DynTabPage>
     AccountService().addListener(_onAccountChanged);
     _scrollController.addListener(_onScroll);
     _load(refresh: true);
+    // 演示模式切换时重建（内容骨架即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+  }
+
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     AccountService().removeListener(_onAccountChanged);
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -233,7 +241,9 @@ class _DynTabPageState extends State<_DynTabPage>
       },
       child: AppRefreshIndicator(
         onRefresh: () => _load(refresh: true),
-        child: switch (_state) {
+        child: Pref.demoMode
+            ? _buildSkeleton()
+            : switch (_state) {
           Loading() => _buildSkeleton(),
           Error(:final errMsg) => _buildError(errMsg),
           Success() => _items.isEmpty

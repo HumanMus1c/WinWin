@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
@@ -201,6 +203,51 @@ class _LivePageState extends State<LivePage>
   }
 }
 
+/// 演示模式：直播页骨架网格（近似 _LiveCard 布局）。
+Widget _buildLiveSkeletonGrid({int count = 8}) {
+  return CustomScrollView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    slivers: [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(
+          Style.safeSpace,
+          Style.sm,
+          Style.safeSpace,
+          Style.md,
+        ),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 280,
+            childAspectRatio: 0.85,
+            mainAxisSpacing: Style.cardSpace,
+            crossAxisSpacing: Style.cardSpace,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, i) => const Skeleton(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: SkeletonBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+                  ),
+                  SizedBox(height: Style.sm),
+                  SkeletonLine(width: double.infinity, height: 12),
+                  SizedBox(height: 6),
+                  SkeletonLine(width: 90, height: 10),
+                ],
+              ),
+            ),
+            childCount: count,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
 /// 我的关注直播视图：已关注主播的正在直播网格。
 class _LiveFollowSubView extends StatefulWidget {
   const _LiveFollowSubView();
@@ -309,50 +356,53 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
           }
           return false;
         },
-        child: switch (_state) {
-          Loading() => const Center(child: CircularProgressIndicator()),
-          Error(:final errMsg) => _buildError(errMsg),
-          Success() => _items.isEmpty
-              ? _buildEmpty()
-              : CustomScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        Style.safeSpace,
-                        Style.sm,
-                        Style.safeSpace,
-                        Style.md,
-                      ),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 280,
-                          childAspectRatio: 0.85,
-                          mainAxisSpacing: Style.cardSpace,
-                          crossAxisSpacing: Style.cardSpace,
+        child: DemoMask(
+          skeleton: _buildLiveSkeletonGrid,
+          child: () => switch (_state) {
+            Loading() => const Center(child: CircularProgressIndicator()),
+            Error(:final errMsg) => _buildError(errMsg),
+            Success() => _items.isEmpty
+                ? _buildEmpty()
+                : CustomScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          Style.safeSpace,
+                          Style.sm,
+                          Style.safeSpace,
+                          Style.md,
                         ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, i) {
-                            if (i >= _items.length - 2) {
-                              _onScroll();
-                            }
-                            return _LiveCard(item: _items[i]);
-                          },
-                          childCount: _items.length,
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 280,
+                            childAspectRatio: 0.85,
+                            mainAxisSpacing: Style.cardSpace,
+                            crossAxisSpacing: Style.cardSpace,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, i) {
+                              if (i >= _items.length - 2) {
+                                _onScroll();
+                              }
+                              return _LiveCard(item: _items[i]);
+                            },
+                            childCount: _items.length,
+                          ),
                         ),
                       ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: _buildTrailer(),
-                    ),
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: Style.xxl * 2),
-                    ),
-                  ],
-                ),
-        },
+                      SliverToBoxAdapter(
+                        child: _buildTrailer(),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: Style.xxl * 2),
+                      ),
+                    ],
+                  ),
+          },
+        ),
       ),
     );
   }
@@ -541,50 +591,53 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
           }
           return false;
         },
-        child: switch (_state) {
-          Loading() => const Center(child: CircularProgressIndicator()),
-          Error(:final errMsg) => _buildError(errMsg),
-          Success() => _items.isEmpty
-              ? _buildEmpty()
-              : CustomScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        Style.safeSpace,
-                        Style.sm,
-                        Style.safeSpace,
-                        Style.md,
-                      ),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 280,
-                          childAspectRatio: 0.85,
-                          mainAxisSpacing: Style.cardSpace,
-                          crossAxisSpacing: Style.cardSpace,
+        child: DemoMask(
+          skeleton: _buildLiveSkeletonGrid,
+          child: () => switch (_state) {
+            Loading() => const Center(child: CircularProgressIndicator()),
+            Error(:final errMsg) => _buildError(errMsg),
+            Success() => _items.isEmpty
+                ? _buildEmpty()
+                : CustomScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          Style.safeSpace,
+                          Style.sm,
+                          Style.safeSpace,
+                          Style.md,
                         ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, i) {
-                            if (i >= _items.length - 2) {
-                              _onScroll();
-                            }
-                            return _LiveCard(item: _items[i]);
-                          },
-                          childCount: _items.length,
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 280,
+                            childAspectRatio: 0.85,
+                            mainAxisSpacing: Style.cardSpace,
+                            crossAxisSpacing: Style.cardSpace,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, i) {
+                              if (i >= _items.length - 2) {
+                                _onScroll();
+                              }
+                              return _LiveCard(item: _items[i]);
+                            },
+                            childCount: _items.length,
+                          ),
                         ),
                       ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: _buildTrailer(),
-                    ),
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: Style.xxl * 2),
-                    ),
-                  ],
-                ),
-        },
+                      SliverToBoxAdapter(
+                        child: _buildTrailer(),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: Style.xxl * 2),
+                      ),
+                    ],
+                  ),
+          },
+        ),
       ),
     );
   }

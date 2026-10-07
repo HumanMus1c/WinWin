@@ -1,5 +1,6 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/image_utils.dart';
 
@@ -38,6 +39,18 @@ class NetworkImgLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isAvatar = type == 'avatar';
+    // 演示模式：直接输出占位（灰块/灰圆），不构建图片、不发起加载。
+    return ValueListenableBuilder<bool>(
+      valueListenable: Pref.demoModeNotifier,
+      builder: (context, demo, _) {
+        if (demo) return _placeholder(context, isAvatar: isAvatar);
+        return _buildImageLayer(context);
+      },
+    );
+  }
+
+  Widget _buildImageLayer(BuildContext context) {
     final isEmote = type == 'emote';
     final isAvatar = type == 'avatar';
     if (src?.isNotEmpty == true) {

@@ -3,10 +3,12 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/video/detail_page.dart';
@@ -199,7 +201,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: Text(
+          Pref.demoMode ? '会话' : widget.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         // 下方列表滚动时标题栏不叠加 surfaceTint 变色。
         scrolledUnderElevation: 0,
         actions: [
@@ -218,7 +224,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       body: Column(
         children: [
           Expanded(
-            child: _loading && _messages.isEmpty
+            child: Pref.demoMode
+                ? const DemoListSkeleton(coverWidth: 40, coverHeight: 40)
+                : _loading && _messages.isEmpty
                 ? const Center(child: CircularProgressIndicator(color: biliPink))
                 : _error != null && _messages.isEmpty
                     ? Center(

@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/storage/storage.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/search.dart';
 import 'package:winwin/models/search/result.dart';
@@ -174,7 +176,9 @@ class _SearchPageState extends State<SearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildSearchAppBar(),
-      body: _showSuggests ? _buildSuggestsList() : _buildMainContent(),
+      body: (_showSuggests && !Pref.demoMode)
+          ? _buildSuggestsList()
+          : _buildMainContent(),
     );
   }
 
@@ -223,13 +227,14 @@ class _SearchPageState extends State<SearchPage> {
     return ListView(
       padding: const EdgeInsets.all(Style.md),
       children: [
-        if (_history.isNotEmpty || _visitedUsers.isNotEmpty) ...[
+        if (_history.isNotEmpty ||
+            (_visitedUsers.isNotEmpty && !Pref.demoMode)) ...[
           _buildHistoryHeader(),
           if (_history.isNotEmpty) ...[
             const SizedBox(height: Style.sm),
             _buildHistoryChips(),
           ],
-          if (_visitedUsers.isNotEmpty) ...[
+          if (_visitedUsers.isNotEmpty && !Pref.demoMode) ...[
             const SizedBox(height: Style.sm),
             _buildVisitedUserChips(),
           ],
@@ -369,6 +374,12 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Widget _buildTrendingSection() {
+    if (Pref.demoMode) {
+      return const SizedBox(
+        height: 240,
+        child: DemoListSkeleton(itemCount: 5, coverWidth: 28, coverHeight: 28),
+      );
+    }
     if (_trendingLoading) {
       return const Padding(
         padding: EdgeInsets.all(Style.xl),

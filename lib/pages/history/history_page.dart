@@ -8,6 +8,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/history.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/history/history_models.dart';
@@ -52,11 +53,18 @@ class _HistoryPageState extends State<HistoryPage> {
     AccountService().addListener(_onAccountChanged);
     _scrollController.addListener(_onScroll);
     _load(refresh: true);
+    // 演示模式切换时重建（骨架即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+  }
+
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     AccountService().removeListener(_onAccountChanged);
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -260,7 +268,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
         ],
       ),
-      body: _loading && _items.isEmpty
+      body: Pref.demoMode || (_loading && _items.isEmpty)
           ? _buildSkeleton()
           : _error != null && _items.isEmpty
               ? _buildError()
