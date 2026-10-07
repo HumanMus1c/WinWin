@@ -46,17 +46,59 @@ class SessionListSectionState extends State<SessionListSection> {
 
   bool get _isSpecialMode => _selectedType == _specialCategoryType;
 
+  /// 演示模式：本地追加的会话行数（滚动每次仅 +1 行）。
+  int _demoExtra = 0;
+
+  /// 演示模式：上次追加行的滚动位置（需继续滚动约半屏后才再追加）。
+  double _demoLastAppendAt = double.negativeInfinity;
+
+  final ScrollController _scrollCtrl = ScrollController();
+
   @override
   void initState() {
     super.initState();
     AccountService().addListener(_onAccountChanged);
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+    _scrollCtrl.addListener(_onDemoScroll);
     _load();
   }
 
   @override
   void dispose() {
+    _scrollCtrl.removeListener(_onDemoScroll);
+    _scrollCtrl.dispose();
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     AccountService().removeListener(_onAccountChanged);
     super.dispose();
+  }
+
+  void _onDemoChanged() {
+    if (!mounted) return;
+    setState(() {});
+    if (!Pref.demoMode && _sessions.isEmpty) {
+      _load(refresh: true);
+    }
+  }
+
+  /// 演示模式滚动追加：到达底部且再滚动约半屏后，追加"一行"（一个会话项）。
+  void _onDemoScroll() {
+    if (!Pref.demoMode) return;
+    if (!_scrollCtrl.hasClients || !_scrollCtrl.position.hasContentDimensions) {
+      return;
+    }
+    final pos = _scrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - 80 &&
+        pos.pixels > _demoLastAppendAt + pos.viewportDimension * 0.5) {
+      _demoLastAppendAt = pos.pixels;
+      setState(() => _demoExtra += 1);
+    }
+  }
+
+  /// 演示模式：初始仅填充当前视口所需的会话行数（+ 滚动追加数）。
+  int _demoVisibleRows(BuildContext context) {
+    final rowsFit =
+        ((MediaQuery.sizeOf(context).height - 260) / 76).ceil().clamp(4, 20);
+    return rowsFit + _demoExtra;
   }
 
   void _onAccountChanged() {
@@ -80,6 +122,11 @@ class SessionListSectionState extends State<SessionListSection> {
   Future<void> reload() => _load(refresh: true);
 
   Future<void> _load({bool refresh = false, int dupRetry = 0}) async {
+    // 演示模式：不拉取云端会话（滚动追加在 _onDemoScroll 中本地处理）。
+    if (Pref.demoMode) {
+      _loading = false;
+      return;
+    }
     // 启动时本页可能先于 bootstrap 完成前构建（main 不阻塞 runApp），
     // 须先等 Dio 初始化，否则 Request.dio LateInitializationError 导致白屏。
     await ensureBootstrap();
@@ -281,11 +328,28 @@ class SessionListSectionState extends State<SessionListSection> {
             type: MaterialType.transparency,
             clipBehavior: Clip.hardEdge,
             child: CustomScrollView(
+              controller: _scrollCtrl,
               // AlwaysScrollable：列表不满一屏时仍可下拉刷新。
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 // 会话列表
-                if (_loading && _sessions.isEmpty)
+                if (Pref.demoMode)
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => _SessionTile(
+                        session: const {
+                          'talker_id': 0,
+                          'session_type': 1,
+                        },
+                        index: index,
+                        onToggleTop: _handleToggleTop,
+                        onToggleDnd: _handleToggleDnd,
+                        onRemove: _handleRemove,
+                      ),
+                      childCount: _demoVisibleRows(context),
+                    ),
+                  )
+                else if (_loading && _sessions.isEmpty)
                   const SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.all(Style.xxl),

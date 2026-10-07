@@ -21,6 +21,8 @@ void _showDemoCardMenu(BuildContext context, Offset position, int seed) {
     data: VideoCardData(
       bvid: 'BV1demo$seed',
       aid: 0,
+      mid: 10000,
+      cover: 'https://demo.winwin.local/cover_$seed.jpg',
       ownerName: kDemoDisplayName,
       title: '演示视频',
     ),

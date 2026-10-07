@@ -113,9 +113,9 @@ List<ContextMenuAction> buildVideoCardActions({
     );
   }
 
-  // 5. 查看 / 保存封面（演示模式：涉及云端素材，隐藏该动作）
+  // 5. 查看 / 保存封面（演示模式下封面为占位图；对话框内下载动作可安全失败并提示）
   final cover = data.cover;
-  if (cover != null && cover.isNotEmpty && !Pref.demoMode) {
+  if (cover != null && cover.isNotEmpty) {
     actions.add(
       ContextMenuAction(
         title: '查看/保存封面',

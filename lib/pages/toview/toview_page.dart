@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
@@ -56,6 +57,12 @@ class _ToviewPageState extends State<ToviewPage> {
   String? _error;
   StreamSubscription<WatchLaterEvent>? _watchLaterSubscription;
 
+  /// 演示模式：本地追加的演示卡片数量（滚动每次仅 +1 行）。
+  int _demoExtra = 0;
+
+  /// 演示模式：上次追加行的滚动位置（需继续滚动约半屏后才再追加）。
+  double _demoLastAppendAt = double.negativeInfinity;
+
   @override
   void initState() {
     super.initState();
@@ -68,7 +75,11 @@ class _ToviewPageState extends State<ToviewPage> {
   }
 
   void _onDemoChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    if (!Pref.demoMode && _items.isEmpty) {
+      _load(refresh: true);
+    }
   }
 
   void _initWatchLaterSubscription() {
@@ -134,6 +145,11 @@ class _ToviewPageState extends State<ToviewPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
+    // 演示模式：不拉取云端列表（滚动追加在 _onScroll 中本地处理）。
+    if (Pref.demoMode) {
+      _loading = false;
+      return;
+    }
     await ensureBootstrap();
     if (refresh) {
       _page = 1;
@@ -202,6 +218,16 @@ class _ToviewPageState extends State<ToviewPage> {
         _scrollController.position.hasContentDimensions) {
       final pos = _scrollController.position;
       if (pos.pixels >= pos.maxScrollExtent - 300) {
+        // 演示模式：滚动仅本地追加"一行"（数量=视口列数），不请求云端。
+        if (Pref.demoMode) {
+          if (pos.pixels <= _demoLastAppendAt + pos.viewportDimension * 0.5) {
+            return;
+          }
+          _demoLastAppendAt = pos.pixels;
+          final perRow = (pos.viewportDimension / 460).floor().clamp(2, 8);
+          setState(() => _demoExtra += perRow);
+          return;
+        }
         _load();
       }
     }
@@ -317,7 +343,9 @@ class _ToviewPageState extends State<ToviewPage> {
               label: const Text('播放全部'),
             )
           : null,
-      body: _loading && _items.isEmpty
+      body: Pref.demoMode
+          ? _buildDemoList()
+          : _loading && _items.isEmpty
           ? _buildSkeleton()
           : _error != null && _items.isEmpty
               ? _buildError()
@@ -395,6 +423,48 @@ class _ToviewPageState extends State<ToviewPage> {
                         ),
                       ),
                     ),
+    );
+  }
+
+  /// 演示模式：本地列表（初始仅填充视口所需行数；滚动每次仅 +1 行）。
+  Widget _buildDemoList() {
+    final perRow = (MediaQuery.sizeOf(context).width / 460).floor().clamp(2, 8);
+    final rowsFit =
+        ((MediaQuery.sizeOf(context).height - 160) / 122).ceil().clamp(3, 12);
+    return CustomScrollView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            Style.safeSpace,
+            Style.safeSpace,
+            Style.safeSpace,
+            80,
+          ),
+          sliver: SliverGrid.builder(
+            gridDelegate: Grid.videoCardHDelegate(
+              maxCrossAxisExtent: 440.0,
+              mainAxisExtent: 110.0,
+            ),
+            itemCount: rowsFit * perRow + _demoExtra,
+            itemBuilder: (context, index) => DemoVideoCardH(
+              seed: index,
+              onTap: () => _openDemoVideo(context, index),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 演示模式：打开本地演示视频详情（不拉取云端数据）。
+  void _openDemoVideo(BuildContext context, int index) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
+      ),
     );
   }
 
