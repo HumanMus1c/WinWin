@@ -164,6 +164,121 @@ class _DemoEditableChoiceState extends State<DemoEditableChoice> {
   }
 }
 
+/// 演示模式下可"双击进入编辑、失焦即保存"的数值部件。
+///
+/// 非演示模式直接返回 [builder] 原样结果；演示模式双击切换为内联输入框，
+/// 取消焦点（点击其他区域）或回车时立即持久化到 DemoOverrides。
+class DemoInlineEditNumber extends StatefulWidget {
+  const DemoInlineEditNumber({
+    super.key,
+    required this.overrideKey,
+    required this.value,
+    required this.builder,
+  });
+
+  /// DemoOverrides 存储键（如 `video.like.count`）。
+  final String overrideKey;
+
+  /// 展示值（无覆盖时使用；通常为稳定随机数）。
+  final num? value;
+
+  /// 根据展示值构建子组件。
+  final Widget Function(BuildContext context, num? display) builder;
+
+  @override
+  State<DemoInlineEditNumber> createState() => _DemoInlineEditNumberState();
+}
+
+class _DemoInlineEditNumberState extends State<DemoInlineEditNumber> {
+  final TextEditingController _ctrl = TextEditingController();
+  final FocusNode _focus = FocusNode();
+  bool _editing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+    _focus.addListener(_onFocusChanged);
+  }
+
+  @override
+  void dispose() {
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
+    _focus.removeListener(_onFocusChanged);
+    _focus.dispose();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onDemoChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onFocusChanged() {
+    if (!_focus.hasFocus && _editing) {
+      _commit();
+    }
+  }
+
+  num? get _display => DemoOverrides.number(widget.overrideKey) ?? widget.value;
+
+  void _start() {
+    _ctrl.text = _display == null ? '' : '${_display!.round()}';
+    setState(() => _editing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focus.requestFocus();
+    });
+  }
+
+  Future<void> _commit() async {
+    if (!_editing) return;
+    setState(() => _editing = false);
+    final v = int.tryParse(_ctrl.text.trim());
+    if (v == null || v < 0) return;
+    await DemoOverrides.set(widget.overrideKey, v);
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Pref.demoMode) return widget.builder(context, widget.value);
+    if (_editing) {
+      final style = Theme.of(context).textTheme.labelMedium;
+      return SizedBox(
+        width: 72,
+        child: TextField(
+          controller: _ctrl,
+          focusNode: _focus,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          style: style,
+          textAlign: TextAlign.center,
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 4,
+              vertical: 4,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          onSubmitted: (_) => _commit(),
+          onTapOutside: (_) => _focus.unfocus(),
+        ),
+      );
+    }
+    return Tooltip(
+      message: '演示模式：双击编辑数值',
+      child: GestureDetector(
+        onDoubleTap: _start,
+        child: widget.builder(context, _display),
+      ),
+    );
+  }
+}
+
 /// 可编辑元素的共用外壳：hover 高亮 + 点击编辑入口。
 ///
 /// [IgnorePointer] 让子控件不参与命中测试，点击统一交给编辑入口

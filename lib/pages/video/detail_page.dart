@@ -16,7 +16,9 @@ import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/app_messenger.dart' as app_messenger;
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/log/sync_trace.dart';
+import 'package:winwin/common/widgets/demo_editable.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/follow.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -162,7 +164,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   void _onDemoChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    if (Pref.demoMode) {
+      // 进入演示：暂停播放（与正常模式数据隔离）。
+      playerController?.pause();
+    } else if (_detailState is Loading) {
+      // 退出演示且尚未加载：恢复正常模式的云端加载。
+      _loadDetail();
+      _loadRelated();
+      _loadTags();
+    }
+    setState(() {});
   }
 
   @override
@@ -208,6 +220,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 全屏态与手动暂停均不触发，避免覆盖用户意图。
   void _handleCollapseAutoPause(double r) {
     if (_fullscreen || _inAppFullscreen) return;
+    if (Pref.demoMode) return;
     final ctrl = playerController;
     if (ctrl == null || !Pref.collapseAutoPause) return;
     if (r >= 0.98) {
@@ -266,7 +279,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           'VideoDetailPage',
           'didPopNext: resume existing player session, wasPlaying=$_wasPlaying, completed=${ctrl.completed.value}',
         );
-        if (_wasPlaying && !ctrl.completed.value) {
+        if (_wasPlaying && !ctrl.completed.value && !Pref.demoMode) {
           ctrl.play();
         }
       }
@@ -317,6 +330,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   // ─────────────────────────── 数据加载 ───────────────────────────
 
   Future<void> _loadDetail() async {
+    // 演示模式：不拉取云端数据（与正常模式完全隔离）。
+    if (Pref.demoMode) return;
     setState(() => _detailState = LoadingState.loading());
     final res = await VideoHttp.videoIntro(bvid: widget.bvid);
     if (!mounted) return;
@@ -419,6 +434,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   Future<void> _loadRelated() async {
+    if (Pref.demoMode) return;
     setState(() => _relatedState = LoadingState.loading());
     final res = await VideoHttp.relatedVideoList(bvid: widget.bvid);
     if (!mounted) return;
@@ -434,6 +450,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 拉取稿件标签（对标 BiliPai loadVideoTags，失败静默降级不展示）。
   Future<void> _loadTags() async {
+    if (Pref.demoMode) return;
     final res = await VideoHttp.videoTags(bvid: widget.bvid);
     if (!mounted) return;
     if (res case Success(:final response)) {
@@ -446,6 +463,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     String? nextOffset,
     bool refresh = false,
   }) async {
+    if (Pref.demoMode) return;
     if (_loadingReplies) return;
     if (refresh) {
       _replies.clear();
@@ -960,6 +978,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
+                              // 演示模式：本地演示分区（灰条占位 + 随机互动数据）。
+                              if (Pref.demoMode) {
+                                if (index == 0) return _buildInfoSectionDemo();
+                                if (index == 1) return _buildDescSectionDemo();
+                                if (index == 2) return _buildTagsSectionDemo();
+                                return _buildReplyTileDemo(index - 3);
+                              }
                               if (isLoading) {
                                 if (index == 0) {
                                   return _buildInfoSectionSkeleton();
@@ -1007,13 +1032,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               }
                               return _buildReplyTrailer();
                             },
-                            childCount: isLoading
-                                ? (appendRelated ? 6 : 2)
-                                : (appendRelated
-                                    ? (_tags.isNotEmpty ? 3 : 2) +
-                                        _replies.length +
-                                        1
-                                    : (_tags.isNotEmpty ? 3 : 2)),
+                            childCount: Pref.demoMode
+                                ? 11
+                                : isLoading
+                                    ? (appendRelated ? 6 : 2)
+                                    : (appendRelated
+                                        ? (_tags.isNotEmpty ? 3 : 2) +
+                                            _replies.length +
+                                            1
+                                        : (_tags.isNotEmpty ? 3 : 2)),
                           ),
                         ),
                       ),
@@ -1302,21 +1329,16 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 播放器内容（Phase 7.6.4：封面加 Hero 共享元素转场）。
   /// VideoHeader 负责裁切/圆角/尺寸，此处只返回原始内容。
   Widget _buildPlayerContent(VideoDetailData? data) {
-    final content = _buildPlayerContentInner(data);
-    // 演示模式：播放器画面覆盖占位遮罩（不暂停、不改播放状态）。
-    return ValueListenableBuilder<bool>(
-      valueListenable: Pref.demoModeNotifier,
-      builder: (context, demo, _) => Stack(
-        fit: StackFit.expand,
-        children: [
-          content,
-          if (demo) const DemoVideoOverlay(),
-        ],
-      ),
-    );
+    return _buildPlayerContentInner(data);
   }
 
   Widget _buildPlayerContentInner(VideoDetailData? data) {
+    // 演示模式：视频区域使用灰色静态占位符（不加载、不播放真实视频）。
+    if (Pref.demoMode) {
+      return ColoredBox(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      );
+    }
     final controller = playerController;
     if (controller == null) {
       final coverWidget = NetworkImgLayer(
@@ -2369,6 +2391,23 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 相关推荐列表主体（宽栏 Tab 与降级右栏共用）。
   Widget _buildRelatedBody() {
+    // 演示模式：本地生成的横版占位卡片（可点击进入演示详情）。
+    if (Pref.demoMode) {
+      return ListView.separated(
+        padding: const EdgeInsets.fromLTRB(
+          Style.cardSpace,
+          0,
+          Style.safeSpace,
+          Style.xxl * 2,
+        ),
+        itemCount: 6,
+        separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
+        itemBuilder: (context, index) => DemoVideoCardH(
+          seed: index,
+          onTap: () => _openDemoVideo(context, index),
+        ),
+      );
+    }
     return switch (_relatedState) {
       Loading() => _buildRightSkeleton(),
       Error(:final errMsg) => _buildError(errMsg, _loadRelated),
@@ -2486,6 +2525,203 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   // ─────────────────────────── 局部骨架屏 / 错误态 ───────────────────────────
+
+  /// 演示模式：打开本地演示视频详情（不拉取云端数据）。
+  void _openDemoVideo(BuildContext context, int index) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
+      ),
+    );
+  }
+
+  /// 演示模式：信息区 —— 标题/UP 灰色占位，互动行使用随机数据（可双击编辑）。
+  Widget _buildInfoSectionDemo() {
+    final bvid = widget.bvid;
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonLine(width: double.infinity, height: 18),
+          const SizedBox(height: 6),
+          const SkeletonLine(width: 220, height: 18),
+          const SizedBox(height: Style.sm),
+          Row(
+            children: [
+              const SkeletonCircle(size: 40),
+              const SizedBox(width: Style.md),
+              Expanded(
+                child: Row(
+                  children: [
+                    AppIcon(
+                      AppIcons.profile(),
+                      size: 16,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      kDemoDisplayName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(Style.radiusSm),
+                  ),
+                ),
+                onPressed: () {},
+                icon: Icon(AppIcons.add(), size: 16),
+                label: Text(
+                  DemoOverrides.count('demo.followbtn.$bvid', min: 0, max: 1) ==
+                          1
+                      ? '已关注'
+                      : '关注',
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: Style.xl),
+          VideoActionRow(
+            stat: null,
+            hasLike:
+                DemoOverrides.count('demo.like.$bvid', min: 0, max: 1) == 1,
+            hasDislike: false,
+            coinNum: DemoOverrides.count('demo.coin.$bvid', min: 0, max: 3),
+            hasFav: DemoOverrides.count('demo.fav.$bvid', min: 0, max: 1) == 1,
+            inWatchLater: false,
+            onLike: () {},
+            onTriple: () {},
+            onCoin: () {},
+            onDislike: () {},
+            onFav: () {},
+            onShare: () {},
+            onWatchLater: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 演示模式：简介区 —— 灰色静态占位。
+  Widget _buildDescSectionDemo() {
+    return _card(
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SkeletonLine(width: 80, height: 14),
+          SizedBox(height: Style.sm),
+          SkeletonLine(width: double.infinity, height: 12),
+          SizedBox(height: 6),
+          SkeletonLine(width: double.infinity, height: 12),
+          SizedBox(height: 6),
+          SkeletonLine(width: 240, height: 12),
+        ],
+      ),
+    );
+  }
+
+  /// 演示模式：标签区 —— 灰色胶囊占位。
+  Widget _buildTagsSectionDemo() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Style.sm),
+      child: Wrap(
+        spacing: Style.sm,
+        runSpacing: Style.sm,
+        children: List.generate(
+          4,
+          (i) => const SkeletonBox(
+            width: 64,
+            height: 24,
+            borderRadius: BorderRadius.all(Radius.circular(100)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 演示模式：评论条目 —— 文本灰色占位，点赞数随机（双击可编辑），保留互动按钮。
+  Widget _buildReplyTileDemo(int index) {
+    final bvid = widget.bvid;
+    final outline = Theme.of(context).colorScheme.outline;
+    return _card(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonCircle(size: 38),
+          const SizedBox(width: Style.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SkeletonLine(width: 90, height: 13),
+                const SizedBox(height: 8),
+                const SkeletonLine(width: double.infinity, height: 12),
+                const SizedBox(height: 6),
+                const SkeletonLine(width: 200, height: 12),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: () {},
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: AppIcon(
+                          AppIcons.like(),
+                          size: 14,
+                          color: outline,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    DemoInlineEditNumber(
+                      overrideKey: 'demo.reply.$bvid.$index.like',
+                      value: DemoOverrides.count(
+                        'demo.reply.$bvid.$index.like',
+                        min: 10,
+                        max: 99999,
+                      ),
+                      builder: (context, v) => Text(
+                        NumUtils.formatNum(v?.toInt()),
+                        style: TextStyle(fontSize: 11, color: outline),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: AppIcon(
+                        AppIcons.reply(),
+                        size: 14,
+                        color: outline,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '回复',
+                      style: TextStyle(fontSize: 11, color: outline),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// 视频信息区局部骨架：卡片外壳、关注按钮与六键互动行以最终静态样式常驻，
   /// 仅标题文本、数据行与 UP 资料展示 Shimmer 占位。

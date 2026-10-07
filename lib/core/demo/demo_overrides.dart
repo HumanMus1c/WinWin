@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -42,6 +43,19 @@ abstract final class DemoOverrides {
     final value = _read()[key];
     return value is String ? value : null;
   }
+
+  /// 演示数值：优先覆盖值；否则按 [key] 稳定随机（同 key 每次渲染一致）。
+  ///
+  /// 用于视频/动态/评论的互动计数等"本地随机生成"的演示数据。
+  static int count(String key, {int min = 100, int max = 99999}) {
+    final override = number(key);
+    if (override != null) return override.toInt();
+    return min + Random(key.hashCode).nextInt(max - min + 1);
+  }
+
+  /// 演示视频时长（秒）：按 [key] 稳定随机（59s–99min）。
+  static int durationSeconds(String key) =>
+      count('$key.duration', min: 59, max: 5999);
 
   /// 写入覆盖值；[value] 为 null 时清除该 key。
   static Future<void> set(String key, Object? value) async {

@@ -6,6 +6,7 @@ import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
@@ -109,22 +110,40 @@ class VideoCardH extends StatelessWidget {
                               heroTag: heroTag,
                             ),
                           ),
-                          if (!demo && duration > 0)
+                          if (demo || duration > 0)
                             Positioned(
                               right: 4,
                               bottom: 4,
                               child: PBadge(
-                                text: DurationUtils.formatDuration(duration),
+                                text: demo
+                                    ? DurationUtils.formatDuration(
+                                        DemoOverrides.durationSeconds(
+                                          'demo.hcard.${data.bvid ?? ''}',
+                                        ),
+                                      )
+                                    : DurationUtils.formatDuration(duration),
                                 type: PBadgeType.duration,
                               ),
                             ),
-                          if (showStat && !demo)
+                          if (demo || showStat)
                             Positioned(
                               left: 4,
                               bottom: 4,
                               child: VideoCoverStatBadge(
-                                playCount: data.playCount,
-                                danmakuCount: data.danmakuCount,
+                                playCount: demo
+                                    ? DemoOverrides.count(
+                                        'demo.hplay.${data.bvid ?? ''}',
+                                        min: 1000,
+                                        max: 9999999,
+                                      )
+                                    : data.playCount,
+                                danmakuCount: demo
+                                    ? DemoOverrides.count(
+                                        'demo.hdm.${data.bvid ?? ''}',
+                                        min: 10,
+                                        max: 99999,
+                                      )
+                                    : data.danmakuCount,
                               ),
                             ),
                           if (progress != null && progress > 0)
@@ -170,7 +189,14 @@ class VideoCardH extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         demo
-            ? const SkeletonLine(width: double.infinity, height: 13)
+            ? const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonLine(width: double.infinity, height: 13),
+                  SizedBox(height: 6),
+                  SkeletonLine(width: 150, height: 13),
+                ],
+              )
             : Text(
                 title,
                 maxLines: 2,
@@ -181,8 +207,20 @@ class VideoCardH extends StatelessWidget {
         Row(
           children: [
             if (demo) ...[
-              const SkeletonLine(width: 90, height: 12),
-              const Spacer(),
+              AppIcon(AppIcons.profile(), size: 13, color: cs.outline),
+              const SizedBox(width: 3),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    kDemoDisplayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+                  ),
+                ),
+              ),
             ] else ...[
               if (ownerName.isNotEmpty) ...[
                 AppIcon(AppIcons.profile(), size: 13, color: cs.outline),

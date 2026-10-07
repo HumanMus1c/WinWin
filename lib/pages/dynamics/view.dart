@@ -10,9 +10,12 @@ import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/common/widgets/demo_editable.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/dyn.dart';
+import 'package:winwin/theme/colors.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/article/article_page.dart';
 import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
@@ -125,6 +128,9 @@ class _DynTabPageState extends State<_DynTabPage>
   bool _hasMore = true;
   bool _loading = false;
 
+  /// 演示模式：本地生成的占位动态数量（滚动追加，不拉取云端）。
+  int _demoExtra = 8;
+
   /// 点赞状态记忆（跨瀑布流滚动重建保留，刷新时清空）。
   final Map<String, bool> _likedState = {};
   final Map<String, int> _likeCountState = {};
@@ -146,7 +152,11 @@ class _DynTabPageState extends State<_DynTabPage>
   }
 
   void _onDemoChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    if (!Pref.demoMode && _state is Loading) {
+      _load(refresh: true);
+    }
   }
 
   @override
@@ -187,6 +197,15 @@ class _DynTabPageState extends State<_DynTabPage>
   }
 
   Future<void> _load({required bool refresh}) async {
+    // 演示模式：滚动加载改为本地追加（不拉取云端）。
+    if (Pref.demoMode) {
+      if (!refresh && _hasMore) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _demoExtra += 2);
+        });
+      }
+      return;
+    }
     if (_loading) return;
     if (!refresh && !_hasMore) return;
     _loading = true;
@@ -281,15 +300,21 @@ class _DynTabPageState extends State<_DynTabPage>
     );
     return SliverGrid.builder(
       gridDelegate: gridDelegate,
-      itemCount: _items.length,
+      itemCount: _items.length + (Pref.demoMode ? _demoExtra : 0),
       itemBuilder: (context, index) {
+        if (Pref.demoMode) {
+          if (index == _items.length + _demoExtra - 1) {
+            _onScroll();
+          }
+          return index < _items.length
+              ? _buildDemoDynCard(_items[index].id.hashCode,
+                  item: _items[index])
+              : _buildDemoDynCard(index);
+        }
         if (index == _items.length - 1) {
           _onScroll();
         }
-        final item = _items[index];
-        return Pref.demoMode
-            ? _buildDemoPlaceholderCard(item)
-            : _DynVideoCard(item: item);
+        return _DynVideoCard(item: _items[index]);
       },
     );
   }
@@ -301,15 +326,21 @@ class _DynTabPageState extends State<_DynTabPage>
     );
     return SliverGrid.builder(
       gridDelegate: gridDelegate,
-      itemCount: _items.length,
+      itemCount: _items.length + (Pref.demoMode ? _demoExtra : 0),
       itemBuilder: (context, index) {
+        if (Pref.demoMode) {
+          if (index == _items.length + _demoExtra - 1) {
+            _onScroll();
+          }
+          return index < _items.length
+              ? _buildDemoDynCard(_items[index].id.hashCode,
+                  item: _items[index])
+              : _buildDemoDynCard(index);
+        }
         if (index == _items.length - 1) {
           _onScroll();
         }
-        final item = _items[index];
-        return Pref.demoMode
-            ? _buildDemoPlaceholderCard(item)
-            : _DynPgcCard(item: item);
+        return _DynPgcCard(item: _items[index]);
       },
     );
   }
@@ -320,8 +351,17 @@ class _DynTabPageState extends State<_DynTabPage>
       maxCrossAxisExtent: 440.0,
       mainAxisSpacing: Style.cardSpace,
       crossAxisSpacing: Style.cardSpace,
-      childCount: _items.length,
+      childCount: _items.length + (Pref.demoMode ? _demoExtra : 0),
       itemBuilder: (context, index) {
+        if (Pref.demoMode) {
+          if (index == _items.length + _demoExtra - 1) {
+            _onScroll();
+          }
+          return index < _items.length
+              ? _buildDemoDynCard(_items[index].id.hashCode,
+                  item: _items[index])
+              : _buildDemoDynCard(index);
+        }
         if (index == _items.length - 1) {
           _onScroll();
         }
@@ -336,8 +376,17 @@ class _DynTabPageState extends State<_DynTabPage>
       maxCrossAxisExtent: 420.0,
       mainAxisSpacing: Style.cardSpace,
       crossAxisSpacing: Style.cardSpace,
-      childCount: _items.length,
+      childCount: _items.length + (Pref.demoMode ? _demoExtra : 0),
       itemBuilder: (context, index) {
+        if (Pref.demoMode) {
+          if (index == _items.length + _demoExtra - 1) {
+            _onScroll();
+          }
+          return index < _items.length
+              ? _buildDemoDynCard(_items[index].id.hashCode,
+                  item: _items[index])
+              : _buildDemoDynCard(index);
+        }
         if (index == _items.length - 1) {
           _onScroll();
         }
@@ -347,7 +396,7 @@ class _DynTabPageState extends State<_DynTabPage>
   }
 
   Widget _buildDynCard(DynItemModel item) {
-    if (Pref.demoMode) return _buildDemoPlaceholderCard(item);
+    if (Pref.demoMode) return _buildDemoDynCard(item.id.hashCode, item: item);
     return _DynCard(
       item: item,
       liked: _likedState[item.id],
@@ -359,10 +408,28 @@ class _DynTabPageState extends State<_DynTabPage>
     );
   }
 
-  /// 演示模式：动态静态占位卡片（保留点击进入对应详情，不展示云端数据）。
-  Widget _buildDemoPlaceholderCard(DynItemModel item) {
+  /// 演示模式：动态占位卡（真实条目保留原点击导航；本地条目进入演示详情）。
+  Widget _buildDemoDynCard(int seed, {DynItemModel? item}) {
     final VoidCallback onTap;
-    if (_isVideoTab) {
+    if (item == null) {
+      onTap = () {
+        if (_isVideoTab || _isPgcTab) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => VideoDetailPage(bvid: 'BV1demo$seed'),
+            ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DynamicDetailPage(dynamicId: 'demo_$seed'),
+            ),
+          );
+        }
+      };
+    } else if (_isVideoTab) {
       final bvid = item.archive?.bvid;
       onTap = () {
         if (bvid == null || bvid.isEmpty) return;
@@ -424,14 +491,7 @@ class _DynTabPageState extends State<_DynTabPage>
         );
       };
     }
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: const _DynCardSkeleton(),
-      ),
-    );
+    return _DemoDynCard(seed: seed, onTap: onTap);
   }
 
   Widget _buildSkeleton() {
@@ -511,6 +571,148 @@ class _DynTabPageState extends State<_DynTabPage>
       );
     }
     return const SizedBox.shrink();
+  }
+}
+
+/// 演示模式：动态占位卡（作者=程序图标+程序名；文案灰色占位；保留互动按钮）。
+class _DemoDynCard extends StatelessWidget {
+  const _DemoDynCard({required this.seed, this.onTap});
+
+  final int seed;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(Style.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  const SkeletonCircle(size: 36),
+                  const SizedBox(width: Style.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            AppIcon(
+                              AppIcons.profile(),
+                              size: 13,
+                              color: cs.outline,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              kDemoDisplayName,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const SkeletonLine(width: 60, height: 10),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Style.sm),
+              const SkeletonLine(width: double.infinity, height: 13),
+              const SizedBox(height: 6),
+              const SkeletonLine(width: 200, height: 13),
+              const SizedBox(height: Style.sm),
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: skeletonBlockColor(context),
+                    borderRadius: BorderRadius.circular(Style.radiusSm),
+                  ),
+                ),
+              ),
+              const SizedBox(height: Style.sm),
+              _DemoDynActionBar(seed: seed),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 演示模式：动态互动栏（转发/评论/点赞；数值随机、双击可编辑、本地可点）。
+class _DemoDynActionBar extends StatefulWidget {
+  const _DemoDynActionBar({required this.seed});
+
+  final int seed;
+
+  @override
+  State<_DemoDynActionBar> createState() => _DemoDynActionBarState();
+}
+
+class _DemoDynActionBarState extends State<_DemoDynActionBar> {
+  bool _liked = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final outline = Theme.of(context).colorScheme.outline;
+    Widget item(Widget icon, String key, {bool active = false}) {
+      final color = active ? biliPink : outline;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          icon,
+          const SizedBox(width: 4),
+          DemoInlineEditNumber(
+            overrideKey: key,
+            value: DemoOverrides.count(key, min: 10, max: 99999),
+            builder: (context, v) => Text(
+              NumUtils.formatNum(v?.toInt()),
+              style: TextStyle(fontSize: 11, color: color),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        item(
+          AppIcon(AppIcons.repost(), size: 15, color: outline),
+          'demo.dyn.${widget.seed}.repost',
+        ),
+        item(
+          AppIcon(AppIcons.comment(), size: 15, color: outline),
+          'demo.dyn.${widget.seed}.comment',
+        ),
+        InkWell(
+          onTap: () => setState(() => _liked = !_liked),
+          borderRadius: BorderRadius.circular(4),
+          child: item(
+            AppIcon(
+              AppIcons.like(active: _liked),
+              size: 15,
+              color: _liked ? biliPink : outline,
+            ),
+            'demo.dyn.${widget.seed}.like',
+            active: _liked,
+          ),
+        ),
+      ],
+    );
   }
 }
 

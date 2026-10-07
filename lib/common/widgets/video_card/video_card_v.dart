@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -5,8 +7,10 @@ import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 
@@ -93,25 +97,43 @@ class VideoCardV extends StatelessWidget {
                             ),
                             heroTag: heroTag,
                           ),
-                          if (!demo && data.duration > 0)
+                          if (demo || data.duration > 0)
                             Positioned(
                               right: 7,
                               bottom: 6,
                               child: PBadge(
-                                text:
-                                    DurationUtils.formatDuration(data.duration),
+                                text: demo
+                                    ? DurationUtils.formatDuration(
+                                        DemoOverrides.durationSeconds(
+                                          'demo.vcard.${data.bvid ?? ''}',
+                                        ),
+                                      )
+                                    : DurationUtils.formatDuration(
+                                        data.duration,
+                                      ),
                                 type: PBadgeType.duration,
                               ),
                             ),
-                          if (!demo)
-                            Positioned(
-                              left: 7,
-                              bottom: 6,
-                              child: VideoCoverStatBadge(
-                                playCount: data.playCount,
-                                danmakuCount: data.danmakuCount,
-                              ),
+                          Positioned(
+                            left: 7,
+                            bottom: 6,
+                            child: VideoCoverStatBadge(
+                              playCount: demo
+                                  ? DemoOverrides.count(
+                                      'demo.vplay.${data.bvid ?? ''}',
+                                      min: 1000,
+                                      max: 9999999,
+                                    )
+                                  : data.playCount,
+                              danmakuCount: demo
+                                  ? DemoOverrides.count(
+                                      'demo.vdm.${data.bvid ?? ''}',
+                                      min: 10,
+                                      max: 99999,
+                                    )
+                                  : data.danmakuCount,
                             ),
+                          ),
                         ],
                       );
                     },
@@ -147,8 +169,15 @@ class VideoCardV extends StatelessWidget {
             Expanded(
               child: demo
                   ? const Align(
-                      alignment: Alignment.centerLeft,
-                      child: SkeletonLine(width: double.infinity, height: 13),
+                      alignment: Alignment.topLeft,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SkeletonLine(width: double.infinity, height: 13),
+                          SizedBox(height: 6),
+                          SkeletonLine(width: 150, height: 13),
+                        ],
+                      ),
                     )
                   : Text(
                       title,
@@ -161,8 +190,57 @@ class VideoCardV extends StatelessWidget {
               spacing: 2,
               children: [
                 if (demo) ...[
-                  const SkeletonLine(width: 64, height: 14),
-                  const Spacer(),
+                  PBadge(
+                    text: Random(
+                      (data.bvid ?? '').hashCode,
+                    ).nextBool()
+                        ? '已关注'
+                        : '未关注',
+                    type: PBadgeType.status,
+                  ),
+                  PBadge(
+                    text: const ['高播放', '1万点赞', '热门', '宝藏新作'][
+                        Random((data.bvid ?? '').hashCode ^ 5).nextInt(4)],
+                    type: PBadgeType.highlight,
+                  ),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondaryContainer
+                              .withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AppIcon(
+                              AppIcons.profile(),
+                              size: 12,
+                              color: theme.colorScheme.outline,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              kDemoDisplayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                height: 1.5,
+                                fontSize:
+                                    theme.textTheme.labelMedium?.fontSize,
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ] else ...[
                   if (rcmdReason != null && rcmdReason.isNotEmpty)
                     PBadge(text: rcmdReason, type: PBadgeType.highlight),

@@ -12,6 +12,7 @@ import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/event/event_bus.dart';
 import 'package:winwin/core/log/api_blackbox.dart';
 import 'package:winwin/core/log/app_logger.dart';
@@ -522,12 +523,18 @@ class _ToviewCard extends StatelessWidget {
                           heroTag: bvid != null && bvid.isNotEmpty ? 'toview_$bvid' : null,
                         ),
                       ),
-                      if (!Pref.demoMode && duration > 0)
+                      if (duration > 0 || Pref.demoMode)
                         Positioned(
                           right: 4,
                           bottom: 4,
                           child: PBadge(
-                            text: DurationUtils.formatDuration(duration),
+                            text: DurationUtils.formatDuration(
+                              Pref.demoMode
+                                  ? DemoOverrides.durationSeconds(
+                                      'demo.tv.${bvid ?? ''}',
+                                    )
+                                  : duration,
+                            ),
                             type: PBadgeType.duration,
                           ),
                         ),
@@ -584,15 +591,15 @@ class _ToviewCard extends StatelessWidget {
                                 AppIcon(AppIcons.profile(), size: 12, color: cs.outline),
                                 const SizedBox(width: 2),
                                 Flexible(
-                                  child: Pref.demoMode
-                                      ? const SkeletonLine(width: 80, height: 11)
-                                      : Text(
-                                          owner.name!,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: theme.textTheme.labelSmall
-                                              ?.copyWith(color: cs.outline),
-                                        ),
+                                  child: Text(
+                                    Pref.demoMode
+                                        ? kDemoDisplayName
+                                        : owner.name!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.labelSmall
+                                        ?.copyWith(color: cs.outline),
+                                  ),
                                 ),
                               ],
                             ),
@@ -600,28 +607,40 @@ class _ToviewCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            if (!Pref.demoMode && stat?.view != null) ...[
+                            if (Pref.demoMode || stat?.view != null) ...[
                               AppIcon(AppIcons.viewCount(),
                                 size: 12,
                                 color: cs.outline,
                               ),
                               const SizedBox(width: 2),
                               Text(
-                                NumUtils.formatNum(stat!.view),
+                                Pref.demoMode
+                                    ? NumUtils.formatNum(DemoOverrides.count(
+                                        'demo.tvplay.${bvid ?? ''}',
+                                        min: 1000,
+                                        max: 9999999,
+                                      ))
+                                    : NumUtils.formatNum(stat!.view),
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   color: cs.outline,
                                 ),
                               ),
                               const SizedBox(width: 8),
                             ],
-                            if (!Pref.demoMode && stat?.danmaku != null) ...[
+                            if (Pref.demoMode || stat?.danmaku != null) ...[
                               AppIcon(AppIcons.danmakuCount(),
                                 size: 12,
                                 color: cs.outline,
                               ),
                               const SizedBox(width: 2),
                               Text(
-                                NumUtils.formatNum(stat!.danmaku),
+                                Pref.demoMode
+                                    ? NumUtils.formatNum(DemoOverrides.count(
+                                        'demo.tvdm.${bvid ?? ''}',
+                                        min: 10,
+                                        max: 99999,
+                                      ))
+                                    : NumUtils.formatNum(stat!.danmaku),
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   color: cs.outline,
                                 ),

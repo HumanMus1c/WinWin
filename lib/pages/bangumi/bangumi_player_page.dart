@@ -133,6 +133,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     _wideTabCtrl = TabController(length: 2, vsync: this);
     _narrowTabCtrl = TabController(length: 3, vsync: this);
     windowManager.addListener(this);
+    // 演示模式切换时重建（播放器隔离/灰占位即时生效）。
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
 
     _initPlayerForEpisode(_currentEpisode);
     _loadReplies();
@@ -148,9 +150,22 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     });
   }
 
+  void _onDemoChanged() {
+    if (!mounted) return;
+    if (Pref.demoMode) {
+      // 进入演示：暂停播放（与正常模式数据隔离）。
+      playerController?.pause();
+    } else if (playerController == null) {
+      // 退出演示：恢复播放器初始化。
+      _initPlayerForEpisode(_currentEpisode);
+    }
+    setState(() {});
+  }
+
   /// 播放器折叠自动暂停（对标 BiliPai PlayerCollapseAutoPausePolicy 与 DetailPage）。
   void _handleCollapseAutoPause(double r) {
     if (_fullscreen || _inAppFullscreen) return;
+    if (Pref.demoMode) return;
     final ctrl = playerController;
     if (ctrl == null || !Pref.collapseAutoPause) return;
     if (r >= 0.98) {
@@ -175,6 +190,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   @override
   void dispose() {
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
     Pref.bangumiEpisodesDescending.removeListener(_onGlobalOrderChanged);
     _scrollRatio.dispose();
     routeObserver.unsubscribe(this);
@@ -235,6 +251,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   // ─────────────────────────── 播放器初始化与切集 ───────────────────────────
 
   void _initPlayerForEpisode(BangumiEpisode ep, {Duration? startPos}) {
+    // 演示模式：不创建播放器、不拉流（与正常模式完全隔离）。
+    if (Pref.demoMode) return;
     final bvid = ep.bvid ?? '';
     final cid = ep.cid ?? 0;
     if (cid <= 0 && bvid.isEmpty) {
@@ -799,17 +817,15 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
-  /// 演示模式：播放画面覆盖占位遮罩（不暂停、不改播放状态）。
+  /// 演示模式：播放区域使用灰色静态占位（不加载、不播放真实视频）。
   Widget _withDemoOverlay(Widget child) {
     return ValueListenableBuilder<bool>(
       valueListenable: Pref.demoModeNotifier,
-      builder: (context, demo, _) => Stack(
-        fit: StackFit.expand,
-        children: [
-          child,
-          if (demo) const DemoVideoOverlay(),
-        ],
-      ),
+      builder: (context, demo, _) => demo
+          ? ColoredBox(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            )
+          : child,
     );
   }
 

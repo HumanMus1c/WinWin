@@ -505,50 +505,61 @@ class _StatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dash = isLogin ? null : '—';
+    // Flexible 必须在 Row 的直接子级：演示外壳会包裹多层组件，
+    // 因此统一在最外层提供 Flexible，并让 AppActionTile 关闭自带外壳。
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          DemoEditableNumber(
-            overrideKey: 'profile.dynamic',
-            value: info?.dynamicCount,
-            title: '动态数',
-            builder: (context, v) => AppActionTile(
-              count: isLogin ? _fmt(v) : dash,
-              label: '动态',
-              // 切换到根导航「动态」tab，与导航栏入口共用同一实例。
-              onTap: () => onGuarded(
-                context,
-                (ctx) => onNavigate != null
-                    ? onNavigate!(AppPage.dynamic)
-                    : showDynamicsPage(ctx),
+          Flexible(
+            child: DemoEditableNumber(
+              overrideKey: 'profile.dynamic',
+              value: info?.dynamicCount,
+              title: '动态数',
+              builder: (context, v) => AppActionTile(
+                flexible: false,
+                count: isLogin ? _fmt(v) : dash,
+                label: '动态',
+                // 切换到根导航「动态」tab，与导航栏入口共用同一实例。
+                onTap: () => onGuarded(
+                  context,
+                  (ctx) => onNavigate != null
+                      ? onNavigate!(AppPage.dynamic)
+                      : showDynamicsPage(ctx),
+                ),
               ),
             ),
           ),
-          DemoEditableNumber(
-            overrideKey: 'profile.following',
-            value: info?.following,
-            title: '关注数',
-            builder: (context, v) => AppActionTile(
-              count: isLogin ? _fmt(v) : dash,
-              label: '关注',
-              onTap: () => onGuarded(
-                context,
-                (ctx) => _gotoRelation(ctx, RelationType.followings),
+          Flexible(
+            child: DemoEditableNumber(
+              overrideKey: 'profile.following',
+              value: info?.following,
+              title: '关注数',
+              builder: (context, v) => AppActionTile(
+                flexible: false,
+                count: isLogin ? _fmt(v) : dash,
+                label: '关注',
+                onTap: () => onGuarded(
+                  context,
+                  (ctx) => _gotoRelation(ctx, RelationType.followings),
+                ),
               ),
             ),
           ),
-          DemoEditableNumber(
-            overrideKey: 'profile.follower',
-            value: info?.follower,
-            title: '粉丝数',
-            builder: (context, v) => AppActionTile(
-              count: isLogin ? _fmt(v) : dash,
-              label: '粉丝',
-              onTap: () => onGuarded(
-                context,
-                (ctx) => _gotoRelation(ctx, RelationType.fans),
+          Flexible(
+            child: DemoEditableNumber(
+              overrideKey: 'profile.follower',
+              value: info?.follower,
+              title: '粉丝数',
+              builder: (context, v) => AppActionTile(
+                flexible: false,
+                count: isLogin ? _fmt(v) : dash,
+                label: '粉丝',
+                onTap: () => onGuarded(
+                  context,
+                  (ctx) => _gotoRelation(ctx, RelationType.fans),
+                ),
               ),
             ),
           ),

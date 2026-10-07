@@ -1,6 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'package:winwin/common/widgets/demo_editable.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/models/video/video_detail.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
@@ -119,6 +122,7 @@ class _VideoActionRowState extends State<VideoActionRow>
   Widget build(BuildContext context) {
     final stat = widget.stat;
     final inWatchLater = widget.inWatchLater ?? false;
+    final demo = Pref.demoMode;
     return Row(
       children: [
         // 点赞 — 长按触发三连进度环（点击交给内层 InkWell，
@@ -138,10 +142,11 @@ class _VideoActionRowState extends State<VideoActionRow>
                   : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
               text: NumUtils.formatNum(stat?.like),
+              textWidget: _demoCountWidget('video.like.count', widget.hasLike),
               isActive: widget.hasLike,
               tooltip: '点赞（长按一键三连）',
               progress: _tripleCtrl,
-              onTap: widget.onLike,
+              onTap: demo ? () {} : widget.onLike,
             ),
           ),
         ),
@@ -156,9 +161,10 @@ class _VideoActionRowState extends State<VideoActionRow>
                   : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             text: NumUtils.formatNum(stat?.coin),
+            textWidget: _demoCountWidget('video.coin.count', widget.coinNum > 0),
             isActive: widget.coinNum > 0,
             tooltip: '投币',
-            onTap: widget.onCoin,
+            onTap: demo ? () {} : widget.onCoin,
           ),
         ),
         // 收藏
@@ -172,9 +178,10 @@ class _VideoActionRowState extends State<VideoActionRow>
                   : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             text: NumUtils.formatNum(stat?.favorite),
+            textWidget: _demoCountWidget('video.fav.count', widget.hasFav),
             isActive: widget.hasFav,
             tooltip: '收藏',
-            onTap: widget.onFav,
+            onTap: demo ? () {} : widget.onFav,
           ),
         ),
         // 点踩
@@ -190,7 +197,7 @@ class _VideoActionRowState extends State<VideoActionRow>
             text: widget.hasDislike ? '已点踩' : '点踩',
             isActive: widget.hasDislike,
             tooltip: '点踩',
-            onTap: widget.onDislike,
+            onTap: demo ? () {} : widget.onDislike,
           ),
         ),
         // 分享（对标 BiliPai resolveVideoDetailShareActionText：
@@ -205,9 +212,12 @@ class _VideoActionRowState extends State<VideoActionRow>
             text: (stat?.share ?? 0) > 0
                 ? NumUtils.formatNum(stat?.share)
                 : '分享',
+            textWidget: demo
+                ? _demoCountWidget('video.share.count', false)
+                : null,
             isActive: false,
             tooltip: '分享',
-            onTap: widget.onShare,
+            onTap: demo ? () {} : widget.onShare,
           ),
         ),
         // 稍后再看
@@ -223,10 +233,32 @@ class _VideoActionRowState extends State<VideoActionRow>
             text: inWatchLater ? '已添加' : '稍后看',
             isActive: inWatchLater,
             tooltip: inWatchLater ? '移除稍后再看' : '添加稍后再看',
-            onTap: widget.onWatchLater,
+            onTap: demo ? () {} : widget.onWatchLater,
           ),
         ),
       ],
+    );
+  }
+
+  /// 演示模式：计数文本 → 随机值 + 双击内联编辑（失焦即保存）。
+  Widget? _demoCountWidget(String key, bool active) {
+    if (!Pref.demoMode) return null;
+    final color =
+        active ? biliPink : Theme.of(context).colorScheme.onSurfaceVariant;
+    final style = TextStyle(
+      fontSize: 11,
+      color: color,
+      fontWeight: active ? FontWeight.w500 : FontWeight.normal,
+    );
+    return DemoInlineEditNumber(
+      overrideKey: key,
+      value: DemoOverrides.count(key, min: 1000, max: 999999),
+      builder: (context, v) => Text(
+        NumUtils.formatNum(v?.toInt()),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+      ),
     );
   }
 }
@@ -240,6 +272,7 @@ class _ActionButton extends StatelessWidget {
     required this.tooltip,
     this.onTap,
     this.progress,
+    this.textWidget,
   });
 
   final Widget icon;
@@ -250,6 +283,9 @@ class _ActionButton extends StatelessWidget {
 
   /// 三连进度环动画（仅点赞按钮传入）。
   final Animation<double>? progress;
+
+  /// 计数文本部件（演示模式下替换 [text]，支持双击内联编辑）。
+  final Widget? textWidget;
 
   @override
   Widget build(BuildContext context) {
@@ -292,17 +328,18 @@ class _ActionButton extends StatelessWidget {
             children: [
               iconWidget,
               const SizedBox(height: 2),
-              Text(
-                text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: color,
-                  fontWeight:
-                      isActive ? FontWeight.w500 : FontWeight.normal,
-                ),
-              ),
+              textWidget ??
+                  Text(
+                    text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: color,
+                      fontWeight:
+                          isActive ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
             ],
           ),
         ),

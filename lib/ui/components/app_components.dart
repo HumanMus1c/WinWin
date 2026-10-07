@@ -485,6 +485,7 @@ class AppActionTile extends StatelessWidget {
     required this.label,
     this.onTap,
     this.iconTint,
+    this.flexible = true,
   }) : assert(
           icon != null || count != null,
           'AppActionTile 需传入 icon 或 count 之一',
@@ -495,6 +496,12 @@ class AppActionTile extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final Color? iconTint;
+
+  /// 是否自带 [Flexible] 外壳（默认 true，直接作为 Row 子项使用）。
+  ///
+  /// 演示模式的外壳会把组件包进多层 Widget，此时须置 false 并由调用方
+  /// 自行在最外层提供 [Flexible]，否则会触发 ParentDataWidget 断言。
+  final bool flexible;
 
   @override
   Widget build(BuildContext context) {
@@ -536,13 +543,12 @@ class AppActionTile extends StatelessWidget {
     );
 
     // 阶段5d-L1：M3 分支已移除；按压反馈恒为原生 MiuixPressable。
-    return Flexible(
-      child: MiuixPressable(
-        onPressed: onTap,
-        enabled: onTap != null,
-        child: tile,
-      ),
+    final pressed = MiuixPressable(
+      onPressed: onTap,
+      enabled: onTap != null,
+      child: tile,
     );
+    return flexible ? Flexible(child: pressed) : pressed;
   }
 }
 

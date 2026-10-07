@@ -122,7 +122,17 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   }
 
   void _onDemoChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    if (Pref.demoMode) {
+      // 进入演示：暂停播放（隔离真实数据）。
+      try {
+        _player?.state = mdk.PlaybackState.paused;
+      } catch (_) {}
+    } else if (!_isLiving) {
+      // 退出演示且未连接：恢复直播流。
+      _initLive();
+    }
+    setState(() {});
   }
 
   @override
@@ -191,6 +201,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   }
 
   Future<void> _initLive() async {
+    // 演示模式：不连接直播流（与正常模式完全隔离）。
+    if (Pref.demoMode) return;
     setState(() {
       _loading = true;
       _errorMessage = null;
@@ -975,6 +987,18 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   /// 视频播放器区域（普通窗口模式）
   Widget _buildPlayerBox() {
+    // 演示模式：播放器区域使用灰色静态占位符（不连接/播放真实直播流）。
+    if (Pref.demoMode) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(Style.radiusMd),
+          ),
+        ),
+      );
+    }
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Container(
@@ -1000,9 +1024,6 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               // 屏幕弹幕悬浮层
               if (_danmakuVisible && _isLiving) _buildDanmakuOverlay(),
-
-              // 演示模式：画面遮罩（覆盖视频帧与弹幕，不暂停播放）
-              if (Pref.demoMode) const DemoVideoOverlay(),
 
               // 暂停状态大居中播放按钮
               if (_isLiving && !_isPlaying && !_loading && _errorMessage == null)
@@ -1032,6 +1053,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   /// 全屏/网页全屏模式播放器
   Widget _buildFullscreenPlayer() {
+    // 演示模式：灰色静态占位（不连接/播放真实直播流）。
+    if (Pref.demoMode) {
+      return ColoredBox(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      );
+    }
     return MouseRegion(
       onHover: (_) => _onHoverPlayer(),
       child: Stack(
@@ -1039,9 +1066,6 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         children: [
           _buildVideoSurface(),
           if (_danmakuVisible && _isLiving) _buildDanmakuOverlay(),
-
-          // 演示模式：画面遮罩（覆盖视频帧与弹幕，不暂停播放）
-          if (Pref.demoMode) const DemoVideoOverlay(),
           if (_isLiving && !_isPlaying && !_loading && _errorMessage == null)
             _buildCenterPlayButton(),
           if (_loading && _isLiving && _errorMessage == null)

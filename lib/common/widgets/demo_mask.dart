@@ -1,8 +1,15 @@
+import 'dart:math';
+
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/duration_utils.dart';
 
 /// 演示模式内容遮罩：演示开启时整块替换为 [skeleton]。
 ///
@@ -100,6 +107,268 @@ class DemoListSkeleton extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 演示模式：本地生成的竖版视频卡片（可交互，无云端数据）。
+///
+/// 封面灰色占位、标题灰色占位、作者统一为程序图标 + 程序名「WinWin」，
+/// 时长/播放数/关注状态/热门胶囊等元素使用"控件美术素材 + 稳定随机值"。
+class DemoVideoCard extends StatelessWidget {
+  const DemoVideoCard({super.key, required this.seed, this.onTap});
+
+  /// 稳定随机种子（通常为列表索引）。
+  final int seed;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final followed = Random(seed).nextBool();
+    final hotLabel =
+        const ['高播放', '1万点赞', '热门', '宝藏新作'][Random(seed ^ 5).nextInt(4)];
+    final durationText = DurationUtils.formatDuration(
+      DemoOverrides.durationSeconds('demo.card.$seed'),
+    );
+
+    return RepaintBoundary(
+      child: Card(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 10,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Positioned.fill(
+                      child: SkeletonBox(
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(Style.radiusMd),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 7,
+                      bottom: 6,
+                      child: PBadge(
+                        text: durationText,
+                        type: PBadgeType.duration,
+                      ),
+                    ),
+                    Positioned(
+                      left: 7,
+                      bottom: 6,
+                      child: VideoCoverStatBadge(
+                        playCount: DemoOverrides.count(
+                          'demo.play.$seed',
+                          min: 1000,
+                          max: 9999999,
+                        ),
+                        danmakuCount: DemoOverrides.count(
+                          'demo.dm.$seed',
+                          min: 10,
+                          max: 99999,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SkeletonLine(
+                              width: double.infinity,
+                              height: 13,
+                            ),
+                            SizedBox(height: 6),
+                            SkeletonLine(width: 150, height: 13),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        spacing: 2,
+                        children: [
+                          PBadge(
+                            text: followed ? '已关注' : '未关注',
+                            type: PBadgeType.status,
+                          ),
+                          PBadge(
+                            text: hotLabel,
+                            type: PBadgeType.highlight,
+                          ),
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: cs.secondaryContainer
+                                      .withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AppIcon(
+                                      AppIcons.profile(),
+                                      size: 12,
+                                      color: cs.outline,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      kDemoDisplayName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        height: 1.5,
+                                        fontSize:
+                                            theme.textTheme.labelMedium?.fontSize,
+                                        color: cs.outline,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 演示模式：本地生成的横版视频卡片（相关推荐/列表场景，可交互）。
+class DemoVideoCardH extends StatelessWidget {
+  const DemoVideoCardH({super.key, required this.seed, this.onTap});
+
+  final int seed;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final durationText = DurationUtils.formatDuration(
+      DemoOverrides.durationSeconds('demo.hcard.$seed'),
+    );
+
+    return RepaintBoundary(
+      child: Card(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(Style.radiusMd),
+                  child: SizedBox(
+                    width: 150,
+                    height: 150 * 9 / 16,
+                    child: Stack(
+                      children: [
+                        const Positioned.fill(
+                          child: SkeletonBox(
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+                        ),
+                        Positioned(
+                          right: 4,
+                          bottom: 4,
+                          child: PBadge(
+                            text: durationText,
+                            type: PBadgeType.duration,
+                          ),
+                        ),
+                        Positioned(
+                          left: 4,
+                          bottom: 4,
+                          child: VideoCoverStatBadge(
+                            playCount: DemoOverrides.count(
+                              'demo.hplay.$seed',
+                              min: 1000,
+                              max: 9999999,
+                            ),
+                            danmakuCount: DemoOverrides.count(
+                              'demo.hdm.$seed',
+                              min: 10,
+                              max: 99999,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SkeletonLine(width: double.infinity, height: 13),
+                      const SizedBox(height: 6),
+                      const SkeletonLine(width: 150, height: 13),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          AppIcon(
+                            AppIcons.profile(),
+                            size: 13,
+                            color: cs.outline,
+                          ),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                kDemoDisplayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall
+                                    ?.copyWith(color: cs.outline),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

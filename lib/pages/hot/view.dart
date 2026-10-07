@@ -1,7 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
+import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/video_card/video_card_v.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/hot/controller.dart';
@@ -24,8 +26,31 @@ class _HotPageState extends State<HotPage>
     with AutomaticKeepAliveClientMixin {
   final HotController controller = Get.put(HotController());
 
+  /// 演示模式：本地生成的演示卡片数量（向下滚动每次追加"一行"）。
+  int _demoCount = 12;
+
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    Pref.demoModeNotifier.addListener(_onDemoChanged);
+  }
+
+  @override
+  void dispose() {
+    Pref.demoModeNotifier.removeListener(_onDemoChanged);
+    super.dispose();
+  }
+
+  void _onDemoChanged() {
+    if (!mounted) return;
+    setState(() {});
+    if (!Pref.demoMode && controller.loadingState.value is Loading) {
+      controller.onRefresh();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +89,8 @@ class _HotPageState extends State<HotPage>
     ColorScheme colorScheme,
     LoadingState<List<dynamic>?> loadingState,
   ) {
+    // 演示模式：完全使用本地生成的卡片（滚动追加一行，不拉取云端）。
+    if (Pref.demoMode) return _buildDemoGrid();
     return switch (loadingState) {
       Loading() => _buildSkeleton,
       Success(:final response) =>
@@ -111,10 +138,40 @@ class _HotPageState extends State<HotPage>
   }
 
   Widget get _buildSkeleton => SliverGrid.builder(
-        gridDelegate: gridDelegate,
-        itemBuilder: (context, index) => const VideoCardVSkeleton(),
-        itemCount: 10,
-      );
+    gridDelegate: gridDelegate,
+    itemBuilder: (context, index) => const VideoCardVSkeleton(),
+    itemCount: 10,
+  );
+
+  /// 演示模式：本地生成卡片网格；滚动接近底部时追加一行（本地生成）。
+  Widget _buildDemoGrid() {
+    final perRow =
+        (MediaQuery.sizeOf(context).width / 250).floor().clamp(2, 8);
+    return SliverGrid.builder(
+      gridDelegate: gridDelegate,
+      itemCount: _demoCount,
+      itemBuilder: (context, index) {
+        if (index == _demoCount - 1) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _demoCount += perRow);
+          });
+        }
+        return DemoVideoCard(
+          seed: index,
+          onTap: () => _openDemoDetail(context, index),
+        );
+      },
+    );
+  }
+
+  void _openDemoDetail(BuildContext context, int index) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
+      ),
+    );
+  }
 
   Widget _buildError(ColorScheme colorScheme, [String? errMsg]) {
     return SliverFillRemaining(
