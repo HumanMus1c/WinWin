@@ -1,10 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -53,96 +55,101 @@ class VideoCardH extends StatelessWidget {
     final double? progress = data.progress;
     Offset? lastTapPosition;
 
-    return RepaintBoundary(
-      child: Card(
-        child: InkWell(
-          onTap: onTap,
-          onSecondaryTapDown: (details) {
-            lastTapPosition = details.globalPosition;
-          },
-          onSecondaryTapUp: (details) {
-            showVideoContextMenu(
-              context: context,
-              position: details.globalPosition,
-              data: data,
-              videoItem: videoItem,
-              onRemove: onRemove,
-            );
-          },
-          onLongPress: () {
-            if (lastTapPosition != null) {
+    // 演示模式：卡片保留完整交互（左键进入详情 / 右键菜单），
+    // 文本与封面角标换为静态占位（无云端数据）。
+    return ValueListenableBuilder<bool>(
+      valueListenable: Pref.demoModeNotifier,
+      builder: (context, demo, _) => RepaintBoundary(
+        child: Card(
+          child: InkWell(
+            onTap: onTap,
+            onSecondaryTapDown: (details) {
+              lastTapPosition = details.globalPosition;
+            },
+            onSecondaryTapUp: (details) {
               showVideoContextMenu(
                 context: context,
-                position: lastTapPosition!,
+                position: details.globalPosition,
                 data: data,
                 videoItem: videoItem,
                 onRemove: onRemove,
               );
-            }
-          },
-          borderRadius: BorderRadius.all(radius),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 左：封面缩略图
-                ClipRRect(
-                  borderRadius: BorderRadius.all(radius),
-                  child: SizedBox(
-                    width: coverWidth,
-                    height: coverWidth * 9 / 16,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: NetworkImgLayer(
-                            src: data.cover,
-                            width: coverWidth,
-                            height: coverWidth * 9 / 16,
-                            borderRadius: BorderRadius.all(radius),
-                            heroTag: heroTag,
-                          ),
-                        ),
-                        if (duration > 0)
-                          Positioned(
-                            right: 4,
-                            bottom: 4,
-                            child: PBadge(
-                              text: DurationUtils.formatDuration(duration),
-                              type: PBadgeType.duration,
+            },
+            onLongPress: () {
+              if (lastTapPosition != null) {
+                showVideoContextMenu(
+                  context: context,
+                  position: lastTapPosition!,
+                  data: data,
+                  videoItem: videoItem,
+                  onRemove: onRemove,
+                );
+              }
+            },
+            borderRadius: BorderRadius.all(radius),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 左：封面缩略图
+                  ClipRRect(
+                    borderRadius: BorderRadius.all(radius),
+                    child: SizedBox(
+                      width: coverWidth,
+                      height: coverWidth * 9 / 16,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: NetworkImgLayer(
+                              src: data.cover,
+                              width: coverWidth,
+                              height: coverWidth * 9 / 16,
+                              borderRadius: BorderRadius.all(radius),
+                              heroTag: heroTag,
                             ),
                           ),
-                        if (showStat)
-                          Positioned(
-                            left: 4,
-                            bottom: 4,
-                            child: VideoCoverStatBadge(
-                              playCount: data.playCount,
-                              danmakuCount: data.danmakuCount,
-                            ),
-                          ),
-                        if (progress != null && progress > 0)
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: LinearProgressIndicator(
-                              value: progress.clamp(0.0, 1.0),
-                              minHeight: 2,
-                              backgroundColor: Colors.transparent,
-                              valueColor: AlwaysStoppedAnimation(
-                                theme.colorScheme.primary,
+                          if (!demo && duration > 0)
+                            Positioned(
+                              right: 4,
+                              bottom: 4,
+                              child: PBadge(
+                                text: DurationUtils.formatDuration(duration),
+                                type: PBadgeType.duration,
                               ),
                             ),
-                          ),
-                      ],
+                          if (showStat && !demo)
+                            Positioned(
+                              left: 4,
+                              bottom: 4,
+                              child: VideoCoverStatBadge(
+                                playCount: data.playCount,
+                                danmakuCount: data.danmakuCount,
+                              ),
+                            ),
+                          if (progress != null && progress > 0)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: LinearProgressIndicator(
+                                value: progress.clamp(0.0, 1.0),
+                                minHeight: 2,
+                                backgroundColor: Colors.transparent,
+                                valueColor: AlwaysStoppedAnimation(
+                                  theme.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                // 右：标题 + UP + 统计
-                Expanded(child: _buildTextContent(theme, data)),
-              ],
+                  const SizedBox(width: 10),
+                  // 右：标题 + UP + 统计
+                  Expanded(child: _buildTextContent(theme, data, demo: demo)),
+                ],
+              ),
             ),
           ),
         ),
@@ -150,7 +157,11 @@ class VideoCardH extends StatelessWidget {
     );
   }
 
-  Widget _buildTextContent(ThemeData theme, VideoCardData data) {
+  Widget _buildTextContent(
+    ThemeData theme,
+    VideoCardData data, {
+    required bool demo,
+  }) {
     final String title = data.title;
     final cs = theme.colorScheme;
     final String ownerName = data.ownerName;
@@ -158,32 +169,39 @@ class VideoCardH extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
-        ),
+        demo
+            ? const SkeletonLine(width: double.infinity, height: 13)
+            : Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
+              ),
         const SizedBox(height: 6),
         Row(
           children: [
-            if (ownerName.isNotEmpty) ...[
-              AppIcon(AppIcons.profile(), size: 13, color: cs.outline),
-              const SizedBox(width: 3),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    ownerName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+            if (demo) ...[
+              const SkeletonLine(width: 90, height: 12),
+              const Spacer(),
+            ] else ...[
+              if (ownerName.isNotEmpty) ...[
+                AppIcon(AppIcons.profile(), size: 13, color: cs.outline),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      ownerName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+                    ),
                   ),
                 ),
-              ),
-            ] else
-              const Spacer(),
+              ] else
+                const Spacer(),
+            ],
             VideoPopupMenu(
               data: data,
               videoItem: videoItem,

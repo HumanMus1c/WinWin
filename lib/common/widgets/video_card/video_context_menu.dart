@@ -9,6 +9,7 @@ import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
@@ -45,7 +46,7 @@ List<ContextMenuAction> buildVideoCardActions({
   if (bvid != null && bvid.isNotEmpty) {
     actions.add(
       ContextMenuAction(
-        title: '复制 BV 号 ($bvid)',
+        title: Pref.demoMode ? '复制 BV 号' : '复制 BV 号 ($bvid)',
         icon: AppIcon(AppIcons.copy()),
         onTap: () {
           Utils.copyText(bvid);
@@ -98,7 +99,7 @@ List<ContextMenuAction> buildVideoCardActions({
   if (mid != null && mid > 0) {
     actions.add(
       ContextMenuAction(
-        title: '访问 UP 主：${ownerName.isNotEmpty ? ownerName : mid}',
+        title: Pref.demoMode ? '访问 UP 主' : '访问 UP 主：${ownerName.isNotEmpty ? ownerName : mid}',
         icon: AppIcon(AppIcons.profile()),
         onTap: () {
           Navigator.push(
@@ -112,9 +113,9 @@ List<ContextMenuAction> buildVideoCardActions({
     );
   }
 
-  // 5. 查看 / 保存封面
+  // 5. 查看 / 保存封面（演示模式：涉及云端素材，隐藏该动作）
   final cover = data.cover;
-  if (cover != null && cover.isNotEmpty) {
+  if (cover != null && cover.isNotEmpty && !Pref.demoMode) {
     actions.add(
       ContextMenuAction(
         title: '查看/保存封面',
@@ -183,7 +184,7 @@ List<ContextMenuAction> buildVideoCardActions({
   if (mid != null && mid > 0) {
     actions.add(
       ContextMenuAction(
-        title: '拉黑 UP 主：${ownerName.isNotEmpty ? ownerName : mid}',
+        title: Pref.demoMode ? '拉黑 UP 主' : '拉黑 UP 主：${ownerName.isNotEmpty ? ownerName : mid}',
         icon: AppIcon(AppIcons.block()),
         onTap: () {
           showDialog(

@@ -241,9 +241,7 @@ class _DynTabPageState extends State<_DynTabPage>
       },
       child: AppRefreshIndicator(
         onRefresh: () => _load(refresh: true),
-        child: Pref.demoMode
-            ? _buildSkeleton()
-            : switch (_state) {
+        child: switch (_state) {
           Loading() => _buildSkeleton(),
           Error(:final errMsg) => _buildError(errMsg),
           Success() => _items.isEmpty
@@ -288,7 +286,10 @@ class _DynTabPageState extends State<_DynTabPage>
         if (index == _items.length - 1) {
           _onScroll();
         }
-        return _DynVideoCard(item: _items[index]);
+        final item = _items[index];
+        return Pref.demoMode
+            ? _buildDemoPlaceholderCard(item)
+            : _DynVideoCard(item: item);
       },
     );
   }
@@ -305,7 +306,10 @@ class _DynTabPageState extends State<_DynTabPage>
         if (index == _items.length - 1) {
           _onScroll();
         }
-        return _DynPgcCard(item: _items[index]);
+        final item = _items[index];
+        return Pref.demoMode
+            ? _buildDemoPlaceholderCard(item)
+            : _DynPgcCard(item: item);
       },
     );
   }
@@ -343,6 +347,7 @@ class _DynTabPageState extends State<_DynTabPage>
   }
 
   Widget _buildDynCard(DynItemModel item) {
+    if (Pref.demoMode) return _buildDemoPlaceholderCard(item);
     return _DynCard(
       item: item,
       liked: _likedState[item.id],
@@ -351,6 +356,81 @@ class _DynTabPageState extends State<_DynTabPage>
         _likedState[item.id] = liked;
         _likeCountState[item.id] = count;
       },
+    );
+  }
+
+  /// 演示模式：动态静态占位卡片（保留点击进入对应详情，不展示云端数据）。
+  Widget _buildDemoPlaceholderCard(DynItemModel item) {
+    final VoidCallback onTap;
+    if (_isVideoTab) {
+      final bvid = item.archive?.bvid;
+      onTap = () {
+        if (bvid == null || bvid.isEmpty) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VideoDetailPage(
+              bvid: bvid,
+              cover: item.archive?.cover,
+              heroTag: 'dyn_$bvid',
+            ),
+          ),
+        );
+      };
+    } else if (_isPgcTab) {
+      onTap = () {
+        final pgc = item.pgc;
+        final url = pgc?.jumpUrl;
+        final result = (url != null && url.isNotEmpty)
+            ? BilibiliUrlParser.parseDeepLink(url)
+            : null;
+        if (result != null && result.isBangumi) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BangumiDetailPage(
+                seasonId: result.seasonId,
+                epId: result.epId,
+                mediaId: result.mediaId,
+              ),
+            ),
+          );
+        } else if (result?.bvid != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => VideoDetailPage(bvid: result!.bvid!),
+            ),
+          );
+        } else if (item.archive?.bvid != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => VideoDetailPage(
+                bvid: item.archive!.bvid!,
+                cover: pgc?.cover ?? item.archive?.cover,
+              ),
+            ),
+          );
+        }
+      };
+    } else {
+      onTap = () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DynamicDetailPage(item: item),
+          ),
+        );
+      };
+    }
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: const _DynCardSkeleton(),
+      ),
     );
   }
 

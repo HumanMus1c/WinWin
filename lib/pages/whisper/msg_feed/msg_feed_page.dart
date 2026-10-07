@@ -228,6 +228,8 @@ class MsgFeedAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    // 演示模式：头像使用默认占位（不加载云端头像）。
+    if (Pref.demoMode) return _fallback(cs);
     // 解码尺寸限制（对齐 NetworkImgLayer 策略）：头像原图可能高达 1000+px，
     // 不限制解码尺寸会让每张头像按原图解码（CPU 位图 + GPU 纹理双份占用）。
     final dpr = MediaQuery.devicePixelRatioOf(context);

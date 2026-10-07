@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'package:winwin/common/widgets/demo_mask.dart';
+import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
@@ -285,17 +285,7 @@ class SessionListSectionState extends State<SessionListSection> {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 // 会话列表
-                if (Pref.demoMode)
-                  const SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 480,
-                      child: DemoListSkeleton(
-                        coverWidth: 44,
-                        coverHeight: 44,
-                      ),
-                    ),
-                  )
-                else if (_loading && _sessions.isEmpty)
+                if (_loading && _sessions.isEmpty)
                   const SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.all(Style.xxl),
@@ -443,7 +433,7 @@ class _SessionTile extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             MsgFeedAvatar(src: _avatar),
-            if (unread > 0)
+            if (!Pref.demoMode && unread > 0)
               Positioned(
                 right: -4,
                 top: -4,
@@ -470,30 +460,34 @@ class _SessionTile extends StatelessWidget {
         title: Row(
           children: [
             Flexible(
-              child: Text(
-                _name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyLarge,
-              ),
+              child: Pref.demoMode
+                  ? const SkeletonLine(width: 120, height: 14)
+                  : Text(
+                      _name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyLarge,
+                    ),
             ),
             if (isPinned) _flag(theme, '置顶'),
             if (isSpecial) _flag(theme, '特别关注', color: biliPink),
             if (isDnd) _flag(theme, '免打扰'),
           ],
         ),
-        subtitle: Text(
-          MessagePreviewParser.parseSessionPreview(content, msgType),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
+        subtitle: Pref.demoMode
+            ? const SkeletonLine(width: double.infinity, height: 12)
+            : Text(
+                MessagePreviewParser.parseSessionPreview(content, msgType),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (ts != null && ts > 0)
+            if (!Pref.demoMode && ts != null && ts > 0)
               Text(
                 msgFeedTime(ts),
                 style: theme.textTheme.bodySmall?.copyWith(

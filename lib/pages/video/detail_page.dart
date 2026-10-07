@@ -2369,7 +2369,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 相关推荐列表主体（宽栏 Tab 与降级右栏共用）。
   Widget _buildRelatedBody() {
-    if (Pref.demoMode) return _buildRightSkeleton();
     return switch (_relatedState) {
       Loading() => _buildRightSkeleton(),
       Error(:final errMsg) => _buildError(errMsg, _loadRelated),
@@ -2440,25 +2439,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           ),
         ),
       ),
-      if (Pref.demoMode)
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
-          sliver: SliverList.separated(
-            itemCount: 6,
-            separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
-            itemBuilder: (context, index) => _buildRelatedSkeletonItem(),
-          ),
-        )
-      else
-        switch (_relatedState) {
-          Loading() => SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
-              sliver: SliverList.separated(
-                itemCount: 6,
-                separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
-                itemBuilder: (context, index) => _buildRelatedSkeletonItem(),
-              ),
+      switch (_relatedState) {
+        Loading() => SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+            sliver: SliverList.separated(
+              itemCount: 6,
+              separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
+              itemBuilder: (context, index) => _buildRelatedSkeletonItem(),
             ),
+          ),
         Error(:final errMsg) => SliverToBoxAdapter(
             child: SizedBox(
               height: 240,

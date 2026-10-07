@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
@@ -315,7 +316,7 @@ class _ToviewPageState extends State<ToviewPage> {
               label: const Text('播放全部'),
             )
           : null,
-      body: Pref.demoMode || (_loading && _items.isEmpty)
+      body: _loading && _items.isEmpty
           ? _buildSkeleton()
           : _error != null && _items.isEmpty
               ? _buildError()
@@ -521,7 +522,7 @@ class _ToviewCard extends StatelessWidget {
                           heroTag: bvid != null && bvid.isNotEmpty ? 'toview_$bvid' : null,
                         ),
                       ),
-                      if (duration > 0)
+                      if (!Pref.demoMode && duration > 0)
                         Positioned(
                           right: 4,
                           bottom: 4,
@@ -553,14 +554,16 @@ class _ToviewCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      item.title ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        height: 1.35,
-                      ),
-                    ),
+                    Pref.demoMode
+                        ? const SkeletonLine(width: double.infinity, height: 13)
+                        : Text(
+                            item.title ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              height: 1.35,
+                            ),
+                          ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -581,14 +584,15 @@ class _ToviewCard extends StatelessWidget {
                                 AppIcon(AppIcons.profile(), size: 12, color: cs.outline),
                                 const SizedBox(width: 2),
                                 Flexible(
-                                  child: Text(
-                                    owner.name!,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: cs.outline,
-                                    ),
-                                  ),
+                                  child: Pref.demoMode
+                                      ? const SkeletonLine(width: 80, height: 11)
+                                      : Text(
+                                          owner.name!,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(color: cs.outline),
+                                        ),
                                 ),
                               ],
                             ),
@@ -596,7 +600,7 @@ class _ToviewCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            if (stat?.view != null) ...[
+                            if (!Pref.demoMode && stat?.view != null) ...[
                               AppIcon(AppIcons.viewCount(),
                                 size: 12,
                                 color: cs.outline,
@@ -610,7 +614,7 @@ class _ToviewCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                             ],
-                            if (stat?.danmaku != null) ...[
+                            if (!Pref.demoMode && stat?.danmaku != null) ...[
                               AppIcon(AppIcons.danmakuCount(),
                                 size: 12,
                                 color: cs.outline,

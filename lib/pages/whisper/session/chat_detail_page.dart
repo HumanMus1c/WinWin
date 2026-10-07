@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
-import 'package:winwin/common/widgets/demo_mask.dart';
+import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -224,9 +224,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       body: Column(
         children: [
           Expanded(
-            child: Pref.demoMode
-                ? const DemoListSkeleton(coverWidth: 40, coverHeight: 40)
-                : _loading && _messages.isEmpty
+            child: _loading && _messages.isEmpty
                 ? const Center(child: CircularProgressIndicator(color: biliPink))
                 : _error != null && _messages.isEmpty
                     ? Center(
@@ -380,6 +378,13 @@ class _ChatBubble extends StatelessWidget {
     final isRevoked = (msg['msg_status'] as num?)?.toInt() == 1;
     final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
+    // 演示模式：消息内容不展示云端数据（视频卡片消息渲染为静态骨架卡）。
+    if (Pref.demoMode) {
+      return _wrap(
+        msgType == 11 ? _buildDemoVideoCard(theme) : _buildDemoTextBubble(theme),
+      );
+    }
+
     // 富媒体消息：图片 / 分享卡片 / 视频稿件 / 专栏，按卡片形式渲染。
     if (!isRevoked) {
       switch (msgType) {
@@ -427,6 +432,63 @@ class _ChatBubble extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// 演示模式：视频卡片消息的静态骨架占位（不展示云端数据）。
+  Widget _buildDemoVideoCard(ThemeData theme) {
+    return Container(
+      width: 300,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AspectRatio(
+            aspectRatio: 16 / 9,
+            child: SkeletonBox(
+              width: double.infinity,
+              height: double.infinity,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(Style.sm),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                SkeletonLine(width: double.infinity, height: 12),
+                SizedBox(height: 6),
+                SkeletonLine(width: 140, height: 11),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 演示模式：文本消息的静态占位气泡。
+  Widget _buildDemoTextBubble(ThemeData theme) {
+    return Container(
+      width: 200,
+      padding: const EdgeInsets.symmetric(
+        horizontal: Style.md,
+        vertical: Style.sm,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SkeletonLine(width: double.infinity, height: 12),
+          SizedBox(height: 6),
+          SkeletonLine(width: 100, height: 12),
         ],
       ),
     );

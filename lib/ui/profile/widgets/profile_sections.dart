@@ -101,7 +101,7 @@ class ProfileDownloadSectionState extends State<ProfileDownloadSection> {
           onRefresh: reload,
           isRefreshing: _isRefreshing,
         ),
-        if (Pref.demoMode || _loading)
+        if (_loading)
           const ProfileCardSkeleton(height: 120)
         else
           ProfileEmptyCard(

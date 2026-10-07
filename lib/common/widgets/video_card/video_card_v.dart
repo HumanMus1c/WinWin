@@ -1,9 +1,11 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
@@ -38,86 +40,97 @@ class VideoCardV extends StatelessWidget {
     final radius = shapes.medium;
     Offset? lastTapPosition;
 
-    return RepaintBoundary(
-      child: Card(
-        child: InkWell(
-          onTap: onTap,
-          onSecondaryTapDown: (details) {
-            lastTapPosition = details.globalPosition;
-          },
-          onSecondaryTapUp: (details) {
-            showVideoContextMenu(
-              context: context,
-              position: details.globalPosition,
-              data: data,
-              videoItem: videoItem,
-              onRemove: onRemove,
-            );
-          },
-          onLongPress: () {
-            if (lastTapPosition != null) {
+    // 演示模式：卡片保留完整交互（左键进入详情 / 右键菜单），
+    // 文本与封面角标换为静态占位（无云端数据）。
+    return ValueListenableBuilder<bool>(
+      valueListenable: Pref.demoModeNotifier,
+      builder: (context, demo, _) => RepaintBoundary(
+        child: Card(
+          child: InkWell(
+            onTap: onTap,
+            onSecondaryTapDown: (details) {
+              lastTapPosition = details.globalPosition;
+            },
+            onSecondaryTapUp: (details) {
               showVideoContextMenu(
                 context: context,
-                position: lastTapPosition!,
+                position: details.globalPosition,
                 data: data,
                 videoItem: videoItem,
                 onRemove: onRemove,
               );
-            }
-          },
-          borderRadius: BorderRadius.all(radius),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AspectRatio(
-                aspectRatio: 16 / 10,
-                child: LayoutBuilder(
-                  builder: (context, boxConstraints) {
-                    final double maxWidth = boxConstraints.maxWidth;
-                    final double maxHeight = boxConstraints.maxHeight;
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        NetworkImgLayer(
-                          src: data.cover,
-                          width: maxWidth,
-                          height: maxHeight,
-                          borderRadius: BorderRadius.vertical(
-                            top: radius,
-                          ),
-                          heroTag: heroTag,
-                        ),
-                        if (data.duration > 0)
-                          Positioned(
-                            right: 7,
-                            bottom: 6,
-                            child: PBadge(
-                              text: DurationUtils.formatDuration(data.duration),
-                              type: PBadgeType.duration,
+            },
+            onLongPress: () {
+              if (lastTapPosition != null) {
+                showVideoContextMenu(
+                  context: context,
+                  position: lastTapPosition!,
+                  data: data,
+                  videoItem: videoItem,
+                  onRemove: onRemove,
+                );
+              }
+            },
+            borderRadius: BorderRadius.all(radius),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 10,
+                  child: LayoutBuilder(
+                    builder: (context, boxConstraints) {
+                      final double maxWidth = boxConstraints.maxWidth;
+                      final double maxHeight = boxConstraints.maxHeight;
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          NetworkImgLayer(
+                            src: data.cover,
+                            width: maxWidth,
+                            height: maxHeight,
+                            borderRadius: BorderRadius.vertical(
+                              top: radius,
                             ),
+                            heroTag: heroTag,
                           ),
-                        Positioned(
-                          left: 7,
-                          bottom: 6,
-                          child: VideoCoverStatBadge(
-                            playCount: data.playCount,
-                            danmakuCount: data.danmakuCount,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                          if (!demo && data.duration > 0)
+                            Positioned(
+                              right: 7,
+                              bottom: 6,
+                              child: PBadge(
+                                text:
+                                    DurationUtils.formatDuration(data.duration),
+                                type: PBadgeType.duration,
+                              ),
+                            ),
+                          if (!demo)
+                            Positioned(
+                              left: 7,
+                              bottom: 6,
+                              child: VideoCoverStatBadge(
+                                playCount: data.playCount,
+                                danmakuCount: data.danmakuCount,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
-              _content(context, data),
-            ],
+                _content(context, data, demo: demo),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _content(BuildContext context, VideoCardData data) {
+  Widget _content(
+    BuildContext context,
+    VideoCardData data, {
+    required bool demo,
+  }) {
     final theme = Theme.of(context);
     final String title = data.title;
     final String? rcmdReason = data.rcmdReason;
@@ -132,62 +145,72 @@ class VideoCardV extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(height: 1.38),
-              ),
+              child: demo
+                  ? const Align(
+                      alignment: Alignment.centerLeft,
+                      child: SkeletonLine(width: double.infinity, height: 13),
+                    )
+                  : Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(height: 1.38),
+                    ),
             ),
             Row(
               spacing: 2,
               children: [
-                if (rcmdReason != null && rcmdReason.isNotEmpty)
-                  PBadge(text: rcmdReason, type: PBadgeType.highlight),
-                if (isFollowed)
-                  const PBadge(text: '已关注', type: PBadgeType.status),
-                if (ownerName.isNotEmpty)
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: GestureDetector(
-                        onTap: () {
-                          if (mid != null && mid > 0) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => MemberSpacePage(mid: mid),
+                if (demo) ...[
+                  const SkeletonLine(width: 64, height: 14),
+                  const Spacer(),
+                ] else ...[
+                  if (rcmdReason != null && rcmdReason.isNotEmpty)
+                    PBadge(text: rcmdReason, type: PBadgeType.highlight),
+                  if (isFollowed)
+                    const PBadge(text: '已关注', type: PBadgeType.status),
+                  if (ownerName.isNotEmpty)
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: () {
+                            if (mid != null && mid > 0) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MemberSpacePage(mid: mid),
+                                ),
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.secondaryContainer
+                                  .withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: Text(
+                              ownerName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              semanticsLabel: 'UP：$ownerName',
+                              style: TextStyle(
+                                height: 1.5,
+                                fontSize: theme.textTheme.labelMedium?.fontSize,
+                                color: theme.colorScheme.outline,
                               ),
-                            );
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.secondaryContainer
-                                .withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: Text(
-                            ownerName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            semanticsLabel: 'UP：$ownerName',
-                            style: TextStyle(
-                              height: 1.5,
-                              fontSize: theme.textTheme.labelMedium?.fontSize,
-                              color: theme.colorScheme.outline,
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  )
-                else
-                  const Spacer(),
+                    )
+                  else
+                    const Spacer(),
+                ],
                 VideoPopupMenu(
                   data: data,
                   videoItem: videoItem,
