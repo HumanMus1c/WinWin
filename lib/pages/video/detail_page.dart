@@ -2463,16 +2463,29 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               child: _buildCommentSortRow(),
             ),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(
-                  Style.cardSpace,
-                  Style.xs,
-                  Style.safeSpace,
-                  Style.md,
-                ),
-                itemCount: 4,
-                itemBuilder: (_, _) => _buildReplyTileSkeleton(),
-              ),
+              child: Pref.demoMode
+                  // 演示模式：本地演示评论（与正常模式一致的交互按钮，不发请求）。
+                  ? ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        Style.cardSpace,
+                        Style.xs,
+                        Style.safeSpace,
+                        Style.md,
+                      ),
+                      itemCount: 8,
+                      itemBuilder: (_, i) =>
+                          _DemoReplyTile(bvid: widget.bvid, seed: i),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        Style.cardSpace,
+                        Style.xs,
+                        Style.safeSpace,
+                        Style.md,
+                      ),
+                      itemCount: 4,
+                      itemBuilder: (_, _) => _buildReplyTileSkeleton(),
+                    ),
             ),
             _buildCommentInputBar(
               enabled: false,
