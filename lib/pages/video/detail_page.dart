@@ -1033,7 +1033,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               return _buildReplyTrailer();
                             },
                             childCount: Pref.demoMode
-                                ? 11
+                                ? (appendRelated ? 11 : 3)
                                 : isLoading
                                     ? (appendRelated ? 6 : 2)
                                     : (appendRelated
@@ -1333,11 +1333,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   Widget _buildPlayerContentInner(VideoDetailData? data) {
-    // 演示模式：视频区域使用灰色静态占位符（不加载、不播放真实视频）。
+    // 演示模式：灰色静态画面 + 播放控制栏（布局对齐正常模式；不加载视频）。
     if (Pref.demoMode) {
-      return ColoredBox(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      );
+      return _buildDemoPlayerChrome();
     }
     final controller = playerController;
     if (controller == null) {
@@ -2525,6 +2523,126 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   // ─────────────────────────── 局部骨架屏 / 错误态 ───────────────────────────
+
+  /// 演示模式：灰色静态画面 + 播放控制栏（对齐正常模式播放器布局）。
+  Widget _buildDemoPlayerChrome() {
+    const glyphShadow = ContrastStyle.glyphShadows;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        ),
+        // 中央播放按钮（对齐暂停态）。
+        Center(
+          child: Icon(
+            AppIcons.play(active: true),
+            size: 56,
+            color: Colors.white,
+            shadows: glyphShadow,
+          ),
+        ),
+        // 底部控制栏（渐变 + 进度条 + 按钮行，对齐正常模式）。
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                stops: [0.0, 0.55, 1.0],
+                colors: [
+                  Color(0x73000000),
+                  Color(0x28000000),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 14.0, bottom: Style.xs),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 第一行：进度条（静止于起点）。
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Expanded(
+                          child: Divider(
+                            height: 3,
+                            thickness: 3,
+                            color: Color(0x47FFFFFF),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                    ),
+                  ),
+                  // 第二行：控制按钮（对齐正常模式左右分区）。
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+                    child: Row(
+                      children: [
+                        Icon(
+                          AppIcons.play(active: true),
+                          size: 20,
+                          color: Colors.white,
+                          shadows: glyphShadow,
+                        ),
+                        const SizedBox(width: Style.sm),
+                        const Text(
+                          '00:00 / 00:00',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            shadows: glyphShadow,
+                          ),
+                        ),
+                        const SizedBox(width: Style.md),
+                        Icon(
+                          AppIcons.danmaku(active: true),
+                          size: 18,
+                          color: Colors.white,
+                          shadows: glyphShadow,
+                        ),
+                        const Spacer(),
+                        for (final icon in [
+                          AppIcons.volumeDown(),
+                          AppIcons.lockOutline(),
+                          AppIcons.pip(),
+                          AppIcons.fullscreen(),
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(left: Style.md),
+                            child: Icon(
+                              icon,
+                              size: 18,
+                              color: Colors.white,
+                              shadows: glyphShadow,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   /// 演示模式：打开本地演示视频详情（不拉取云端数据）。
   void _openDemoVideo(BuildContext context, int index) {

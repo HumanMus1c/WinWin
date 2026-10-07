@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
-import 'package:winwin/common/widgets/demo_mask.dart';
+import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -148,6 +149,8 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _clearHistory() {
+    // 演示模式：不操作真实搜索历史。
+    if (Pref.demoMode) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -222,19 +225,25 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  /// 主内容：热搜 + 历史。
+  /// 主内容：热搜 + 历史（演示模式使用本地演示数据，布局与正常模式对齐）。
   Widget _buildMainContent() {
     return ListView(
       padding: const EdgeInsets.all(Style.md),
       children: [
-        if (_history.isNotEmpty ||
-            (_visitedUsers.isNotEmpty && !Pref.demoMode)) ...[
+        if (Pref.demoMode) ...[
+          _buildHistoryHeader(),
+          const SizedBox(height: Style.sm),
+          _buildHistoryChips(),
+          const SizedBox(height: Style.sm),
+          _buildVisitedUserChips(),
+          const SizedBox(height: Style.lg),
+        ] else if (_history.isNotEmpty || _visitedUsers.isNotEmpty) ...[
           _buildHistoryHeader(),
           if (_history.isNotEmpty) ...[
             const SizedBox(height: Style.sm),
             _buildHistoryChips(),
           ],
-          if (_visitedUsers.isNotEmpty && !Pref.demoMode) ...[
+          if (_visitedUsers.isNotEmpty) ...[
             const SizedBox(height: Style.sm),
             _buildVisitedUserChips(),
           ],
@@ -265,6 +274,21 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Widget _buildHistoryChips() {
+    // 演示模式：本地占位胶囊（不展示真实搜索历史）。
+    if (Pref.demoMode) {
+      return Wrap(
+        spacing: Style.sm,
+        runSpacing: Style.sm,
+        children: [
+          for (final w in const [56.0, 72.0, 48.0, 84.0, 64.0])
+            SkeletonBox(
+              width: w,
+              height: 32,
+              borderRadius: BorderRadius.circular(100),
+            ),
+        ],
+      );
+    }
     return Wrap(
       spacing: Style.sm,
       runSpacing: Style.sm,
@@ -284,6 +308,58 @@ class _SearchPageState extends State<SearchPage> {
   Widget _buildVisitedUserChips() {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+
+    // 演示模式：本地演示用户卡片（程序图标 + WinWin，布局对齐正常模式）。
+    if (Pref.demoMode) {
+      return SizedBox(
+        height: 34,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: 4,
+          separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
+          itemBuilder: (context, index) => Container(
+            padding: const EdgeInsets.only(
+              left: 3,
+              right: 10,
+              top: 3,
+              bottom: 3,
+            ),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainer.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(alpha: 0.4),
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHigh,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: AppIcon(
+                    AppIcons.profile(),
+                    size: 14,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  kDemoDisplayName,
+                  style: TextStyle(fontSize: 12, color: cs.onSurface),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return SizedBox(
       height: 34,
@@ -374,10 +450,43 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Widget _buildTrendingSection() {
+    // 演示模式：本地演示热搜（布局与正常模式一致：序号 + 标题/副标题占位）。
     if (Pref.demoMode) {
-      return const SizedBox(
-        height: 240,
-        child: DemoListSkeleton(itemCount: 5, coverWidth: 28, coverHeight: 28),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '大家都在搜',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: Style.sm),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 8,
+            itemBuilder: (context, index) => ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: SizedBox(
+                width: 28,
+                child: Text(
+                  '${index + 1}',
+                  style: TextStyle(
+                    color: index < 3 ? biliPink : null,
+                    fontWeight:
+                        index < 3 ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+              title: const SkeletonLine(width: double.infinity, height: 13),
+              subtitle: index.isEven
+                  ? const SkeletonLine(width: 120, height: 10)
+                  : null,
+            ),
+          ),
+        ],
       );
     }
     if (_trendingLoading) {

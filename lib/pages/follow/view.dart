@@ -36,15 +36,20 @@ class _FollowPageState extends State<FollowPage>
   /// 演示模式：本地生成的演示卡片数量（向下滚动每次追加"一行"）。
   int _demoCount = 12;
 
+  /// 演示模式：上次追加行的滚动位置（需继续滚动约半屏后才再追加）。
+  double _demoLastAppendAt = double.negativeInfinity;
+
   @override
   void initState() {
     super.initState();
     AccountService().addListener(_onAccountChanged);
     Pref.demoModeNotifier.addListener(_onDemoChanged);
+    controller.scrollController.addListener(_onDemoScroll);
   }
 
   @override
   void dispose() {
+    controller.scrollController.removeListener(_onDemoScroll);
     Pref.demoModeNotifier.removeListener(_onDemoChanged);
     AccountService().removeListener(_onAccountChanged);
     super.dispose();
@@ -56,6 +61,21 @@ class _FollowPageState extends State<FollowPage>
     if (!Pref.demoMode && controller.loadingState.value is Loading) {
       controller.onRefresh();
     }
+  }
+
+  /// 演示模式滚动追加：到达底部且再滚动约半屏后，追加"一行"本地卡片。
+  void _onDemoScroll() {
+    if (!Pref.demoMode) return;
+    final sc = controller.scrollController;
+    if (!sc.hasClients || !sc.position.hasContentDimensions) return;
+    final pos = sc.position;
+    if (pos.pixels < pos.maxScrollExtent - 240) return;
+    if (pos.pixels <= _demoLastAppendAt + pos.viewportDimension * 0.5) {
+      return;
+    }
+    _demoLastAppendAt = pos.pixels;
+    final perRow = (pos.viewportDimension / 250).floor().clamp(2, 8);
+    setState(() => _demoCount += perRow);
   }
 
   void _onAccountChanged() {
@@ -154,24 +174,15 @@ class _FollowPageState extends State<FollowPage>
     itemCount: 10,
   );
 
-  /// 演示模式：本地生成卡片网格；滚动接近底部时追加一行（本地生成）。
+  /// 演示模式：本地生成卡片网格（滚动追加见 [_onDemoScroll]）。
   Widget _buildDemoGrid() {
-    final perRow =
-        (MediaQuery.sizeOf(context).width / 250).floor().clamp(2, 8);
     return SliverGrid.builder(
       gridDelegate: gridDelegate,
       itemCount: _demoCount,
-      itemBuilder: (context, index) {
-        if (index == _demoCount - 1) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => _demoCount += perRow);
-          });
-        }
-        return DemoVideoCard(
-          seed: index,
-          onTap: () => _openDemoDetail(context, index),
-        );
-      },
+      itemBuilder: (context, index) => DemoVideoCard(
+        seed: index,
+        onTap: () => _openDemoDetail(context, index),
+      ),
     );
   }
 

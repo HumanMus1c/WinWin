@@ -4,12 +4,28 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
+import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/duration_utils.dart';
+
+/// 演示模式：演示卡片右键/长按"更多选项"菜单（使用占位数据，不触发云端写操作）。
+void _showDemoCardMenu(BuildContext context, Offset position, int seed) {
+  showVideoContextMenu(
+    context: context,
+    position: position,
+    data: VideoCardData(
+      bvid: 'BV1demo$seed',
+      aid: 0,
+      ownerName: kDemoDisplayName,
+      title: '演示视频',
+    ),
+  );
+}
 
 /// 演示模式内容遮罩：演示开启时整块替换为 [skeleton]。
 ///
@@ -135,11 +151,22 @@ class DemoVideoCard extends StatelessWidget {
     final durationText = DurationUtils.formatDuration(
       DemoOverrides.durationSeconds('demo.card.$seed'),
     );
+    Offset? lastTapPosition;
 
     return RepaintBoundary(
       child: Card(
         child: InkWell(
           onTap: onTap,
+          onSecondaryTapDown: (details) {
+            lastTapPosition = details.globalPosition;
+          },
+          onSecondaryTapUp: (details) =>
+              _showDemoCardMenu(context, details.globalPosition, seed),
+          onLongPress: () {
+            if (lastTapPosition != null) {
+              _showDemoCardMenu(context, lastTapPosition!, seed);
+            }
+          },
           borderRadius: BorderRadius.circular(Style.radiusMd),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -281,11 +308,22 @@ class DemoVideoCardH extends StatelessWidget {
     final durationText = DurationUtils.formatDuration(
       DemoOverrides.durationSeconds('demo.hcard.$seed'),
     );
+    Offset? lastTapPosition;
 
     return RepaintBoundary(
       child: Card(
         child: InkWell(
           onTap: onTap,
+          onSecondaryTapDown: (details) {
+            lastTapPosition = details.globalPosition;
+          },
+          onSecondaryTapUp: (details) =>
+              _showDemoCardMenu(context, details.globalPosition, seed),
+          onLongPress: () {
+            if (lastTapPosition != null) {
+              _showDemoCardMenu(context, lastTapPosition!, seed);
+            }
+          },
           borderRadius: BorderRadius.circular(Style.radiusMd),
           child: Padding(
             padding: const EdgeInsets.all(8),

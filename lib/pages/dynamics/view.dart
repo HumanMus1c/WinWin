@@ -131,6 +131,9 @@ class _DynTabPageState extends State<_DynTabPage>
   /// 演示模式：本地生成的占位动态数量（滚动追加，不拉取云端）。
   int _demoExtra = 8;
 
+  /// 演示模式：上次追加行的滚动位置（需继续滚动约半屏后才再追加）。
+  double _demoLastAppendAt = double.negativeInfinity;
+
   /// 点赞状态记忆（跨瀑布流滚动重建保留，刷新时清空）。
   final Map<String, bool> _likedState = {};
   final Map<String, int> _likeCountState = {};
@@ -197,15 +200,8 @@ class _DynTabPageState extends State<_DynTabPage>
   }
 
   Future<void> _load({required bool refresh}) async {
-    // 演示模式：滚动加载改为本地追加（不拉取云端）。
-    if (Pref.demoMode) {
-      if (!refresh && _hasMore) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) setState(() => _demoExtra += 2);
-        });
-      }
-      return;
-    }
+    // 演示模式：不拉取云端（滚动追加在 _onScroll 中本地处理）。
+    if (Pref.demoMode) return;
     if (_loading) return;
     if (!refresh && !_hasMore) return;
     _loading = true;
@@ -243,9 +239,19 @@ class _DynTabPageState extends State<_DynTabPage>
       return;
     }
     final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 240) {
-      _load(refresh: false);
+    if (pos.pixels < pos.maxScrollExtent - 240) return;
+    // 演示模式：本地追加"一行"（数量随列数）；到达底部后需继续滚动约半屏
+    // 才会再次追加，避免连续触发追加多行。
+    if (Pref.demoMode) {
+      if (pos.pixels <= _demoLastAppendAt + pos.viewportDimension * 0.5) {
+        return;
+      }
+      _demoLastAppendAt = pos.pixels;
+      final perRow = (pos.viewportDimension / 460).floor().clamp(2, 4);
+      setState(() => _demoExtra += perRow);
+      return;
     }
+    _load(refresh: false);
   }
 
   @override
@@ -303,9 +309,6 @@ class _DynTabPageState extends State<_DynTabPage>
       itemCount: _items.length + (Pref.demoMode ? _demoExtra : 0),
       itemBuilder: (context, index) {
         if (Pref.demoMode) {
-          if (index == _items.length + _demoExtra - 1) {
-            _onScroll();
-          }
           return index < _items.length
               ? _buildDemoDynCard(_items[index].id.hashCode,
                   item: _items[index])
@@ -329,9 +332,6 @@ class _DynTabPageState extends State<_DynTabPage>
       itemCount: _items.length + (Pref.demoMode ? _demoExtra : 0),
       itemBuilder: (context, index) {
         if (Pref.demoMode) {
-          if (index == _items.length + _demoExtra - 1) {
-            _onScroll();
-          }
           return index < _items.length
               ? _buildDemoDynCard(_items[index].id.hashCode,
                   item: _items[index])
@@ -354,9 +354,6 @@ class _DynTabPageState extends State<_DynTabPage>
       childCount: _items.length + (Pref.demoMode ? _demoExtra : 0),
       itemBuilder: (context, index) {
         if (Pref.demoMode) {
-          if (index == _items.length + _demoExtra - 1) {
-            _onScroll();
-          }
           return index < _items.length
               ? _buildDemoDynCard(_items[index].id.hashCode,
                   item: _items[index])
@@ -379,9 +376,6 @@ class _DynTabPageState extends State<_DynTabPage>
       childCount: _items.length + (Pref.demoMode ? _demoExtra : 0),
       itemBuilder: (context, index) {
         if (Pref.demoMode) {
-          if (index == _items.length + _demoExtra - 1) {
-            _onScroll();
-          }
           return index < _items.length
               ? _buildDemoDynCard(_items[index].id.hashCode,
                   item: _items[index])
