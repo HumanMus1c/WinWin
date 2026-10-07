@@ -2,7 +2,7 @@
 
 > 小破站桌面端 ( ゜- ゜)つロ 干杯~
 
-WinWin 是使用 **Flutter** 构建的 Windows 桌面应用，**以 PiliPlus 为基础进行桌面化改造与改进而来**：替换了播放内核（fvp / libmdk），并持续改进视觉设计——当前前端为 **flutter_miuix（Miuix）** 组件体系（Material 3 已完全移除），并可能引入液态玻璃（Liquid Glass）风格。功能覆盖视频 / 番剧 / 直播播放、弹幕、评论互动、动态与消息、搜索与个人空间。
+WinWin 是使用 **Flutter** 构建的 Windows 桌面应用，**以 PiliPlus 为基础进行桌面化改造与改进而来**：替换了播放内核（fvp / libmdk），并持续改进视觉设计——当前前端为 **flutter_miuix（Miuix）** 组件体系（Material 3 已完全移除），并可能引入液态玻璃（Liquid Glass）风格。功能覆盖视频 / 番剧 / 直播播放、弹幕、评论互动、动态与消息、搜索与个人空间。本项目以 **vibe coding（AI 辅助编程）方式开发**。
 
 项目早期在界面设计上参考过 **BiliPai** 的前端设计，并移植了其中若干可跨平台的策略与交互逻辑；接口细节参考 **bilibili-API-collect** 的公开文档。完整来源与致谢见下。
 
@@ -18,7 +18,7 @@ WinWin 是使用 **Flutter** 构建的 Windows 桌面应用，**以 PiliPlus 为
 WinWin 是 PiliPlus 在 Windows 桌面方向的改进分支，大量基础模块以其对应实现为蓝本复用/裁剪（源码文件头均保留「移植自 / 对标 / 参考」注释）。主要涉及：
 
 - 基础设施：`constants`、`http/api`、`id_utils`（BV↔AV 等）、`wbi_sign`（WBI 签名）、`danmaku_utils` 等；
-- 网络层：统一请求封装（buvid 激活 / UA / 超时对齐）、登录、视频、直播、动态等 11+ HTTP 模块；
+- 网络层：统一请求封装（buvid 激活 / UA / 超时对齐）、登录、视频、直播、动态等 20+ HTTP 模块；
 - 账户与存储：账号管理 / CookieJar / 登录守卫、Hive 存储键与偏好骨架；
 - 弹幕：段弹幕 HTTP、弹幕屏蔽规则同步；
 - 播放器：播放控制与交互以 PiliPlus 方案为骨架（**内核替换为 fvp/mdk，缘由见第二章**）、选流、音量归一（loudnorm）；
@@ -54,7 +54,31 @@ BiliPai 为 Android 原生（Kotlin + Jetpack Compose）项目。WinWin 早期�
 **（6）fvp / libmdk — 播放内核**
 [wang-bin/fvp](https://github.com/wang-bin/fvp)（BSD-3-Clause）基于 [wang-bin/mdk-sdk](https://github.com/wang-bin/mdk-sdk)（libmdk，对开源项目与 Flutter 用户免费）：硬件解码、D3D11 渲染、多格式支持。
 
-### 1.2 上游许可证一览
+### 1.2 功能模块与上游来源对照
+
+本项目各功能模块与上游的对应关系如下（各源码文件头均保留「移植自 / 对标 / 参考」标记）：
+
+| 功能模块 | 上游来源 | 主要移植内容 |
+| --- | --- | --- |
+| 应用骨架 / 导航 | PiliPlus | `MainLayout` 三槽位布局、`SimpleScaffold`、沉浸式标题栏、桌面全屏与窗口定位 |
+| 网络与请求层 | PiliPlus | 统一请求封装（buvid 激活 / UA / 超时对齐）、风控规避参数、错误文案映射 |
+| 业务接口模块（20+ HTTP） | PiliPlus | 视频 / 评论 / 弹幕 / 直播 / 动态 / 消息 / 搜索 / 收藏 / 历史 / 稍后再看 / 番剧 / 音乐 / 用户空间 / 关注 / 粉丝 / 黑名单 / 下载 / 人机验证等 |
+| 签名与 ID 工具 | PiliPlus | WBI 签名（`wbi_sign`）、BV↔AV 等 ID 转换、弹幕工具集 |
+| 账号与登录 | PiliPlus + BiliPai | PiliPlus：账户服务 / 登录守卫 / 登录页 / 极验弹窗；BiliPai：会话 CookieJar（`AppSessionCookieJar`） |
+| 播放控制与交互 | PiliPlus | 全局单例播放器（引用计数）、拖动 / 心跳 / 返回重建等交互骨架、PGC 播放体系 |
+| 播放策略与容错 | BiliPai | `VideoLoadPolicy` / `NetworkFallbackPolicy` / `HeartbeatPolicy` / `StreamSelectionPolicy` / 卡死自愈 / 错误恢复；番剧 OP/ED 跳过与自动连播 |
+| 弹幕体系 | PiliPlus + BiliPai | PiliPlus：段弹幕 HTTP / 屏蔽规则同步 / 控制器与工具；BiliPai：protobuf 手写解析器、类型 / 关键词 / 指令过滤、发送面板策略 |
+| 评论与内容安全 | PiliPlus + BiliPai | PiliPlus：HTTP 骨架；BiliPai：三级容灾回退、评论反诈、首页推荐匿名化、排序与容错 |
+| 动态 / 消息中心 | PiliPlus + BiliPai | PiliPlus：动态流与页面骨架；BiliPai：私信 Inbox 套件（分页策略 / 用户解析 / 预览解析） |
+| 搜索 / 空间 / 收藏 / 历史 / 稍后再看 | PiliPlus + BiliPai | PiliPlus：HTTP 与页面；BiliPai：响应式排版规范与交互对齐 |
+| 空降助手 | BiliPai + BilibiliSponsorBlock | 用例移植（`SponsorBlockUseCase`）+ 段落数据 API（bsbsb.top 镜像） |
+| 日志 / 启动 / 配置 | PiliPlus + BiliPai | PiliPlus 骨架 + BiliPai 增强（环形缓冲落盘 / 脱敏 / 启动任务编排 / 配置加载守卫） |
+| UI 组件与设计系统 | flutter_miuix + BiliPai | Miuix 组件体系（唯一风格）；BiliPai 设计 tokens（`BiliDesign` / 对比度策略 / 动效 tokens） |
+| 接口协议与文档 | bilibili-API-collect | WBI / APP 签名、视频流地址、gRPC 协议定义（`grpc_api`） |
+| 播放内核 | fvp / libmdk（第三方库，非移植） | 硬件解码 / D3D11 渲染 |
+| 凭据安全（自研增强） | 相对 PiliPlus 的改进 | 上游为明文 Hive 存储；WinWin 增加加密落盘 |
+
+### 1.3 上游许可证一览
 
 | 上游项目 | 许可证 | 与 WinWin 的关系 |
 | --- | --- | --- |
@@ -65,7 +89,7 @@ BiliPai 为 Android 原生（Kotlin + Jetpack Compose）项目。WinWin 早期�
 | fvp | BSD-3-Clause | 播放插件 |
 | libmdk | 自定义许可（开源 / Flutter 免费） | 播放内核 |
 
-### 1.3 使用的开源库（直接依赖）
+### 1.4 使用的开源库（直接依赖）
 
 | 类别 | 依赖 | 用途 |
 | --- | --- | --- |
@@ -119,6 +143,7 @@ flutter build windows --release    # 产物：build\windows\x64\runner\Release\
 ## 四、免责声明
 
 - 本项目为个人兴趣开发，仅供学习与技术交流，请于下载后 24 小时内删除；
+- 本项目采用 **vibe coding（AI 辅助编程）方式开发**：代码由 AI 编程助手协作产出，经运行验证与人工审阅，但仍可能存在未知缺陷，请自行评估使用风险；
 - 所调用接口均从公开渠道收集，不提供任何破解内容；
 - 内容版权归原权利方所有，请勿滥用本项目；
 - 如涉及版权或权益问题，请联系删除。
