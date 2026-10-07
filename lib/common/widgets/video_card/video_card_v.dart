@@ -190,14 +190,12 @@ class VideoCardV extends StatelessWidget {
               spacing: 2,
               children: [
                 if (demo) ...[
-                  PBadge(
-                    text: Random(
-                      (data.bvid ?? '').hashCode,
-                    ).nextBool()
-                        ? '已关注'
-                        : '未关注',
-                    type: PBadgeType.status,
-                  ),
+                  // 与正常模式一致：仅"已关注"时显示该胶囊（不存在"未关注"胶囊）。
+                  if (Random((data.bvid ?? '').hashCode).nextBool())
+                    const PBadge(
+                      text: '已关注',
+                      type: PBadgeType.status,
+                    ),
                   PBadge(
                     text: const ['高播放', '1万点赞', '热门', '宝藏新作'][
                         Random((data.bvid ?? '').hashCode ^ 5).nextInt(4)],

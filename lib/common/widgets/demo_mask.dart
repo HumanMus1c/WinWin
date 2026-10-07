@@ -236,10 +236,12 @@ class DemoVideoCard extends StatelessWidget {
                       Row(
                         spacing: 2,
                         children: [
-                          PBadge(
-                            text: followed ? '已关注' : '未关注',
-                            type: PBadgeType.status,
-                          ),
+                          // 与正常模式一致：仅"已关注"时显示该胶囊。
+                          if (followed)
+                            const PBadge(
+                              text: '已关注',
+                              type: PBadgeType.status,
+                            ),
                           PBadge(
                             text: hotLabel,
                             type: PBadgeType.highlight,
