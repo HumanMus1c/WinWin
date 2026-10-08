@@ -4,6 +4,7 @@ import 'app_icons.dart';
 import 'app_shapes.dart';
 import 'app_typography.dart';
 import 'colors.dart';
+import 'miuix_page_transitions.dart';
 import 'system_font_scanner.dart';
 
 /// App theme — 阶段5d-L4-2 单轨化后恒解析 Miuix ThemeData。
@@ -91,6 +92,10 @@ class AppTheme {
           error: miuixLightError,
         ),
         scaffoldBackgroundColor: miuixLightBackground,
+        // 页面转场：Miuix 动效规范（替代 material_ui 平台默认 Zoom 转场——
+        // 其缩放会向路由视口外溢出并覆盖沉浸标题条，详见 miuix_page_transitions.dart）；
+        // 关掉 kUseMiuixPageTransitions 即回退平台默认值（null = ThemeData 默认）。
+        pageTransitionsTheme: kUseMiuixPageTransitions ? kMiuixPageTransitions : null,
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -155,6 +160,8 @@ class AppTheme {
           error: miuixDarkError,
         ),
         scaffoldBackgroundColor: miuixDarkBackground,
+        // 页面转场：同浅色主题（见 _miuixLight 处说明）。
+        pageTransitionsTheme: kUseMiuixPageTransitions ? kMiuixPageTransitions : null,
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           elevation: 0,

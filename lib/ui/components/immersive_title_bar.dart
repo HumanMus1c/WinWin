@@ -138,7 +138,12 @@ class _ImmersiveTitleBarShellState extends State<ImmersiveTitleBarShell>
                     height: kWindowCaptionHeight,
                     child: _buildTitleBarRow(context, stripColor),
                   ),
-                Expanded(child: widget.child),
+                // 路由内容区裁剪（物理兜底）：Flutter 不裁剪子节点绘制，页面转场的
+                // 缩放/位移动画、浮层等一旦越界就会覆盖到 32px 标题条上（曾表现为
+                // "进出视频页时页面瞬间叠在标题条之上"）。此处把内容区裁到标题条
+                // 之下——等价于系统原生标题栏时代的客户区边界，标题条（含三键）
+                // 恒不被任何页面内容覆盖。
+                Expanded(child: ClipRect(child: widget.child)),
               ],
             ),
           );
