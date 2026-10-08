@@ -24,11 +24,8 @@ class AppRoute<T> extends PageRouteBuilder<T> {
                   Animation<double> animation,
                   Animation<double> secondaryAnimation,
                   Widget child) =>
-              MiuixPageTransition(
-            animation: animation,
-            secondaryAnimation: secondaryAnimation,
-            child: child,
-          ),
+              // 只用本路由的 animation：被覆盖页静止（性能取向）。
+              MiuixPageTransition(animation: animation, child: child),
           transitionDuration: kMiuixTransitionDuration,
           reverseTransitionDuration: kMiuixTransitionDuration,
         );

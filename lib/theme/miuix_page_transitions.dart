@@ -55,10 +55,8 @@ class MiuixPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    return MiuixPageTransition(
-      animation: animation,
-      secondaryAnimation: secondaryAnimation,
-      child: child,
-    );
+    // 注：不使用 secondaryAnimation —— 被覆盖的当前页保持静止（性能取向，
+    // 见 MiuixPageTransition 文档）。
+    return MiuixPageTransition(animation: animation, child: child);
   }
 }

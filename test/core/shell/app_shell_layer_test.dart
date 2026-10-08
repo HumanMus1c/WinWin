@@ -107,6 +107,55 @@ void main() {
     expect(find.text('二级页'), findsOneWidget);
   });
 
+  testWidgets('转场性能取向：旧页静止（零变换），仅新页淡入+位移且不缩放',
+      (tester) async {
+    final navKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Navigator(
+          key: navKey,
+          onGenerateRoute: (RouteSettings settings) => AppRoute<void>(
+            builder: (_) => const Center(child: Text('旧页')),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    final Rect oldSettled = tester.getRect(find.text('旧页'));
+
+    navKey.currentState!.push(
+      AppRoute<void>(builder: (_) => const Center(child: Text('新页'))),
+    );
+    await tester.pump();
+    final Rect oldDuring = tester.getRect(find.text('旧页'));
+    final Rect newDuring = tester.getRect(find.text('新页'));
+
+    await tester.pump(const Duration(milliseconds: 400));
+    final Rect newSettled = tester.getRect(find.text('新页'));
+
+    // 旧页（被覆盖的当前页）：转场期间位置/尺寸零变化 —— 不加任何特效。
+    expect(
+      oldDuring,
+      oldSettled,
+      reason: '被覆盖的当前页必须完全静止（不加变换/透明度层）',
+    );
+
+    // 新页：自下方滑入（纯位移），最终归位；全过程尺寸不变（未缩放）。
+    expect(newDuring.top, greaterThan(newSettled.top), reason: '新页应自下方滑入');
+    expect(newDuring.size, newSettled.size, reason: '新页不得缩放（仅位移）');
+
+    // 结构约束：转场核内不得出现缩放动画（缩放会触发整页重光栅化）。
+    expect(
+      find.descendant(
+        of: find.byType(MiuixPageTransition),
+        matching: find.byType(ScaleTransition),
+      ),
+      findsNothing,
+      reason: '转场核内不得使用 ScaleTransition',
+    );
+  });
+
   test('AppDialogRoute：PopupRoute 契约（Esc 分层）+ barrier 默认值', () {
     final route = AppDialogRoute<void>(builder: (_) => const SizedBox.shrink());
     expect(route, isA<PopupRoute<void>>());
