@@ -9,6 +9,7 @@ import 'package:winwin/theme/colors.dart';
 
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/utils/image_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 顶层导航页面枚举。
 enum AppPage { home, dynamic, history, whisper, profile }
@@ -66,8 +67,8 @@ class NavDestinationIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final color = selected ? destination.color : cs.onSurfaceVariant;
     final iconData = destination.icon(selected: selected);
 

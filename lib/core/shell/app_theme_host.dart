@@ -4,22 +4,143 @@ import 'package:flutter_miuix/miuix.dart' show MiuixColors;
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
+import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
+
+/// 应用调色板（取代 Material `ColorScheme` 的读取面）。
+///
+/// 字段名与 `ColorScheme` **一一对齐**，便于迁移期做纯机械替换：
+/// `Theme.of(context).colorScheme.X` → `AppThemeHost.of(context).colors.X`。
+///
+/// 取值**全部来自项目调色板常量**（theme/colors.dart 的 `miuixLight*/miuixDark*`，
+/// 与过渡期 ThemeData 的 ColorScheme 同源）→ 迁移零视觉漂移。
+@immutable
+class AppPalette {
+  const AppPalette({
+    required this.primary,
+    required this.onPrimary,
+    required this.primaryContainer,
+    required this.secondary,
+    required this.secondaryContainer,
+    required this.tertiary,
+    required this.tertiaryContainer,
+    required this.surface,
+    required this.surfaceContainerLow,
+    required this.surfaceContainer,
+    required this.surfaceContainerHighest,
+    required this.onSurface,
+    required this.onSurfaceVariant,
+    required this.outline,
+    required this.outlineVariant,
+    required this.background,
+    required this.onBackground,
+    required this.error,
+    required this.onError,
+    required this.inverseSurface,
+    required this.onInverseSurface,
+    required this.scrim,
+  });
+
+  final Color primary;
+  final Color onPrimary;
+  final Color primaryContainer;
+  final Color secondary;
+  final Color secondaryContainer;
+  final Color tertiary;
+  final Color tertiaryContainer;
+  final Color surface;
+  final Color surfaceContainerLow;
+  final Color surfaceContainer;
+  final Color surfaceContainerHighest;
+  final Color onSurface;
+  final Color onSurfaceVariant;
+  final Color outline;
+  final Color outlineVariant;
+  final Color background;
+  final Color onBackground;
+  final Color error;
+  final Color onError;
+
+  /// 反色面（亮色主题用深卡、暗色主题用亮卡；Toast 等反色卡使用）。
+  final Color inverseSurface;
+
+  /// 反色面上的内容色。
+  final Color onInverseSurface;
+
+  /// 遮罩色（对话框/弹层 barrier）。
+  final Color scrim;
+
+  static const AppPalette light = AppPalette(
+    primary: miuixLightPrimary,
+    onPrimary: miuixLightOnPrimary,
+    primaryContainer: miuixLightPrimaryContainer,
+    secondary: miuixLightSecondary,
+    secondaryContainer: miuixLightSecondaryContainer,
+    tertiary: miuixLightTertiary,
+    tertiaryContainer: miuixLightTertiaryContainer,
+    surface: miuixLightSurface,
+    // M3 基线值（迁移前 ColorScheme.light() 的默认，项目未覆写该字段）
+    surfaceContainerLow: Color(0xFFF7F2FA),
+    surfaceContainer: miuixLightSurfaceContainer,
+    surfaceContainerHighest: miuixLightSurfaceContainerHighest,
+    onSurface: miuixLightOnSurface,
+    onSurfaceVariant: miuixLightOnSurfaceVariant,
+    outline: miuixLightOutline,
+    outlineVariant: miuixLightOutlineVariant,
+    background: miuixLightBackground,
+    onBackground: miuixLightOnSurface,
+    error: miuixLightError,
+    onError: miuixLightOnPrimary,
+    inverseSurface: miuixLightOnSurface,
+    onInverseSurface: miuixLightSurface,
+    scrim: Color(0xFF000000),
+  );
+
+  static const AppPalette dark = AppPalette(
+    primary: miuixDarkPrimary,
+    onPrimary: miuixDarkOnPrimary,
+    primaryContainer: miuixDarkPrimaryContainer,
+    secondary: miuixDarkSecondary,
+    secondaryContainer: miuixDarkSecondaryContainer,
+    tertiary: miuixDarkTertiary,
+    tertiaryContainer: miuixDarkTertiaryContainer,
+    surface: miuixDarkSurface,
+    // M3 基线值（迁移前 ColorScheme.dark() 的默认，项目未覆写该字段）
+    surfaceContainerLow: Color(0xFF1D1B20),
+    surfaceContainer: miuixDarkSurfaceContainer,
+    surfaceContainerHighest: miuixDarkSurfaceContainerHighest,
+    onSurface: miuixDarkOnSurface,
+    onSurfaceVariant: miuixDarkOnSurfaceVariant,
+    outline: miuixDarkOutline,
+    outlineVariant: miuixDarkOutlineVariant,
+    background: miuixDarkBackground,
+    onBackground: miuixDarkOnSurface,
+    error: miuixDarkError,
+    onError: Color(0xFF000000),
+    inverseSurface: miuixDarkOnSurface,
+    onInverseSurface: miuixDarkSurface,
+    scrim: Color(0xFF000000),
+  );
+
+  /// 按明暗取调色板（静态单例，供 [AppTokens] 直接引用）。
+  static AppPalette forBrightness(Brightness brightness) =>
+      brightness == Brightness.dark ? dark : light;
+}
 
 /// 应用主题取用通道（MD3 库级退役的"主题宿主"替身）。
 ///
 /// 取代 `Theme.of(context).colorScheme` / `Theme.of(context).extension<X>()`
-/// 这两条 Material 通道：明暗、配色（flutter_miuix `MiuixColors`）、
-/// 设计 Token（AppShapes/AppTypography/AppChrome）统一由 [AppThemeHost]
-/// 供给，读取方一律走 `AppTokens.of(context)`。
+/// 这两条 Material 通道：明暗、配色（[AppPalette]）、设计 Token
+/// （AppShapes/AppTypography/AppChrome）统一由 [AppThemeHost] 供给，
+/// 读取方一律走 `AppThemeHost.of(context)`。
 ///
-/// L0 阶段（双轨并存）：本文件**零 Material 依赖**，可先于摘除流程独立落地；
-/// 组件在 B2 批次分批从 `Theme.of` 切到 [AppTokens.of] 即可。
+/// 需要 flutter_miuix 专有配色语义（如 `windowDimming`）时用 [miuix]。
 @immutable
 class AppTokens {
   const AppTokens({
     required this.brightness,
     required this.colors,
+    required this.miuix,
     required this.shapes,
     required this.typography,
     required this.chrome,
@@ -28,8 +149,11 @@ class AppTokens {
   /// 当前明暗（来源：ThemeNotifier 解析后的最终态）。
   final Brightness brightness;
 
-  /// 桥接后的 Miuix 配色（唯一配色源，见 miuix_theme_bridge）。
-  final MiuixColors colors;
+  /// 项目调色板（取代 `colorScheme`）。
+  final AppPalette colors;
+
+  /// flutter_miuix 桥接配色（Miuix 专有语义入口）。
+  final MiuixColors miuix;
 
   /// 形状 Token。
   final AppShapes shapes;
@@ -48,14 +172,15 @@ class AppTokens {
       identical(this, other) ||
       other is AppTokens &&
           other.brightness == brightness &&
-          other.colors == colors &&
+          identical(other.colors, colors) &&
+          identical(other.miuix, miuix) &&
           other.shapes == shapes &&
           other.typography == typography &&
           other.chrome == chrome;
 
   @override
   int get hashCode =>
-      Object.hash(brightness, colors, shapes, typography, chrome);
+      Object.hash(brightness, colors, miuix, shapes, typography, chrome);
 }
 
 /// 主题宿主：把 [AppTokens] 注入整树（挂载于 Navigator 之上，覆盖全部路由）。
@@ -64,10 +189,11 @@ class AppThemeHost extends InheritedWidget {
 
   final AppTokens tokens;
 
-  /// 按明暗构造一套 Token（配色走既有桥接调色板，Token 数据零改动）。
+  /// 按明暗构造一套 Token（调色板取项目常量，Token 数据零改动）。
   static AppTokens tokensFor(Brightness brightness) => AppTokens(
         brightness: brightness,
-        colors: brightness == Brightness.dark
+        colors: AppPalette.forBrightness(brightness),
+        miuix: brightness == Brightness.dark
             ? miuixBridgeDarkColors()
             : miuixBridgeLightColors(),
         shapes: AppShapes.miuix,

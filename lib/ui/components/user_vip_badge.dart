@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/contrast_policy.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 解析大会员角标展示文案。
 ///
@@ -90,9 +90,9 @@ class UserVipBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = resolveUserVipBadgeLabel(label, vipType);
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
 
     final baseContainer = containerColor ?? const Color(0xFFFB7299);
     final baseContent = contentColor ?? Colors.white;

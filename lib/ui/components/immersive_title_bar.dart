@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/window/desktop_fullscreen.dart';
 
@@ -128,7 +129,7 @@ class _ImmersiveTitleBarShellState extends State<ImmersiveTitleBarShell>
         valueListenable: titleBarBackdrop,
         builder: (context, backdrop, _) {
           final stripColor =
-              backdrop ?? Theme.of(context).scaffoldBackgroundColor;
+              backdrop ?? AppThemeHost.of(context).colors.background;
           return ColoredBox(
             color: stripColor,
             child: Column(

@@ -7,6 +7,7 @@ import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 export 'app_desktop_interaction.dart';
 export 'app_press_feedback.dart';
@@ -27,9 +28,9 @@ export 'user_vip_badge.dart';
 /// 从 context 读取两套 Token 的便捷封装。
 class _Tokens {
   _Tokens.of(BuildContext context)
-      : shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.miuix,
-        chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.miuix,
-        typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.miuix;
+      : shapes = AppThemeHost.of(context).shapes,
+        chrome = AppThemeHost.of(context).chrome,
+        typo = AppThemeHost.of(context).typography;
 
   final AppShapes shapes;
   final AppChrome chrome;
@@ -66,8 +67,8 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = _Tokens.of(context);
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final r = radius ?? t.shapes.medium.x;
 
     // 阶段5d-L1：M3 分支已移除；原生 MiuixCard（squircle 圆角 + 无阴影扁平）。
@@ -104,7 +105,7 @@ class AppGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = _Tokens.of(context);
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     // 阶段5d-L1：M3 分支已移除；MiuixCard + squircle 裁角（防按压溢出）。
     final r = t.shapes.large.x;
     return Container(
@@ -221,8 +222,8 @@ class AppListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final tint = iconTint ?? cs.primary;
 
     // 阶段5d-L1：M3 分支已移除；MiuixBasicComponent 恒用。
@@ -436,7 +437,7 @@ class AppSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return AppTextField(
       controller: controller,
       focusNode: focusNode,
@@ -507,7 +508,8 @@ class AppActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = _Tokens.of(context);
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     // 阶段5d-L1：M3 分支已移除。
     final contentColor = iconTint ?? cs.onSurfaceVariant;
     const spacing = 8.0;
@@ -577,7 +579,7 @@ class AppProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     final v = (value == null || !value!.isFinite) ? 0.0 : value!.clamp(0.0, 1.0);
 
     // 阶段5d-L1：M3 分支已移除；原生 Miuix 线性进度条（自带全圆角轨道），

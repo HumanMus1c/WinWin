@@ -1,3 +1,4 @@
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// 通用 hover 视觉容器（对标 BiliPai 所有可交互控件的 hover 效果）。
@@ -35,9 +36,9 @@ class _HoverContainerState extends State<HoverContainer> {
   Widget build(BuildContext context) {
     if (!widget.enabled) return widget.child;
 
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final hoverColor = widget.hoverColor ??
-        theme.colorScheme.onSurface.withValues(alpha: 0.08);
+        tokens.colors.onSurface.withValues(alpha: 0.08);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),

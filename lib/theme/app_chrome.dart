@@ -8,8 +8,8 @@ import 'package:material_ui/material_ui.dart';
 /// 是否显示分割线。与 [AppShapes]（组件级圆角）互补：[AppShapes] 描述
 /// 单个控件的形状，[AppChrome] 描述承载多个控件的「外壳」。
 ///
-/// 作为 [ThemeExtension] 挂载，组件通过
-/// `Theme.of(context).extension<AppChrome>()` 读取。
+/// 读取通道：`AppThemeHost.of(context).chrome`（MD3 库级退役 B2 起）；
+/// 过渡期仍作为 [ThemeExtension] 挂载（B7 摘除）。
 @immutable
 class AppChrome extends ThemeExtension<AppChrome> {
   const AppChrome({

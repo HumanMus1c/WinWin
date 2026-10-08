@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/core/window/title_bar_controller.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/history/history_page.dart';
 import 'package:winwin/pages/whisper/view.dart';
@@ -41,7 +42,7 @@ class _AppRootState extends State<AppRoot> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final brightness = Theme.of(context).brightness;
+    final brightness = AppThemeHost.of(context).brightness;
     if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
       if (_brightness != brightness) {
         _brightness = brightness;

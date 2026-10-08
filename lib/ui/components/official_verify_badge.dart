@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'package:winwin/theme/app_shapes.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 官方认证色调类型（个人 / 机构）。
 enum OfficialVerifyBadgeTone {
@@ -126,7 +126,7 @@ class OfficialVerifyBadge extends StatelessWidget {
       return OfficialVerifyAvatarBadge(badge: badge);
     }
 
-    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.miuix;
+    final shapes = AppThemeHost.of(context).shapes;
 
     final (containerColor, contentColor) = switch (badge.tone) {
       OfficialVerifyBadgeTone.personal => (
@@ -177,7 +177,7 @@ class OfficialVerifyAvatarBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final iconColor = switch (badge.tone) {
       OfficialVerifyBadgeTone.personal => const Color(0xFFFFCC00),
       OfficialVerifyBadgeTone.organization => const Color(0xFF40C4FF),
@@ -189,7 +189,7 @@ class OfficialVerifyAvatarBadge extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
+          color: tokens.colors.surface,
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,

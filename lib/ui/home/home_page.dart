@@ -9,11 +9,10 @@ import 'package:winwin/pages/pgc/view.dart';
 import 'package:winwin/pages/rcmd/view.dart';
 import 'package:winwin/pages/search/search_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
-import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
@@ -96,17 +95,17 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
-    final chrome = theme.extension<AppChrome>() ?? AppChrome.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
+    final chrome = tokens.chrome;
     final tabs = HomeTabType.defaultOrder;
 
     final barColor = cs.surface.withValues(alpha: 0.72);
     final barContrast = resolveAccessibleContainerColors(
       containerColor: barColor,
       contentColor: cs.onSurfaceVariant,
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: tokens.colors.background,
       fallbackContentColors: [cs.onSurface, cs.onInverseSurface],
     );
     final barContentColor = barContrast.contentColor;

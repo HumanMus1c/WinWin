@@ -4,9 +4,9 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 个人页各内容分区的统一标题行（对齐 PiliPlus `ListTile` 标题规范）。
 class ProfileSectionHeader extends StatelessWidget {
@@ -28,7 +28,8 @@ class ProfileSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -109,8 +110,8 @@ class ProfileHorizontalList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final totalCount = itemCount + (hasMore && onMore != null ? 1 : 0);
 
     return SizedBox(
@@ -163,9 +164,9 @@ class ProfileCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
 
     return SizedBox(
@@ -235,8 +236,9 @@ class ProfileEmptyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
 
     return SizedBox(
       height: 120,
@@ -316,8 +318,9 @@ class ProfileFavFolderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
 
     return InkWell(
@@ -414,8 +417,9 @@ class ProfileVideoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
 
     return InkWell(

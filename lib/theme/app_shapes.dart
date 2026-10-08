@@ -4,9 +4,10 @@ import 'package:material_ui/material_ui.dart';
 /// 形状 Token — 圆角体系（阶段5d-L4-2 单轨化）。
 ///
 /// 参照 BiliPai 的 `BiliDesign.shapes`：iOS 连续曲率圆角，MD3 标准 M3
-/// 圆角 ×0.9 缩放，Miuix 扁平大圆角 ×1.15 缩放。作为 [ThemeExtension]
-/// 挂载到 [ThemeData]，组件通过 `Theme.of(context).extension<AppShapes>()`
-/// 读取；阶段5d-L4-2 单轨化后无需风格参数。
+/// 圆角 ×0.9 缩放，Miuix 扁平大圆角 ×1.15 缩放。
+///
+/// 读取通道：`AppThemeHost.of(context).shapes`（MD3 库级退役 B2 起）；
+/// 过渡期仍作为 [ThemeExtension] 挂载到 [ThemeData]（B7 摘除）。
 ///
 /// 同时提供 [Radius] 与 [BorderRadius] / [RoundedRectangleBorder] 三种形式，
 /// 覆盖卡片、按钮、容器、胶囊、输入框等场景。

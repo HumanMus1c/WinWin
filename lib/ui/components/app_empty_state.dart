@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 统一空状态组件（移植自 BiliPai v0.2.3-beta.3 `AppEmptyState`）。
 ///
@@ -28,7 +29,8 @@ class AppEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final tint = iconColor ?? cs.onSurfaceVariant;
 
     return Center(
@@ -93,7 +95,7 @@ class AppErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return AppEmptyState(
       icon: AppIcon(AppIcons.error()),
       iconColor: cs.error,

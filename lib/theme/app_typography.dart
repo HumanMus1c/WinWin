@@ -8,8 +8,8 @@ import 'package:material_ui/material_ui.dart';
 /// - **Material 3**：标准 M3 Typography，letterSpacing 0.15（规范间距）。
 /// - **Miuix**：Medium 字重，letterSpacing 0（扁平舒展）。
 ///
-/// 作为 [ThemeExtension] 挂载，组件通过
-/// `Theme.of(context).extension<AppTypography>()` 读取。
+/// 读取通道：`AppThemeHost.of(context).typography`（MD3 库级退役 B2 起）；
+/// 过渡期仍作为 [ThemeExtension] 挂载（B7 摘除）。
 /// 仅提供与 M3 默认有差异的补充字段；基础字号仍由
 /// `ThemeData.textTheme` 提供。
 @immutable

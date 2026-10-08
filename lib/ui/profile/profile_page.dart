@@ -14,8 +14,6 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
-import 'package:winwin/theme/app_shapes.dart';
-import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/common/widgets/demo_editable.dart';
@@ -25,6 +23,7 @@ import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 import 'package:winwin/ui/profile/widgets/profile_sections.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术单轨 Miuix（阶段5d-L4-2）。
 ///
@@ -247,8 +246,9 @@ class _UserInfoSectionState extends State<_UserInfoSection> {
     final info = widget.info;
     final isLogin = widget.isLogin;
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final typo = Theme.of(context).extension<AppTypography>() ?? AppTypography.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final typo = AppThemeHost.of(context).typography;
 
     final levelInfo = info?.levelInfo;
     final hasLevel = levelInfo?.currentLevel != null;
@@ -602,11 +602,13 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.miuix;
+    final cs = AppThemeHost.of(context).colors;
+    final shapes = AppThemeHost.of(context).shapes;
     // 阶段5d-L1：M3 分支已移除。
     final r = Radius.circular(shapes.large.x);
 
+    // 注：NormalItem.getTrailing 的签名仍是 Material ThemeData（B5/B6 一并迁移），
+    // 此处随签名使用传入的 theme。
     Widget trailingChevron(ThemeData theme) => AppIcon(AppIcons.chevronForward(),
           size: 14,
           color: theme.colorScheme.outline,

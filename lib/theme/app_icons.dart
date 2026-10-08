@@ -1,3 +1,4 @@
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
@@ -637,8 +638,8 @@ class AppBackButton extends StatelessWidget {
     final route = ModalRoute.of(context);
     final isClose = route is PageRoute<dynamic> && route.fullscreenDialog;
     final iconData = isClose ? AppIcons.clear() : AppIcons.back();
-    final theme = Theme.of(context);
-    final effectiveColor = color ?? theme.colorScheme.onSurface;
+    final tokens = AppThemeHost.of(context);
+    final effectiveColor = color ?? tokens.colors.onSurface;
 
     return IconButton(
       icon: AppIcon(

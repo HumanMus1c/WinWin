@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'components/frosted_bottom_bar.dart';
 
 /// 宽屏断点（≥ 此宽度启用侧边 [AppNavRail]，否则底部浮动栏）。
@@ -127,9 +128,9 @@ class AppNavRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final chrome = Theme.of(context).extension<AppChrome>() ?? AppChrome.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final chrome = AppThemeHost.of(context).chrome;
 
     return SafeArea(
       child: Container(

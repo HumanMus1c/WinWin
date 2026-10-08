@@ -1,3 +1,4 @@
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// 桌面级微交互装饰组件（自适应悬停高光与聚焦环）。
@@ -45,8 +46,8 @@ class _AppDesktopInteractionState extends State<AppDesktopInteraction> {
   Widget build(BuildContext context) {
     if (!widget.enabled) return widget.child;
 
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final hoverColor = cs.onSurface.withValues(alpha: widget.hoverAlpha);
     final focusColor = cs.primary;
 

@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/theme/app_theme.dart';
 import 'package:winwin/theme/miuix_page_transitions.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
@@ -110,8 +111,12 @@ void main() {
   });
 }
 
-/// 标题条底色（与场景里的 `scaffoldBackgroundColor` 一致）。
-const String _stripHex = '00ff00';
+/// 标题条底色（B2 起标题条改读 Token 通道：`AppTokens.colors.background`，
+/// 取值即 [AppPalette.light] 的应用背景色）。
+final String _stripHex = () {
+  final argb = AppPalette.light.background.toARGB32().toRadixString(16);
+  return argb.length >= 8 ? argb.substring(2) : argb.padLeft(6, '0');
+}();
 
 /// 标题条内的采样行（避开左端图标与右端三键）。
 const List<int> _stripRows = <int>[2, 10, 16, 22, 28, 31];
@@ -140,7 +145,6 @@ Future<void> _runTransitionCoverageScenario(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightFor().copyWith(
-          scaffoldBackgroundColor: const Color(0xFF00FF00),
           pageTransitionsTheme: transitions,
         ),
         navigatorKey: navKey,
