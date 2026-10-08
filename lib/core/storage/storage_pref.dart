@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
 
-import 'package:material_ui/material_ui.dart' show ThemeMode, ValueNotifier;
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:hive_ce/hive.dart';
 
 import 'package:winwin/core/account/login_utils.dart' show LoginUtils;
@@ -27,12 +27,6 @@ abstract final class Pref {
 
   /// 0=light 1=dark 2=system
   static int get themeType => _themeTypeInt;
-
-  static ThemeMode get themeMode => switch (_themeTypeInt) {
-    0 => ThemeMode.light,
-    1 => ThemeMode.dark,
-    _ => ThemeMode.system,
-  };
 
   static double get defaultTextScale =>
       _setting.get(SettingBoxKey.defaultTextScale, defaultValue: 1.0);

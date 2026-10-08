@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:winwin/pages/setting/theme_notifier.dart';
@@ -46,7 +46,7 @@ class TitleBarController with WidgetsBindingObserver {
 
   @override
   void didChangePlatformBrightness() {
-    if (ThemeNotifier.instance.value == ThemeMode.system) {
+    if (ThemeNotifier.instance.value == ThemeModeType.system) {
       update();
     }
   }
@@ -87,8 +87,8 @@ class TitleBarController with WidgetsBindingObserver {
 
   bool _isCurrentDark() {
     final mode = ThemeNotifier.instance.value;
-    if (mode == ThemeMode.dark) return true;
-    if (mode == ThemeMode.light) return false;
+    if (mode == ThemeModeType.dark) return true;
+    if (mode == ThemeModeType.light) return false;
     return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
         Brightness.dark;
   }

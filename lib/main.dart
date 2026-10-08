@@ -1,6 +1,5 @@
 import 'dart:async' show unawaited;
 import 'dart:io' show Platform, pid;
-import 'dart:ui' show PointerDeviceKind;
 
 import 'package:catcher_2/catcher_2.dart';
 import 'package:flutter/foundation.dart';
@@ -8,7 +7,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:fvp/mdk.dart' as mdk;
 import 'package:window_manager/window_manager.dart' hide calcWindowPosition;
 
-import 'core/app_messenger.dart';
 import 'core/bootstrap.dart';
 import 'core/input/app_escape_scope.dart';
 import 'core/log/api_blackbox.dart';
@@ -16,6 +14,7 @@ import 'core/log/app_logger.dart';
 import 'core/log/sync_trace.dart';
 import 'core/player/seek_probe.dart';
 import 'core/perf/transition_probe.dart';
+import 'core/shell/app_shell.dart';
 import 'core/storage/storage_pref.dart';
 import 'core/window/title_bar_controller.dart';
 import 'core/window/window_state_controller.dart';
@@ -25,9 +24,7 @@ import 'pages/video/desktop_pip.dart';
 import 'theme/app_font_notifier.dart';
 import 'theme/app_theme.dart';
 import 'theme/colors.dart';
-import 'theme/miuix_theme_bridge.dart';
 import 'ui/app.dart';
-import 'ui/components/immersive_title_bar.dart';
 import 'utils/calc_window_position.dart';
 import 'utils/json_file_handler.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -177,29 +174,6 @@ void main() async {
   );
 }
 
-/// 全局平滑滚动行为配置。
-///
-/// 解决 Windows 桌面端默认 [ClampingScrollPhysics] 滚轮步进僵硬卡手的问题，
-/// 开启弹性动量插值物理，并允许鼠标/触控板/触屏全设备指针平滑滚动。
-class AppScrollBehavior extends MaterialScrollBehavior {
-  const AppScrollBehavior();
-
-  @override
-  Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-        PointerDeviceKind.stylus,
-      };
-
-  @override
-  ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const BouncingScrollPhysics(
-      parent: AlwaysScrollableScrollPhysics(),
-    );
-  }
-}
-
 class WinWinApp extends StatelessWidget {
   const WinWinApp({super.key, this.bootstrapError});
 
@@ -207,56 +181,37 @@ class WinWinApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 两层 ValueListenableBuilder — 主题模式 × 应用字体，任一变化重建 MaterialApp。
-    // （阶段5d-L4-2：原 UI 风格层与 UiStyleScope 已随单轨化移除。）
-    return ValueListenableBuilder<ThemeMode>(
-          valueListenable: ThemeNotifier.instance,
-          builder: (context, themeMode, _) {
-            return ValueListenableBuilder<String>(
-              valueListenable: AppFontNotifier.instance,
-              builder: (context, fontFamily, _) {
-                return MaterialApp(
-                    title: 'WinWin — BiliPai Desktop Port',
-                    debugShowCheckedModeBanner: false,
-                    scrollBehavior: const AppScrollBehavior(),
-                    theme: AppTheme.lightFor(fontFamily: fontFamily),
-                    darkTheme: AppTheme.darkFor(fontFamily: fontFamily),
-                    themeMode: themeMode,
-                    navigatorKey: appNavigatorKey,
-                    scaffoldMessengerKey: appScaffoldMessengerKey,
-                    navigatorObservers: [routeObserver, appEscapeObserver],
-                    // 全局 Esc 分层路由：返回上一级 / 取消输入聚焦 /
-                    // 关闭对话框与二级浮层（详见 AppEscapeScope）。
-                    //
-                    // 兼容桥接已摘除（R4，2026-10-02）：全依赖审计确认 Windows
-                    // 编译面不存在运行时可达到的 SDK MaterialLocalizations / Theme
-                    // 消费者；摘除证据见 docs/material_ui兼容桥接摘除复盘-2026-10-02.md。
-                    builder: (context, child) {
-                      final base = AppEscapeScope(
-                        navigatorKey: appNavigatorKey,
-                        observer: appEscapeObserver,
-                        child: child ?? const SizedBox.shrink(),
-                      );
-                      // 阶段5d-L4-1：风格入口退役后 MiuixThemeScope 恒启用
-                      // （原 `uiStyle != UiStyle.miuix` 门控移除）。由
-                      // MiuixThemeScope 提供桥接配色/字体的 MiuixTheme，供
-                      // Miuix 控件取用（见 theme/miuix_theme_bridge.dart）。
-                      return MiuixThemeScope(
-                        isDark: Theme.of(context).brightness == Brightness.dark,
-                        fontFamily: fontFamily,
-                        child: MiuixToastHost(
-                          child: ImmersiveTitleBarShell(child: base),
-                        ),
-                      );
-                    },
-                    home: AgreementGate(
-                      bootstrapError: bootstrapError,
-                      child: const AppRoot(),
-                    ),
-                );
-              },
+    // 两层 ValueListenableBuilder — 主题模式 × 应用字体，任一变化重建应用壳。
+    // （B1：应用壳由 MaterialApp 换为 AppShell（WidgetsApp + AppThemeHost +
+    //  过渡期 Material 主题）；主题模式为项目枚举 ThemeModeType，不再依赖
+    //  Material 的 ThemeMode。）
+    return ValueListenableBuilder<ThemeModeType>(
+      valueListenable: ThemeNotifier.instance,
+      builder: (context, themeMode, _) {
+        return ValueListenableBuilder<String>(
+          valueListenable: AppFontNotifier.instance,
+          builder: (context, fontFamily, _) {
+            final isDark = themeMode.resolveIsDark(
+              MediaQuery.platformBrightnessOf(context),
+            );
+            return AppShell(
+              title: 'WinWin — BiliPai Desktop Port',
+              isDark: isDark,
+              fontFamily: fontFamily,
+              theme: isDark
+                  ? AppTheme.darkFor(fontFamily: fontFamily)
+                  : AppTheme.lightFor(fontFamily: fontFamily),
+              navigatorKey: appNavigatorKey,
+              escapeObserver: appEscapeObserver,
+              navigatorObservers: [routeObserver, appEscapeObserver],
+              home: AgreementGate(
+                bootstrapError: bootstrapError,
+                child: const AppRoot(),
+              ),
             );
           },
+        );
+      },
     );
   }
 }

@@ -37,17 +37,16 @@ List<SettingsModel> get styleSettings => [
       NormalModel(
         title: '主题模式',
         leading: const Icon(Icons.brightness_6_outlined),
-        getSubtitle: () =>
-            '当前模式：${ThemeModeType.fromMode(ThemeNotifier.instance.value).label}',
+        getSubtitle: () => '当前模式：${ThemeNotifier.instance.value.label}',
         onTap: (context, setState) async {
           final res = await showSelectDialog<ThemeModeType>(
             context,
             title: '主题模式',
-            value: ThemeModeType.fromMode(ThemeNotifier.instance.value),
+            value: ThemeNotifier.instance.value,
             values: ThemeModeType.values.map((e) => (e, e.label)).toList(),
           );
           if (res != null) {
-            await ThemeNotifier.instance.setMode(res.toThemeMode());
+            await ThemeNotifier.instance.setMode(res);
             setState();
           }
         },

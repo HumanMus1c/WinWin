@@ -6,13 +6,6 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 
-/// 应用级 ScaffoldMessenger 句柄（挂载于 `MaterialApp.scaffoldMessengerKey`）。
-///
-/// 供没有 BuildContext 的异步/深层调用点弹提示使用（例如网络错误 toast）。
-/// 取代此前与纯 MaterialApp 架构不兼容、会抛异步异常的 GetX Snackbar。
-final GlobalKey<ScaffoldMessengerState> appScaffoldMessengerKey =
-    GlobalKey<ScaffoldMessengerState>();
-
 /// 浮层提示卡的最大宽度（含内边距）。
 const double _toastMaxWidth = 400;
 

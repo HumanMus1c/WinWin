@@ -9,7 +9,9 @@ import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/core/shell/app_shell.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_transition.dart';
+import 'package:material_ui/material_ui.dart' as modern;
 import 'package:winwin/core/shell/miuix_compat.dart';
+import 'package:winwin/theme/app_theme.dart';
 
 /// MD3 库级退役（Part B）L0 替身层回归测试。
 ///
@@ -226,6 +228,43 @@ void main() {
     );
     expect(localizations.cutButtonLabel, isNotEmpty);
     expect(brightness, Brightness.dark);
+  });
+
+  testWidgets('AppShell：过渡期 Material 主题/本地化齐备（MaterialApp 等价面）',
+      (tester) async {
+    final navKey = GlobalKey<NavigatorState>();
+    final theme = AppTheme.lightFor();
+    late modern.ThemeData seenTheme;
+    late legacy.MaterialLocalizations localizations;
+
+    await tester.pumpWidget(
+      AppShell(
+        title: 'WinWin',
+        isDark: false,
+        navigatorKey: navKey,
+        escapeObserver: AppEscapeNavigatorObserver(),
+        theme: theme,
+        home: Builder(builder: (context) {
+          // 应用侧主题消费者走 material_ui 的 Theme.of（SDK material 仅服务
+          // flutter_miuix 内部组件，见 MiuixCompat）。
+          seenTheme = modern.Theme.of(context);
+          localizations = legacy.MaterialLocalizations.of(context);
+          return const Text('首页');
+        }),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 过渡期主题：B2 迁移 Theme.of 消费者前，Material 控件仍须拿到应用主题。
+    expect(seenTheme.brightness, theme.brightness);
+    expect(seenTheme.colorScheme.primary, theme.colorScheme.primary);
+    // 本地化：MaterialLocalizations 不得缺失（Material 控件依赖）。
+    expect(localizations.cutButtonLabel, isNotEmpty);
+    // 文本基底：显式 DefaultTextStyle（非 WidgetsApp 的"黄绿双下划线"错误样式）。
+    expect(
+      DefaultTextStyle.of(tester.element(find.text('首页'))).style.decoration,
+      TextDecoration.none,
+    );
   });
 
   testWidgets('AppShell：WidgetsApp 壳可挂首页、注入 Token、路由走 AppRoute',
