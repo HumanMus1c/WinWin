@@ -9,6 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # 本地化：自建 MiuixCompat 需为 flutter_miuix 内部的 SDK TextField 提供
+  # MaterialLocalizations（与旧桥 delegates 一致：Global 三件套）。
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.8
   get: ^4.7.2
   dio: ^5.7.0
