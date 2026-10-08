@@ -8,6 +8,7 @@ import 'package:winwin/models/video/video_detail.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 视频详情页互动行（对标 BiliPai
 /// `feature/video/ui/section/VideoActionSection.ActionButtonsRow`）。
@@ -139,7 +140,7 @@ class _VideoActionRowState extends State<VideoActionRow>
               size: 24,
               color: widget.hasLike
                   ? biliPink
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
+                  : AppThemeHost.of(context).colors.onSurfaceVariant,
             ),
               text: NumUtils.formatNum(stat?.like),
               textWidget: _demoCountWidget('video.like.count', widget.hasLike),
@@ -158,7 +159,7 @@ class _VideoActionRowState extends State<VideoActionRow>
               size: 24,
               color: widget.coinNum > 0
                   ? biliPink
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
+                  : AppThemeHost.of(context).colors.onSurfaceVariant,
             ),
             text: NumUtils.formatNum(stat?.coin),
             textWidget: _demoCountWidget('video.coin.count', widget.coinNum > 0),
@@ -175,7 +176,7 @@ class _VideoActionRowState extends State<VideoActionRow>
               size: 24,
               color: widget.hasFav
                   ? biliPink
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
+                  : AppThemeHost.of(context).colors.onSurfaceVariant,
             ),
             text: NumUtils.formatNum(stat?.favorite),
             textWidget: _demoCountWidget('video.fav.count', widget.hasFav),
@@ -192,7 +193,7 @@ class _VideoActionRowState extends State<VideoActionRow>
               size: 24,
               color: widget.hasDislike
                   ? biliPink
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
+                  : AppThemeHost.of(context).colors.onSurfaceVariant,
             ),
             text: widget.hasDislike ? '已点踩' : '点踩',
             isActive: widget.hasDislike,
@@ -207,7 +208,7 @@ class _VideoActionRowState extends State<VideoActionRow>
             icon: AppIcon(
               AppIcons.share(),
               size: 24,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: AppThemeHost.of(context).colors.onSurfaceVariant,
             ),
             text: (stat?.share ?? 0) > 0
                 ? NumUtils.formatNum(stat?.share)
@@ -228,7 +229,7 @@ class _VideoActionRowState extends State<VideoActionRow>
               size: 24,
               color: inWatchLater
                   ? biliPink
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
+                  : AppThemeHost.of(context).colors.onSurfaceVariant,
             ),
             text: inWatchLater ? '已添加' : '稍后看',
             isActive: inWatchLater,
@@ -244,7 +245,7 @@ class _VideoActionRowState extends State<VideoActionRow>
   Widget? _demoCountWidget(String key, bool active) {
     if (!Pref.demoMode) return null;
     final color =
-        active ? biliPink : Theme.of(context).colorScheme.onSurfaceVariant;
+        active ? biliPink : AppThemeHost.of(context).colors.onSurfaceVariant;
     final style = TextStyle(
       fontSize: 11,
       color: color,
@@ -289,8 +290,8 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final inactive = theme.colorScheme.onSurfaceVariant;
+    final tokens = AppThemeHost.of(context);
+    final inactive = tokens.colors.onSurfaceVariant;
     final color = isActive ? biliPink : inactive;
     Widget iconWidget = icon;
     if (progress != null) {

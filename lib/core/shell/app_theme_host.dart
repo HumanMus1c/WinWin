@@ -20,6 +20,7 @@ class AppPalette {
     required this.primary,
     required this.onPrimary,
     required this.primaryContainer,
+    required this.onPrimaryContainer,
     required this.secondary,
     required this.secondaryContainer,
     required this.onSecondaryContainer,
@@ -45,6 +46,7 @@ class AppPalette {
   final Color primary;
   final Color onPrimary;
   final Color primaryContainer;
+  final Color onPrimaryContainer;
   final Color secondary;
   final Color secondaryContainer;
   final Color onSecondaryContainer;
@@ -76,6 +78,7 @@ class AppPalette {
     primary: miuixLightPrimary,
     onPrimary: miuixLightOnPrimary,
     primaryContainer: miuixLightPrimaryContainer,
+    onPrimaryContainer: miuixLightOnPrimaryContainer,
     secondary: miuixLightSecondary,
     secondaryContainer: miuixLightSecondaryContainer,
     // M3 基线值（项目未覆写该字段）
@@ -105,6 +108,7 @@ class AppPalette {
     primary: miuixDarkPrimary,
     onPrimary: miuixDarkOnPrimary,
     primaryContainer: miuixDarkPrimaryContainer,
+    onPrimaryContainer: miuixDarkOnPrimaryContainer,
     secondary: miuixDarkSecondary,
     secondaryContainer: miuixDarkSecondaryContainer,
     // M3 基线值（项目未覆写该字段）

@@ -15,6 +15,7 @@ import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 用户合集/系列视频列表详情页面。
 class SeasonSeriesDetailPage extends StatefulWidget {
@@ -104,7 +105,8 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     return Scaffold(
       appBar: AppBar(
@@ -260,8 +262,8 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
   }
 
   Widget _buildVideoItem(MemberVideoItem item, int index) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final bvid = item.bvid;
 
     return Card(

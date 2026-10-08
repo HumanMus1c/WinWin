@@ -29,6 +29,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// Duration 没有 clamp 方法，手动实现（用于 seek 位置限制）。
 Duration _clampDuration(Duration value, Duration min, Duration max) {
@@ -2361,7 +2362,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                     '已保存：$_savedPath',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      color: AppThemeHost.of(context).colors.onSurfaceVariant,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

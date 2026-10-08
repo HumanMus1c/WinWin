@@ -43,6 +43,7 @@ import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 番剧播放页面（对标 BiliPai `BangumiPlayerScreen` 与 PiliPlus PGC 播放体系）。
 ///
@@ -759,7 +760,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
 
     final isFill = _fullscreen || _inAppFullscreen;
     if (isFill) {
@@ -838,18 +839,19 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       valueListenable: _scrollRatio,
       builder: (context, scrollRatio, _) {
         final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
         final opacity = forceOpaque ? 1.0 : scrollRatio.clamp(0.0, 1.0);
         final overVideo = opacity < 0.5;
         // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏拍平到页面背景后，
         // 为标题/返回箭头选出达标可读色（覆盖在播放器上时仍用白色）。
         final barContrast = resolveAccessibleContainerColors(
-          containerColor: theme.scaffoldBackgroundColor
+          containerColor: tokens.colors.background
               .withValues(alpha: opacity * 0.95),
-          contentColor: theme.colorScheme.onSurface,
-          backgroundColor: theme.scaffoldBackgroundColor,
+          contentColor: tokens.colors.onSurface,
+          backgroundColor: tokens.colors.background,
           fallbackContentColors: [
-            theme.colorScheme.onInverseSurface,
-            theme.colorScheme.scrim,
+            tokens.colors.onInverseSurface,
+            tokens.colors.scrim,
           ],
         );
 
@@ -928,11 +930,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   child: Container(
                     height: kToolbarHeight,
                     decoration: BoxDecoration(
-                      color: theme.scaffoldBackgroundColor
+                      color: tokens.colors.background
                           .withValues(alpha: 0.95),
                       border: Border(
                         bottom: BorderSide(
-                          color: theme.colorScheme.outlineVariant
+                          color: tokens.colors.outlineVariant
                               .withValues(alpha: 0.3),
                           width: 0.5,
                         ),
@@ -950,7 +952,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         final topColor = overVideo
             ? Colors.black.withValues(
                 alpha: (0.45 * (1.0 - opacity) + 0.70 * opacity).clamp(0.0, 1.0))
-            : theme.scaffoldBackgroundColor
+            : tokens.colors.background
                 .withValues(alpha: (opacity * 0.95).clamp(0.0, 1.0));
 
         return Positioned(
@@ -982,7 +984,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   /// 桌面宽屏双栏布局（左 7: 播放器+互动+简介，右 3: 选集/评论 Tab）
-  Widget _buildWideLayout(ColorScheme cs) {
+  Widget _buildWideLayout(AppPalette cs) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1074,7 +1076,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   /// 窄屏单列布局（视频 + 弹幕 + 选集/简介/评论 Tab，支持滚动挤压缩放）
-  Widget _buildNarrowLayout(ColorScheme cs) {
+  Widget _buildNarrowLayout(AppPalette cs) {
     return Stack(
       children: [
         LayoutBuilder(
@@ -1110,7 +1112,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                         Tab(text: Pref.demoMode ? '评论' : '评论 (${_replies.length})'),
                       ],
                     ),
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                    color: AppThemeHost.of(context).colors.background,
                   ),
                 ),
               ],
@@ -1184,7 +1186,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   // ─────────────────────────── 选集 Sidebar ───────────────────────────
 
-  Widget _buildEpisodesSidebar(ColorScheme cs) {
+  Widget _buildEpisodesSidebar(AppPalette cs) {
     final ordered = _episodesDescending ? _episodes.reversed.toList() : _episodes;
 
     return Column(
@@ -1333,7 +1335,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   // ─────────────────────────── 评论区（共享普通视频稿件样式） ───────────────────────────
 
-  Widget _buildCommentsSidebar(ColorScheme cs) {
+  Widget _buildCommentsSidebar(AppPalette cs) {
     return Column(
       children: [
         Padding(
@@ -1347,8 +1349,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   /// 评论排序行（对标普通视频稿件 CommentSortHeader）
-  Widget _buildCommentSortRow(ColorScheme cs) {
-    final theme = Theme.of(context);
+  Widget _buildCommentSortRow(AppPalette cs) {
+    final tokens = AppThemeHost.of(context);
     Widget sortBtn(String label, int mode) {
       final selected = _replyMode == mode;
       return TextButton(
@@ -1364,8 +1366,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             fontSize: 13,
             fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             color: selected
-                ? theme.colorScheme.onSurface
-                : theme.colorScheme.onSurfaceVariant,
+                ? tokens.colors.onSurface
+                : tokens.colors.onSurfaceVariant,
           ),
         ),
       );
@@ -1380,7 +1382,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           '共 ${_replies.length} 条',
           style: TextStyle(
             fontSize: 12,
-            color: theme.colorScheme.onSurfaceVariant,
+            color: tokens.colors.onSurfaceVariant,
           ),
         ),
       ],
@@ -1403,7 +1405,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   /// 评论列表（使用普通视频稿件设计）
-  Widget _buildReplyListView(ColorScheme cs) {
+  Widget _buildReplyListView(AppPalette cs) {
     if (_replies.isEmpty && _loadingReplies) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -1426,10 +1428,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   /// 普通视频稿件同款评论卡片
   Widget _buildReplyTile(ReplyItemModel reply) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final member = reply.member;
     final grayStyle = TextStyle(
       fontSize: 12,
-      color: theme.colorScheme.onSurfaceVariant,
+      color: tokens.colors.onSurfaceVariant,
     );
     final rpid = reply.rpid;
     final subReplies = rpid != null ? _subReplies[rpid] : null;
@@ -1478,7 +1481,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                 color: (member?.level != null &&
                                         member!.level! >= 6)
                                     ? biliPink
-                                    : theme.colorScheme.onSurface,
+                                    : tokens.colors.onSurface,
                               ),
                             ),
                           ),
@@ -1491,7 +1494,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                               vertical: 1,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest,
+                              color: tokens.colors.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(3),
                             ),
                             child: Text(
@@ -1499,7 +1502,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                               style: TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurfaceVariant,
+                                color: tokens.colors.onSurfaceVariant,
                                 height: 1.1,
                               ),
                             ),
@@ -1514,7 +1517,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       textStyle: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 14.5,
                         height: 1.55,
-                        color: theme.colorScheme.onSurface,
+                        color: tokens.colors.onSurface,
                       ),
                     ),
                     const SizedBox(height: Style.sm),
@@ -1532,7 +1535,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                 size: 15,
                                 color: reply.isLiked
                                     ? biliPink
-                                    : theme.colorScheme.onSurfaceVariant,
+                                    : tokens.colors.onSurfaceVariant,
                               ),
                               Text(
                                 NumUtils.formatNum(reply.like),
@@ -1540,7 +1543,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                   fontSize: 12,
                                   color: reply.isLiked
                                       ? biliPink
-                                      : theme.colorScheme.onSurfaceVariant,
+                                      : tokens.colors.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -1553,7 +1556,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                             size: 15,
                             color: reply.isDisliked
                                 ? biliPink
-                                : theme.colorScheme.onSurfaceVariant,
+                                : tokens.colors.onSurfaceVariant,
                           ),
                         ),
                         if (reply.upAction?.like == true)
@@ -1584,7 +1587,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                               Icon(
                                 AppIcons.reply(),
                                 size: 15,
-                                color: theme.colorScheme.onSurfaceVariant,
+                                color: tokens.colors.onSurfaceVariant,
                               ),
                               Text(
                                 '回复',
@@ -1605,7 +1608,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                       : '展开 ${reply.rcount}条回复',
                                   style: grayStyle.copyWith(
                                     fontSize: 12,
-                                    color: theme.colorScheme.primary,
+                                    color: tokens.colors.primary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -1614,7 +1617,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                       ? AppIcons.chevronUp()
                                       : AppIcons.expandMore(),
                                   size: 15,
-                                  color: theme.colorScheme.primary,
+                                  color: tokens.colors.primary,
                                 ),
                               ],
                             ),
@@ -1636,7 +1639,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 vertical: Style.sm,
               ),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest
+                color: tokens.colors.surfaceContainerHighest
                     .withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(Style.radiusMd),
               ),
@@ -1649,7 +1652,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       Divider(
                         height: 1,
                         thickness: 0.5,
-                        color: theme.colorScheme.outlineVariant
+                        color: tokens.colors.outlineVariant
                             .withValues(alpha: 0.2),
                       ),
                       const SizedBox(height: Style.xs),
@@ -1701,6 +1704,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     ReplyItemModel root,
   ) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final subMember = sub.member;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1737,7 +1741,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.primary,
+                            color: tokens.colors.primary,
                           ),
                         ),
                       ),
@@ -1750,7 +1754,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                           vertical: 1,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest,
+                          color: tokens.colors.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(3),
                         ),
                         child: Text(
@@ -1758,7 +1762,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                           style: TextStyle(
                             fontSize: 8.5,
                             fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurfaceVariant,
+                            color: tokens.colors.onSurfaceVariant,
                             height: 1.1,
                           ),
                         ),
@@ -1770,7 +1774,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 _formatDate(sub.ctime),
                 style: TextStyle(
                   fontSize: 11,
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: tokens.colors.onSurfaceVariant,
                 ),
               ),
             ],
@@ -1783,7 +1787,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               textStyle: theme.textTheme.bodyMedium?.copyWith(
                 fontSize: 13.5,
                 height: 1.5,
-                color: theme.colorScheme.onSurface,
+                color: tokens.colors.onSurface,
               ),
             ),
           ),
@@ -1803,7 +1807,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                         size: 13,
                         color: sub.isLiked
                             ? biliPink
-                            : theme.colorScheme.onSurfaceVariant,
+                            : tokens.colors.onSurfaceVariant,
                       ),
                       Text(
                         NumUtils.formatNum(sub.like),
@@ -1811,7 +1815,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                           fontSize: 11.5,
                           color: sub.isLiked
                               ? biliPink
-                              : theme.colorScheme.onSurfaceVariant,
+                              : tokens.colors.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -1824,7 +1828,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                     size: 13,
                     color: sub.isDisliked
                         ? biliPink
-                        : theme.colorScheme.onSurfaceVariant,
+                        : tokens.colors.onSurfaceVariant,
                   ),
                 ),
                 if (sub.upAction?.like == true)
@@ -1858,13 +1862,13 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       Icon(
                         AppIcons.reply(),
                         size: 13,
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: tokens.colors.onSurfaceVariant,
                       ),
                       Text(
                         '回复',
                         style: TextStyle(
                           fontSize: 11.5,
-                          color: theme.colorScheme.onSurfaceVariant,
+                          color: tokens.colors.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -1879,8 +1883,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   /// 评论列表尾部
-  Widget _buildReplyTrailer(ColorScheme cs) {
-    final theme = Theme.of(context);
+  Widget _buildReplyTrailer(AppPalette cs) {
+    final tokens = AppThemeHost.of(context);
     if (_loadingReplies) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: Style.lg),
@@ -1908,7 +1912,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           child: Text(
             '还没有评论',
             style: TextStyle(
-              color: theme.colorScheme.onSurfaceVariant,
+              color: tokens.colors.onSurfaceVariant,
             ),
           ),
         ),
@@ -1922,7 +1926,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             '没有更多评论',
             style: TextStyle(
               fontSize: 12,
-              color: theme.colorScheme.outline,
+              color: tokens.colors.outline,
             ),
           ),
         ),
@@ -1932,8 +1936,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   /// 评论输入栏（普通视频稿件同款胶囊输入框与粉色发送按钮）
-  Widget _buildCommentInputBar(ColorScheme cs) {
-    final theme = Theme.of(context);
+  Widget _buildCommentInputBar(AppPalette cs) {
+    final tokens = AppThemeHost.of(context);
     final enabled = _currentEpisode.aid != null && _currentEpisode.aid! > 0;
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -1943,10 +1947,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         Style.safeSpace,
       ),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: tokens.colors.background,
         border: Border(
           top: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
             width: 0.5,
           ),
         ),
@@ -1978,14 +1982,14 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       : '当前剧集暂不支持评论',
                   hintStyle: TextStyle(
                     fontSize: 13,
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: tokens.colors.onSurfaceVariant,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(100),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: theme.colorScheme.surfaceContainer
+                  fillColor: tokens.colors.surfaceContainer
                       .withValues(alpha: 0.5),
                   suffixIcon: _replyRoot != null
                       ? IconButton(
@@ -2037,10 +2041,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: AppThemeHost.of(context).colors.surface,
         borderRadius: BorderRadius.circular(Style.mdRadius),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+          color: AppThemeHost.of(context).colors.outlineVariant.withValues(alpha: 0.2),
         ),
       ),
       child: child,
@@ -2089,7 +2093,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     };
   }
 
-  Widget _buildFollowButton(ColorScheme cs) {
+  Widget _buildFollowButton(AppPalette cs) {
     return GestureDetector(
       onSecondaryTap: _isFollowed ? _showFollowStatusDialog : null,
       child: FilledButton.tonal(
@@ -2115,7 +2119,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   /// 视频下方交互区（对标普通视频稿件 detail_page.dart 的 _buildInfoSection）
-  Widget _buildInfoSection(ColorScheme cs) {
+  Widget _buildInfoSection(AppPalette cs) {
     final theme = Theme.of(context);
     final stat = widget.detail.stat;
     final grayStyle = TextStyle(fontSize: 12, color: cs.onSurfaceVariant);
@@ -2265,7 +2269,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   /// 番剧简介卡片（默认 3 行折叠，可展开/收起；展开后含声优与制作人员）
-  Widget _buildDescSection(ColorScheme cs) {
+  Widget _buildDescSection(AppPalette cs) {
     final desc = widget.detail.evaluate.trim();
     final hasActors = widget.detail.actors.isNotEmpty;
     final hasStaff = widget.detail.staff.isNotEmpty;
@@ -2325,7 +2329,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   /// 风格标签行
-  Widget _buildTagsSection(ColorScheme cs) {
+  Widget _buildTagsSection(AppPalette cs) {
     if (widget.detail.styles.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: Style.md),

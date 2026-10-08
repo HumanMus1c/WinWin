@@ -48,6 +48,7 @@ import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
@@ -94,8 +95,8 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final outline = theme.colorScheme.onSurfaceVariant;
+    final tokens = AppThemeHost.of(context);
+    final outline = tokens.colors.onSurfaceVariant;
     final grayStyle = TextStyle(fontSize: 12, color: outline);
     final key = 'demo.reply.${widget.bvid}.${widget.seed}';
     final subCount = DemoOverrides.count('$key.sub', min: 0, max: 5);
@@ -103,7 +104,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
       margin: const EdgeInsets.only(top: Style.sm),
       padding: const EdgeInsets.all(Style.md),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: tokens.colors.surface,
         borderRadius: BorderRadius.circular(Style.mdRadius),
       ),
       child: Row(
@@ -194,7 +195,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                                   : '展开 $subCount条回复',
                               style: grayStyle.copyWith(
                                 fontSize: 12,
-                                color: theme.colorScheme.primary,
+                                color: tokens.colors.primary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -203,7 +204,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                                   ? AppIcons.chevronUp()
                                   : AppIcons.expandMore(),
                               size: 16,
-                              color: theme.colorScheme.primary,
+                              color: tokens.colors.primary,
                             ),
                           ],
                         ),
@@ -1320,6 +1321,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 错误态的简介占位卡片：展示 bvid 与错误原因，说明评论区不可用。
   Widget _buildDetailErrorCard(int? code, String? errMsg) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1335,7 +1337,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             _friendlyVideoError(code, errMsg),
             style: TextStyle(
               fontSize: 13,
-              color: theme.colorScheme.onSurfaceVariant,
+              color: tokens.colors.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: Style.sm),
@@ -1343,7 +1345,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             '稿件信息加载失败，评论与互动暂不可用',
             style: TextStyle(
               fontSize: 12,
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              color: tokens.colors.onSurfaceVariant.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -1369,18 +1371,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       valueListenable: _scrollRatio,
       builder: (context, scrollRatio, _) {
         final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
         final opacity = forceOpaque ? 1.0 : scrollRatio.clamp(0.0, 1.0);
         final overVideo = opacity < 0.5;
         // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏拍平到页面背景后，
         // 为标题/返回箭头选出达标可读色（覆盖在播放器上时仍用白色）。
         final barContrast = resolveAccessibleContainerColors(
-          containerColor: theme.scaffoldBackgroundColor
+          containerColor: tokens.colors.background
               .withValues(alpha: opacity * 0.95),
-          contentColor: theme.colorScheme.onSurface,
-          backgroundColor: theme.scaffoldBackgroundColor,
+          contentColor: tokens.colors.onSurface,
+          backgroundColor: tokens.colors.background,
           fallbackContentColors: [
-            theme.colorScheme.onInverseSurface,
-            theme.colorScheme.scrim,
+            tokens.colors.onInverseSurface,
+            tokens.colors.scrim,
           ],
         );
 
@@ -1434,11 +1437,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   child: Container(
                     height: kToolbarHeight,
                     decoration: BoxDecoration(
-                      color: theme.scaffoldBackgroundColor
+                      color: tokens.colors.background
                           .withValues(alpha: 0.95),
                       border: Border(
                         bottom: BorderSide(
-                          color: theme.colorScheme.outlineVariant
+                          color: tokens.colors.outlineVariant
                               .withValues(alpha: 0.3),
                           width: 0.5,
                         ),
@@ -1456,7 +1459,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         final topColor = overVideo
             ? Colors.black.withValues(
                 alpha: (0.45 * (1.0 - opacity) + 0.70 * opacity).clamp(0.0, 1.0))
-            : theme.scaffoldBackgroundColor
+            : tokens.colors.background
                 .withValues(alpha: (opacity * 0.95).clamp(0.0, 1.0));
 
         return Positioned(
@@ -1528,11 +1531,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 标题 + 数据行 + UP 行。
   Widget _buildInfoSection(VideoDetailData data) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final stat = data.stat;
     final owner = data.owner;
     final grayStyle = TextStyle(
       fontSize: 12,
-      color: theme.colorScheme.onSurfaceVariant,
+      color: tokens.colors.onSurfaceVariant,
     );
     return _card(
       child: Column(
@@ -1555,19 +1559,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               Icon(
                 AppIcons.viewCount(),
                 size: 15,
-                color: theme.colorScheme.onSurfaceVariant,
+                color: tokens.colors.onSurfaceVariant,
               ),
               Text(NumUtils.formatNum(stat?.view), style: grayStyle),
               Icon(
                 AppIcons.danmakuCount(),
                 size: 14,
-                color: theme.colorScheme.onSurfaceVariant,
+                color: tokens.colors.onSurfaceVariant,
               ),
               Text(NumUtils.formatNum(stat?.danmaku), style: grayStyle),
               Icon(
                 AppIcons.duration(),
                 size: 14,
-                color: theme.colorScheme.onSurfaceVariant,
+                color: tokens.colors.onSurfaceVariant,
               ),
               Text(
                 DurationUtils.formatDuration(data.duration),
@@ -1642,7 +1646,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 简介卡片：默认 3 行，可展开/收起。
   Widget _buildDescSection(VideoDetailData data) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final desc = (data.desc ?? '').trim();
     return _card(
       margin: const EdgeInsets.only(top: Style.md),
@@ -1663,7 +1667,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               style: TextStyle(
                 fontSize: 13,
                 height: 1.5,
-                color: theme.colorScheme.onSurfaceVariant,
+                color: tokens.colors.onSurfaceVariant,
               ),
             ),
           ),
@@ -1684,7 +1688,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 稿件标签行（对标 BiliPai VideoTagsRow：最多取 10 个，
   /// 14dp 圆角 chip + surfaceVariant 底色，点击按标签名搜索）。
   Widget _buildTagsSection() {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: Style.md),
       child: Wrap(
@@ -1693,7 +1697,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         children: [
           for (final tag in _tags.take(10))
             Material(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(
+              color: tokens.colors.surfaceContainerHighest.withValues(
                 alpha: 0.8,
               ),
               borderRadius: BorderRadius.circular(Style.radiusLg),
@@ -1714,7 +1718,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     tag.tagName ?? '',
                     style: TextStyle(
                       fontSize: 12,
-                      color: theme.colorScheme.onSurfaceVariant,
+                      color: tokens.colors.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -1752,12 +1756,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   Widget _buildReplyTile(ReplyItemModel reply) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final member = reply.member;
     final upMid = _detailState.dataOrNull?.owner?.mid;
     final isUp = upMid != null && (reply.mid == upMid || member?.mid == upMid);
     final grayStyle = TextStyle(
       fontSize: 12,
-      color: theme.colorScheme.onSurfaceVariant,
+      color: tokens.colors.onSurfaceVariant,
     );
     final rpid = reply.rpid;
     final subReplies = rpid != null ? _subReplies[rpid] : null;
@@ -1804,7 +1809,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                 fontWeight: FontWeight.w600,
                                 color: isUp
                                     ? biliPink
-                                    : theme.colorScheme.onSurface,
+                                    : tokens.colors.onSurface,
                               ),
                             ),
                           ),
@@ -1842,7 +1847,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               vertical: 1,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest,
+                              color: tokens.colors.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(3),
                             ),
                             child: Text(
@@ -1850,7 +1855,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               style: TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurfaceVariant,
+                                color: tokens.colors.onSurfaceVariant,
                                 height: 1.1,
                               ),
                             ),
@@ -1865,7 +1870,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       textStyle: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 14.5,
                         height: 1.55,
-                        color: theme.colorScheme.onSurface,
+                        color: tokens.colors.onSurface,
                       ),
                     ),
                     const SizedBox(height: Style.sm),
@@ -1883,7 +1888,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                 size: 15,
                                 color: reply.isLiked
                                     ? biliPink
-                                    : theme.colorScheme.onSurfaceVariant,
+                                    : tokens.colors.onSurfaceVariant,
                               ),
                               Text(
                                 NumUtils.formatNum(reply.like),
@@ -1891,7 +1896,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                   fontSize: 12,
                                   color: reply.isLiked
                                       ? biliPink
-                                      : theme.colorScheme.onSurfaceVariant,
+                                      : tokens.colors.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -1904,7 +1909,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             size: 15,
                             color: reply.isDisliked
                                 ? biliPink
-                                : theme.colorScheme.onSurfaceVariant,
+                                : tokens.colors.onSurfaceVariant,
                           ),
                         ),
                         if (reply.upAction?.like == true)
@@ -1935,7 +1940,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               Icon(
                                 AppIcons.reply(),
                                 size: 15,
-                                color: theme.colorScheme.onSurfaceVariant,
+                                color: tokens.colors.onSurfaceVariant,
                               ),
                               Text(
                                 '回复',
@@ -1956,7 +1961,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                       : '展开 ${reply.rcount}条回复',
                                   style: grayStyle.copyWith(
                                     fontSize: 12,
-                                    color: theme.colorScheme.primary,
+                                    color: tokens.colors.primary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -1965,7 +1970,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                       ? AppIcons.chevronUp()
                                       : AppIcons.expandMore(),
                                   size: 15,
-                                  color: theme.colorScheme.primary,
+                                  color: tokens.colors.primary,
                                 ),
                               ],
                             ),
@@ -1987,7 +1992,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 vertical: Style.sm,
               ),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest
+                color: tokens.colors.surfaceContainerHighest
                     .withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(Style.radiusMd),
               ),
@@ -2000,7 +2005,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       Divider(
                         height: 1,
                         thickness: 0.5,
-                        color: theme.colorScheme.outlineVariant
+                        color: tokens.colors.outlineVariant
                             .withValues(alpha: 0.2),
                       ),
                       const SizedBox(height: Style.xs),
@@ -2053,6 +2058,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     int? upMid,
   }) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final isSubUp =
         upMid != null && (sub.mid == upMid || sub.member?.mid == upMid);
     final subMember = sub.member;
@@ -2092,7 +2098,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color:
-                                isSubUp ? biliPink : theme.colorScheme.primary,
+                                isSubUp ? biliPink : tokens.colors.primary,
                           ),
                         ),
                       ),
@@ -2130,7 +2136,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           vertical: 1,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest,
+                          color: tokens.colors.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(3),
                         ),
                         child: Text(
@@ -2138,7 +2144,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           style: TextStyle(
                             fontSize: 8.5,
                             fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurfaceVariant,
+                            color: tokens.colors.onSurfaceVariant,
                             height: 1.1,
                           ),
                         ),
@@ -2150,7 +2156,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 _formatDate(sub.ctime),
                 style: TextStyle(
                   fontSize: 11,
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: tokens.colors.onSurfaceVariant,
                 ),
               ),
             ],
@@ -2163,7 +2169,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               textStyle: theme.textTheme.bodyMedium?.copyWith(
                 fontSize: 13.5,
                 height: 1.5,
-                color: theme.colorScheme.onSurface,
+                color: tokens.colors.onSurface,
               ),
             ),
           ),
@@ -2183,7 +2189,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                         size: 13,
                         color: sub.isLiked
                             ? biliPink
-                            : theme.colorScheme.onSurfaceVariant,
+                            : tokens.colors.onSurfaceVariant,
                       ),
                       Text(
                         NumUtils.formatNum(sub.like),
@@ -2191,7 +2197,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           fontSize: 11.5,
                           color: sub.isLiked
                               ? biliPink
-                              : theme.colorScheme.onSurfaceVariant,
+                              : tokens.colors.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -2204,7 +2210,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     size: 13,
                     color: sub.isDisliked
                         ? biliPink
-                        : theme.colorScheme.onSurfaceVariant,
+                        : tokens.colors.onSurfaceVariant,
                   ),
                 ),
                 if (sub.upAction?.like == true)
@@ -2238,13 +2244,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       Icon(
                         AppIcons.reply(),
                         size: 13,
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: tokens.colors.onSurfaceVariant,
                       ),
                       Text(
                         '回复',
                         style: TextStyle(
                           fontSize: 11.5,
-                          color: theme.colorScheme.onSurfaceVariant,
+                          color: tokens.colors.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -2262,7 +2268,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 水平内边距与评论区 SliverPadding 一致，宽度对齐评论区容器）。
   /// [enabled]=false 时置灰（稿件信息加载中或失败态，无 aid 不可发评论）。
   Widget _buildCommentInputBar({bool enabled = true, String? disabledHint}) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         Style.safeSpace,
@@ -2271,10 +2277,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         Style.xs,
       ),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: tokens.colors.surface,
         border: Border(
           top: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
             width: 0.5,
           ),
         ),
@@ -2310,14 +2316,14 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       : (disabledHint ?? '稿件不可用，暂无法评论'),
                   hintStyle: TextStyle(
                     fontSize: 13,
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: tokens.colors.onSurfaceVariant,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(100),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: theme.colorScheme.surfaceContainer
+                  fillColor: tokens.colors.surfaceContainer
                       .withValues(alpha: 0.5),
                   suffixIcon: _replyRoot != null
                       ? IconButton(
@@ -2386,14 +2392,14 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           child: Text(
             '还没有评论',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: AppThemeHost.of(context).colors.onSurfaceVariant,
             ),
           ),
         ),
       );
     }
     if (_replyEnd) {
-      final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: Style.lg),
         child: Center(
@@ -2401,7 +2407,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             '没有更多评论',
             style: TextStyle(
               fontSize: 12,
-              color: theme.colorScheme.outline,
+              color: tokens.colors.outline,
             ),
           ),
         ),
@@ -2417,17 +2423,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 评论 Tab 含 最热/最新排序行 + 评论列表 + 底部输入栏；
   /// 稿件信息未就绪（Loading/Error）时评论 Tab 展示占位/不可用提示。
   Widget _buildRightColumn() {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final replyCount = _detailState.dataOrNull?.stat?.reply;
     return Column(
       children: [
         TabBar(
           controller: _rightTabCtrl,
-          labelColor: theme.colorScheme.onSurface,
-          unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-          indicatorColor: theme.colorScheme.primary,
+          labelColor: tokens.colors.onSurface,
+          unselectedLabelColor: tokens.colors.onSurfaceVariant,
+          indicatorColor: tokens.colors.primary,
           indicatorSize: TabBarIndicatorSize.label,
-          dividerColor: theme.colorScheme.outlineVariant.withValues(
+          dividerColor: tokens.colors.outlineVariant.withValues(
             alpha: 0.3,
           ),
           tabs: [
@@ -2514,7 +2520,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 评论排序行（对标 BiliPai CommentSortHeader）：
   /// 最热(3) / 最新(2) 文本切换，选中项加粗强调。
   Widget _buildCommentSortRow() {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     Widget sortBtn(String label, int mode) {
       final selected = _replyMode == mode;
       return TextButton(
@@ -2525,8 +2531,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             fontSize: 13,
             fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             color: selected
-                ? theme.colorScheme.onSurface
-                : theme.colorScheme.onSurfaceVariant,
+                ? tokens.colors.onSurface
+                : tokens.colors.onSurfaceVariant,
           ),
         ),
       );
@@ -2729,14 +2735,14 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     AppIcon(
                       AppIcons.profile(),
                       size: 16,
-                      color: Theme.of(context).colorScheme.outline,
+                      color: AppThemeHost.of(context).colors.outline,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       kDemoDisplayName,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        color: AppThemeHost.of(context).colors.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -2988,7 +2994,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   Widget _buildError(String? errMsg, VoidCallback onRetry) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -2996,7 +3002,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           Icon(
             Icons.cloud_off_outlined,
             size: 48,
-            color: theme.colorScheme.onSurfaceVariant,
+            color: tokens.colors.onSurfaceVariant,
           ),
           const SizedBox(height: Style.lg),
           Padding(
@@ -3004,7 +3010,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             child: Text(
               errMsg ?? '加载失败',
               textAlign: TextAlign.center,
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+              style: TextStyle(color: tokens.colors.onSurfaceVariant),
             ),
           ),
           const SizedBox(height: Style.xl),
@@ -3029,7 +3035,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: AppThemeHost.of(context).colors.surface,
         borderRadius: BorderRadius.circular(Style.mdRadius),
       ),
       child: child,
@@ -3069,7 +3075,7 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
 
     final String label;
     final IconData icon;

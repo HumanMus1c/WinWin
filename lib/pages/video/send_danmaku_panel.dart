@@ -10,6 +10,7 @@ import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 弹幕发送面板（移植自 BiliPai `DanmakuSendDialog` + `DanmakuComposerPolicy`）。
 ///
@@ -222,10 +223,11 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   /// 计数 + 「颜色、位置、大小」折叠设置区 + 全宽发送按钮。
   Widget _buildSheet() {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Container(
       constraints: const BoxConstraints(maxWidth: 560),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: tokens.colors.surface,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(Style.radiusMd),
         ),
@@ -258,7 +260,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
               height: 52,
               padding: const EdgeInsets.symmetric(horizontal: Style.md),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest
+                color: tokens.colors.surfaceContainerHighest
                     .withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(Style.radiusSm),
               ),
@@ -276,7 +278,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                   isCollapsed: true,
                   hintText: _danmakuPlaceholder(Accounts.main.isLogin),
                   hintStyle: TextStyle(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: tokens.colors.onSurfaceVariant,
                     fontSize: 15,
                   ),
                   counterText: '',
@@ -293,8 +295,8 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                 style: TextStyle(
                   fontSize: 12,
                   color: _textController.text.length > 90
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.onSurfaceVariant,
+                      ? tokens.colors.error
+                      : tokens.colors.onSurfaceVariant,
                 ),
               ),
             ),
@@ -365,6 +367,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   /// 设置面板（颜色/位置/大小）通过点击设置按钮展开。
   Widget _buildInline() {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         Style.safeSpace,
@@ -373,10 +376,10 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
         Style.xs,
       ),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: tokens.colors.surface,
         border: Border(
           top: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
             width: 0.5,
           ),
         ),
@@ -403,7 +406,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                   hintText: _danmakuPlaceholder(Accounts.main.isLogin),
                   hintStyle: TextStyle(
                     fontSize: 13,
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: tokens.colors.onSurfaceVariant,
                   ),
                   counterText: '',
                   border: OutlineInputBorder(
@@ -411,7 +414,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: theme.colorScheme.surfaceContainer
+                  fillColor: tokens.colors.surfaceContainer
                       .withValues(alpha: 0.5),
                 ),
               ),
@@ -488,6 +491,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
     _settingsOverlay = OverlayEntry(
       builder: (context) {
         final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
         // 面板在按钮正上方，右对齐按钮右边缘
         final panelWidth = 340.0;
         final panelLeft = (buttonPosition.dx + buttonSize.width - panelWidth)
@@ -506,7 +510,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
               title: '弹幕样式',
               icon: AppIcon(AppIcons.palette(),
                 size: 16,
-                color: theme.colorScheme.primary,
+                color: tokens.colors.primary,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -643,7 +647,8 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
               runSpacing: Style.sm,
               children: [
                 for (final option in options)
-                  _buildOptionChip(theme, option, selected == option.value,
+                  _buildOptionChip(
+                      AppThemeHost.of(context), option, selected == option.value,
                       () => notifier.value = option.value),
               ],
             );
@@ -654,13 +659,13 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   }
 
   Widget _buildOptionChip(
-    ThemeData theme,
+    AppTokens tokens,
     ({int value, String label}) option,
     bool selected,
     VoidCallback onTap,
   ) {
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final cs = tokens.colors;
+    final isDark = tokens.isDark;
     return GestureDetector(
       onTap: onTap,
       child: Container(

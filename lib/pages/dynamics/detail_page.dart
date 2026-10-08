@@ -27,6 +27,7 @@ import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 动态详情页面。
 ///
@@ -239,7 +240,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     return Scaffold(
       appBar: AppBar(
@@ -309,7 +311,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
 
   Widget _buildDetailContent(
     DynItemModel item,
-    ColorScheme cs,
+    AppPalette cs,
     ThemeData theme,
   ) {
     final author = item.author;
@@ -896,7 +898,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   /// 追番剧集卡片
   Widget _buildPgcPreview(BuildContext context, DynPgc pgc) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final cover = pgc.cover;
 
     return InkWell(
@@ -954,7 +957,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   /// 专栏卡片预览（点击进入专栏页面）
   Widget _buildArticlePreview(BuildContext context, DynArticle article) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final cover = article.covers.isNotEmpty ? article.covers.first : null;
 
     return Card(
@@ -1037,7 +1041,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   /// 直播卡片预览（点击直达直播间）
   Widget _buildLivePreview(BuildContext context, DynLive live) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final isLiving = live.liveStatus == 1 || live.badge == '直播中';
 
     return Card(
@@ -1125,7 +1130,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   /// 转发动态区域
   Widget _buildForwardSection(BuildContext context, DynItemModel orig) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final origAuthor = orig.author;
 
     return Container(

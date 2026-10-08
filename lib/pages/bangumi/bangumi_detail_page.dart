@@ -17,6 +17,7 @@ import 'package:winwin/pages/video/detail_page.dart' show kDetailNarrowBreakpoin
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 番剧 / 影视详情主页（对标 BiliPai `BangumiDetailScreen` 与 PiliPlus）。
 ///
@@ -433,7 +434,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
 
     return Scaffold(
       appBar: AppBar(
@@ -487,7 +488,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   /// 骨架屏
-  Widget _buildSkeleton(ColorScheme cs) {
+  Widget _buildSkeleton(AppPalette cs) {
     return Padding(
       padding: const EdgeInsets.all(Style.safeSpace),
       child: Row(
@@ -559,7 +560,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
   // ─────────────────────────── 宽屏双栏布局 ───────────────────────────
 
-  Widget _buildWideLayout(BangumiDetail detail, ColorScheme cs) {
+  Widget _buildWideLayout(BangumiDetail detail, AppPalette cs) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -638,7 +639,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
   // ─────────────────────────── 窄屏单列布局 ───────────────────────────
 
-  Widget _buildNarrowLayout(BangumiDetail detail, ColorScheme cs) {
+  Widget _buildNarrowLayout(BangumiDetail detail, AppPalette cs) {
     return Scrollbar(
       controller: _narrowScrollController,
       child: CustomScrollView(
@@ -694,7 +695,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   // ─────────────────────────── 左栏组件 ───────────────────────────
 
   /// 海报、标题、评分、统计
-  Widget _buildHeaderInfo(BangumiDetail detail, ColorScheme cs) {
+  Widget _buildHeaderInfo(BangumiDetail detail, AppPalette cs) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -797,7 +798,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   /// 操作按钮组（开始播放、追番、分享）
-  Widget _buildActionButtons(BangumiDetail detail, ColorScheme cs) {
+  Widget _buildActionButtons(BangumiDetail detail, AppPalette cs) {
     final startEp = _resolveStartEpisode(detail);
     final hasProgress = detail.userStatus?.progressLastEpId != null;
 
@@ -842,7 +843,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   /// 元信息栏（风格标签、开播、声优、制作）
-  Widget _buildMetaSection(BangumiDetail detail, ColorScheme cs) {
+  Widget _buildMetaSection(BangumiDetail detail, AppPalette cs) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -894,7 +895,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     );
   }
 
-  Widget _buildMetaRow(String label, String value, ColorScheme cs) {
+  Widget _buildMetaRow(String label, String value, AppPalette cs) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -920,7 +921,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   /// 简介（支持折叠展开）
-  Widget _buildEvaluateSection(BangumiDetail detail, ColorScheme cs) {
+  Widget _buildEvaluateSection(BangumiDetail detail, AppPalette cs) {
     if (detail.evaluate.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -962,7 +963,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   // ─────────────────────────── 右栏组件 ───────────────────────────
 
   /// 关联季度切换选择器
-  Widget _buildSeasonSelector(BangumiDetail detail, ColorScheme cs) {
+  Widget _buildSeasonSelector(BangumiDetail detail, AppPalette cs) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -998,7 +999,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   /// 选集控制栏（选集标题、正倒序、快速跳转、分页ChoiceChip选择器）
-  Widget _buildEpisodeControlHeader(BangumiDetail detail, ColorScheme cs) {
+  Widget _buildEpisodeControlHeader(BangumiDetail detail, AppPalette cs) {
     final all = detail.episodes;
     final totalCount = all.length;
     final pageCount = (totalCount / _episodesPerPage).ceil();
@@ -1089,7 +1090,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   /// 虚拟化剧集网格 Sliver 构建器（仅在视口内的卡片才实例化与解码图片，杜绝主线程卡死）
-  List<Widget> _buildEpisodeGridSlivers(BangumiDetail detail, ColorScheme cs) {
+  List<Widget> _buildEpisodeGridSlivers(BangumiDetail detail, AppPalette cs) {
     final all = detail.episodes;
     if (all.isEmpty) {
       return [
@@ -1150,7 +1151,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   Widget _buildEpisodeCard(
     BangumiDetail detail,
     BangumiEpisode ep,
-    ColorScheme cs, {
+    AppPalette cs, {
     double? customWidth,
   }) {
     final isLastWatched = detail.userStatus?.progressLastEpId == ep.id;
@@ -1344,7 +1345,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   /// 衍生内容分区（花絮、PV、预告、特典等，横向虚拟化加载，共享全局正倒序状态）
-  Widget _buildExtraSections(BangumiDetail detail, ColorScheme cs) {
+  Widget _buildExtraSections(BangumiDetail detail, AppPalette cs) {
     final visibleSections = detail.sections;
 
     if (visibleSections.isEmpty) return const SizedBox.shrink();
@@ -1438,7 +1439,7 @@ class _FollowButtonState extends State<_FollowButton> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
 
     // 动态状态判定
     final String label;

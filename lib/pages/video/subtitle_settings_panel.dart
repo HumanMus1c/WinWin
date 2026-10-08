@@ -10,6 +10,7 @@ import 'package:winwin/pages/video/subtitle_controller.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 字幕选择 + 样式设置面板（Phase 4.4）。
 ///
@@ -135,7 +136,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                 child: Text(
                   '当前视频暂无可用字幕',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.outline,
+                    color: AppThemeHost.of(context).colors.outline,
                   ),
                 ),
               ),
@@ -416,7 +417,7 @@ class _SliderRow extends StatelessWidget {
                 IconButton(
                   tooltip: '恢复默认',
                   icon: AppIcon(AppIcons.refresh(), size: 15),
-                  color: Theme.of(context).colorScheme.outline,
+                  color: AppThemeHost.of(context).colors.outline,
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(

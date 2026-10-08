@@ -23,7 +23,6 @@ import 'package:winwin/pages/dynamics/detail_page.dart';
 import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/grid.dart';
@@ -31,6 +30,7 @@ import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 推送动态页。
 void showDynamicsPage(BuildContext context) {
@@ -74,7 +74,7 @@ class _DynamicsPageState extends State<DynamicsPage>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('动态'),
@@ -88,7 +88,7 @@ class _DynamicsPageState extends State<DynamicsPage>
         // 阶段5d-L1：M3 分支已移除（细分隔线恒用）。
         shape: Border(
           bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
             width: 0.5,
           ),
         ),
@@ -577,7 +577,7 @@ class _DemoDynCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
@@ -661,7 +661,7 @@ class _DemoDynActionBarState extends State<_DemoDynActionBar> {
 
   @override
   Widget build(BuildContext context) {
-    final outline = Theme.of(context).colorScheme.outline;
+    final outline = AppThemeHost.of(context).colors.outline;
     Widget item(Widget icon, String key, {bool active = false}) {
       final color = active ? biliPink : outline;
       return Row(
@@ -777,8 +777,8 @@ class _DynVideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
     final archive = item.archive;
     final bvid = archive?.bvid;
@@ -873,7 +873,7 @@ class _DynVideoCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
-                            color: theme.colorScheme.outline,
+                            color: tokens.colors.outline,
                           ),
                         ),
                       ),
@@ -883,25 +883,25 @@ class _DynVideoCard extends StatelessWidget {
                       children: [
                         AppIcon(AppIcons.viewCount(),
                           size: 13,
-                          color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                          color: tokens.colors.outline.withValues(alpha: 0.8),
                         ),
                         Text(
                           NumUtils.formatNum(play),
                           style: TextStyle(
                             fontSize: 12,
-                            color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                            color: tokens.colors.outline.withValues(alpha: 0.8),
                           ),
                         ),
                         const SizedBox(width: 4),
                         AppIcon(AppIcons.danmakuCount(),
                           size: 13,
-                          color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                          color: tokens.colors.outline.withValues(alpha: 0.8),
                         ),
                         Text(
                           NumUtils.formatNum(danmaku),
                           style: TextStyle(
                             fontSize: 12,
-                            color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                            color: tokens.colors.outline.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -925,8 +925,8 @@ class _DynPgcCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
     final pgc = item.pgc;
     final cover = pgc?.cover ?? item.archive?.cover;
@@ -1010,7 +1010,7 @@ class _DynPgcCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
-                            color: theme.colorScheme.outline,
+                            color: tokens.colors.outline,
                           ),
                         ),
                       ),
@@ -1020,26 +1020,26 @@ class _DynPgcCard extends StatelessWidget {
                       children: [
                         AppIcon(AppIcons.viewCount(),
                           size: 13,
-                          color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                          color: tokens.colors.outline.withValues(alpha: 0.8),
                         ),
                         Text(
                           NumUtils.formatNum(play),
                           style: TextStyle(
                             fontSize: 12,
-                            color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                            color: tokens.colors.outline.withValues(alpha: 0.8),
                           ),
                         ),
                         if (danmaku != null) ...[
                           const SizedBox(width: 4),
                           AppIcon(AppIcons.danmakuCount(),
                             size: 13,
-                            color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                            color: tokens.colors.outline.withValues(alpha: 0.8),
                           ),
                           Text(
                             NumUtils.formatNum(danmaku),
                             style: TextStyle(
                               fontSize: 12,
-                              color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                              color: tokens.colors.outline.withValues(alpha: 0.8),
                             ),
                           ),
                         ],
@@ -1135,7 +1135,8 @@ class _DynCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final author = item.author;
 
     return Card(
@@ -1295,7 +1296,8 @@ class _DynCard extends StatelessWidget {
   /// 转发动态内容渲染（嵌套原动态卡片，递归深度 ≤ 1）。
   Widget _buildForwardContent(BuildContext context, DynItemModel orig) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final origAuthor = orig.author;
 
     return InkWell(
@@ -1381,7 +1383,8 @@ class _DynCard extends StatelessWidget {
   /// 追番剧集动态卡片预览。
   Widget _buildPgcPreview(BuildContext context, DynPgc pgc) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final cover = pgc.cover;
 
     return InkWell(
@@ -1597,7 +1600,8 @@ class _DynCard extends StatelessWidget {
   /// 专栏卡片渲染。
   Widget _buildArticleCard(BuildContext context, DynArticle article) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final cover = article.covers.isNotEmpty ? article.covers.first : null;
 
     return Card(
@@ -1689,7 +1693,8 @@ class _DynCard extends StatelessWidget {
   /// 直播卡片渲染（UP主开播或直播推荐）。
   Widget _buildLiveCard(BuildContext context, DynLive live) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final isLiving = live.liveStatus == 1 || live.badge == '直播中';
 
     return Card(
@@ -1839,8 +1844,8 @@ class _DynCard extends StatelessWidget {
 
   /// 失效/空动态卡片渲染。
   Widget _buildNoneCard(BuildContext context, DynNone none) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1868,7 +1873,8 @@ class _DynCard extends StatelessWidget {
     if (additional.goodsItems.isEmpty) return const SizedBox.shrink();
     final item = additional.goodsItems.first;
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     return InkWell(
       onTap: () {

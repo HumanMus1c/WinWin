@@ -11,6 +11,7 @@ import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 弹幕设置面板（移植自 PiliPlus `lib/pages/video/widgets/header_mixin.dart`
 /// 中的弹幕设置区）。
@@ -439,7 +440,7 @@ class _SliderRow extends StatelessWidget {
                 IconButton(
                   tooltip: '恢复默认',
                   icon: AppIcon(AppIcons.refresh(), size: 15),
-                  color: Theme.of(context).colorScheme.outline,
+                  color: AppThemeHost.of(context).colors.outline,
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(

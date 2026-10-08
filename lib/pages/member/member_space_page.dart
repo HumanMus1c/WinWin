@@ -39,13 +39,13 @@ import 'package:winwin/pages/member/season_series_detail_page.dart';
 import 'package:winwin/pages/relation/member_relation_page.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/pages/video/detail_page.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/date_utils.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 动态类型筛选枚举。
 enum _DynFilterType {
@@ -170,7 +170,7 @@ class _DemoMedalEditState extends State<_DemoMedalEdit> {
     final hasOverride = DemoOverrides.text('space.medal.name') != null ||
         DemoOverrides.choice('space.medal.level') != null ||
         DemoOverrides.choice('space.medal.color') != null;
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return Tooltip(
       message: '演示模式：点击编辑',
       child: MouseRegion(
@@ -837,7 +837,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   Widget _buildSpaceContent(MemberSpaceData? data) {
     final card = data?.card;
     final images = data?.images;
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
 
     final tabs = _availableTabs;
@@ -945,12 +945,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
                   indicatorSize: TabBarIndicatorSize.label,
-                  labelColor: theme.colorScheme.primary,
-                  unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-                  indicatorColor: theme.colorScheme.primary,
+                  labelColor: tokens.colors.primary,
+                  unselectedLabelColor: tokens.colors.onSurfaceVariant,
+                  indicatorColor: tokens.colors.primary,
                   tabs: tabs.map((t) => Tab(text: _tabTitle(t))).toList(),
                 ),
-                theme.colorScheme.surface,
+                tokens.colors.surface,
               ),
             ),
           ];
@@ -1038,9 +1038,9 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     MemberCard? card,
     MemberImages? images,
   ) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     // 演示模式：横幅图片（云端内容）替换为默认渐变占位。
-    if (Pref.demoMode) return _defaultHeaderGradient(theme);
+    if (Pref.demoMode) return _defaultHeaderGradient(tokens);
     String? topPhoto = images?.topPhoto ??
         images?.imgUrl ??
         _extraTopPhoto?.topPhoto ??
@@ -1066,10 +1066,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             memCacheWidth: ImageUtils.decodeClamp(
                 MediaQuery.sizeOf(context).width, context,
                 max: 2048),
-            errorBuilder: (_, _, _) => _defaultHeaderGradient(theme),
+            errorBuilder: (_, _, _) => _defaultHeaderGradient(tokens),
           )
         else
-          _defaultHeaderGradient(theme),
+          _defaultHeaderGradient(tokens),
         // 阴影遮罩
         Container(
           decoration: BoxDecoration(
@@ -1079,8 +1079,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               colors: [
                 Colors.black.withValues(alpha: 0.4),
                 Colors.transparent,
-                theme.scaffoldBackgroundColor.withValues(alpha: 0.8),
-                theme.scaffoldBackgroundColor,
+                tokens.colors.background.withValues(alpha: 0.8),
+                tokens.colors.background,
               ],
               stops: const [0.0, 0.4, 0.85, 1.0],
             ),
@@ -1090,7 +1090,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     );
   }
 
-  Widget _defaultHeaderGradient(ThemeData theme) {
+  Widget _defaultHeaderGradient(AppTokens tokens) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -1099,7 +1099,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           colors: [
             biliPink.withValues(alpha: 0.7),
             biliBlue.withValues(alpha: 0.5),
-            theme.scaffoldBackgroundColor,
+            tokens.colors.background,
           ],
         ),
       ),
@@ -1109,7 +1109,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   /// 用户详细信息卡片（头像、名字、会员、等级经验、粉丝牌、认证、签名、关注TA的人等）
   Widget _buildUserDetailCard(BuildContext context, MemberCard? card, int? silence) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     // 演示模式：VIP 类型/等级读取覆盖值（无覆盖回退真实值）。
     final realVip = (card?.vip?.isVip ?? false) ? 1 : 0;
     final isVip = (DemoOverrides.choice('profile.vipType') ?? realVip) > 0;
@@ -1565,6 +1566,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     VoidCallback? onTap,
   }) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     Widget content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1584,7 +1586,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           label,
           style: TextStyle(
             fontSize: 12,
-            color: theme.colorScheme.onSurfaceVariant,
+            color: tokens.colors.onSurfaceVariant,
           ),
         ),
       ],
@@ -1625,7 +1627,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                           : '共 -- 支视频'),
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.outline,
+                    color: AppThemeHost.of(context).colors.outline,
                   ),
                 ),
                 const Spacer(),
@@ -1722,8 +1724,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildVideoCard(MemberVideoItem item) {
-    final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
     final bvid = item.bvid;
 
@@ -1780,28 +1782,28 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     children: [
                       AppIcon(AppIcons.viewCount(),
                         size: 13,
-                        color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                        color: tokens.colors.outline.withValues(alpha: 0.8),
                       ),
                       const SizedBox(width: 2),
                       Text(
                         NumUtils.formatNum(item.play),
                         style: TextStyle(
                           fontSize: 11,
-                          color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                          color: tokens.colors.outline.withValues(alpha: 0.8),
                         ),
                       ),
                       if (item.danmaku != null) ...[
                         const SizedBox(width: 6),
                         AppIcon(AppIcons.danmakuCount(),
                           size: 13,
-                          color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                          color: tokens.colors.outline.withValues(alpha: 0.8),
                         ),
                         const SizedBox(width: 2),
                         Text(
                           NumUtils.formatNum(item.danmaku),
                           style: TextStyle(
                             fontSize: 11,
-                            color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                            color: tokens.colors.outline.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -1811,7 +1813,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                           DateFormatUtils.dateFormat(item.pubdate!),
                           style: TextStyle(
                             fontSize: 10,
-                            color: theme.colorScheme.outline.withValues(alpha: 0.7),
+                            color: tokens.colors.outline.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -1888,7 +1890,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Widget _buildSeasonSeriesCard(SpaceSsModel model) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final meta = model.meta;
     if (meta == null) return const SizedBox.shrink();
 
@@ -2124,7 +2127,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   /// 用户空间动态卡片（自适应不同动态类型的高度和内部结构）
   Widget _buildSpaceDynamicCard(DynItemModel item) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final author = item.author;
 
     return Card(
@@ -2271,7 +2275,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Widget _buildForwardContent(BuildContext context, DynItemModel orig) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final origAuthor = orig.author;
 
     return InkWell(
@@ -2534,7 +2539,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Widget _buildArticleCard(BuildContext context, DynArticle article) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final cover = article.covers.isNotEmpty ? article.covers.first : null;
 
     return Card(
@@ -2604,7 +2610,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Widget _buildLiveCard(BuildContext context, DynLiveRcmd live) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     return Card(
       elevation: 0,
@@ -2693,7 +2700,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Widget _buildPgcPreview(BuildContext context, DynPgc pgc) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final cover = pgc.cover;
 
     return Container(
@@ -2739,7 +2747,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   Widget _buildGoodsCard(BuildContext context, DynAdditional additional) {
     final item = additional.goodsItems.first;
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     return Container(
       padding: const EdgeInsets.all(Style.sm),
@@ -2893,8 +2902,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildFavFolderCard(FavFolderInfo item) {
-    final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
 
     return Card(
@@ -2973,7 +2982,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      color: theme.colorScheme.outline,
+                      color: tokens.colors.outline,
                     ),
                   ),
                 ],
@@ -3081,8 +3090,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildBangumiCard(SpaceBangumiItem item) {
-    final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
 
     return Card(
@@ -3154,7 +3163,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      color: theme.colorScheme.outline,
+                      color: tokens.colors.outline,
                     ),
                   ),
                 ],
@@ -3220,7 +3229,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   /// 隐私保护或受限占位展示卡片
   Widget _buildPrivacyNotice(String message, {VoidCallback? onRetry}) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: Style.xl, vertical: Style.xxl),
@@ -3331,7 +3341,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _infoRow(String label, String? value, {Widget? customValue}) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Style.xs),
       child: Row(
@@ -3341,7 +3351,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             width: 80,
             child: Text(
               label,
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
+              style: TextStyle(color: tokens.colors.onSurfaceVariant, fontSize: 13),
             ),
           ),
           Expanded(
@@ -3367,14 +3377,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildError(String? errMsg, VoidCallback onRetry) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.cloud_off_outlined, size: 48, color: theme.colorScheme.onSurfaceVariant),
+          Icon(Icons.cloud_off_outlined, size: 48, color: tokens.colors.onSurfaceVariant),
           const SizedBox(height: Style.lg),
-          Text(errMsg ?? '加载失败', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+          Text(errMsg ?? '加载失败', style: TextStyle(color: tokens.colors.onSurfaceVariant)),
           const SizedBox(height: Style.xl),
           FilledButton.tonal(onPressed: onRetry, child: const Text('点击重试')),
         ],
