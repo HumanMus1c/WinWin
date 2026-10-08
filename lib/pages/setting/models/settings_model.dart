@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/pages/setting/widgets/set_switch_item.dart';
 
@@ -33,7 +34,7 @@ class NormalModel extends SettingsModel {
   final String? title;
   final ValueGetter<String>? getTitle;
   final ValueGetter<String>? getSubtitle;
-  final Widget Function(ThemeData theme)? getTrailing;
+  final Widget Function(AppTokens tokens)? getTrailing;
   final void Function(BuildContext context, VoidCallback setState)? onTap;
 
   const NormalModel({

@@ -76,7 +76,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
 
     return MiuixDialogShell(
       constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
@@ -90,7 +90,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
           children: [
             Row(
               children: [
-                Text('字幕设置', style: theme.textTheme.titleMedium),
+                Text('字幕设置', style: tokens.text.titleMedium),
                 const Spacer(),
                 IconButton(
                   icon: AppIcon(AppIcons.clear()),
@@ -99,14 +99,14 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
               ],
             ),
             const Divider(height: 1),
-            Expanded(child: _buildList(theme)),
+            Expanded(child: _buildList(tokens)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildList(ThemeData theme) {
+  Widget _buildList(AppTokens tokens) {
     final sub = widget.controller.subtitle;
     void selectAi(SubtitlePreference pref) {
       setState(() => _aiPref = pref);
@@ -120,7 +120,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
           padding: const EdgeInsets.symmetric(vertical: Style.sm),
           children: [
             // ── 字幕轨道选择 ──
-            Text('字幕轨道', style: theme.textTheme.labelLarge),
+            Text('字幕轨道', style: tokens.text.labelLarge),
             const SizedBox(height: Style.xs),
             _SubtitleOptionTile(
               label: '关闭字幕',
@@ -135,7 +135,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                 ),
                 child: Text(
                   '当前视频暂无可用字幕',
-                  style: theme.textTheme.bodySmall?.copyWith(
+                  style: tokens.text.bodySmall?.copyWith(
                     color: AppThemeHost.of(context).colors.outline,
                   ),
                 ),
@@ -150,7 +150,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
             const Divider(height: Style.lg),
 
             // ── AI 偏好策略 ──
-            Text('AI 字幕策略', style: theme.textTheme.labelLarge),
+            Text('AI 字幕策略', style: tokens.text.labelLarge),
             const SizedBox(height: Style.xs),
             // 阶段5d-L1：M3 分支已移除。
             Column(
@@ -173,7 +173,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
             const Divider(height: Style.lg),
 
             // ── 样式设置 ──
-            Text('字幕样式', style: theme.textTheme.labelLarge),
+            Text('字幕样式', style: tokens.text.labelLarge),
             const SizedBox(height: Style.xs),
             _SliderRow(
               label: '字号缩放',
@@ -402,7 +402,7 @@ class _SliderRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(label, style: Theme.of(context).textTheme.bodyMedium),
+              Text(label, style: AppThemeHost.of(context).text.bodyMedium),
               const Spacer(),
               Text(
                 valueLabel,

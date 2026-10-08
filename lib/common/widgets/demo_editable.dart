@@ -244,7 +244,7 @@ class _DemoInlineEditNumberState extends State<DemoInlineEditNumber> {
   Widget build(BuildContext context) {
     if (!Pref.demoMode) return widget.builder(context, widget.value);
     if (_editing) {
-      final style = Theme.of(context).textTheme.labelMedium;
+      final style = AppThemeHost.of(context).text.labelMedium;
       return SizedBox(
         width: 72,
         child: TextField(

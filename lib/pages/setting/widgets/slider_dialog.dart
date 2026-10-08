@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 通用滑块设置对话框（字体大小 / 界面缩放 / 缓冲大小 / 缓冲时长共用）。
 ///
@@ -54,7 +55,7 @@ class _AppSliderDialogState extends State<AppSliderDialog> {
   @override
   Widget build(BuildContext context) {
     // 阶段5d-L1：M3 分支已移除。
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return MiuixDialogShell(
         constraints: const BoxConstraints(minWidth: 320, maxWidth: 360),
         child: Padding(
@@ -68,12 +69,12 @@ class _AppSliderDialogState extends State<AppSliderDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(widget.title, style: theme.textTheme.titleMedium),
+              Text(widget.title, style: tokens.text.titleMedium),
               const SizedBox(height: Style.md),
               Center(
                 child: Text(
                   _valueLabel,
-                  style: theme.textTheme.titleLarge?.copyWith(
+                  style: tokens.text.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),

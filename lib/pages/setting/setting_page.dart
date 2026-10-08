@@ -6,6 +6,7 @@ import 'package:winwin/pages/setting/setting_type.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 设置主页面 — 桌面端双栏布局。
 ///
@@ -52,7 +53,7 @@ class _SettingPageState extends State<SettingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final padding = MediaQuery.viewPaddingOf(context);
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
@@ -66,7 +67,7 @@ class _SettingPageState extends State<SettingPage> {
               decoration: BoxDecoration(
                 border: Border(
                   right: BorderSide(
-                    color: theme.colorScheme.outlineVariant
+                    color: tokens.colors.outlineVariant
                         .withValues(alpha: 0.3),
                     width: 0.5,
                   ),
@@ -83,7 +84,7 @@ class _SettingPageState extends State<SettingPage> {
                   // ── 分类导航 ──
                   AppGroup(
                     children: _items
-                        .map((item) => _buildCategoryItem(theme, item))
+                        .map((item) => _buildCategoryItem(tokens, item))
                         .toList(),
                   ),
                 ],
@@ -107,21 +108,21 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
-  Widget _buildCategoryItem(ThemeData theme, _SettingEntry item) {
+  Widget _buildCategoryItem(AppTokens tokens, _SettingEntry item) {
     final isSelected = item.type == _type;
     return AppListItem(
       icon: item.icon,
       title: item.type.title,
       subtitle: item.subtitle,
       iconTint: isSelected
-          ? theme.colorScheme.primary
-          : theme.colorScheme.onSurfaceVariant,
+          ? tokens.colors.primary
+          : tokens.colors.onSurfaceVariant,
       trailing: isSelected
           ? Container(
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
+                color: tokens.colors.primary,
                 shape: BoxShape.circle,
               ),
             )

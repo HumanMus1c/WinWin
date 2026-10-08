@@ -13,6 +13,7 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 关注动态视频流页（移植自 PiliPlus 关注动态流）。
 ///
@@ -248,7 +249,7 @@ class _FollowPageState extends State<FollowPage>
 
   /// 未登录引导卡片。
   Widget _buildLoginPrompt(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,

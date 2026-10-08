@@ -8,6 +8,7 @@ import 'package:winwin/core/account/account.dart' show NoAccount;
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 极验验证码 JS 资源（gt.0.5.0.js 旧版 / fullpage 新版均可）。
 const _geetestJsUri =
@@ -268,7 +269,7 @@ class _ErrorView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: AppThemeHost.of(context).text.bodyMedium,
             ),
             const SizedBox(height: 24),
             FilledButton(onPressed: onClose, child: const Text('关闭')),

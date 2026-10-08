@@ -4,6 +4,7 @@ import 'package:winwin/pages/onboarding/user_agreement_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 关于页面。
 ///
@@ -15,21 +16,21 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Scaffold(
       appBar: showAppBar ? AppBar(title: const Text('关于')) : null,
       body: ListView(
         padding: const EdgeInsets.all(Style.lg),
         children: [
-          _buildHeader(theme),
+          _buildHeader(tokens),
           const SizedBox(height: Style.lg),
-          _buildInfoSection(context, theme),
+          _buildInfoSection(context, tokens),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(ThemeData theme) {
+  Widget _buildHeader(AppTokens tokens) {
     return Center(
       child: Column(
         children: [
@@ -38,32 +39,32 @@ class AboutPage extends StatelessWidget {
             height: 88,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(Style.radiusLg),
-              color: theme.colorScheme.primaryContainer,
+              color: tokens.colors.primaryContainer,
             ),
             child: AppIcon(AppIcons.play(active: true),
               size: 48,
-              color: theme.colorScheme.primary,
+              color: tokens.colors.primary,
             ),
           ),
           const SizedBox(height: Style.md),
           Text(
             'WinWin',
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: tokens.text.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: Style.xs),
           Text(
             'BiliPai Desktop Port',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.outline,
+            style: tokens.text.bodySmall?.copyWith(
+              color: tokens.colors.outline,
             ),
           ),
           const SizedBox(height: Style.sm),
           Text(
             '版本 0.1.0',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.outline,
+            style: tokens.text.bodySmall?.copyWith(
+              color: tokens.colors.outline,
             ),
           ),
         ],
@@ -71,7 +72,7 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoSection(BuildContext context, ThemeData theme) {
+  Widget _buildInfoSection(BuildContext context, AppTokens tokens) {
     return AppGroup(
       children: [
         AppListItem(
@@ -94,7 +95,7 @@ class AboutPage extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogCtx) {
-        final theme = Theme.of(dialogCtx);
+        final tokens = AppThemeHost.of(dialogCtx);
         return Dialog(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560, maxHeight: 560),
@@ -109,7 +110,7 @@ class AboutPage extends StatelessWidget {
                       Expanded(
                         child: Text(
                           '开源协议与用户条款',
-                          style: theme.textTheme.titleMedium?.copyWith(
+                          style: tokens.text.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                         ),

@@ -7,6 +7,41 @@ import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 
+/// 应用文本样式面（取代 Material `textTheme` 读取）。
+///
+/// 只包含项目实际使用的 10 个槽位；取值由过渡期 `ThemeData.textTheme`
+/// （M3 Typography + 应用字体族注入）派生 → 与迁移前**逐字段一致**（零漂移）。
+/// B7 摘除 material_ui 时改为内联常量（派生入口在 app_theme.dart，随其退役）。
+@immutable
+class AppTextStyles {
+  const AppTextStyles({
+    this.titleLarge,
+    this.titleMedium,
+    this.titleSmall,
+    this.bodyLarge,
+    this.bodyMedium,
+    this.bodySmall,
+    this.labelLarge,
+    this.labelMedium,
+    this.labelSmall,
+    this.headlineSmall,
+  });
+
+  final TextStyle? titleLarge;
+  final TextStyle? titleMedium;
+  final TextStyle? titleSmall;
+  final TextStyle? bodyLarge;
+  final TextStyle? bodyMedium;
+  final TextStyle? bodySmall;
+  final TextStyle? labelLarge;
+  final TextStyle? labelMedium;
+  final TextStyle? labelSmall;
+  final TextStyle? headlineSmall;
+
+  /// 未挂宿主/未注入时的兜底（空样式；正常路径由 AppShell 注入真实值）。
+  static const AppTextStyles fallback = AppTextStyles();
+}
+
 /// 应用调色板（取代 Material `ColorScheme` 的读取面）。
 ///
 /// 字段名与 `ColorScheme` **一一对齐**，便于迁移期做纯机械替换：
@@ -162,6 +197,7 @@ class AppTokens {
     required this.shapes,
     required this.typography,
     required this.chrome,
+    this.text = AppTextStyles.fallback,
   });
 
   /// 当前明暗（来源：ThemeNotifier 解析后的最终态）。
@@ -181,6 +217,9 @@ class AppTokens {
 
   /// 外壳/层级 Token。
   final AppChrome chrome;
+
+  /// 文本样式面（取代 `textTheme`；由 AppShell 注入过渡期派生值）。
+  final AppTextStyles text;
 
   /// 是否深色。
   bool get isDark => brightness == Brightness.dark;
@@ -208,7 +247,13 @@ class AppThemeHost extends InheritedWidget {
   final AppTokens tokens;
 
   /// 按明暗构造一套 Token（调色板取项目常量，Token 数据零改动）。
-  static AppTokens tokensFor(Brightness brightness) => AppTokens(
+  ///
+  /// [textStyles] 由应用壳注入（过渡期从 ThemeData 派生；未注入时用空兜底）。
+  static AppTokens tokensFor(
+    Brightness brightness, {
+    AppTextStyles textStyles = AppTextStyles.fallback,
+  }) =>
+      AppTokens(
         brightness: brightness,
         colors: AppPalette.forBrightness(brightness),
         miuix: brightness == Brightness.dark
@@ -217,6 +262,7 @@ class AppThemeHost extends InheritedWidget {
         shapes: AppShapes.miuix,
         typography: AppTypography.miuix,
         chrome: AppChrome.miuix,
+        text: textStyles,
       );
 
   /// 取当前 Token；未挂宿主时按平台亮度回退（防测试/未包裹子树崩溃）。

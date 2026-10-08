@@ -4,6 +4,7 @@ import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 「回复我的」入口。
 void showReplyMePage(BuildContext context) {
@@ -43,7 +44,7 @@ class _ReplyTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final nickname = _user?['nickname']?.toString() ?? '';
     final business = _content?['business']?.toString() ?? '';
     final source = _content?['source_content']?.toString() ?? '';
@@ -66,18 +67,18 @@ class _ReplyTile extends StatelessWidget {
           children: [
             TextSpan(
               text: nickname,
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(color: theme.colorScheme.primary),
+              style: tokens.text.titleSmall
+                  ?.copyWith(color: tokens.colors.primary),
             ),
             if (isMulti)
               TextSpan(
                 text: ' 等人',
-                style: theme.textTheme.labelSmall,
+                style: tokens.text.labelSmall,
               ),
             TextSpan(
               text: ' 对我的$business发布了${counts ?? 0}条评论',
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: tokens.text.titleSmall
+                  ?.copyWith(color: tokens.colors.onSurfaceVariant),
             ),
           ],
         ),
@@ -87,17 +88,17 @@ class _ReplyTile extends StatelessWidget {
         children: [
           if (source.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(source, style: theme.textTheme.bodyMedium),
+            Text(source, style: tokens.text.bodyMedium),
           ],
           if (targetReply.isNotEmpty)
-            _quoteLine(theme, '| $targetReply'),
+            _quoteLine(tokens, '| $targetReply'),
           if (rootReply.isNotEmpty)
-            _quoteLine(theme, '| $rootReply'),
+            _quoteLine(tokens, '| $rootReply'),
           const SizedBox(height: 4),
           Text(
             msgFeedTime(item['reply_time'] as int?),
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.outline),
+            style: tokens.text.bodySmall
+                ?.copyWith(color: tokens.colors.outline),
           ),
         ],
       ),
@@ -105,14 +106,14 @@ class _ReplyTile extends StatelessWidget {
     );
   }
 
-  Widget _quoteLine(ThemeData theme, String text) => Padding(
+  Widget _quoteLine(AppTokens tokens, String text) => Padding(
         padding: const EdgeInsets.only(top: 2),
         child: Text(
           text,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.labelSmall
-              ?.copyWith(color: theme.colorScheme.outline, height: 1.5),
+          style: tokens.text.labelSmall
+              ?.copyWith(color: tokens.colors.outline, height: 1.5),
         ),
       );
 

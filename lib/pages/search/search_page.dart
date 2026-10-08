@@ -261,7 +261,7 @@ class _SearchPageState extends State<SearchPage> {
       children: [
         Text(
           '搜索历史',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          style: AppThemeHost.of(context).text.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -458,7 +458,7 @@ class _SearchPageState extends State<SearchPage> {
         children: [
           Text(
             '大家都在搜',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            style: AppThemeHost.of(context).text.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
           ),
@@ -502,7 +502,7 @@ class _SearchPageState extends State<SearchPage> {
       children: [
         Text(
           '大家都在搜',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          style: AppThemeHost.of(context).text.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
         ),

@@ -15,6 +15,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/system_font_scanner.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 外观设置项列表。
 ///
@@ -248,7 +249,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                   children: [
                     Text(
                       '应用字体',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: AppThemeHost.of(context).text.titleMedium,
                     ),
                     const Spacer(),
                     IconButton(
@@ -392,8 +393,8 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
           const SizedBox(height: 2),
           Text(
             subtitle,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
+            style: AppThemeHost.of(context).text.labelSmall?.copyWith(
+                  color: AppThemeHost.of(context).colors.outline,
                 ),
           ),
         ],

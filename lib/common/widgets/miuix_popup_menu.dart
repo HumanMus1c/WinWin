@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 自研 Miuix 弹层菜单壳（阶段4h）。
 ///
@@ -157,7 +158,7 @@ class _PopupOverlay extends StatelessWidget {
     // 文本基底：覆写 WidgetsApp 的默认"黄绿双下划线"错误样式
     // （浮层无 Material/DefaultTextStyle 时 Text 合并到该样式）。
     final bodyStyle =
-        (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).copyWith(
+        (AppThemeHost.of(context).text.bodyMedium ?? const TextStyle()).copyWith(
       decoration: TextDecoration.none,
     );
     // 条目字号继承触发控件（如播放器控制条 12px），避免弹层与其割裂。

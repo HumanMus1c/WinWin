@@ -1,3 +1,4 @@
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -12,7 +13,7 @@ class NormalItem extends StatefulWidget {
   final String? subtitle;
   final ValueGetter<String>? getSubtitle;
   final Widget? leading;
-  final Widget Function(ThemeData theme)? getTrailing;
+  final Widget Function(AppTokens tokens)? getTrailing;
   final void Function(BuildContext context, VoidCallback setState)? onTap;
   final EdgeInsetsGeometry? contentPadding;
   final TextStyle? titleStyle;
@@ -39,10 +40,10 @@ class NormalItem extends StatefulWidget {
 class _NormalItemState extends State<NormalItem> {
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final text = widget.subtitle ?? widget.getSubtitle?.call();
     // trailing 限宽防溢出（对标 BiliPai 数值 maxWidth 200dp）。
-    final trailing = widget.getTrailing?.call(theme);
+    final trailing = widget.getTrailing?.call(tokens);
 
     // 阶段5d-L1：M3 分支已移除；MiuixBasicComponent 恒用。
         final Color? customTitleColor = widget.titleStyle?.color;
@@ -53,13 +54,13 @@ class _NormalItemState extends State<NormalItem> {
               ? null
               : MiuixBasicComponentColors(
                   color: customTitleColor,
-                  disabledColor: theme.colorScheme.outline,
+                  disabledColor: tokens.colors.outline,
                 ),
           startAction: widget.leading == null
               ? null
               : IconTheme(
                   data: IconThemeData(
-                    color: theme.colorScheme.primary,
+                    color: tokens.colors.primary,
                     size: 22,
                   ),
                   child: widget.leading!,

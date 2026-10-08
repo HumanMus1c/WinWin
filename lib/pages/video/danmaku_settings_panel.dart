@@ -108,7 +108,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
 
     return MiuixDialogShell(
       constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
@@ -122,7 +122,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           children: [
             Row(
               children: [
-                Text('弹幕设置', style: theme.textTheme.titleMedium),
+                Text('弹幕设置', style: tokens.text.titleMedium),
                 const Spacer(),
                 IconButton(
                   icon: AppIcon(AppIcons.clear()),
@@ -131,14 +131,14 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
               ],
             ),
             const Divider(height: 1),
-            Expanded(child: _buildList(theme)),
+            Expanded(child: _buildList(tokens)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildList(ThemeData theme) {
+  Widget _buildList(AppTokens tokens) {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: Style.sm),
       children: [
@@ -294,7 +294,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           },
         ),
         const SizedBox(height: Style.sm),
-        _buildBlockTypeChips(theme),
+        _buildBlockTypeChips(tokens),
         const Divider(height: Style.xl),
         _SwitchRow(
           label: '合并相同弹幕',
@@ -341,13 +341,13 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
   }
 
   /// 屏蔽类型多选（滚动/顶部/底部/高级/彩色）。
-  Widget _buildBlockTypeChips(ThemeData theme) {
+  Widget _buildBlockTypeChips(AppTokens tokens) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Style.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('屏蔽类型', style: theme.textTheme.bodyMedium),
+          Text('屏蔽类型', style: tokens.text.bodyMedium),
           const SizedBox(height: Style.sm),
           Wrap(
             spacing: Style.sm,
@@ -425,7 +425,7 @@ class _SliderRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(label, style: Theme.of(context).textTheme.bodyMedium),
+              Text(label, style: AppThemeHost.of(context).text.bodyMedium),
               const Spacer(),
               Text(
                 valueLabel,
@@ -490,7 +490,7 @@ class _SwitchRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: Style.xs),
       child: Row(
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Text(label, style: AppThemeHost.of(context).text.bodyMedium),
           const Spacer(),
           // 阶段5d-L1：M3 分支已移除。
           MiuixSwitch(value: value, onChanged: onChanged),

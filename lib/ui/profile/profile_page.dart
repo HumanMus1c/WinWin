@@ -607,11 +607,10 @@ class _SettingsGroup extends StatelessWidget {
     // 阶段5d-L1：M3 分支已移除。
     final r = Radius.circular(shapes.large.x);
 
-    // 注：NormalItem.getTrailing 的签名仍是 Material ThemeData（B5/B6 一并迁移），
-    // 此处随签名使用传入的 theme。
-    Widget trailingChevron(ThemeData theme) => AppIcon(AppIcons.chevronForward(),
+    // NormalItem.getTrailing 的签名已随 B2-t 迁移为 AppTokens。
+    Widget trailingChevron(AppTokens tokens) => AppIcon(AppIcons.chevronForward(),
           size: 14,
-          color: theme.colorScheme.outline,
+          color: tokens.colors.outline,
         );
 
     return Column(

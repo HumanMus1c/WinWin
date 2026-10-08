@@ -328,7 +328,7 @@ void showVideoCoverDialog({
   showDialog(
     context: context,
     builder: (dialogCtx) {
-      final theme = Theme.of(dialogCtx);
+      final tokens = AppThemeHost.of(dialogCtx);
       final dialogWidth = (MediaQuery.sizeOf(dialogCtx).width * 0.5).clamp(360.0, 560.0);
 
       return Dialog(
@@ -359,7 +359,7 @@ void showVideoCoverDialog({
                       SelectableText(
                         title,
                         maxLines: 2,
-                        style: theme.textTheme.titleSmall?.copyWith(
+                        style: tokens.text.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           height: 1.35,
                         ),

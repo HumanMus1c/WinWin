@@ -18,6 +18,7 @@ import 'package:winwin/pages/whisper/session/session_more_menu_button.dart';
 import 'package:winwin/pages/whisper/session/session_pagination_policy.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 可内嵌的会话列表区（用于消息页直接展示）。
 ///
@@ -297,7 +298,7 @@ class SessionListSectionState extends State<SessionListSection> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     // 筛选 chips 固定在顶部，仅会话列表区域可滚动。
     return Column(
       children: [
@@ -368,7 +369,7 @@ class SessionListSectionState extends State<SessionListSection> {
                           children: [
                             Text(
                               _error!,
-                              style: TextStyle(color: theme.colorScheme.error),
+                              style: TextStyle(color: tokens.colors.error),
                             ),
                             const SizedBox(height: Style.sm),
                             TextButton(
@@ -470,7 +471,7 @@ class _SessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final unread = (session['unread_count'] as num?)?.toInt() ?? 0;
     final isPinned = _isPinned;
     final isDnd = _isDnd;
@@ -506,9 +507,9 @@ class _SessionTile extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.error,
+                    color: tokens.colors.error,
                     border: Border.all(
-                      color: theme.scaffoldBackgroundColor,
+                      color: tokens.colors.background,
                       width: 1.5,
                     ),
                     borderRadius: BorderRadius.circular(100),
@@ -530,12 +531,12 @@ class _SessionTile extends StatelessWidget {
                       _name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge,
+                      style: tokens.text.bodyLarge,
                     ),
             ),
-            if (isPinned) _flag(theme, '置顶'),
-            if (isSpecial) _flag(theme, '特别关注', color: biliPink),
-            if (isDnd) _flag(theme, '免打扰'),
+            if (isPinned) _flag(tokens, '置顶'),
+            if (isSpecial) _flag(tokens, '特别关注', color: biliPink),
+            if (isDnd) _flag(tokens, '免打扰'),
           ],
         ),
         subtitle: Pref.demoMode
@@ -544,8 +545,8 @@ class _SessionTile extends StatelessWidget {
                 MessagePreviewParser.parseSessionPreview(content, msgType),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                style: tokens.text.bodySmall?.copyWith(
+                  color: tokens.colors.onSurfaceVariant,
                 ),
               ),
         trailing: Row(
@@ -554,8 +555,8 @@ class _SessionTile extends StatelessWidget {
             if (!Pref.demoMode && ts != null && ts > 0)
               Text(
                 msgFeedTime(ts),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.outline,
+                style: tokens.text.bodySmall?.copyWith(
+                  color: tokens.colors.outline,
                 ),
               ),
             SessionMoreMenuButton(
@@ -589,8 +590,8 @@ class _SessionTile extends StatelessWidget {
     selected?.call();
   }
 
-  Widget _flag(ThemeData theme, String text, {Color? color}) {
-    final c = color ?? theme.colorScheme.primary;
+  Widget _flag(AppTokens tokens, String text, {Color? color}) {
+    final c = color ?? tokens.colors.primary;
     return Container(
       margin: const EdgeInsets.only(left: 6),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),

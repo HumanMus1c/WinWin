@@ -2343,7 +2343,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
             children: [
               Row(
                 children: [
-                  Text('截图预览', style: Theme.of(context).textTheme.titleMedium),
+                  Text('截图预览', style: AppThemeHost.of(context).text.titleMedium),
                   const Spacer(),
                   IconButton(
                     icon: AppIcon(AppIcons.clear()),
