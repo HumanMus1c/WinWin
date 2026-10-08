@@ -54,6 +54,14 @@ class TransitionProbe {
   int _buildJank = 0;
   int _rasterJank = 0;
 
+  /// 已计入的最大帧号（跨次记录持续维护）。
+  ///
+  /// `addTimingsCallback` 是**批处理**投递（最多积攒 100 帧/1 秒），首批可能包含
+  /// 开窗之前的旧帧；用帧号单调性过滤，保证 frames/fps 只统计窗口内的真实帧
+  /// （时间戳口径与 DateTime 不同源，不能按时间过滤）。
+  int _lastFrameNumber = -1;
+  int _skippedStale = 0;
+
   /// 最近若干次转场结论（供测试/自查读取；最多保留 50 条）。
   final List<String> reports = <String>[];
 
@@ -93,8 +101,17 @@ class TransitionProbe {
   }
 
   void _onTimings(List<FrameTiming> timings) {
-    if (!_recording) return;
     for (final FrameTiming timing in timings) {
+      // 帧号单调过滤（未记录时也要维护游标，保证下次开窗不漏帧）。
+      final int frameNumber = timing.frameNumber;
+      if (frameNumber >= 0) {
+        if (frameNumber <= _lastFrameNumber) {
+          _skippedStale++;
+          continue;
+        }
+        _lastFrameNumber = frameNumber;
+      }
+      if (!_recording) continue;
       final double buildMs = timing.buildDuration.inMicroseconds / 1000.0;
       final double rasterMs = timing.rasterDuration.inMicroseconds / 1000.0;
       _record(buildMs: buildMs, rasterMs: rasterMs);
@@ -161,7 +178,8 @@ class TransitionProbe {
         'build(avg=${avgBuild.toStringAsFixed(2)} '
         'max=${_buildMax.toStringAsFixed(2)} jank=$_buildJank) '
         'raster(avg=${avgRaster.toStringAsFixed(2)} '
-        'max=${_rasterMax.toStringAsFixed(2)} jank=$_rasterJank)';
+        'max=${_rasterMax.toStringAsFixed(2)} jank=$_rasterJank) '
+        'stale=$_skippedStale';
   }
 
   /// 是否正在记录（[visibleForTesting]）。
@@ -174,4 +192,8 @@ class TransitionProbe {
     if (!_recording) return;
     _record(buildMs: buildMs, rasterMs: rasterMs);
   }
+
+  /// 注入一批 [FrameTiming]（[visibleForTesting]：验证帧号单调过滤口径）。
+  @visibleForTesting
+  void feedFrameTimings(List<FrameTiming> timings) => _onTimings(timings);
 }
