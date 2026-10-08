@@ -9,6 +9,7 @@ import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 「系统消息」入口。
 void showSysMsgPage(BuildContext context) {
@@ -146,6 +147,7 @@ class _SysMsgTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final title = item['title']?.toString() ?? '';
     final content = item['content']?.toString() ?? '';
     final timeAt = item['time_at']?.toString() ?? '';
@@ -173,7 +175,7 @@ class _SysMsgTile extends StatelessWidget {
               child: Text(
                 timeAt,
                 style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.outline),
+                    ?.copyWith(color: tokens.colors.outline),
               ),
             ),
         ],

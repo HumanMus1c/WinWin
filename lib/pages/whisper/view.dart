@@ -16,6 +16,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 消息页（Phase 7.7.3）。
 ///
@@ -226,6 +227,7 @@ class _EntryItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     // hover 反馈：以条目强调色 8% 底衬显示可点击外形（复测反馈）。
     return HoverContainer(
       onTap: onTap,
@@ -258,8 +260,8 @@ class _EntryItem extends StatelessWidget {
                     constraints: const BoxConstraints(minWidth: 18),
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.error,
-                      border: Border.all(color: theme.scaffoldBackgroundColor, width: 1.5),
+                      color: tokens.colors.error,
+                      border: Border.all(color: tokens.colors.background, width: 1.5),
                       borderRadius: BorderRadius.circular(100),
                     ),
                     child: Text(

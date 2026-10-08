@@ -11,6 +11,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/crc32.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 弹幕屏蔽规则管理页（移植自 PiliPlus `lib/pages/danmaku_block/view.dart`）。
 ///
@@ -170,6 +171,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(
         horizontal: Style.lg,
@@ -203,7 +205,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
               TabBar(
                 controller: _tabController,
                 labelColor: biliPink,
-                unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+                unselectedLabelColor: tokens.colors.onSurfaceVariant,
                 indicatorColor: biliPink,
                 tabs: [for (final t in _tabs) Tab(text: t.label)],
               ),
@@ -270,7 +272,7 @@ class _RuleListSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final hint = switch (type) {
       0 => '输入关键词',
       1 => '输入正则（如 \\d+）',
@@ -317,7 +319,7 @@ class _RuleListSection extends StatelessWidget {
               ? Center(
                   child: Text(
                     '暂无${DmBlockType.values[type].label}规则',
-                    style: TextStyle(color: theme.colorScheme.outline),
+                    style: TextStyle(color: tokens.colors.outline),
                   ),
                 )
               : ListView.builder(
@@ -343,7 +345,7 @@ class _RuleListSection extends StatelessWidget {
                         subtitle: type == DmBlockType.uid.serverType
                             ? Text('midHash', style: TextStyle(
                                 fontSize: 11,
-                                color: theme.colorScheme.outline,
+                                color: tokens.colors.outline,
                               ))
                             : null,
                       ),

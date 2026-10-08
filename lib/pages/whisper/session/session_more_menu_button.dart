@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 构建会话「更多选项」动作列表（三点菜单与右键菜单共用）。
 ///
@@ -17,7 +18,7 @@ List<ContextMenuAction> buildSessionMenuActions({
   required VoidCallback onToggleDnd,
   required VoidCallback onRemove,
 }) {
-  final cs = Theme.of(context).colorScheme;
+  final cs = AppThemeHost.of(context).colors;
   return [
     ContextMenuAction(
       title: isPinned ? '取消置顶' : '置顶会话',
@@ -68,7 +69,7 @@ class SessionMoreMenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final actions = buildSessionMenuActions(
       context: context,
       isPinned: isPinned,
@@ -110,7 +111,7 @@ class SessionMoreMenuButton extends StatelessWidget {
           child: AppIcon(
             AppIcons.moreOptions(),
             size: 20,
-            color: theme.colorScheme.outline,
+            color: tokens.colors.outline,
           ),
         ),
       );

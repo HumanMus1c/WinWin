@@ -17,7 +17,6 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/history/history_models.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
@@ -25,6 +24,7 @@ import 'package:winwin/utils/date_utils.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 历史记录页面（移植自 PiliPlus `lib/pages/history/`，重构为自适应多列宫格排版）。
 void showHistoryPage(BuildContext context) {
@@ -361,7 +361,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                       '没有更多了',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Theme.of(context).colorScheme.outline,
+                                        color: AppThemeHost.of(context).colors.outline,
                                       ),
                                     ),
                                   ),
@@ -468,8 +468,9 @@ class _HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
     final duration = item.duration ?? 0;
     final progress = item.progress ?? 0;

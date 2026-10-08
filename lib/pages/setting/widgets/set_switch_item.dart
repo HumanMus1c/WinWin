@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 开关设置项：自动从 [GStorage.setting] 读取初始值，切换时写回。
 ///
@@ -81,8 +82,9 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final subTitleStyle = theme.textTheme.labelMedium?.copyWith(
-      color: theme.colorScheme.outline,
+      color: tokens.colors.outline,
     );
 
     final miuixSwitchBtn = AppSwitch(
@@ -96,7 +98,7 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
                 if (widget.leading != null) ...[
                   IconTheme(
                     data: IconThemeData(
-                      color: theme.colorScheme.primary,
+                      color: tokens.colors.primary,
                       size: 22,
                     ),
                     child: widget.leading!,
@@ -113,7 +115,7 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
                         style: widget.titleStyle ??
                             theme.textTheme.bodyLarge?.copyWith(
                               color: widget.onTap != null && !val
-                                  ? theme.colorScheme.outline
+                                  ? tokens.colors.outline
                                   : null,
                             ),
                       ),
@@ -153,7 +155,7 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
                   height: 25,
                   child: VerticalDivider(
                     width: 1,
-                    color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                    color: tokens.colors.outline.withValues(alpha: 0.3),
                   ),
                 ),
                 Padding(
@@ -175,13 +177,13 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
               ? null
               : MiuixBasicComponentColors(
                   color: customTitleColor,
-                  disabledColor: theme.colorScheme.outline,
+                  disabledColor: tokens.colors.outline,
                 ),
           startAction: widget.leading == null
               ? null
               : IconTheme(
                   data: IconThemeData(
-                    color: theme.colorScheme.primary,
+                    color: tokens.colors.primary,
                     size: 22,
                   ),
                   child: widget.leading!,

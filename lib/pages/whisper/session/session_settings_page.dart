@@ -7,6 +7,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 会话设置入口（阶段 D）。
 ///
@@ -140,6 +141,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
       body: ListView(
@@ -152,20 +154,20 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
           ),
           const Divider(height: 1),
           ListTile(
-            leading: Icon(Icons.report_outlined, color: theme.colorScheme.error),
-            title: Text('举报', style: TextStyle(color: theme.colorScheme.error)),
+            leading: Icon(Icons.report_outlined, color: tokens.colors.error),
+            title: Text('举报', style: TextStyle(color: tokens.colors.error)),
             onTap: _report,
           ),
           ListTile(
-            leading: Icon(AppIcons.delete(), color: theme.colorScheme.error),
-            title: Text('删除会话', style: TextStyle(color: theme.colorScheme.error)),
+            leading: Icon(AppIcons.delete(), color: tokens.colors.error),
+            title: Text('删除会话', style: TextStyle(color: tokens.colors.error)),
             onTap: _deleteSession,
           ),
           Padding(
             padding: const EdgeInsets.all(Style.lg),
             child: Text(
               '推送开关 / 拉黑 / 清空消息等待后续扩展',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodySmall?.copyWith(color: tokens.colors.outline),
             ),
           ),
         ],

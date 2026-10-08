@@ -17,7 +17,6 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/fav/fav_models.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
@@ -25,6 +24,7 @@ import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
 void showFavPage(BuildContext context) {
@@ -254,7 +254,7 @@ class _FavPageState extends State<FavPage> {
                                       '没有更多了',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Theme.of(context).colorScheme.outline,
+                                        color: AppThemeHost.of(context).colors.outline,
                                       ),
                                     ),
                                   ),
@@ -301,8 +301,9 @@ class _FavFolderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
     final hasCover = folder.cover.isNotEmpty;
 
@@ -604,7 +605,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
                                   '没有更多了',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Theme.of(context).colorScheme.outline,
+                                    color: AppThemeHost.of(context).colors.outline,
                                   ),
                                 ),
                               ),
@@ -620,7 +621,8 @@ class _FavDetailPageState extends State<FavDetailPage> {
   /// 顶部文件夹概览信息卡片
   Widget _buildHeaderInfo() {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final folder = widget.folder;
     final upper = folder.upper;
 
@@ -703,8 +705,9 @@ class _FavVideoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
     final duration = item.duration ?? 0;
     final isInvalid = item.bvid == null || item.bvid!.isEmpty;

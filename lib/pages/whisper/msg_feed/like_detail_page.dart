@@ -9,6 +9,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 「点赞详情」入口——展开单条点赞卡片的用户列表。
 void showLikeDetailPage(
@@ -143,6 +144,7 @@ class _LikeUserTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
         horizontal: Style.safeSpace,
@@ -156,7 +158,7 @@ class _LikeUserTile extends StatelessWidget {
       subtitle: Text(
         msgFeedTime(item['like_time'] as int?),
         style: theme.textTheme.bodySmall
-            ?.copyWith(color: theme.colorScheme.outline),
+            ?.copyWith(color: tokens.colors.outline),
       ),
       onTap: () {
         final mid = _mid;

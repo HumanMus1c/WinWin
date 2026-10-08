@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 用户协议门禁页（移植自 BiliPai v0.2.3-beta.3 `OnboardingScreen`）。
 ///
@@ -42,7 +43,8 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     return Scaffold(
       body: SafeArea(
@@ -202,7 +204,8 @@ class _ClauseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     return InkWell(
       onTap: onTap,

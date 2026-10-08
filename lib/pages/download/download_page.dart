@@ -6,11 +6,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 打开离线缓存页面。
 void showDownloadPage(BuildContext context) {
@@ -132,8 +132,9 @@ class _DownloadPageState extends State<DownloadPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
 
     return Scaffold(
       appBar: AppBar(

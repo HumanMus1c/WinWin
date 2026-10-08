@@ -13,11 +13,11 @@ import 'package:winwin/http/member.dart';
 import 'package:winwin/http/pgc.dart';
 import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 番剧二级分类枚举
 enum PgcSubTab {
@@ -60,9 +60,9 @@ class _PgcPageState extends State<PgcPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
 
     // 嵌入 HomePage 时顶部留白 112 避开浮动顶栏(60) + 分类标签行(36)
     return Padding(
@@ -581,7 +581,7 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
   }
 
   Widget _buildLoginPrompt(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -660,7 +660,8 @@ class _MyBangumiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final title = item.title ?? '';
     final cover = item.cover;
     final badge = item.badge;
@@ -822,7 +823,8 @@ class _PgcCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(

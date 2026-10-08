@@ -4,6 +4,7 @@ import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/whisper/msg_feed/like_detail_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 「点赞我的」入口。
 void showLikeMePage(BuildContext context) {
@@ -50,6 +51,7 @@ class _LikeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final users = _users;
     final first = users.isNotEmpty ? users.first as Map : null;
     final nickname = first?['nickname']?.toString() ?? '';
@@ -69,7 +71,7 @@ class _LikeTile extends StatelessWidget {
             TextSpan(
               text: nickname,
               style: theme.textTheme.titleSmall
-                  ?.copyWith(color: theme.colorScheme.primary),
+                  ?.copyWith(color: tokens.colors.primary),
             ),
             if (isMulti)
               TextSpan(
@@ -79,7 +81,7 @@ class _LikeTile extends StatelessWidget {
             TextSpan(
               text: ' 赞了我的动态',
               style: theme.textTheme.titleSmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ?.copyWith(color: tokens.colors.onSurfaceVariant),
             ),
           ],
         ),
@@ -100,7 +102,7 @@ class _LikeTile extends StatelessWidget {
           Text(
             '共 $counts 个赞 · ${msgFeedTime(item['like_time'] as int?)}',
             style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.outline),
+                ?.copyWith(color: tokens.colors.outline),
           ),
         ],
       ),

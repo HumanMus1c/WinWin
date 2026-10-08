@@ -17,6 +17,7 @@ import 'package:winwin/pages/login/geetest_webview_dialog.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 登录页（移植自 PiliPlus `lib/pages/login/`）。
 ///
@@ -307,7 +308,8 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Style.xl),
       child: Column(
@@ -592,7 +594,8 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Style.xl),
       child: Column(
@@ -817,7 +820,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(Style.xl),
@@ -965,7 +968,7 @@ class _CookieLoginTabState extends State<_CookieLoginTab> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Style.xl),
       child: Column(

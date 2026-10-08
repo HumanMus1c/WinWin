@@ -8,11 +8,11 @@ import 'package:winwin/http/fan.dart';
 import 'package:winwin/http/follow.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 关系列表类型：关注列表 / 粉丝列表。
 enum RelationType { followings, fans }
@@ -178,7 +178,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
                                     '没有更多了',
                                     style: TextStyle(
                                       color:
-                                          Theme.of(context).colorScheme.outline,
+                                          AppThemeHost.of(context).colors.outline,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -192,19 +192,19 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
   }
 
   Widget _buildEmptyView() {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           AppIcon(AppIcons.people(),
             size: 48,
-            color: theme.colorScheme.outline,
+            color: tokens.colors.outline,
           ),
           const SizedBox(height: Style.sm),
           Text(
             widget.type == RelationType.followings ? '暂无关注' : '暂无粉丝',
-            style: TextStyle(color: theme.colorScheme.outline),
+            style: TextStyle(color: tokens.colors.outline),
           ),
           const SizedBox(height: Style.md),
           OutlinedButton(
@@ -253,7 +253,8 @@ class _RelationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
 
     return Card(
@@ -293,7 +294,7 @@ class _RelationCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.outline,
+                        color: tokens.colors.outline,
                       ),
                     ),
                   ],
@@ -301,7 +302,7 @@ class _RelationCard extends StatelessWidget {
               ),
               AppIcon(AppIcons.chevronForward(),
                 size: 18,
-                color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                color: tokens.colors.outline.withValues(alpha: 0.6),
               ),
             ],
           ),

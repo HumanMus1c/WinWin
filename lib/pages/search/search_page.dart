@@ -18,6 +18,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/image_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 搜索页面 — 搜索框 + 热搜 + 历史 + 联想建议。
 ///
@@ -203,7 +204,7 @@ class _SearchPageState extends State<SearchPage> {
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor: Theme.of(context).colorScheme.surfaceContainer.withValues(alpha: 0.5),
+          fillColor: AppThemeHost.of(context).colors.surfaceContainer.withValues(alpha: 0.5),
           contentPadding: const EdgeInsets.symmetric(horizontal: Style.md),
           suffixIcon: _controller.text.isNotEmpty
               ? IconButton(
@@ -267,7 +268,7 @@ class _SearchPageState extends State<SearchPage> {
         GestureDetector(
           onTap: _clearHistory,
           child: AppIcon(AppIcons.delete(),
-              size: 18, color: Theme.of(context).colorScheme.outline),
+              size: 18, color: AppThemeHost.of(context).colors.outline),
         ),
       ],
     );
@@ -306,8 +307,8 @@ class _SearchPageState extends State<SearchPage> {
 
   /// 第二行搜索历史：展示搜索后观看稿件对应的作者与直接访问过的用户空间用户。
   Widget _buildVisitedUserChips() {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     // 演示模式：本地演示用户卡片（程序图标 + WinWin，布局对齐正常模式）。
     if (Pref.demoMode) {

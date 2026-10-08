@@ -5,6 +5,7 @@ import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 单选对话框：用于画质/音质/主题模式等枚举值选择。
 ///
@@ -31,7 +32,8 @@ class SelectDialog<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final titleMedium = TextTheme.of(context).titleMedium;
     final subtitleStyle = theme.textTheme.labelSmall?.copyWith(
       color: cs.outline,

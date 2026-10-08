@@ -29,6 +29,7 @@ class AppPalette {
     required this.surface,
     required this.surfaceContainerLow,
     required this.surfaceContainer,
+    required this.surfaceContainerHigh,
     required this.surfaceContainerHighest,
     required this.onSurface,
     required this.onSurfaceVariant,
@@ -55,6 +56,7 @@ class AppPalette {
   final Color surface;
   final Color surfaceContainerLow;
   final Color surfaceContainer;
+  final Color surfaceContainerHigh;
   final Color surfaceContainerHighest;
   final Color onSurface;
   final Color onSurfaceVariant;
@@ -89,6 +91,8 @@ class AppPalette {
     // M3 基线值（迁移前 ColorScheme.light() 的默认，项目未覆写该字段）
     surfaceContainerLow: Color(0xFFF7F2FA),
     surfaceContainer: miuixLightSurfaceContainer,
+    // M3 基线值（项目未覆写该字段）
+    surfaceContainerHigh: Color(0xFFECE6F0),
     surfaceContainerHighest: miuixLightSurfaceContainerHighest,
     onSurface: miuixLightOnSurface,
     onSurfaceVariant: miuixLightOnSurfaceVariant,
@@ -119,6 +123,8 @@ class AppPalette {
     // M3 基线值（迁移前 ColorScheme.dark() 的默认，项目未覆写该字段）
     surfaceContainerLow: Color(0xFF1D1B20),
     surfaceContainer: miuixDarkSurfaceContainer,
+    // M3 基线值（项目未覆写该字段）
+    surfaceContainerHigh: Color(0xFF2B2930),
     surfaceContainerHighest: miuixDarkSurfaceContainerHighest,
     onSurface: miuixDarkOnSurface,
     onSurfaceVariant: miuixDarkOnSurfaceVariant,

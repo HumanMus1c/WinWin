@@ -4,6 +4,7 @@ import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 「艾特我的」入口。
 void showAtMePage(BuildContext context) {
@@ -44,6 +45,7 @@ class _AtTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final nickname = _user?['nickname']?.toString() ?? '';
     final business = _content?['business']?.toString() ?? '';
     final source = _content?['source_content']?.toString() ?? '';
@@ -63,12 +65,12 @@ class _AtTile extends StatelessWidget {
             TextSpan(
               text: nickname,
               style: theme.textTheme.titleSmall
-                  ?.copyWith(color: theme.colorScheme.primary),
+                  ?.copyWith(color: tokens.colors.primary),
             ),
             TextSpan(
               text: ' 在$business中@了我',
               style: theme.textTheme.titleSmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ?.copyWith(color: tokens.colors.onSurfaceVariant),
             ),
           ],
         ),

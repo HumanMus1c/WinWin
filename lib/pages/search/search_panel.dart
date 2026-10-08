@@ -19,6 +19,7 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 搜索面板 — 单个 Tab 对应的结果列表。
 ///
@@ -248,6 +249,7 @@ class _SearchPanelState extends State<SearchPanel>
 
   Widget _buildUserCard(SearchUserItemModel item) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Card(
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -281,10 +283,10 @@ class _SearchPanelState extends State<SearchPanel>
                   memCacheWidth: ImageUtils.decodeClamp(48, context, max: 256),
                   memCacheHeight: ImageUtils.decodeClamp(48, context, max: 256),
                   placeholder: (_, _) => Container(
-                    color: theme.colorScheme.surfaceContainer,
+                    color: tokens.colors.surfaceContainer,
                   ),
                   errorBuilder: (_, _, _) => Container(
-                    color: theme.colorScheme.surfaceContainer,
+                    color: tokens.colors.surfaceContainer,
                     child: AppIcon(AppIcons.profile()),
                   ),
                 ),
@@ -333,7 +335,7 @@ class _SearchPanelState extends State<SearchPanel>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 11, color: theme.colorScheme.outline),
+                          fontSize: 11, color: tokens.colors.outline),
                     ),
                     if (item.verifyInfo != null &&
                         item.verifyInfo!.isNotEmpty)
@@ -342,7 +344,7 @@ class _SearchPanelState extends State<SearchPanel>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 11, color: theme.colorScheme.outline),
+                            fontSize: 11, color: tokens.colors.outline),
                       ),
                   ],
                 ),
@@ -372,6 +374,7 @@ class _SearchPanelState extends State<SearchPanel>
 
   Widget _buildLiveCard(SearchLiveItemModel item) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Card(
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -405,10 +408,10 @@ class _SearchPanelState extends State<SearchPanel>
                         memCacheHeight:
                             ImageUtils.decodeClamp(81, context, max: 1080),
                         placeholder: (_, _) => Container(
-                          color: theme.colorScheme.surfaceContainer,
+                          color: tokens.colors.surfaceContainer,
                         ),
                         errorBuilder: (_, _, _) => Container(
-                          color: theme.colorScheme.surfaceContainer,
+                          color: tokens.colors.surfaceContainer,
                           child: AppIcon(AppIcons.error()),
                         ),
                       ),
@@ -448,7 +451,7 @@ class _SearchPanelState extends State<SearchPanel>
                     Row(
                       children: [
                         AppIcon(AppIcons.profile(),
-                            size: 13, color: theme.colorScheme.outline),
+                            size: 13, color: tokens.colors.outline),
                         const SizedBox(width: 3),
                         Flexible(
                           child: Text(
@@ -456,7 +459,7 @@ class _SearchPanelState extends State<SearchPanel>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: 12, color: theme.colorScheme.outline),
+                                fontSize: 12, color: tokens.colors.outline),
                           ),
                         ),
                       ],
@@ -468,7 +471,7 @@ class _SearchPanelState extends State<SearchPanel>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 11, color: theme.colorScheme.outline),
+                            fontSize: 11, color: tokens.colors.outline),
                       ),
                     ],
                   ],
@@ -485,6 +488,7 @@ class _SearchPanelState extends State<SearchPanel>
 
   Widget _buildPgcCard(SearchPgcItemModel item) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Card(
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -518,10 +522,10 @@ class _SearchPanelState extends State<SearchPanel>
                     memCacheHeight:
                         ImageUtils.decodeClamp(114, context, max: 1080),
                     placeholder: (_, _) => Container(
-                      color: theme.colorScheme.surfaceContainer,
+                      color: tokens.colors.surfaceContainer,
                     ),
                     errorBuilder: (_, _, _) => Container(
-                      color: theme.colorScheme.surfaceContainer,
+                      color: tokens.colors.surfaceContainer,
                       child: AppIcon(AppIcons.error()),
                     ),
                   ),
@@ -546,7 +550,7 @@ class _SearchPanelState extends State<SearchPanel>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 11, color: theme.colorScheme.outline),
+                            fontSize: 11, color: tokens.colors.outline),
                       ),
                     ],
                     const SizedBox(height: 4),
@@ -558,7 +562,7 @@ class _SearchPanelState extends State<SearchPanel>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 11, color: theme.colorScheme.outline),
+                            fontSize: 11, color: tokens.colors.outline),
                       ),
                     const Spacer(),
                     if (item.indexShow != null)
@@ -585,6 +589,7 @@ class _SearchPanelState extends State<SearchPanel>
 
   Widget _buildArticleCard(SearchArticleItemModel item) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final hasImg = item.imageUrls != null && item.imageUrls!.isNotEmpty;
     return Card(
       margin: EdgeInsets.zero,
@@ -616,7 +621,7 @@ class _SearchPanelState extends State<SearchPanel>
                       memCacheHeight:
                           ImageUtils.decodeClamp(94, context, max: 1080),
                       placeholder: (_, _) => Container(
-                        color: theme.colorScheme.surfaceContainer,
+                        color: tokens.colors.surfaceContainer,
                       ),
                       errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     ),
@@ -641,14 +646,14 @@ class _SearchPanelState extends State<SearchPanel>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 11, color: theme.colorScheme.outline),
+                            fontSize: 11, color: tokens.colors.outline),
                       ),
                     ],
                     const Spacer(),
                     Text(
                       '${NumUtils.formatNum(item.view)}阅读 · ${NumUtils.formatNum(item.like)}喜欢',
                       style: TextStyle(
-                          fontSize: 11, color: theme.colorScheme.outline),
+                          fontSize: 11, color: tokens.colors.outline),
                     ),
                   ],
                 ),
@@ -676,7 +681,7 @@ class _SearchPanelState extends State<SearchPanel>
           child: Text(
             '没有更多了',
             style: TextStyle(
-                color: Theme.of(context).colorScheme.outline, fontSize: 12),
+                color: AppThemeHost.of(context).colors.outline, fontSize: 12),
           ),
         ),
       );
@@ -716,11 +721,11 @@ class _SearchPanelState extends State<SearchPanel>
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.search_off,
-              size: 48, color: Theme.of(context).colorScheme.outline),
+              size: 48, color: AppThemeHost.of(context).colors.outline),
           const SizedBox(height: Style.sm),
           Text(
             '没有找到相关内容',
-            style: TextStyle(color: Theme.of(context).colorScheme.outline),
+            style: TextStyle(color: AppThemeHost.of(context).colors.outline),
           ),
         ],
       ),
