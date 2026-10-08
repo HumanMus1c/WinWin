@@ -27,13 +27,18 @@ void main() {
     expect(probe.reports, isEmpty);
   });
 
-  test('聚合口径：用时/帧数/平均与最差耗时/超预算帧数/方向', () {
+  test('聚合口径：用时/帧数(tick)/平均与最差耗时/超预算帧数/方向', () {
     final probe = TransitionProbe.instance;
     TransitionProbe.enabled = true;
 
-    probe.begin('TestRoute', reverse: false, configuredMs: 300);
+    // 帧数口径 = 转场动画 ticker（每渲染一帧回调一次）。
+    final ticker = ValueNotifier<int>(0);
+    probe.begin('TestRoute', reverse: false, configuredMs: 300, ticker: ticker);
     expect(probe.isRecording, isTrue);
-    // 预算 16.7ms：build 超 1 帧（20），raster 超 2 帧（18/30）。
+    ticker.value++;
+    ticker.value++;
+    ticker.value++;
+    // 帧耗时口径 = FrameTiming：预算 16.7ms 下 build 超 1 帧（20）、raster 超 2 帧（18/30）。
     probe.recordFrame(buildMs: 8, rasterMs: 6);
     probe.recordFrame(buildMs: 20, rasterMs: 18);
     probe.recordFrame(buildMs: 12, rasterMs: 30);
@@ -48,6 +53,7 @@ void main() {
     expect(report, contains('frames=3'));
     expect(report, contains('build(avg=13.33 max=20.00 jank=1)'));
     expect(report, contains('raster(avg=18.00 max=30.00 jank=2)'));
+    ticker.dispose();
   });
 
   test('方向标记：pop 反向窗口', () {
@@ -65,7 +71,7 @@ void main() {
     expect(report, contains('raster(avg=5.00 max=5.00 jank=0)'));
   });
 
-  test('帧号单调过滤：批处理回灌的旧帧不计入 frames/fps', () {
+  test('帧号单调过滤：批处理回灌的旧帧不污染帧耗时统计', () {
     final probe = TransitionProbe.instance;
     TransitionProbe.enabled = true;
 
@@ -85,7 +91,7 @@ void main() {
     probe.feedFrameTimings(<FrameTiming>[frame(100), frame(101), frame(102)]);
 
     probe.begin('FilterRoute', reverse: false, configuredMs: 300);
-    // 首批回灌 98~102（旧帧） + 新帧 103（应只计入 103）。
+    // 首批回灌 98~102（旧帧） + 新帧 103（仅 103 计入 build/raster）。
     probe.feedFrameTimings(<FrameTiming>[
       frame(98),
       frame(99),
@@ -97,8 +103,8 @@ void main() {
     probe.end();
 
     final report = probe.reports.single;
-    expect(report, contains('frames=1'), reason: '仅新帧入选');
-    expect(report, contains('build(avg=20.00 max=20.00 jank=1)'));
+    expect(report, contains('build(avg=20.00 max=20.00 jank=1)'),
+        reason: '仅新帧计入耗时统计');
     expect(report, contains('raster(avg=30.00 max=30.00 jank=1)'));
     expect(report, contains('stale=5'), reason: '回灌旧帧计数可查');
   });

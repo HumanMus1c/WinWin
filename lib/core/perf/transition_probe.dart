@@ -47,6 +47,8 @@ class TransitionProbe {
   int _configuredMs = 0;
   int _startMs = 0;
   int _frames = 0;
+  /// 帧耗时样本数（FrameTiming 收到的帧，可能与 tick 数不同——批处理延迟所致）。
+  int _timingCount = 0;
   double _buildSum = 0;
   double _rasterSum = 0;
   double _buildMax = 0;
@@ -56,11 +58,18 @@ class TransitionProbe {
 
   /// 已计入的最大帧号（跨次记录持续维护）。
   ///
-  /// `addTimingsCallback` 是**批处理**投递（最多积攒 100 帧/1 秒），首批可能包含
-  /// 开窗之前的旧帧；用帧号单调性过滤，保证 frames/fps 只统计窗口内的真实帧
+  /// `addTimingsCallback` 是**批处理投递**（最多积攒 100 帧/1 秒，最长延迟约 1s），
+  /// 首批可能包含开窗之前的旧帧；用帧号单调性过滤，避免 build/raster 统计被旧帧污染
   /// （时间戳口径与 DateTime 不同源，不能按时间过滤）。
   int _lastFrameNumber = -1;
   int _skippedStale = 0;
+
+  /// 帧数口径：转场动画的 ticker（每渲染一帧回调一次）——
+  /// 帧耗时的批处理延迟使"窗口内收到的 FrameTiming"不可靠，故帧数/帧率以 tick 为准。
+  Listenable? _ticker;
+  void _onTick() {
+    if (_recording) _frames++;
+  }
 
   /// 最近若干次转场结论（供测试/自查读取；最多保留 50 条）。
   final List<String> reports = <String>[];
@@ -127,7 +136,7 @@ class TransitionProbe {
   }
 
   void _record({required double buildMs, required double rasterMs}) {
-    _frames++;
+    _timingCount++;
     _buildSum += buildMs;
     _rasterSum += rasterMs;
     if (buildMs > _buildMax) _buildMax = buildMs;
@@ -137,7 +146,14 @@ class TransitionProbe {
   }
 
   /// 转场开始（动画状态进入 forward=push / reverse=pop 时调用）。
-  void begin(String label, {required bool reverse, int configuredMs = 0}) {
+  ///
+  /// [ticker] 传入转场动画本身：其每渲染一帧回调一次，作为**帧数**的权威口径。
+  void begin(
+    String label, {
+    required bool reverse,
+    int configuredMs = 0,
+    Listenable? ticker,
+  }) {
     if (!enabled) return;
     _recording = true;
     _label = label;
@@ -145,18 +161,24 @@ class TransitionProbe {
     _configuredMs = configuredMs;
     _startMs = DateTime.now().millisecondsSinceEpoch;
     _frames = 0;
+    _timingCount = 0;
     _buildSum = 0;
     _rasterSum = 0;
     _buildMax = 0;
     _rasterMax = 0;
     _buildJank = 0;
     _rasterJank = 0;
+    _ticker?.removeListener(_onTick);
+    _ticker = ticker;
+    _ticker?.addListener(_onTick);
   }
 
   /// 转场结束（动画 completed/dismissed 时调用）：输出结论行。
   void end() {
     if (!enabled || !_recording) return;
     _recording = false;
+    _ticker?.removeListener(_onTick);
+    _ticker = null;
     final int ms = DateTime.now().millisecondsSinceEpoch - _startMs;
     final String line = summary(ms);
     reports.add(line);
@@ -169,12 +191,13 @@ class TransitionProbe {
   /// 组装结论行（[visibleForTesting] 便于对账聚合口径）。
   @visibleForTesting
   String summary(int ms) {
-    final int n = _frames;
+    final int n = _timingCount;
     final double avgBuild = n == 0 ? 0 : _buildSum / n;
     final double avgRaster = n == 0 ? 0 : _rasterSum / n;
-    final double fps = ms <= 0 ? 0 : n * 1000 / ms;
+    final double fps = ms <= 0 ? 0 : _frames * 1000 / ms;
     return 'transition route=$_label dir=$_direction '
-        'ms=$ms cfg=${_configuredMs}ms frames=$n fps=${fps.toStringAsFixed(1)} '
+        'ms=$ms cfg=${_configuredMs}ms frames=$_frames fps=${fps.toStringAsFixed(1)} '
+        'timings=$n '
         'build(avg=${avgBuild.toStringAsFixed(2)} '
         'max=${_buildMax.toStringAsFixed(2)} jank=$_buildJank) '
         'raster(avg=${avgRaster.toStringAsFixed(2)} '

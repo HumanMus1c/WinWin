@@ -86,12 +86,14 @@ class _MiuixPageTransitionState extends State<MiuixPageTransition> {
           widget.label ?? 'unknown',
           reverse: false,
           configuredMs: widget.configuredMs ?? 0,
+          ticker: widget.animation,
         );
       case AnimationStatus.reverse:
         TransitionProbe.instance.begin(
           widget.label ?? 'unknown',
           reverse: true,
           configuredMs: widget.configuredMs ?? 0,
+          ticker: widget.animation,
         );
       case AnimationStatus.completed:
       case AnimationStatus.dismissed:
