@@ -56,7 +56,12 @@ class MiuixPageTransitionsBuilder extends PageTransitionsBuilder {
     Widget child,
   ) {
     // 注：不使用 secondaryAnimation —— 被覆盖的当前页保持静止（性能取向，
-    // 见 MiuixPageTransition 文档）。
-    return MiuixPageTransition(animation: animation, child: child);
+    // 见 MiuixPageTransition 文档）。label/configuredMs 供转场探针记录。
+    return MiuixPageTransition(
+      animation: animation,
+      label: route.settings.name ?? '${route.runtimeType}',
+      configuredMs: route.transitionDuration.inMilliseconds,
+      child: child,
+    );
   }
 }
