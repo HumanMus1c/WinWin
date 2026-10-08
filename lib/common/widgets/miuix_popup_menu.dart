@@ -167,16 +167,12 @@ class _PopupOverlay extends StatelessWidget {
     const gap = 6.0;
     const screenInset = 12.0;
 
-    // 默认向下展开；下方空间不足时翻转到触发器上方。
-    final spaceBelow = media.size.height - triggerRect.bottom - gap - screenInset;
-    final placeAbove = spaceBelow < 160;
-    final panelMaxHeight = math.max(
-      120.0,
-      math.min(maxHeight, placeAbove ? triggerRect.top - gap - screenInset : spaceBelow),
-    );
-
-    final right = math.max(8.0, media.size.width - triggerRect.right);
-    final maxWidth = math.min(320.0, media.size.width - 16);
+    // 方向 = 上下可用空间较大侧（与布局委托同一策略），仅决定展开动画锚点：
+    // 默认向下展开；上侧空间更大时翻转到触发器上方。
+    final spaceBelow =
+        media.size.height - triggerRect.bottom - gap - screenInset;
+    final spaceAbove = triggerRect.top - gap - screenInset;
+    final placeAbove = spaceAbove > spaceBelow;
 
     final curved =
         CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
@@ -209,50 +205,46 @@ class _PopupOverlay extends StatelessWidget {
                 shadowElevation: 6,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: panelMaxHeight),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (title != null) ...[
-                          Padding(
-                            padding:
-                                const EdgeInsets.fromLTRB(16, 12, 16, 6),
-                            child: Text(
-                              title!,
-                              style: (Theme.of(context)
-                                          .textTheme
-                                          .titleSmall ??
-                                      const TextStyle())
-                                  .copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: contentColor,
-                              ),
-                            ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 14),
-                            child: MiuixHorizontalDivider(thickness: 1.5),
-                          ),
-                        ],
-                        Flexible(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: _buildRows(
-                                context,
-                                rowTextStyle: rowTextStyle,
-                                contentColor: contentColor,
-                                selectedContentColor: selectedContentColor,
-                              ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (title != null) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                          child: Text(
+                            title!,
+                            style: (Theme.of(context)
+                                        .textTheme
+                                        .titleSmall ??
+                                    const TextStyle())
+                                .copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: contentColor,
                             ),
                           ),
                         ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 14),
+                          child: MiuixHorizontalDivider(thickness: 1.5),
+                        ),
                       ],
-                    ),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: _buildRows(
+                              context,
+                              rowTextStyle: rowTextStyle,
+                              contentColor: contentColor,
+                              selectedContentColor: selectedContentColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -272,24 +264,18 @@ class _PopupOverlay extends StatelessWidget {
             child: const SizedBox.expand(),
           ),
         ),
-        if (placeAbove)
-          Positioned(
-            bottom: media.size.height - triggerRect.top + gap,
-            right: right,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: panel,
+        Positioned.fill(
+          child: CustomSingleChildLayout(
+            delegate: _PopupMenuLayout(
+              triggerRect: triggerRect,
+              gap: gap,
+              inset: screenInset,
+              maxWidth: 320,
+              maxHeight: maxHeight,
             ),
-          )
-        else
-          Positioned(
-            top: triggerRect.bottom + gap,
-            right: right,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: panel,
-            ),
+            child: panel,
           ),
+        ),
       ],
     );
   }
@@ -339,6 +325,69 @@ class _PopupOverlay extends StatelessWidget {
     }
     return rows;
   }
+}
+
+/// 弹层菜单的视窗内自适应布局（对齐 Flutter 官方 PopupMenu 思路）：
+/// 先按视窗给面板下发约束（宽不超 [maxWidth]、高不超 [maxHeight] 与视窗），
+/// 拿到实际尺寸后决定展开方向与位置，并整体 clamp 进视窗 —— 四边不越界；
+/// 窗口过矮时面板被约束收缩，条目区由 SingleChildScrollView 滚动。
+class _PopupMenuLayout extends SingleChildLayoutDelegate {
+  _PopupMenuLayout({
+    required this.triggerRect,
+    required this.gap,
+    required this.inset,
+    required this.maxWidth,
+    required this.maxHeight,
+  });
+
+  /// 触发器矩形（弹层插入时快照）。
+  final Rect triggerRect;
+
+  /// 面板与触发器之间的间隙。
+  final double gap;
+
+  /// 视窗最小边距。
+  final double inset;
+
+  /// 面板宽度上限。
+  final double maxWidth;
+
+  /// 面板高度上限（组件常态上限，再与视窗取 min）。
+  final double maxHeight;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    return BoxConstraints(
+      maxWidth:
+          math.max(0.0, math.min(maxWidth, constraints.maxWidth - inset * 2)),
+      maxHeight:
+          math.max(0.0, math.min(maxHeight, constraints.maxHeight - inset * 2)),
+    );
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final spaceBelow = size.height - triggerRect.bottom - gap - inset;
+    final spaceAbove = triggerRect.top - gap - inset;
+    final y = spaceAbove > spaceBelow
+        ? triggerRect.top - gap - childSize.height
+        : triggerRect.bottom + gap;
+    return Offset(
+      (triggerRect.right - childSize.width)
+          .clamp(inset, math.max(inset, size.width - childSize.width - inset))
+          .toDouble(),
+      y.clamp(inset, math.max(inset, size.height - childSize.height - inset))
+          .toDouble(),
+    );
+  }
+
+  @override
+  bool shouldRelayout(_PopupMenuLayout oldDelegate) =>
+      triggerRect != oldDelegate.triggerRect ||
+      gap != oldDelegate.gap ||
+      inset != oldDelegate.inset ||
+      maxWidth != oldDelegate.maxWidth ||
+      maxHeight != oldDelegate.maxHeight;
 }
 
 /// 弹层条目行：hover 高亮 + 按压即时反馈（替代上游"纯矩形填充、无按压

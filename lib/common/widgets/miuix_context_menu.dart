@@ -124,53 +124,46 @@ class _MiuixContextMenuOverlayState extends State<_MiuixContextMenuOverlay>
 
     final media = MediaQuery.of(context);
     const gap = 4.0;
-    final width = math.min(300.0, media.size.width - 16);
-    final left = widget.position.dx
-        .clamp(8.0, math.max(8.0, media.size.width - width - 8))
-        .toDouble();
-    final top = widget.position.dy
-        .clamp(8.0, math.max(8.0, media.size.height - 160))
-        .toDouble();
+    const edge = 8.0;
+    // 方向 = 上下可用空间较大侧（与布局委托同一策略），仅决定展开动画锚点。
+    final spaceBelow = media.size.height - widget.position.dy - gap - edge;
+    final spaceAbove = widget.position.dy - gap - edge;
+    final openUpward = spaceAbove > spaceBelow;
 
     final curved =
         CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic);
-    // 对角线展开：以点击点为面板左上角（topLeft 锚点）缩放展开。
+    // 对角线展开：以贴近点击点的角为缩放原点（向下→左上角；向上→左下角）。
     final panel = FadeTransition(
       opacity: curved,
       child: ScaleTransition(
         scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
-        alignment: Alignment.topLeft,
+        alignment: openUpward ? Alignment.bottomLeft : Alignment.topLeft,
         child: MiuixOverlayPanel(
           title: widget.title,
           icon: AppIcon(AppIcons.more(),
             size: 16,
             color: theme.colorScheme.primary,
           ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: math.max(120.0, media.size.height - top - 24),
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final action in widget.actions)
-                    MiuixPopupMenuRow(
-                      text: action.title,
-                      leading: IconTheme(
-                        data: IconThemeData(color: contentColor, size: iconSize),
-                        child: action.icon,
-                      ),
-                      enabled: true,
-                      selected: false,
-                      textStyle: rowTextStyle,
-                      contentColor: contentColor,
-                      selectedContentColor: selectedContentColor,
-                      onTap: () => widget.onSelect(action.onTap),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final action in widget.actions)
+                  MiuixPopupMenuRow(
+                    text: action.title,
+                    leading: IconTheme(
+                      data: IconThemeData(color: contentColor, size: iconSize),
+                      child: action.icon,
                     ),
-                ],
-              ),
+                    enabled: true,
+                    selected: false,
+                    textStyle: rowTextStyle,
+                    contentColor: contentColor,
+                    selectedContentColor: selectedContentColor,
+                    onTap: () => widget.onSelect(action.onTap),
+                  ),
+              ],
             ),
           ),
         ),
@@ -187,13 +180,79 @@ class _MiuixContextMenuOverlayState extends State<_MiuixContextMenuOverlay>
             child: const SizedBox.expand(),
           ),
         ),
-        Positioned(
-          left: left,
-          top: top + gap,
-          width: width,
-          child: panel,
+        Positioned.fill(
+          child: CustomSingleChildLayout(
+            delegate: _MiuixContextMenuLayout(
+              anchor: widget.position,
+              gap: gap,
+              edge: edge,
+              maxWidth: 300,
+            ),
+            child: panel,
+          ),
         ),
       ],
     );
   }
+}
+
+/// 右键菜单的视窗内自适应布局（对齐 Flutter 官方 PopupMenu 思路）：
+/// 先按视窗给面板下发约束（宽固定、高不超视窗），拿到实际尺寸后决定
+/// 展开方向与位置，并整体 clamp 进视窗 —— 四边不越界；窗口过矮时面板
+/// 被约束收缩，列表区由 SingleChildScrollView 滚动。
+class _MiuixContextMenuLayout extends SingleChildLayoutDelegate {
+  _MiuixContextMenuLayout({
+    required this.anchor,
+    required this.gap,
+    required this.edge,
+    required this.maxWidth,
+  });
+
+  /// 触发点（点击位置）。
+  final Offset anchor;
+
+  /// 面板与触发点之间的间隙。
+  final double gap;
+
+  /// 视窗最小边距。
+  final double edge;
+
+  /// 面板宽度上限。
+  final double maxWidth;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final width = math.max(
+      0.0,
+      math.min(maxWidth, constraints.maxWidth - edge * 2),
+    );
+    return BoxConstraints(
+      minWidth: width,
+      maxWidth: width,
+      maxHeight: math.max(0.0, constraints.maxHeight - edge * 2),
+    );
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final spaceBelow = size.height - anchor.dy - gap - edge;
+    final spaceAbove = anchor.dy - gap - edge;
+    final y = spaceAbove > spaceBelow
+        ? anchor.dy - gap - childSize.height
+        : anchor.dy + gap;
+    return Offset(
+      anchor.dx
+          .clamp(edge, math.max(edge, size.width - childSize.width - edge))
+          .toDouble(),
+      y.clamp(edge, math.max(edge, size.height - childSize.height - edge))
+          .toDouble(),
+    );
+  }
+
+  @override
+  bool shouldRelayout(_MiuixContextMenuLayout oldDelegate) =>
+      anchor != oldDelegate.anchor ||
+      gap != oldDelegate.gap ||
+      edge != oldDelegate.edge ||
+      maxWidth != oldDelegate.maxWidth;
 }

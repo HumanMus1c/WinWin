@@ -90,7 +90,9 @@ class MiuixOverlayPanel extends StatelessWidget {
                   const SizedBox(height: 10),
                   Container(height: 1, color: dividerColor),
                   const SizedBox(height: 10),
-                  child,
+                  // 内容区弹性收缩：外层高度受限（窗口过矮 / 视窗内布局）时，
+                  // 面板整体收窄到可用高度，由调用方的滚动区承担滚动，不越界。
+                  Flexible(child: child),
                 ],
               ),
             ),
