@@ -1320,7 +1320,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 错误态的简介占位卡片：展示 bvid 与错误原因，说明评论区不可用。
   Widget _buildDetailErrorCard(int? code, String? errMsg) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     return _card(
       child: Column(
@@ -1330,7 +1329,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             widget.bvid,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.headlineSmall,
+            style: tokens.text.headlineSmall,
           ),
           const SizedBox(height: Style.sm),
           Text(
@@ -1370,7 +1369,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     return ValueListenableBuilder<double>(
       valueListenable: _scrollRatio,
       builder: (context, scrollRatio, _) {
-        final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
         final opacity = forceOpaque ? 1.0 : scrollRatio.clamp(0.0, 1.0);
         final overVideo = opacity < 0.5;
@@ -1410,7 +1408,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               ? '视频详情'
                               : upName!,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
+                          style: tokens.text.titleMedium?.copyWith(
                             color: barContrast.contentColor,
                             shadows:
                                 overVideo ? ContrastStyle.glyphShadows : null,
@@ -1530,7 +1528,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 标题 + 数据行 + UP 行。
   Widget _buildInfoSection(VideoDetailData data) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final stat = data.stat;
     final owner = data.owner;
@@ -1546,7 +1543,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             data.title ?? widget.bvid,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: tokens.text.titleMedium?.copyWith(
               fontSize: 17,
               fontWeight: FontWeight.w600,
               height: 1.35,
@@ -1603,7 +1600,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     owner?.name ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
+                    style: tokens.text.titleSmall?.copyWith(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1742,7 +1739,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         children: [
           Text(
             count != null ? '评论 ${NumUtils.formatNum(count)}' : '评论',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: AppThemeHost.of(context).text.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1755,7 +1752,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   Widget _buildReplyTile(ReplyItemModel reply) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final member = reply.member;
     final upMid = _detailState.dataOrNull?.owner?.mid;
@@ -1867,7 +1863,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     const SizedBox(height: Style.xs),
                     ReplyContentView(
                       content: reply.content,
-                      textStyle: theme.textTheme.bodyMedium?.copyWith(
+                      textStyle: tokens.text.bodyMedium?.copyWith(
                         fontSize: 14.5,
                         height: 1.55,
                         color: tokens.colors.onSurface,
@@ -2057,7 +2053,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     ReplyItemModel root, {
     int? upMid,
   }) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final isSubUp =
         upMid != null && (sub.mid == upMid || sub.member?.mid == upMid);
@@ -2166,7 +2161,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             padding: const EdgeInsets.only(left: 36, top: 4, bottom: 4),
             child: ReplyContentView(
               content: sub.content,
-              textStyle: theme.textTheme.bodyMedium?.copyWith(
+              textStyle: tokens.text.bodyMedium?.copyWith(
                 fontSize: 13.5,
                 height: 1.5,
                 color: tokens.colors.onSurface,
@@ -2638,7 +2633,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 相关推荐 sliver 段落（窄屏单列布局追加在左栏滚动视图尾部，
   /// 数据复用 [_relatedState]，不重新请求）。
   List<Widget> _buildRelatedSlivers() {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(
@@ -2650,7 +2645,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         sliver: SliverToBoxAdapter(
           child: Text(
             '相关推荐',
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: tokens.text.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -2939,7 +2934,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         children: [
           Text(
             '评论',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: AppThemeHost.of(context).text.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),

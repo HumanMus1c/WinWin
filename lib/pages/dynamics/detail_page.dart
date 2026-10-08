@@ -239,7 +239,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
@@ -290,7 +289,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         Success(:final response) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: _buildDetailContent(response, cs, theme)),
+              Expanded(child: _buildDetailContent(response, cs, tokens)),
               // 输入栏与正文居中列（maxWidth 820）对齐，不再横向撑满全屏。
               Center(
                 child: ConstrainedBox(
@@ -312,7 +311,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   Widget _buildDetailContent(
     DynItemModel item,
     AppPalette cs,
-    ThemeData theme,
+    AppTokens tokens,
   ) {
     final author = item.author;
 
@@ -362,7 +361,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                     author?.name ?? '',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.titleMedium?.copyWith(
+                                    style: tokens.text.titleMedium?.copyWith(
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -372,7 +371,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                   const SizedBox(width: 6),
                                   Text(
                                     author.pubAction!,
-                                    style: theme.textTheme.labelSmall?.copyWith(
+                                    style: tokens.text.labelSmall?.copyWith(
                                       color: cs.outline,
                                     ),
                                   ),
@@ -382,7 +381,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                             if (item.pubTs != null)
                               Text(
                                 _formatTime(item.pubTs!),
-                                style: theme.textTheme.labelSmall?.copyWith(
+                                style: tokens.text.labelSmall?.copyWith(
                                   color: cs.outline,
                                 ),
                               ),
@@ -409,14 +408,14 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                   cs.primary,
                                 ),
                               ),
-                              style: theme.textTheme.bodyLarge?.copyWith(
+                              style: tokens.text.bodyLarge?.copyWith(
                                 height: 1.6,
                                 letterSpacing: 0.2,
                               ),
                             )
                           : SelectableText(
                               item.text!,
-                              style: theme.textTheme.bodyLarge?.copyWith(
+                              style: tokens.text.bodyLarge?.copyWith(
                                 height: 1.6,
                                 letterSpacing: 0.2,
                               ),
@@ -521,7 +520,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                         const SizedBox(width: 6),
                         Text(
                           '全部评论 ${item.stat?.comment != null ? '(${NumUtils.formatNum(item.stat!.comment)})' : ''}',
-                          style: theme.textTheme.titleSmall?.copyWith(
+                          style: tokens.text.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -611,7 +610,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                   children: [
                                     Text(
                                       member?.uname ?? 'B站用户',
-                                      style: theme.textTheme.bodySmall?.copyWith(
+                                      style: tokens.text.bodySmall?.copyWith(
                                         fontWeight: FontWeight.w600,
                                         color: cs.outline,
                                       ),
@@ -619,7 +618,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                     const SizedBox(height: 3),
                                     ReplyContentView(
                                       content: reply.content,
-                                      textStyle: theme.textTheme.bodyMedium?.copyWith(
+                                      textStyle: tokens.text.bodyMedium?.copyWith(
                                         height: 1.4,
                                       ),
                                     ),
@@ -764,7 +763,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
 
   /// Opus 区域
   Widget _buildOpusSection(BuildContext context, DynOpus opus) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -773,7 +772,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               opus.title!,
-              style: theme.textTheme.titleMedium?.copyWith(
+              style: tokens.text.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -783,7 +782,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               opus.summaryText!,
-              style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+              style: tokens.text.bodyMedium?.copyWith(height: 1.5),
             ),
           ),
         if (opus.pics.isNotEmpty) _buildDrawGrid(context, opus.pics),
@@ -897,7 +896,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
 
   /// 追番剧集卡片
   Widget _buildPgcPreview(BuildContext context, DynPgc pgc) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final cover = pgc.cover;
@@ -941,7 +939,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                     pgc.title ?? '剧集更新',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
+                    style: tokens.text.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -956,7 +954,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
 
   /// 专栏卡片预览（点击进入专栏页面）
   Widget _buildArticlePreview(BuildContext context, DynArticle article) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final cover = article.covers.isNotEmpty ? article.covers.first : null;
@@ -1013,7 +1010,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                       article.title ?? '专栏文章',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: tokens.text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1023,7 +1020,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                         article.desc!,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
+                        style: tokens.text.bodySmall?.copyWith(
                           color: cs.outline,
                         ),
                       ),
@@ -1040,7 +1037,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
 
   /// 直播卡片预览（点击直达直播间）
   Widget _buildLivePreview(BuildContext context, DynLive live) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final isLiving = live.liveStatus == 1 || live.badge == '直播中';
@@ -1104,7 +1100,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                       live.title ?? (isLiving ? '正在直播' : '直播已结束'),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: tokens.text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1129,7 +1125,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
 
   /// 转发动态区域
   Widget _buildForwardSection(BuildContext context, DynItemModel orig) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final origAuthor = orig.author;
@@ -1170,7 +1165,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
             const SizedBox(height: 4),
             Text(
               orig.text!,
-              style: theme.textTheme.bodyMedium,
+              style: tokens.text.bodyMedium,
             ),
           ],
           if (orig.draw != null && orig.draw!.items.isNotEmpty) ...[

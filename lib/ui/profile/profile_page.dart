@@ -245,7 +245,6 @@ class _UserInfoSectionState extends State<_UserInfoSection> {
   Widget build(BuildContext context) {
     final info = widget.info;
     final isLogin = widget.isLogin;
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final typo = AppThemeHost.of(context).typography;
@@ -271,10 +270,10 @@ class _UserInfoSectionState extends State<_UserInfoSection> {
         ? (displayCurExp / displayNextExp).clamp(0.0, 1.0)
         : (displayCurExp != null && displayCurExp > 0 ? 1.0 : null);
 
-    final coinLabelStyle = theme.textTheme.labelMedium?.copyWith(
+    final coinLabelStyle = tokens.text.labelMedium?.copyWith(
       color: cs.outline,
     );
-    final coinValStyle = theme.textTheme.labelMedium?.copyWith(
+    final coinValStyle = tokens.text.labelMedium?.copyWith(
       fontWeight: typo.titleWeight,
       color: cs.secondary,
     );
@@ -393,7 +392,7 @@ class _UserInfoSectionState extends State<_UserInfoSection> {
                         Flexible(
                           child: Text(
                             isLogin ? (info?.name ?? '未命名用户') : '点击登录',
-                            style: theme.textTheme.titleMedium?.copyWith(
+                            style: tokens.text.titleMedium?.copyWith(
                               height: 1,
                               fontWeight: typo.titleWeight,
                               color: displayVip == 2 ? biliPink : null,
@@ -450,7 +449,7 @@ class _UserInfoSectionState extends State<_UserInfoSection> {
                     else
                       Text(
                         '登录后同步你的账户数据',
-                        style: theme.textTheme.bodySmall?.copyWith(
+                        style: tokens.text.bodySmall?.copyWith(
                           color: cs.onSurface.withValues(alpha: 0.6),
                         ),
                       ),

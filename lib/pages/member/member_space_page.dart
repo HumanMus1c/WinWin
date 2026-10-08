@@ -1108,7 +1108,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   /// 用户详细信息卡片（头像、名字、会员、等级经验、粉丝牌、认证、签名、关注TA的人等）
   Widget _buildUserDetailCard(BuildContext context, MemberCard? card, int? silence) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     // 演示模式：VIP 类型/等级读取覆盖值（无覆盖回退真实值）。
@@ -1264,7 +1263,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   ),
                   child: Text(
                     Pref.demoMode ? kDemoDisplayName : (card.name ?? '未知用户'),
-                    style: theme.textTheme.titleLarge?.copyWith(
+                    style: tokens.text.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: isVip ? vipColor : null,
                     ),
@@ -1350,7 +1349,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             const SizedBox(height: Style.sm),
             SelectableText(
               card.sign!.trim(),
-              style: theme.textTheme.bodyMedium?.copyWith(
+              style: tokens.text.bodyMedium?.copyWith(
                 color: cs.onSurface.withValues(alpha: 0.85),
                 height: 1.4,
               ),
@@ -1565,7 +1564,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     int? count,
     VoidCallback? onTap,
   }) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     Widget content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1573,7 +1571,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         if (count != null)
           Text(
             NumUtils.formatNum(count),
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: tokens.text.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           )
@@ -1889,7 +1887,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildSeasonSeriesCard(SpaceSsModel model) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final meta = model.meta;
@@ -1965,7 +1962,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       meta.name ?? '',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: tokens.text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -2126,7 +2123,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   /// 用户空间动态卡片（自适应不同动态类型的高度和内部结构）
   Widget _buildSpaceDynamicCard(DynItemModel item) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final author = item.author;
@@ -2170,7 +2166,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                                 author?.name ?? '',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleSmall?.copyWith(
+                                style: tokens.text.titleSmall?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -2202,14 +2198,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     TextSpan(children: _buildRichSpans(context, item.richTextNodes, cs.primary)),
                     maxLines: 6,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium,
+                    style: tokens.text.bodyMedium,
                   )
                 else
                   Text(
                     item.text!,
                     maxLines: 6,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium,
+                    style: tokens.text.bodyMedium,
                   ),
               ],
               // 动态主体：视频 / 追番 / 图文 / 专栏 / 直播 / 转发
@@ -2274,7 +2270,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildForwardContent(BuildContext context, DynItemModel orig) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final origAuthor = orig.author;
@@ -2322,7 +2317,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 orig.text!,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium,
+                style: tokens.text.bodyMedium,
               ),
             ],
             if (orig.isVideo && orig.archive?.bvid != null) ...[
@@ -2506,7 +2501,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildOpusCard(BuildContext context, DynOpus opus) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2515,7 +2510,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               opus.title!,
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              style: tokens.text.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         if (opus.summaryText?.isNotEmpty ?? false)
@@ -2525,7 +2520,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               opus.summaryText!,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium,
+              style: tokens.text.bodyMedium,
             ),
           ),
         if (opus.pics.isNotEmpty) _buildDrawGrid(context, opus.pics),
@@ -2538,7 +2533,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildArticleCard(BuildContext context, DynArticle article) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final cover = article.covers.isNotEmpty ? article.covers.first : null;
@@ -2596,7 +2590,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       article.title ?? '专栏文章',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                      style: tokens.text.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -2609,7 +2603,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildLiveCard(BuildContext context, DynLiveRcmd live) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
@@ -2680,7 +2673,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       live.title ?? '正在直播',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                      style: tokens.text.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 4),
                     if (live.watchedShow?.isNotEmpty ?? false)
@@ -2699,7 +2692,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildPgcPreview(BuildContext context, DynPgc pgc) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final cover = pgc.cover;
@@ -2732,7 +2724,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   pgc.title ?? '剧集更新',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: tokens.text.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 if (pgc.badge?.isNotEmpty ?? false)
                   PBadge(text: pgc.badge!, type: PBadgeType.badge),
@@ -2746,7 +2738,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   Widget _buildGoodsCard(BuildContext context, DynAdditional additional) {
     final item = additional.goodsItems.first;
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
@@ -2774,7 +2765,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   item.name ?? '商品推荐',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
+                  style: tokens.text.bodySmall?.copyWith(fontWeight: FontWeight.w500),
                 ),
                 if (item.price?.isNotEmpty ?? false)
                   Text(
@@ -3228,7 +3219,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   /// 隐私保护或受限占位展示卡片
   Widget _buildPrivacyNotice(String message, {VoidCallback? onRetry}) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     return Center(
@@ -3251,7 +3241,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             const SizedBox(height: Style.md),
             Text(
               message,
-              style: theme.textTheme.titleSmall?.copyWith(
+              style: tokens.text.titleSmall?.copyWith(
                 color: cs.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
@@ -3260,7 +3250,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             const SizedBox(height: Style.xs),
             Text(
               '因用户隐私设置，该内容仅空间主人可见',
-              style: theme.textTheme.bodySmall?.copyWith(
+              style: tokens.text.bodySmall?.copyWith(
                 color: cs.outline,
               ),
               textAlign: TextAlign.center,
@@ -3281,7 +3271,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   /// 详细资料 Tab
   Widget _buildAboutTab(MemberCard? card) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
     final level = DemoOverrides.choice('profile.level') ??
         card?.level ??
@@ -3297,7 +3287,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('基本信息', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('基本信息', style: tokens.text.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: Style.md),
                 _infoRow(
                   'UID',

@@ -140,7 +140,6 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
@@ -148,7 +147,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
         children: [
           SwitchListTile(
             title: const Text('消息免打扰'),
-            subtitle: Text(_dnd ? '已开启' : '关闭', style: theme.textTheme.bodySmall),
+            subtitle: Text(_dnd ? '已开启' : '关闭', style: tokens.text.bodySmall),
             value: _dnd,
             onChanged: _busy ? null : _toggleDnd,
           ),
@@ -167,7 +166,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
             padding: const EdgeInsets.all(Style.lg),
             child: Text(
               '推送开关 / 拉黑 / 清空消息等待后续扩展',
-              style: theme.textTheme.bodySmall?.copyWith(color: tokens.colors.outline),
+              style: tokens.text.bodySmall?.copyWith(color: tokens.colors.outline),
             ),
           ),
         ],

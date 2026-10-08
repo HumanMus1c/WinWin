@@ -15,6 +15,7 @@ import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 直播二级分类导航条目。
 class LiveCategoryTab {
@@ -696,6 +697,7 @@ class _LiveCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final cs = theme.colorScheme;
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -812,7 +814,7 @@ class _LiveCard extends StatelessWidget {
                       item.title ?? '',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: tokens.text.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -841,7 +843,7 @@ class _LiveCard extends StatelessWidget {
                               item.uname ?? '',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelSmall?.copyWith(
+                              style: tokens.text.labelSmall?.copyWith(
                                 color: cs.outline,
                               ),
                             ),

@@ -49,7 +49,6 @@ class VideoCardH extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = VideoCardData.from(videoItem);
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final shapes = tokens.shapes;
     final radius = shapes.medium;
@@ -167,7 +166,7 @@ class VideoCardH extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   // 右：标题 + UP + 统计
-                  Expanded(child: _buildTextContent(theme, tokens, data, demo: demo)),
+                  Expanded(child: _buildTextContent(tokens, data, demo: demo)),
                 ],
               ),
             ),
@@ -178,7 +177,6 @@ class VideoCardH extends StatelessWidget {
   }
 
   Widget _buildTextContent(
-    ThemeData theme,
     AppTokens tokens,
     VideoCardData data, {
     required bool demo,
@@ -203,7 +201,7 @@ class VideoCardH extends StatelessWidget {
                 title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
+                style: tokens.text.bodyMedium?.copyWith(height: 1.35),
               ),
         const SizedBox(height: 6),
         Row(
@@ -219,7 +217,7 @@ class VideoCardH extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style:
-                        theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+                        tokens.text.labelSmall?.copyWith(color: cs.outline),
                   ),
                 ),
               ),
@@ -235,7 +233,7 @@ class VideoCardH extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style:
-                          theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+                          tokens.text.labelSmall?.copyWith(color: cs.outline),
                     ),
                   ),
                 ),

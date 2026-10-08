@@ -81,9 +81,8 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
-    final subTitleStyle = theme.textTheme.labelMedium?.copyWith(
+    final subTitleStyle = tokens.text.labelMedium?.copyWith(
       color: tokens.colors.outline,
     );
 
@@ -113,7 +112,7 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
                       Text(
                         widget.title,
                         style: widget.titleStyle ??
-                            theme.textTheme.bodyLarge?.copyWith(
+                            tokens.text.bodyLarge?.copyWith(
                               color: widget.onTap != null && !val
                                   ? tokens.colors.outline
                                   : null,

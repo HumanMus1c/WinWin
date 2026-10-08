@@ -300,7 +300,6 @@ class _FavFolderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final shapes = tokens.shapes;
@@ -352,7 +351,7 @@ class _FavFolderCard extends StatelessWidget {
                       folder.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: tokens.text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -360,7 +359,7 @@ class _FavFolderCard extends StatelessWidget {
                       children: [
                         Text(
                           '${folder.mediaCount} 个内容',
-                          style: theme.textTheme.labelSmall?.copyWith(
+                          style: tokens.text.labelSmall?.copyWith(
                             color: cs.outline,
                           ),
                         ),
@@ -620,7 +619,6 @@ class _FavDetailPageState extends State<FavDetailPage> {
 
   /// 顶部文件夹概览信息卡片
   Widget _buildHeaderInfo() {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final folder = widget.folder;
@@ -652,7 +650,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
                       folder.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
+                      style: tokens.text.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -680,7 +678,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
                     const SizedBox(height: 4),
                     Text(
                       '共 ${folder.mediaCount} 条视频 · ${folder.isPublic ? "公开" : "私密"}',
-                      style: theme.textTheme.labelSmall?.copyWith(
+                      style: tokens.text.labelSmall?.copyWith(
                         color: cs.outline,
                       ),
                     ),
@@ -704,7 +702,6 @@ class _FavVideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final shapes = tokens.shapes;
@@ -796,7 +793,7 @@ class _FavVideoCard extends StatelessWidget {
                       item.title ?? '',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: tokens.text.bodyMedium?.copyWith(
                         height: 1.35,
                         color: isInvalid ? cs.outline : null,
                       ),
@@ -814,7 +811,7 @@ class _FavVideoCard extends StatelessWidget {
                                   upper.name!,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelSmall?.copyWith(
+                                  style: tokens.text.labelSmall?.copyWith(
                                     color: cs.outline,
                                   ),
                                 ),
@@ -832,7 +829,7 @@ class _FavVideoCard extends StatelessWidget {
                               const SizedBox(width: 2),
                               Text(
                                 NumUtils.formatNum(cnt!.play),
-                                style: theme.textTheme.labelSmall?.copyWith(
+                                style: tokens.text.labelSmall?.copyWith(
                                   color: cs.outline,
                                 ),
                               ),
@@ -846,7 +843,7 @@ class _FavVideoCard extends StatelessWidget {
                               const SizedBox(width: 2),
                               Text(
                                 NumUtils.formatNum(cnt!.danmaku),
-                                style: theme.textTheme.labelSmall?.copyWith(
+                                style: tokens.text.labelSmall?.copyWith(
                                   color: cs.outline,
                                 ),
                               ),

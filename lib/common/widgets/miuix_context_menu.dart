@@ -111,14 +111,13 @@ class _MiuixContextMenuOverlayState extends State<_MiuixContextMenuOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final baseColors = MiuixDropdownDefaults.dropdownColors(context);
     final contentColor = baseColors.contentColor;
     final selectedContentColor = baseColors.selectedContentColor;
     // 文本基底（覆写黄绿双下划线错误样式）+ 反色行配色（与弹层壳一致）。
     final rowTextStyle =
-        (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+        (tokens.text.bodyMedium ?? const TextStyle()).copyWith(
       decoration: TextDecoration.none,
     );
     // 选项图标尺寸 = 行文本尺寸（不再硬编码 16 造成与 14px 文本失配）。

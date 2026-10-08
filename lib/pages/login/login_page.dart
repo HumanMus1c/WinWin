@@ -307,7 +307,6 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     return SingleChildScrollView(
@@ -317,7 +316,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
         children: [
           const SizedBox(height: Style.md),
           Text('使用账号密码登录',
-              style: theme.textTheme.titleMedium,
+              style: tokens.text.titleMedium,
               textAlign: TextAlign.center),
           const SizedBox(height: Style.lg),
           AppTextField(
@@ -373,7 +372,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
             '账号密码仅用于该登录接口，不予保存；本地仅存储登录凭证。\n'
             '当前 RSA 加密为 stub，密码登录可能因风控失败；遇到风控时会弹出极验滑块验证。',
             textAlign: TextAlign.center,
-            style: theme.textTheme.labelSmall?.copyWith(
+            style: tokens.text.labelSmall?.copyWith(
               color: cs.onSurface.withValues(alpha: 0.4),
             ),
           ),
@@ -593,7 +592,6 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     return SingleChildScrollView(
@@ -603,7 +601,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
         children: [
           const SizedBox(height: Style.md),
           Text('使用手机短信验证码登录',
-              style: theme.textTheme.titleMedium,
+              style: tokens.text.titleMedium,
               textAlign: TextAlign.center),
           const SizedBox(height: Style.lg),
           // 手机号：区号选择器作为 prefix 内嵌入自适应输入框
@@ -689,7 +687,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
             '本地仅存储登录凭证。\n'
             '遇到风控时会弹出极验滑块验证，验证通过后自动重试。',
             textAlign: TextAlign.center,
-            style: theme.textTheme.labelSmall?.copyWith(
+            style: tokens.text.labelSmall?.copyWith(
               color: cs.onSurface.withValues(alpha: 0.4),
             ),
           ),
@@ -855,7 +853,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
             const SizedBox(height: Style.lg),
             Text(
               _status,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: AppThemeHost.of(context).text.bodyMedium,
               textAlign: TextAlign.center,
             ),
             if (_leftTime > 0 && !_loading)
@@ -977,7 +975,7 @@ class _CookieLoginTabState extends State<_CookieLoginTab> {
           const SizedBox(height: Style.md),
           Text(
             '使用 Cookie 登录',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: AppThemeHost.of(context).text.titleMedium,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: Style.sm),

@@ -170,7 +170,6 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(
@@ -186,7 +185,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
             children: [
               Row(
                 children: [
-                  Text('弹幕屏蔽规则', style: theme.textTheme.titleMedium),
+                  Text('弹幕屏蔽规则', style: tokens.text.titleMedium),
                   const Spacer(),
                   IconButton(
                     icon: AppIcon(AppIcons.refresh(), size: 20),
@@ -219,7 +218,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(_errorMsg!,
-                                    style: theme.textTheme.bodyMedium),
+                                    style: tokens.text.bodyMedium),
                                 const SizedBox(height: Style.sm),
                                 if (Accounts.main.isLogin)
                                   TextButton(

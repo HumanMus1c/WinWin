@@ -104,7 +104,6 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
@@ -171,7 +170,7 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
                                     widget.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.titleSmall?.copyWith(
+                                    style: tokens.text.titleSmall?.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),

@@ -146,7 +146,6 @@ class _SysMsgTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final title = item['title']?.toString() ?? '';
     final content = item['content']?.toString() ?? '';
@@ -160,7 +159,7 @@ class _SysMsgTile extends StatelessWidget {
           ? null
           : Text(
               title,
-              style: theme.textTheme.titleSmall,
+              style: tokens.text.titleSmall,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -168,13 +167,13 @@ class _SysMsgTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (content.isNotEmpty)
-            Text(content, style: theme.textTheme.bodyMedium),
+            Text(content, style: tokens.text.bodyMedium),
           if (timeAt.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Text(
                 timeAt,
-                style: theme.textTheme.bodySmall
+                style: tokens.text.bodySmall
                     ?.copyWith(color: tokens.colors.outline),
               ),
             ),

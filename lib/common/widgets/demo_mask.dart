@@ -146,7 +146,6 @@ class DemoVideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final followed = Random(seed).nextBool();
@@ -277,7 +276,7 @@ class DemoVideoCard extends StatelessWidget {
                                       style: TextStyle(
                                         height: 1.5,
                                         fontSize:
-                                            theme.textTheme.labelMedium?.fontSize,
+                                            tokens.text.labelMedium?.fontSize,
                                         color: cs.outline,
                                       ),
                                     ),
@@ -309,7 +308,6 @@ class DemoVideoCardH extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final durationText = DurationUtils.formatDuration(
@@ -402,7 +400,7 @@ class DemoVideoCardH extends StatelessWidget {
                                 kDemoDisplayName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.labelSmall
+                                style: tokens.text.labelSmall
                                     ?.copyWith(color: cs.outline),
                               ),
                             ),

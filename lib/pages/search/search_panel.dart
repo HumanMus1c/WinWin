@@ -248,7 +248,6 @@ class _SearchPanelState extends State<SearchPanel>
   // ─────────────────────────── 用户卡片 ───────────────────────────
 
   Widget _buildUserCard(SearchUserItemModel item) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     return Card(
       margin: EdgeInsets.zero,
@@ -304,7 +303,7 @@ class _SearchPanelState extends State<SearchPanel>
                             item.uname ?? '',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(
+                            style: tokens.text.titleSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -373,7 +372,6 @@ class _SearchPanelState extends State<SearchPanel>
   // ─────────────────────────── 直播卡片 ───────────────────────────
 
   Widget _buildLiveCard(SearchLiveItemModel item) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     return Card(
       margin: EdgeInsets.zero,
@@ -445,7 +443,7 @@ class _SearchPanelState extends State<SearchPanel>
                       item.title ?? '',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall,
+                      style: tokens.text.titleSmall,
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -487,7 +485,6 @@ class _SearchPanelState extends State<SearchPanel>
   // ─────────────────────────── 番剧/影视卡片 ───────────────────────────
 
   Widget _buildPgcCard(SearchPgcItemModel item) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     return Card(
       margin: EdgeInsets.zero,
@@ -540,7 +537,7 @@ class _SearchPanelState extends State<SearchPanel>
                       item.title ?? '',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall,
+                      style: tokens.text.titleSmall,
                     ),
                     if (item.orgTitle != null &&
                         item.orgTitle!.isNotEmpty) ...[
@@ -588,7 +585,6 @@ class _SearchPanelState extends State<SearchPanel>
   // ─────────────────────────── 专栏卡片 ───────────────────────────
 
   Widget _buildArticleCard(SearchArticleItemModel item) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final hasImg = item.imageUrls != null && item.imageUrls!.isNotEmpty;
     return Card(
@@ -637,7 +633,7 @@ class _SearchPanelState extends State<SearchPanel>
                       item.title ?? '',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall,
+                      style: tokens.text.titleSmall,
                     ),
                     if (item.desc != null && item.desc!.isNotEmpty) ...[
                       const SizedBox(height: 4),

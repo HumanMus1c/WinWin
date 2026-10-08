@@ -31,11 +31,10 @@ class SelectDialog<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final titleMedium = TextTheme.of(context).titleMedium;
-    final subtitleStyle = theme.textTheme.labelSmall?.copyWith(
+    final subtitleStyle = tokens.text.labelSmall?.copyWith(
       color: cs.outline,
     );
 

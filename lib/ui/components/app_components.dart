@@ -507,7 +507,6 @@ class AppActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = _Tokens.of(context);
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     // 阶段5d-L1：M3 分支已移除。
@@ -528,14 +527,14 @@ class AppActionTile extends StatelessWidget {
             else
               Text(
                 count ?? '-',
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: tokens.text.titleMedium?.copyWith(
                   fontWeight: t.typo.titleWeight,
                   color: contentColor,
                 ),
               ),
             Text(
               label,
-              style: theme.textTheme.labelMedium?.copyWith(
+              style: tokens.text.labelMedium?.copyWith(
                 color: cs.onSurfaceVariant,
               ),
             ),

@@ -34,7 +34,6 @@ class MiuixOverlayPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final isDark = tokens.isDark;
@@ -82,7 +81,7 @@ class MiuixOverlayPanel extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text(
                         title,
-                        style: theme.textTheme.titleSmall?.copyWith(
+                        style: tokens.text.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface,
                         ),

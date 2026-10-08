@@ -32,6 +32,7 @@ import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 桌面原生直播间播放页面。
 ///
@@ -779,8 +780,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final displayTitle = Pref.demoMode
         ? '直播间'
         : (_roomInfo?.title ?? widget.title ?? '直播间 $_realRoomId');
@@ -803,7 +804,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           // 1. 底层：主播自定义全屏背景 + 高性能降低分辨率 WebP 缩略图 + 轻量柔和模糊与半透明蒙版
           Positioned.fill(
             child: Container(
-              color: isFillWindow ? Colors.black : theme.scaffoldBackgroundColor,
+              color: isFillWindow ? Colors.black : tokens.colors.background,
               child: (!isFillWindow && customBgUrl != null && customBgUrl.isNotEmpty)
                   ? Stack(
                       fit: StackFit.expand,
@@ -826,11 +827,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  (theme.brightness == Brightness.dark
+                                  (tokens.isDark
                                           ? Colors.black
                                           : cs.surface)
                                       .withValues(alpha: 0.40),
-                                  (theme.brightness == Brightness.dark
+                                  (tokens.isDark
                                           ? Colors.black
                                           : cs.surface)
                                       .withValues(alpha: 0.60),
@@ -916,7 +917,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                                       hostName,
                                       hostAvatar,
                                       cs,
-                                      theme,
+                                      tokens,
                                     ),
                                   ],
                                 ),
@@ -932,7 +933,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                                   Style.md,
                                   Style.md,
                                 ),
-                                child: _buildChatPanel(cs, theme),
+                                child: _buildChatPanel(cs, tokens),
                               ),
                             ),
                           ],
@@ -960,7 +961,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                                 hostName,
                                 hostAvatar,
                                 cs,
-                                theme,
+                                tokens,
                               ),
                             ),
                             const SizedBox(height: Style.md),
@@ -972,7 +973,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                                   Style.md,
                                   Style.md,
                                 ),
-                                child: _buildChatPanel(cs, theme),
+                                child: _buildChatPanel(cs, tokens),
                               ),
                             ),
                           ],
@@ -1686,8 +1687,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   Widget _buildHostInfo(
     String hostName,
     String? hostAvatar,
-    ColorScheme cs,
-    ThemeData theme,
+    AppPalette cs,
+    AppTokens tokens,
   ) {
     final areaName = _roomInfo?.areaName;
     final online = _roomInfo?.online;
@@ -1735,7 +1736,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               children: [
                 Text(
                   hostName,
-                  style: theme.textTheme.titleMedium?.copyWith(
+                  style: tokens.text.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1745,7 +1746,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     Text(
                       roomIdText,
                       style:
-                          theme.textTheme.bodySmall?.copyWith(color: cs.outline),
+                          tokens.text.bodySmall?.copyWith(color: cs.outline),
                     ),
                     if (areaName != null && areaName.isNotEmpty) ...[
                       const SizedBox(width: 8),
@@ -1825,7 +1826,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   }
 
   /// 实时互动面板（含云端与实时弹幕列表 + 底部发送弹幕输入交互条）
-  Widget _buildChatPanel(ColorScheme cs, ThemeData theme) {
+  Widget _buildChatPanel(AppPalette cs, AppTokens tokens) {
     return Container(
       decoration: BoxDecoration(
         color: cs.surface.withValues(alpha: 0.50),
@@ -1848,7 +1849,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 const SizedBox(width: 6),
                 Text(
                   '实时互动',
-                  style: theme.textTheme.titleSmall?.copyWith(
+                  style: tokens.text.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1895,14 +1896,14 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       itemCount: _danmakuList.length,
                       itemBuilder: (context, index) {
                         final item = _danmakuList[index];
-                        return _buildDanmakuItem(item, cs, theme);
+                        return _buildDanmakuItem(item, cs, tokens);
                       },
                     ),
             ),
           ),
 
           // 底部互动发送条（输入框与发送按钮高度严格对齐）
-          _buildChatInputBar(cs, theme),
+          _buildChatInputBar(cs, tokens),
         ],
       ),
     );
@@ -1911,8 +1912,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   /// 单条弹幕渲染（含头像、粉丝牌、UL等级、用户名及官方表情图文混排）
   Widget _buildDanmakuItem(
     LiveDanmakuMessage item,
-    ColorScheme cs,
-    ThemeData theme,
+    AppPalette cs,
+    AppTokens tokens,
   ) {
     final avatar = item.userAvatar;
     final medalName = item.medalName;
@@ -2000,7 +2001,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
     // 4. 正文文本与官方表情解析图文混排
     inlineSpans.addAll(
-      _buildDanmakuContentSpans(text, item.emots, theme.textTheme.bodySmall),
+      _buildDanmakuContentSpans(text, item.emots, tokens.text.bodySmall),
     );
 
     // 5. 大表情 / 贴纸
@@ -2051,7 +2052,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           Expanded(
             child: Text.rich(
               TextSpan(children: inlineSpans),
-              style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+              style: tokens.text.bodySmall?.copyWith(fontSize: 12),
             ),
           ),
         ],
@@ -2128,7 +2129,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   }
 
   /// 底部互动发送条（表情选择器、输入框与发送按钮统一为严格等高的 40px 胶囊设计）
-  Widget _buildChatInputBar(ColorScheme cs, ThemeData theme) {
+  Widget _buildChatInputBar(AppPalette cs, AppTokens tokens) {
     const double barItemHeight = 40.0;
     const double barItemRadius = 20.0;
 

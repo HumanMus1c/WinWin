@@ -180,7 +180,6 @@ class _MiuixToastCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final displayText = _breakLongSegments(message);
@@ -191,7 +190,7 @@ class _MiuixToastCard extends StatelessWidget {
     // 文本基底：覆写 WidgetsApp 的默认"黄绿双下划线"错误样式
     // （根部宿主不在 Material 子树内，Text 合并到该样式）。
     final bodyStyle =
-        (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+        (tokens.text.bodyMedium ?? const TextStyle()).copyWith(
       decoration: TextDecoration.none,
     );
 

@@ -131,7 +131,6 @@ class _DownloadPageState extends State<DownloadPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final shapes = tokens.shapes;
@@ -167,7 +166,7 @@ class _DownloadPageState extends State<DownloadPage> {
                             const SizedBox(width: 8),
                             Text(
                               '缓存目录与空间',
-                              style: theme.textTheme.titleMedium?.copyWith(
+                              style: tokens.text.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -185,7 +184,7 @@ class _DownloadPageState extends State<DownloadPage> {
                         const SizedBox(height: 10),
                         Text(
                           '当前占用：$_cacheSizeStr',
-                          style: theme.textTheme.bodyMedium?.copyWith(
+                          style: tokens.text.bodyMedium?.copyWith(
                             color: cs.onSurface,
                             fontWeight: FontWeight.w600,
                           ),
@@ -193,7 +192,7 @@ class _DownloadPageState extends State<DownloadPage> {
                         const SizedBox(height: 4),
                         Text(
                           '存放路径：$_cachePath',
-                          style: theme.textTheme.bodySmall?.copyWith(
+                          style: tokens.text.bodySmall?.copyWith(
                             color: cs.outline,
                           ),
                           maxLines: 2,

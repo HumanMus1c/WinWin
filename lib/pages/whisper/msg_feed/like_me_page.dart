@@ -50,7 +50,6 @@ class _LikeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final users = _users;
     final first = users.isNotEmpty ? users.first as Map : null;
@@ -70,17 +69,17 @@ class _LikeTile extends StatelessWidget {
           children: [
             TextSpan(
               text: nickname,
-              style: theme.textTheme.titleSmall
+              style: tokens.text.titleSmall
                   ?.copyWith(color: tokens.colors.primary),
             ),
             if (isMulti)
               TextSpan(
                 text: ' 等${users.length}人',
-                style: theme.textTheme.labelSmall,
+                style: tokens.text.labelSmall,
               ),
             TextSpan(
               text: ' 赞了我的动态',
-              style: theme.textTheme.titleSmall
+              style: tokens.text.titleSmall
                   ?.copyWith(color: tokens.colors.onSurfaceVariant),
             ),
           ],
@@ -95,13 +94,13 @@ class _LikeTile extends StatelessWidget {
               title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium,
+              style: tokens.text.bodyMedium,
             ),
           ],
           const SizedBox(height: 4),
           Text(
             '共 $counts 个赞 · ${msgFeedTime(item['like_time'] as int?)}',
-            style: theme.textTheme.bodySmall
+            style: tokens.text.bodySmall
                 ?.copyWith(color: tokens.colors.outline),
           ),
         ],

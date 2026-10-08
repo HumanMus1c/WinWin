@@ -222,7 +222,6 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   /// 弹窗模式（对标 BiliPai DanmakuSendDialog）：标题栏 + 输入卡片 +
   /// 计数 + 「颜色、位置、大小」折叠设置区 + 全宽发送按钮。
   Widget _buildSheet() {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     return Container(
       constraints: const BoxConstraints(maxWidth: 560),
@@ -243,7 +242,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
               children: [
                 Text(
                   '发送弹幕',
-                  style: theme.textTheme.titleMedium
+                  style: tokens.text.titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
@@ -273,7 +272,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _onSend(),
                 onChanged: (_) => setState(() {}),
-                style: theme.textTheme.bodyLarge,
+                style: tokens.text.bodyLarge,
                 decoration: InputDecoration(
                   isCollapsed: true,
                   hintText: _danmakuPlaceholder(Accounts.main.isLogin),
@@ -310,11 +309,11 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
               ),
             ),
             if (_showSettings) ...[
-              _buildColorSection(theme),
+              _buildColorSection(tokens),
               const SizedBox(height: Style.md),
-              _buildChipSection(theme, '位置', _modeOptions, _mode),
+              _buildChipSection(tokens, '位置', _modeOptions, _mode),
               const SizedBox(height: Style.md),
-              _buildChipSection(theme, '大小', _fontSizeOptions, _fontSize),
+              _buildChipSection(tokens, '大小', _fontSizeOptions, _fontSize),
               const SizedBox(height: Style.md),
             ],
             // 全宽发送按钮（对标 BiliPai 48dp filled button）
@@ -366,7 +365,6 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   /// 内联模式：单行输入框 + 设置按钮 + 发送按钮（样式对齐评论发送栏）。
   /// 设置面板（颜色/位置/大小）通过点击设置按钮展开。
   Widget _buildInline() {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -396,7 +394,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _onSend(),
                 onChanged: (_) => setState(() {}),
-                style: theme.textTheme.bodyLarge,
+                style: tokens.text.bodyLarge,
                 decoration: InputDecoration(
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(
@@ -420,9 +418,9 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
               ),
             ),
             const SizedBox(width: Style.sm),
-            _buildInlineSettingsButton(theme),
+            _buildInlineSettingsButton(tokens),
             const SizedBox(width: Style.xs),
-            _buildInlineSendButton(theme),
+            _buildInlineSendButton(tokens),
           ],
         ),
       ),
@@ -430,7 +428,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   }
 
   /// 内联模式设置按钮：点击展开弹幕样式设置面板。
-  Widget _buildInlineSettingsButton(ThemeData theme) {
+  Widget _buildInlineSettingsButton(AppTokens tokens) {
     return Builder(
       builder: (ctx) => IconButton(
         icon: AppIcon(AppIcons.palette(), size: 20),
@@ -441,7 +439,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   }
 
   /// 内联模式发送按钮。
-  Widget _buildInlineSendButton(ThemeData theme) {
+  Widget _buildInlineSendButton(AppTokens tokens) {
     return FilledButton(
       onPressed: _canSend ? _onSend : null,
       style: FilledButton.styleFrom(
@@ -490,7 +488,6 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
 
     _settingsOverlay = OverlayEntry(
       builder: (context) {
-        final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
         // 面板在按钮正上方，右对齐按钮右边缘
         final panelWidth = 340.0;
@@ -516,11 +513,11 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildColorSection(theme),
+                  _buildColorSection(tokens),
                   const SizedBox(height: 20),
-                  _buildChipSection(theme, '位置', _modeOptions, _mode),
+                  _buildChipSection(tokens, '位置', _modeOptions, _mode),
                   const SizedBox(height: 20),
-                  _buildChipSection(theme, '字号', _fontSizeOptions, _fontSize),
+                  _buildChipSection(tokens, '字号', _fontSizeOptions, _fontSize),
                 ],
               ),
             ),
@@ -560,13 +557,13 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
 
   /// 颜色区：圆形色块 32px，选中 2px primary 描边；VIP 渐变色块带
   /// 「VIP」白字（对标 BiliPai 颜色选择器）。
-  Widget _buildColorSection(ThemeData theme) {
+  Widget _buildColorSection(AppTokens tokens) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           '颜色',
-          style: theme.textTheme.bodyMedium
+          style: tokens.text.bodyMedium
               ?.copyWith(fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: Style.sm),
@@ -625,7 +622,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
 
   /// 位置/字号 FilterChip 区（对标 BiliPai：选中 primaryContainer）。
   Widget _buildChipSection(
-    ThemeData theme,
+    AppTokens tokens,
     String title,
     List<({int value, String label})> options,
     ValueNotifier<int> notifier,
@@ -635,7 +632,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
       children: [
         Text(
           title,
-          style: theme.textTheme.bodyMedium
+          style: tokens.text.bodyMedium
               ?.copyWith(fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: Style.sm),

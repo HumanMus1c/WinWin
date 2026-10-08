@@ -42,7 +42,6 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
@@ -65,7 +64,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                   Text(
                     '欢迎使用 WinWin',
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall?.copyWith(
+                    style: tokens.text.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -73,7 +72,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                   Text(
                     '开始之前，请阅读并确认以下条款',
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: tokens.text.bodyMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
                   ),
@@ -127,7 +126,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                   Text(
                     '未勾选全部条款时无法继续；选择「我不同意」将退出应用。',
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.labelSmall?.copyWith(
+                    style: tokens.text.labelSmall?.copyWith(
                       color: cs.outline,
                     ),
                   ),
@@ -203,7 +202,6 @@ class _ClauseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
@@ -225,14 +223,14 @@ class _ClauseTile extends StatelessWidget {
                 children: [
                   Text(
                     clause.title,
-                    style: theme.textTheme.titleSmall?.copyWith(
+                    style: tokens.text.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     clause.desc,
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    style: tokens.text.bodySmall?.copyWith(
                       color: cs.onSurfaceVariant,
                       height: 1.4,
                     ),

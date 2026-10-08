@@ -44,7 +44,6 @@ class _AtTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final nickname = _user?['nickname']?.toString() ?? '';
     final business = _content?['business']?.toString() ?? '';
@@ -64,12 +63,12 @@ class _AtTile extends StatelessWidget {
           children: [
             TextSpan(
               text: nickname,
-              style: theme.textTheme.titleSmall
+              style: tokens.text.titleSmall
                   ?.copyWith(color: tokens.colors.primary),
             ),
             TextSpan(
               text: ' 在$business中@了我',
-              style: theme.textTheme.titleSmall
+              style: tokens.text.titleSmall
                   ?.copyWith(color: tokens.colors.onSurfaceVariant),
             ),
           ],
@@ -82,7 +81,7 @@ class _AtTile extends StatelessWidget {
                 source,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium,
+                style: tokens.text.bodyMedium,
               ),
             )
           : null,

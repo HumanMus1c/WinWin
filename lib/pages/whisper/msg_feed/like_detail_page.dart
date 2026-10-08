@@ -143,7 +143,6 @@ class _LikeUserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
@@ -153,11 +152,11 @@ class _LikeUserTile extends StatelessWidget {
       leading: MsgFeedAvatar(src: _user?['avatar']?.toString(), size: 40),
       title: Text(
         _user?['nickname']?.toString() ?? '',
-        style: theme.textTheme.bodyLarge,
+        style: tokens.text.bodyLarge,
       ),
       subtitle: Text(
         msgFeedTime(item['like_time'] as int?),
-        style: theme.textTheme.bodySmall
+        style: tokens.text.bodySmall
             ?.copyWith(color: tokens.colors.outline),
       ),
       onTap: () {

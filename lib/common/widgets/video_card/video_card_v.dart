@@ -153,7 +153,6 @@ class VideoCardV extends StatelessWidget {
     VideoCardData data, {
     required bool demo,
   }) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final String title = data.title;
     final String? rcmdReason = data.rcmdReason;
@@ -231,7 +230,7 @@ class VideoCardV extends StatelessWidget {
                               style: TextStyle(
                                 height: 1.5,
                                 fontSize:
-                                    theme.textTheme.labelMedium?.fontSize,
+                                    tokens.text.labelMedium?.fontSize,
                                 color: tokens.colors.outline,
                               ),
                             ),
@@ -277,7 +276,7 @@ class VideoCardV extends StatelessWidget {
                               semanticsLabel: 'UP：$ownerName',
                               style: TextStyle(
                                 height: 1.5,
-                                fontSize: theme.textTheme.labelMedium?.fontSize,
+                                fontSize: tokens.text.labelMedium?.fontSize,
                                 color: tokens.colors.outline,
                               ),
                             ),

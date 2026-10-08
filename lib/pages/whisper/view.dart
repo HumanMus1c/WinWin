@@ -104,7 +104,7 @@ class _WhisperPageState extends State<WhisperPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     // 四类互动入口固定在顶部，仅下方会话列表可滚动。
     return Scaffold(
       appBar: AppBar(
@@ -118,7 +118,7 @@ class _WhisperPageState extends State<WhisperPage>
               horizontal: Style.safeSpace,
               vertical: Style.md,
             ),
-            child: _buildEntries(theme),
+            child: _buildEntries(tokens),
           ),
           // 阶段5d-L1：M3 分支已移除。
           const Divider(height: 1),
@@ -141,7 +141,7 @@ class _WhisperPageState extends State<WhisperPage>
     );
   }
 
-  Widget _buildEntries(ThemeData theme) {
+  Widget _buildEntries(AppTokens tokens) {
     return ListenableBuilder(
       listenable: MsgUnreadService(),
       builder: (context, _) {
@@ -226,7 +226,6 @@ class _EntryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     // hover 反馈：以条目强调色 8% 底衬显示可点击外形（复测反馈）。
     return HoverContainer(
@@ -280,7 +279,7 @@ class _EntryItem extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             label,
-            style: theme.textTheme.labelMedium,
+            style: tokens.text.labelMedium,
           ),
         ],
       ),

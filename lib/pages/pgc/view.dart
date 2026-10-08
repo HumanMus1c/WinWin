@@ -659,7 +659,6 @@ class _MyBangumiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final title = item.title ?? '';
@@ -761,7 +760,7 @@ class _MyBangumiCard extends StatelessWidget {
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
+                      style: tokens.text.bodySmall?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -771,7 +770,7 @@ class _MyBangumiCard extends StatelessWidget {
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
+                        style: tokens.text.labelSmall?.copyWith(
                           color: cs.outline,
                         ),
                       ),
@@ -822,7 +821,6 @@ class _PgcCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     return Card(
@@ -942,7 +940,7 @@ class _PgcCard extends StatelessWidget {
                       _title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
+                      style: tokens.text.bodySmall?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -952,7 +950,7 @@ class _PgcCard extends StatelessWidget {
                         _subtitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
+                        style: tokens.text.labelSmall?.copyWith(
                           color: cs.outline,
                         ),
                       ),

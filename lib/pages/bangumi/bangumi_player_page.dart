@@ -838,7 +838,6 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     return ValueListenableBuilder<double>(
       valueListenable: _scrollRatio,
       builder: (context, scrollRatio, _) {
-        final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
         final opacity = forceOpaque ? 1.0 : scrollRatio.clamp(0.0, 1.0);
         final overVideo = opacity < 0.5;
@@ -875,7 +874,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                         child: Text(
                           title ?? '番剧详情',
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
+                          style: tokens.text.titleMedium?.copyWith(
                             color: barContrast.contentColor,
                             shadows:
                                 overVideo ? ContrastStyle.glyphShadows : null,
@@ -1427,7 +1426,6 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   /// 普通视频稿件同款评论卡片
   Widget _buildReplyTile(ReplyItemModel reply) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final member = reply.member;
     final grayStyle = TextStyle(
@@ -1514,7 +1512,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                     const SizedBox(height: Style.xs),
                     ReplyContentView(
                       content: reply.content,
-                      textStyle: theme.textTheme.bodyMedium?.copyWith(
+                      textStyle: tokens.text.bodyMedium?.copyWith(
                         fontSize: 14.5,
                         height: 1.55,
                         color: tokens.colors.onSurface,
@@ -1703,7 +1701,6 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     ReplyItemModel sub,
     ReplyItemModel root,
   ) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final subMember = sub.member;
     return Padding(
@@ -1784,7 +1781,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             padding: const EdgeInsets.only(left: 36, top: 4, bottom: 4),
             child: ReplyContentView(
               content: sub.content,
-              textStyle: theme.textTheme.bodyMedium?.copyWith(
+              textStyle: tokens.text.bodyMedium?.copyWith(
                 fontSize: 13.5,
                 height: 1.5,
                 color: tokens.colors.onSurface,
@@ -2120,7 +2117,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   /// 视频下方交互区（对标普通视频稿件 detail_page.dart 的 _buildInfoSection）
   Widget _buildInfoSection(AppPalette cs) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final stat = widget.detail.stat;
     final grayStyle = TextStyle(fontSize: 12, color: cs.onSurfaceVariant);
     final epStat = VideoStat(
@@ -2139,7 +2136,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             _currentEpisode.displayTitle,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: tokens.text.titleMedium?.copyWith(
               fontSize: 17,
               fontWeight: FontWeight.w600,
               height: 1.35,
@@ -2206,7 +2203,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                               widget.detail.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(
+                              style: tokens.text.titleSmall?.copyWith(
                                 fontSize: 14.5,
                                 fontWeight: FontWeight.w600,
                               ),

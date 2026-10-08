@@ -18,6 +18,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 专栏文章阅读页面。
 ///
@@ -147,8 +148,8 @@ class _ArticlePageState extends State<ArticlePage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final fallbackTitle = widget.title ?? '专栏文章';
 
     return Scaffold(
@@ -202,7 +203,7 @@ class _ArticlePageState extends State<ArticlePage> {
         Success(:final response) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: _buildArticleContent(response, cs, theme)),
+              Expanded(child: _buildArticleContent(response, cs, tokens)),
               // 输入栏与正文居中列（maxWidth 860）对齐，不再横向撑满全屏。
               Center(
                 child: ConstrainedBox(
@@ -223,8 +224,8 @@ class _ArticlePageState extends State<ArticlePage> {
 
   Widget _buildArticleContent(
     ArticleDetailModel article,
-    ColorScheme cs,
-    ThemeData theme,
+    AppPalette cs,
+    AppTokens tokens,
   ) {
     final allImages = article.imageUrls;
 
@@ -262,7 +263,7 @@ class _ArticlePageState extends State<ArticlePage> {
               SliverToBoxAdapter(
                 child: Text(
                   article.title ?? widget.title ?? '',
-                  style: theme.textTheme.headlineSmall?.copyWith(
+                  style: tokens.text.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     height: 1.35,
                   ),
@@ -301,14 +302,14 @@ class _ArticlePageState extends State<ArticlePage> {
                           children: [
                             Text(
                               article.authorName ?? 'UP 主',
-                              style: theme.textTheme.titleSmall?.copyWith(
+                              style: tokens.text.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             if (article.pubTime != null && article.pubTime! > 0)
                               Text(
                                 _formatTime(article.pubTime!),
-                                style: theme.textTheme.labelSmall?.copyWith(
+                                style: tokens.text.labelSmall?.copyWith(
                                   color: cs.outline,
                                 ),
                               ),
@@ -354,7 +355,7 @@ class _ArticlePageState extends State<ArticlePage> {
                           padding: const EdgeInsets.only(top: 18, bottom: 8),
                           child: Text(
                             p.text ?? '',
-                            style: theme.textTheme.titleMedium?.copyWith(
+                            style: tokens.text.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -403,7 +404,7 @@ class _ArticlePageState extends State<ArticlePage> {
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           child: Text(
                             p.text ?? '',
-                            style: theme.textTheme.bodyMedium?.copyWith(
+                            style: tokens.text.bodyMedium?.copyWith(
                               fontSize: 15,
                               height: 1.8,
                               letterSpacing: 0.2,
@@ -434,7 +435,7 @@ class _ArticlePageState extends State<ArticlePage> {
                       const SizedBox(width: 6),
                       Text(
                         '评论区 ${article.replyCount != null ? '(${NumUtils.formatNum(article.replyCount)})' : ''}',
-                        style: theme.textTheme.titleSmall?.copyWith(
+                        style: tokens.text.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -498,7 +499,7 @@ class _ArticlePageState extends State<ArticlePage> {
                                 children: [
                                   Text(
                                     member?.uname ?? 'B站用户',
-                                    style: theme.textTheme.bodySmall?.copyWith(
+                                    style: tokens.text.bodySmall?.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: cs.outline,
                                     ),
@@ -506,7 +507,7 @@ class _ArticlePageState extends State<ArticlePage> {
                                   const SizedBox(height: 3),
                                   ReplyContentView(
                                     content: reply.content,
-                                    textStyle: theme.textTheme.bodyMedium?.copyWith(
+                                    textStyle: tokens.text.bodyMedium?.copyWith(
                                       height: 1.4,
                                     ),
                                   ),

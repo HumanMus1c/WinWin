@@ -27,7 +27,6 @@ class ProfileSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
@@ -46,7 +45,7 @@ class ProfileSectionHeader extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: theme.textTheme.titleMedium?.copyWith(
+                      style: tokens.text.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -54,7 +53,7 @@ class ProfileSectionHeader extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text(
                         '$count',
-                        style: theme.textTheme.titleSmall?.copyWith(
+                        style: tokens.text.titleSmall?.copyWith(
                           color: biliPink,
                           fontWeight: FontWeight.w600,
                         ),
@@ -235,7 +234,6 @@ class ProfileEmptyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final shapes = tokens.shapes;
@@ -271,7 +269,7 @@ class ProfileEmptyCard extends StatelessWidget {
                   children: [
                     Text(
                       message,
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: tokens.text.bodyMedium?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
                     ),
@@ -279,7 +277,7 @@ class ProfileEmptyCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         actionText!,
-                        style: theme.textTheme.labelMedium?.copyWith(
+                        style: tokens.text.labelMedium?.copyWith(
                           color: biliPink,
                           fontWeight: FontWeight.w600,
                         ),
@@ -317,7 +315,6 @@ class ProfileFavFolderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final shapes = tokens.shapes;
@@ -371,14 +368,14 @@ class ProfileFavFolderCard extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(
+              style: tokens.text.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               '共$count条视频 · ${isPublic ? '公开' : '私密'}',
-              style: theme.textTheme.labelSmall?.copyWith(
+              style: tokens.text.labelSmall?.copyWith(
                 color: cs.outline,
               ),
               maxLines: 1,
@@ -416,7 +413,6 @@ class ProfileVideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final shapes = tokens.shapes;
@@ -477,7 +473,7 @@ class ProfileVideoCard extends StatelessWidget {
               title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
+              style: tokens.text.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 height: 1.25,
               ),
@@ -486,7 +482,7 @@ class ProfileVideoCard extends StatelessWidget {
             // UP主 / 副标题
             Text(
               subtitle ?? author ?? '',
-              style: theme.textTheme.labelSmall?.copyWith(
+              style: tokens.text.labelSmall?.copyWith(
                 color: cs.outline,
                 fontSize: 10.5,
               ),

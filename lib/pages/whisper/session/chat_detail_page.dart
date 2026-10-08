@@ -20,6 +20,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 聊天详情入口（阶段 D）。
 ///
@@ -198,7 +199,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -275,22 +276,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                         },
                       ),
           ),
-          _buildInputBar(theme),
+          _buildInputBar(tokens),
         ],
       ),
     );
   }
 
-  Widget _buildInputBar(ThemeData theme) {
+  Widget _buildInputBar(AppTokens tokens) {
     return SafeArea(
       top: false,
       child: Container(
         padding: const EdgeInsets.symmetric(
             horizontal: Style.safeSpace, vertical: Style.sm),
         decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
+          color: tokens.colors.background,
           border: Border(
-            top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+            top: BorderSide(color: tokens.colors.outlineVariant.withValues(alpha: 0.4)),
           ),
         ),
         child: Row(
@@ -312,7 +313,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: theme.colorScheme.surfaceContainerHighest,
+                  fillColor: tokens.colors.surfaceContainerHighest,
                 ),
               ),
             ),
@@ -373,7 +374,7 @@ class _ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final msgType = _msgType;
     final isRevoked = (msg['msg_status'] as num?)?.toInt() == 1;
     final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
@@ -381,7 +382,7 @@ class _ChatBubble extends StatelessWidget {
     // 演示模式：消息内容不展示云端数据（视频卡片消息渲染为静态骨架卡）。
     if (Pref.demoMode) {
       return _wrap(
-        msgType == 11 ? _buildDemoVideoCard(theme) : _buildDemoTextBubble(theme),
+        msgType == 11 ? _buildDemoVideoCard(tokens) : _buildDemoTextBubble(tokens),
       );
     }
 
@@ -389,21 +390,21 @@ class _ChatBubble extends StatelessWidget {
     if (!isRevoked) {
       switch (msgType) {
         case 2:
-          return _wrap(_buildImage(context, theme));
+          return _wrap(_buildImage(context, tokens));
         case 7 || 14:
-          return _wrap(_buildShareCard(context, theme));
+          return _wrap(_buildShareCard(context, tokens));
         case 11:
-          return _wrap(_buildVideoCard(context, theme));
+          return _wrap(_buildVideoCard(context, tokens));
         case 12:
-          return _wrap(_buildArticleCard(theme));
+          return _wrap(_buildArticleCard(tokens));
       }
     }
 
     final text = _text;
     final bubbleColor = isMe
-        ? theme.colorScheme.primary
-        : theme.colorScheme.surfaceContainerHighest;
-    final textColor = isMe ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
+        ? tokens.colors.primary
+        : tokens.colors.surfaceContainerHighest;
+    final textColor = isMe ? tokens.colors.onPrimary : tokens.colors.onSurface;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -428,7 +429,7 @@ class _ChatBubble extends StatelessWidget {
               ),
               child: Text(
                 text.isEmpty ? '[消息]' : text,
-                style: theme.textTheme.bodyMedium?.copyWith(color: textColor),
+                style: tokens.text.bodyMedium?.copyWith(color: textColor),
               ),
             ),
           ),
@@ -438,11 +439,11 @@ class _ChatBubble extends StatelessWidget {
   }
 
   /// 演示模式：视频卡片消息的静态骨架占位（不展示云端数据）。
-  Widget _buildDemoVideoCard(ThemeData theme) {
+  Widget _buildDemoVideoCard(AppTokens tokens) {
     return Container(
       width: 300,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
+        color: tokens.colors.surfaceContainerHighest,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,7 +472,7 @@ class _ChatBubble extends StatelessWidget {
   }
 
   /// 演示模式：文本消息的静态占位气泡。
-  Widget _buildDemoTextBubble(ThemeData theme) {
+  Widget _buildDemoTextBubble(AppTokens tokens) {
     return Container(
       width: 200,
       padding: const EdgeInsets.symmetric(
@@ -479,7 +480,7 @@ class _ChatBubble extends StatelessWidget {
         vertical: Style.sm,
       ),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
+        color: tokens.colors.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: const Column(
@@ -516,7 +517,7 @@ class _ChatBubble extends StatelessWidget {
   }
 
   /// 图片消息（msg_type=2）：content = {url, width, height}。
-  Widget _buildImage(BuildContext context, ThemeData theme) {
+  Widget _buildImage(BuildContext context, AppTokens tokens) {
     final json = _contentJson ?? const <String, dynamic>{};
     final url = SessionAccountResolver.normalizeAvatarUrl(json['url']?.toString());
     final imgWidth = (json['width'] as num?)?.toDouble() ?? 0;
@@ -550,9 +551,9 @@ class _ChatBubble extends StatelessWidget {
 
   /// 分享卡片（msg_type=7/14）：source 区分视频/专栏/动态/番剧/直播。
   /// 视频稿件（source=5）点击跳播放；其余类型仅展示封面与标题。
-  Widget _buildShareCard(BuildContext context, ThemeData theme) {
+  Widget _buildShareCard(BuildContext context, AppTokens tokens) {
     final json = _contentJson;
-    if (json == null) return _fallbackText(theme);
+    if (json == null) return _fallbackText(tokens);
     final source = json['source'];
     final sourceInt = source is int
         ? source
@@ -572,9 +573,9 @@ class _ChatBubble extends StatelessWidget {
     final title = json['title']?.toString() ?? '';
     final author = json['author']?.toString() ?? '';
     return Material(
-      color: theme.colorScheme.surfaceContainerHighest,
+      color: tokens.colors.surfaceContainerHighest,
       child: InkWell(
-        onTap: sourceInt == 5 ? () => _openSharedVideo(context, theme, json) : null,
+        onTap: sourceInt == 5 ? () => _openSharedVideo(context, tokens, json) : null,
         child: Padding(
           padding: const EdgeInsets.all(Style.sm),
           child: Column(
@@ -587,7 +588,7 @@ class _ChatBubble extends StatelessWidget {
                 title.isEmpty ? '[$kind]' : title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium
+                style: tokens.text.bodyMedium
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 2),
@@ -595,8 +596,8 @@ class _ChatBubble extends StatelessWidget {
                 author.isEmpty ? kind : '$author · $kind',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.outline),
+                style: tokens.text.bodySmall
+                    ?.copyWith(color: tokens.colors.outline),
               ),
             ],
           ),
@@ -606,14 +607,14 @@ class _ChatBubble extends StatelessWidget {
   }
 
   /// 视频稿件卡片（msg_type=11）：content = {bvid, title, cover, times...}。
-  Widget _buildVideoCard(BuildContext context, ThemeData theme) {
+  Widget _buildVideoCard(BuildContext context, AppTokens tokens) {
     final json = _contentJson;
-    if (json == null) return _fallbackText(theme);
+    if (json == null) return _fallbackText(tokens);
     final bvid = json['bvid']?.toString() ?? '';
     final title = json['title']?.toString() ?? '';
     final cover = SessionAccountResolver.normalizeAvatarUrl(json['cover']?.toString());
     return Material(
-      color: theme.colorScheme.surfaceContainerHighest,
+      color: tokens.colors.surfaceContainerHighest,
       child: InkWell(
         onTap: bvid.isEmpty ? null : () => _openVideo(context, bvid, cover),
         child: Padding(
@@ -628,7 +629,7 @@ class _ChatBubble extends StatelessWidget {
                 title.isEmpty ? '[视频]' : title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium
+                style: tokens.text.bodyMedium
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
@@ -639,9 +640,9 @@ class _ChatBubble extends StatelessWidget {
   }
 
   /// 专栏卡片（msg_type=12）：暂不支持专栏阅读器，仅展示图文预览。
-  Widget _buildArticleCard(ThemeData theme) {
+  Widget _buildArticleCard(AppTokens tokens) {
     final json = _contentJson;
-    if (json == null) return _fallbackText(theme);
+    if (json == null) return _fallbackText(tokens);
     final images = json['image_urls'];
     final first = images is List && images.isNotEmpty
         ? SessionAccountResolver.normalizeAvatarUrl(images.first?.toString())
@@ -649,7 +650,7 @@ class _ChatBubble extends StatelessWidget {
     final title = json['title']?.toString() ?? '';
     final summary = json['summary']?.toString() ?? '';
     return Container(
-      color: theme.colorScheme.surfaceContainerHighest,
+      color: tokens.colors.surfaceContainerHighest,
       padding: const EdgeInsets.all(Style.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -661,7 +662,7 @@ class _ChatBubble extends StatelessWidget {
             title.isEmpty ? '[专栏]' : title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: tokens.text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           if (summary.isNotEmpty) ...[
             const SizedBox(height: 2),
@@ -669,8 +670,8 @@ class _ChatBubble extends StatelessWidget {
               summary,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: tokens.text.bodySmall
+                  ?.copyWith(color: tokens.colors.onSurfaceVariant),
             ),
           ],
         ],
@@ -678,20 +679,20 @@ class _ChatBubble extends StatelessWidget {
     );
   }
 
-  Widget _fallbackText(ThemeData theme) {
+  Widget _fallbackText(AppTokens tokens) {
     final text = _text;
     return Container(
-      color: theme.colorScheme.surfaceContainerHighest,
+      color: tokens.colors.surfaceContainerHighest,
       padding: const EdgeInsets.symmetric(horizontal: Style.md, vertical: Style.sm),
       child: Text(
         text.isEmpty ? '[消息]' : text,
-        style: theme.textTheme.bodyMedium,
+        style: tokens.text.bodyMedium,
       ),
     );
   }
 
   void _openSharedVideo(
-      BuildContext context, ThemeData theme, Map<String, dynamic> json) {
+      BuildContext context, AppTokens tokens, Map<String, dynamic> json) {
     String? bvid = json['bvid']?.toString();
     if (bvid == null || bvid.isEmpty) {
       final aid = (json['id'] as num?)?.toInt();

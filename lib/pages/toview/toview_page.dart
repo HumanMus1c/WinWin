@@ -524,7 +524,6 @@ class _ToviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final shapes = tokens.shapes;
@@ -638,7 +637,7 @@ class _ToviewCard extends StatelessWidget {
                             item.title ?? '',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
+                            style: tokens.text.bodyMedium?.copyWith(
                               height: 1.35,
                             ),
                           ),
@@ -668,7 +667,7 @@ class _ToviewCard extends StatelessWidget {
                                         : owner.name!,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.labelSmall
+                                    style: tokens.text.labelSmall
                                         ?.copyWith(color: cs.outline),
                                   ),
                                 ),
@@ -692,7 +691,7 @@ class _ToviewCard extends StatelessWidget {
                                         max: 9999999,
                                       ))
                                     : NumUtils.formatNum(stat!.view),
-                                style: theme.textTheme.labelSmall?.copyWith(
+                                style: tokens.text.labelSmall?.copyWith(
                                   color: cs.outline,
                                 ),
                               ),
@@ -712,7 +711,7 @@ class _ToviewCard extends StatelessWidget {
                                         max: 99999,
                                       ))
                                     : NumUtils.formatNum(stat!.danmaku),
-                                style: theme.textTheme.labelSmall?.copyWith(
+                                style: tokens.text.labelSmall?.copyWith(
                                   color: cs.outline,
                                 ),
                               ),

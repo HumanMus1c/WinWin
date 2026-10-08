@@ -252,7 +252,6 @@ class _RelationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final shapes = tokens.shapes;
     final radius = shapes.medium;
@@ -282,7 +281,7 @@ class _RelationCard extends StatelessWidget {
                       member.uname ?? '未知用户',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: tokens.text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -293,7 +292,7 @@ class _RelationCard extends StatelessWidget {
                           : '这个人很神秘',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
+                      style: tokens.text.bodySmall?.copyWith(
                         color: tokens.colors.outline,
                       ),
                     ),

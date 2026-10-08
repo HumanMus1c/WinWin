@@ -1134,7 +1134,6 @@ class _DynCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final author = item.author;
@@ -1183,7 +1182,7 @@ class _DynCard extends StatelessWidget {
                                   author?.name ?? '',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.titleSmall?.copyWith(
+                                  style: tokens.text.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1192,7 +1191,7 @@ class _DynCard extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 Text(
                                   author.pubAction!,
-                                  style: theme.textTheme.labelSmall?.copyWith(
+                                  style: tokens.text.labelSmall?.copyWith(
                                     color: cs.outline,
                                   ),
                                 ),
@@ -1202,7 +1201,7 @@ class _DynCard extends StatelessWidget {
                           if (item.pubTs != null)
                             Text(
                               _formatTime(item.pubTs!),
-                              style: theme.textTheme.labelSmall?.copyWith(
+                              style: tokens.text.labelSmall?.copyWith(
                                 color: cs.outline,
                               ),
                             ),
@@ -1222,14 +1221,14 @@ class _DynCard extends StatelessWidget {
                     ),
                     maxLines: 6,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium,
+                    style: tokens.text.bodyMedium,
                   )
                 else
                   Text(
                     item.text!,
                     maxLines: 6,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium,
+                    style: tokens.text.bodyMedium,
                   ),
               ],
               // 动态主体内容（按类型分发）
@@ -1295,7 +1294,6 @@ class _DynCard extends StatelessWidget {
 
   /// 转发动态内容渲染（嵌套原动态卡片，递归深度 ≤ 1）。
   Widget _buildForwardContent(BuildContext context, DynItemModel orig) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final origAuthor = orig.author;
@@ -1342,14 +1340,14 @@ class _DynCard extends StatelessWidget {
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium,
+                  style: tokens.text.bodyMedium,
                 )
               else
                 Text(
                   orig.text!,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium,
+                  style: tokens.text.bodyMedium,
                 ),
             ],
             if (orig.isVideo && orig.archive != null && (orig.archive!.bvid != null || orig.archive!.title != null)) ...[
@@ -1382,7 +1380,6 @@ class _DynCard extends StatelessWidget {
 
   /// 追番剧集动态卡片预览。
   Widget _buildPgcPreview(BuildContext context, DynPgc pgc) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final cover = pgc.cover;
@@ -1437,7 +1434,7 @@ class _DynCard extends StatelessWidget {
                     pgc.title ?? '剧集更新',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                    style: tokens.text.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   if (pgc.play != null || pgc.danmaku != null) ...[
                     const SizedBox(height: 4),
@@ -1563,7 +1560,7 @@ class _DynCard extends StatelessWidget {
 
   /// Opus 新版图文/文章卡片渲染。
   Widget _buildOpusCard(BuildContext context, DynOpus opus) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1572,7 +1569,7 @@ class _DynCard extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               opus.title!,
-              style: theme.textTheme.titleSmall?.copyWith(
+              style: tokens.text.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1584,7 +1581,7 @@ class _DynCard extends StatelessWidget {
               opus.summaryText!,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium,
+              style: tokens.text.bodyMedium,
             ),
           ),
         if (opus.pics.isNotEmpty)
@@ -1599,7 +1596,6 @@ class _DynCard extends StatelessWidget {
 
   /// 专栏卡片渲染。
   Widget _buildArticleCard(BuildContext context, DynArticle article) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final cover = article.covers.isNotEmpty ? article.covers.first : null;
@@ -1665,7 +1661,7 @@ class _DynCard extends StatelessWidget {
                       article.title ?? '专栏文章',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: tokens.text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1675,7 +1671,7 @@ class _DynCard extends StatelessWidget {
                         article.desc!,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
+                        style: tokens.text.bodySmall?.copyWith(
                           color: cs.outline,
                         ),
                       ),
@@ -1692,7 +1688,6 @@ class _DynCard extends StatelessWidget {
 
   /// 直播卡片渲染（UP主开播或直播推荐）。
   Widget _buildLiveCard(BuildContext context, DynLive live) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final isLiving = live.liveStatus == 1 || live.badge == '直播中';
@@ -1793,7 +1788,7 @@ class _DynCard extends StatelessWidget {
                       live.title ?? (isLiving ? '正在直播' : '直播已结束'),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: tokens.text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1819,7 +1814,7 @@ class _DynCard extends StatelessWidget {
                         else if (live.uname != null && live.uname!.isNotEmpty)
                           Text(
                             live.uname!,
-                            style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+                            style: tokens.text.labelSmall?.copyWith(color: cs.outline),
                           ),
                         if (live.watchedShow != null && live.watchedShow!.isNotEmpty) ...[
                           const Spacer(),
@@ -1827,7 +1822,7 @@ class _DynCard extends StatelessWidget {
                           const SizedBox(width: 3),
                           Text(
                             live.watchedShow!,
-                            style: theme.textTheme.labelSmall?.copyWith(color: cs.outline),
+                            style: tokens.text.labelSmall?.copyWith(color: cs.outline),
                           ),
                         ],
                       ],
@@ -1872,7 +1867,6 @@ class _DynCard extends StatelessWidget {
   Widget _buildGoodsCard(BuildContext context, DynAdditional additional) {
     if (additional.goodsItems.isEmpty) return const SizedBox.shrink();
     final item = additional.goodsItems.first;
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
@@ -1911,7 +1905,7 @@ class _DynCard extends StatelessWidget {
                     item.name ?? '商品推荐',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
+                    style: tokens.text.bodySmall?.copyWith(fontWeight: FontWeight.w500),
                   ),
                   if (item.price != null && item.price!.isNotEmpty)
                     Text(

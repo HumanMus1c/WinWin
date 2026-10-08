@@ -28,7 +28,6 @@ class AppEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final tint = iconColor ?? cs.onSurfaceVariant;
@@ -58,14 +57,14 @@ class AppEmptyState extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium,
+                style: tokens.text.titleMedium,
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 6),
                 Text(
                   subtitle!,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
+                  style: tokens.text.bodySmall?.copyWith(color: cs.outline),
                 ),
               ],
               if (action != null) ...[

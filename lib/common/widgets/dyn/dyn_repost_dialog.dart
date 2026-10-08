@@ -67,7 +67,6 @@ class _DynRepostDialogState extends State<DynRepostDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final target = widget.item.orig ?? widget.item;
@@ -109,7 +108,7 @@ class _DynRepostDialogState extends State<DynRepostDialog> {
                       _previewText(target),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
+                      style: tokens.text.bodySmall?.copyWith(
                         color: cs.outline,
                       ),
                     ),
