@@ -1,9 +1,10 @@
 import 'dart:ui' show PointerDeviceKind;
 
+import 'package:cupertino_ui/cupertino_ui.dart' show DefaultCupertinoLocalizations;
 import 'package:flutter/widgets.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:material_ui/material_ui.dart'
-    show AnimatedTheme, ThemeData; // 过渡期（B2 迁移消费者、B7 摘除）
+    show AnimatedTheme, DefaultMaterialLocalizations, ThemeData // 过渡期（B2 迁移消费者、B7 摘除）
+    ;
 
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
@@ -98,10 +99,13 @@ class AppShell extends StatelessWidget {
       navigatorKey: navigatorKey,
       navigatorObservers: navigatorObservers,
       pageRouteBuilder: appPageRouteBuilder,
+      // 本地化：与 material_ui 的 MaterialApp 默认**逐项一致**——应用侧 material 控件
+      // 读的是 material_ui 自己的 MaterialLocalizations（SDK 的 Global* 实现的是 SDK
+      // 类型，二者不可互换，曾导致"No MaterialLocalizations found"→ 灰块不可点）；
+      // widgets 层由 WidgetsApp 自带。SDK MaterialLocalizations 仅在 MiuixCompat 内提供。
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
+        DefaultMaterialLocalizations.delegate,
+        DefaultCupertinoLocalizations.delegate,
       ],
       home: home,
       builder: (BuildContext context, Widget? child) {

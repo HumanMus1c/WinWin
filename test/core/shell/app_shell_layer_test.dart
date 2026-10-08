@@ -235,7 +235,7 @@ void main() {
     final navKey = GlobalKey<NavigatorState>();
     final theme = AppTheme.lightFor();
     late modern.ThemeData seenTheme;
-    late legacy.MaterialLocalizations localizations;
+    late modern.MaterialLocalizations localizations;
 
     await tester.pumpWidget(
       AppShell(
@@ -245,10 +245,10 @@ void main() {
         escapeObserver: AppEscapeNavigatorObserver(),
         theme: theme,
         home: Builder(builder: (context) {
-          // 应用侧主题消费者走 material_ui 的 Theme.of（SDK material 仅服务
-          // flutter_miuix 内部组件，见 MiuixCompat）。
+          // 应用侧主题/本地化消费者走 material_ui（SDK material 仅服务 flutter_miuix
+          // 内部组件，见 MiuixCompat）。
           seenTheme = modern.Theme.of(context);
-          localizations = legacy.MaterialLocalizations.of(context);
+          localizations = modern.MaterialLocalizations.of(context);
           return const Text('首页');
         }),
       ),
@@ -258,7 +258,8 @@ void main() {
     // 过渡期主题：B2 迁移 Theme.of 消费者前，Material 控件仍须拿到应用主题。
     expect(seenTheme.brightness, theme.brightness);
     expect(seenTheme.colorScheme.primary, theme.colorScheme.primary);
-    // 本地化：MaterialLocalizations 不得缺失（Material 控件依赖）。
+    // 本地化：material_ui 侧的 MaterialLocalizations 不得缺失（Material 控件依赖；
+    // SDK 的 Global* 委托实现的是 SDK 类型，不可互换）。
     expect(localizations.cutButtonLabel, isNotEmpty);
     // 文本基底：显式 DefaultTextStyle（非 WidgetsApp 的"黄绿双下划线"错误样式）。
     expect(
