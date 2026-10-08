@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 演示模式下可即时编辑的数字元素。
 ///
@@ -298,7 +299,7 @@ class _DemoEditShellState extends State<_DemoEditShell> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return Tooltip(
       message: '演示模式：点击编辑',
       child: MouseRegion(
@@ -422,7 +423,7 @@ class _DemoChoiceDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return SimpleDialog(
       title: Text(title),
       children: [

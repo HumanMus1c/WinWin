@@ -8,6 +8,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 动态互动条（转发 / 评论 / 点赞），动态卡片、详情页与空间动态共用。
 ///
@@ -109,7 +110,7 @@ class _DynActionBarState extends State<DynActionBar> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     final liked = _effectiveLiked;
 
     return Row(

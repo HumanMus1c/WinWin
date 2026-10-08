@@ -5,6 +5,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/miuix_theme_bridge.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 浮层提示卡的最大宽度（含内边距）。
 const double _toastMaxWidth = 400;
@@ -180,7 +181,8 @@ class _MiuixToastCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final displayText = _breakLongSegments(message);
     // 反色卡：亮色主题用暗卡（inverseSurface），暗色主题用亮卡；
     // 半透明底（统一不透明度 kMiuixSurfaceAlpha）。

@@ -2,8 +2,8 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/level_icon.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 export 'package:winwin/common/widgets/level_icon.dart';
 
@@ -87,9 +87,9 @@ class LevelExpBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
     final levelColor = LevelColors.forLevel(level, isSenior: isSenior);
 
     final isMax = level >= 6 || (nextExp == null && (currentExp ?? 0) > 0);

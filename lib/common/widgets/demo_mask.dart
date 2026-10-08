@@ -12,6 +12,7 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 演示模式：演示卡片右键/长按"更多选项"菜单（使用占位数据，不触发云端写操作）。
 void _showDemoCardMenu(BuildContext context, Offset position, int seed) {
@@ -67,7 +68,7 @@ class DemoVideoOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return IgnorePointer(
       child: Container(
         decoration: BoxDecoration(
@@ -146,7 +147,8 @@ class DemoVideoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final followed = Random(seed).nextBool();
     final hotLabel =
         const ['高播放', '1万点赞', '热门', '宝藏新作'][Random(seed ^ 5).nextInt(4)];
@@ -308,7 +310,8 @@ class DemoVideoCardH extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final durationText = DurationUtils.formatDuration(
       DemoOverrides.durationSeconds('demo.hcard.$seed'),
     );

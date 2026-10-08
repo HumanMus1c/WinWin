@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// Wraps [child] with a repeating shimmer/sweep animation, commonly used as
 /// the loading state for list cards.
@@ -44,8 +45,8 @@ class _SkeletonState extends State<Skeleton>
       valueListenable: Pref.demoModeNotifier,
       builder: (context, demo, _) {
         if (demo) return widget.child;
-        final theme = Theme.of(context);
-        final isDark = theme.brightness == Brightness.dark;
+        final tokens = AppThemeHost.of(context);
+        final isDark = tokens.isDark;
         final shimmerColor = isDark
             ? Colors.white.withValues(alpha: 0.12)
             : Colors.white.withValues(alpha: 0.75);
@@ -85,8 +86,8 @@ class _SkeletonState extends State<Skeleton>
 
 /// Returns the standard background color for skeleton blocks according to current theme.
 Color skeletonBlockColor(BuildContext context) {
-  final cs = Theme.of(context).colorScheme;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final cs = AppThemeHost.of(context).colors;
+  final isDark = AppThemeHost.of(context).isDark;
   return isDark
       ? cs.surfaceContainerHighest
       : cs.surfaceContainerHighest.withValues(alpha: 0.6);

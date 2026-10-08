@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 简洁评论输入栏（专栏 / 动态详情页使用）：
 /// 官方表情面板按钮 + 胶囊输入框 + 粉色发送按钮。
@@ -40,7 +41,7 @@ class SimpleCommentInputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         Style.safeSpace,
@@ -49,10 +50,10 @@ class SimpleCommentInputBar extends StatelessWidget {
         Style.xs,
       ),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: tokens.colors.surface,
         border: Border(
           top: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
             width: 0.5,
           ),
         ),
@@ -82,14 +83,14 @@ class SimpleCommentInputBar extends StatelessWidget {
                   hintText: hintText,
                   hintStyle: TextStyle(
                     fontSize: 13,
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: tokens.colors.onSurfaceVariant,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(100),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: theme.colorScheme.surfaceContainer
+                  fillColor: tokens.colors.surfaceContainer
                       .withValues(alpha: 0.5),
                 ),
                 onSubmitted: (_) => onSend(),

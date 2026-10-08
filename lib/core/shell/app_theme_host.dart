@@ -22,6 +22,7 @@ class AppPalette {
     required this.primaryContainer,
     required this.secondary,
     required this.secondaryContainer,
+    required this.onSecondaryContainer,
     required this.tertiary,
     required this.tertiaryContainer,
     required this.surface,
@@ -46,6 +47,7 @@ class AppPalette {
   final Color primaryContainer;
   final Color secondary;
   final Color secondaryContainer;
+  final Color onSecondaryContainer;
   final Color tertiary;
   final Color tertiaryContainer;
   final Color surface;
@@ -76,6 +78,8 @@ class AppPalette {
     primaryContainer: miuixLightPrimaryContainer,
     secondary: miuixLightSecondary,
     secondaryContainer: miuixLightSecondaryContainer,
+    // M3 基线值（项目未覆写该字段）
+    onSecondaryContainer: Color(0xFF1D192B),
     tertiary: miuixLightTertiary,
     tertiaryContainer: miuixLightTertiaryContainer,
     surface: miuixLightSurface,
@@ -91,8 +95,9 @@ class AppPalette {
     onBackground: miuixLightOnSurface,
     error: miuixLightError,
     onError: miuixLightOnPrimary,
-    inverseSurface: miuixLightOnSurface,
-    onInverseSurface: miuixLightSurface,
+    // M3 基线值（项目未覆写这两个反色字段；Toast 反色卡取此处）
+    inverseSurface: Color(0xFF313033),
+    onInverseSurface: Color(0xFFF4EFF4),
     scrim: Color(0xFF000000),
   );
 
@@ -102,6 +107,8 @@ class AppPalette {
     primaryContainer: miuixDarkPrimaryContainer,
     secondary: miuixDarkSecondary,
     secondaryContainer: miuixDarkSecondaryContainer,
+    // M3 基线值（项目未覆写该字段）
+    onSecondaryContainer: Color(0xFFE8DEF8),
     tertiary: miuixDarkTertiary,
     tertiaryContainer: miuixDarkTertiaryContainer,
     surface: miuixDarkSurface,
@@ -117,8 +124,9 @@ class AppPalette {
     onBackground: miuixDarkOnSurface,
     error: miuixDarkError,
     onError: Color(0xFF000000),
-    inverseSurface: miuixDarkOnSurface,
-    onInverseSurface: miuixDarkSurface,
+    // M3 基线值（项目未覆写这两个反色字段）
+    inverseSurface: Color(0xFFE6E1E5),
+    onInverseSurface: Color(0xFF313033),
     scrim: Color(0xFF000000),
   );
 

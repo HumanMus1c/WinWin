@@ -11,8 +11,8 @@ import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 视频卡片 - 垂直布局（高性能适配版）。
 ///
@@ -40,7 +40,7 @@ class VideoCardV extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = VideoCardData.from(videoItem);
-    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.miuix;
+    final shapes = AppThemeHost.of(context).shapes;
     final radius = shapes.medium;
     Offset? lastTapPosition;
 
@@ -154,6 +154,7 @@ class VideoCardV extends StatelessWidget {
     required bool demo,
   }) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final String title = data.title;
     final String? rcmdReason = data.rcmdReason;
     final bool isFollowed = data.isFollowed;
@@ -210,7 +211,7 @@ class VideoCardV extends StatelessWidget {
                           vertical: 1,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.secondaryContainer
+                          color: tokens.colors.secondaryContainer
                               .withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(100),
                         ),
@@ -220,7 +221,7 @@ class VideoCardV extends StatelessWidget {
                             AppIcon(
                               AppIcons.profile(),
                               size: 12,
-                              color: theme.colorScheme.outline,
+                              color: tokens.colors.outline,
                             ),
                             const SizedBox(width: 3),
                             Text(
@@ -231,7 +232,7 @@ class VideoCardV extends StatelessWidget {
                                 height: 1.5,
                                 fontSize:
                                     theme.textTheme.labelMedium?.fontSize,
-                                color: theme.colorScheme.outline,
+                                color: tokens.colors.outline,
                               ),
                             ),
                           ],
@@ -265,7 +266,7 @@ class VideoCardV extends StatelessWidget {
                               vertical: 1,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.secondaryContainer
+                              color: tokens.colors.secondaryContainer
                                   .withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(100),
                             ),
@@ -277,7 +278,7 @@ class VideoCardV extends StatelessWidget {
                               style: TextStyle(
                                 height: 1.5,
                                 fontSize: theme.textTheme.labelMedium?.fontSize,
-                                color: theme.colorScheme.outline,
+                                color: tokens.colors.outline,
                               ),
                             ),
                           ),

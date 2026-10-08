@@ -2,6 +2,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_shapes.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 粉丝勋章徽章组件（对齐 B 站官方与自适应设计系统）。
 ///
@@ -28,8 +29,8 @@ class MedalWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final shapes = tokens.shapes;
 
     // 阶段5d-L1：M3 分支已移除，恒为全圆角胶囊。
     final outerRadius = shapes.pillBorder;

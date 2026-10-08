@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_shapes.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 自适应角标组件（对齐 PiliPlus 与哔哩哔哩官方美术规范）。
 ///
@@ -67,10 +68,10 @@ class PBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
-    final isDark = theme.brightness == Brightness.dark;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
+    final isDark = tokens.isDark;
 
     if (type == PBadgeType.progress) {
       final p = (progress ?? 0).clamp(0.0, 1.0);
@@ -159,7 +160,7 @@ class POverlayBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shapes = Theme.of(context).extension<AppShapes>() ?? AppShapes.miuix;
+    final shapes = AppThemeHost.of(context).shapes;
     return Container(
       padding: padding ?? const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
@@ -216,7 +217,7 @@ class _ThemedBadge extends StatelessWidget {
   final String text;
   final PBadgeType type;
   final Radius radius;
-  final ColorScheme cs;
+  final AppPalette cs;
   final bool isDark;
   final double fontSize;
   final EdgeInsetsGeometry? padding;
@@ -313,7 +314,7 @@ class _ProgressBadge extends StatelessWidget {
 
   final double progress;
   final Radius radius;
-  final ColorScheme cs;
+  final AppPalette cs;
 
   @override
   Widget build(BuildContext context) {

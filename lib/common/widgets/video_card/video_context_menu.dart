@@ -20,6 +20,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 String _errMsg(LoadingState state, [String fallback = '操作失败']) {
   if (state is Error) {
@@ -202,7 +203,7 @@ List<ContextMenuAction> buildVideoCardActions({
                     child: Text(
                       '点错了',
                       style: TextStyle(
-                        color: Theme.of(dialogCtx).colorScheme.outline,
+                        color: AppThemeHost.of(dialogCtx).colors.outline,
                       ),
                     ),
                   ),
@@ -282,8 +283,8 @@ class VideoPopupMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     return SizedBox(
       width: 26,
@@ -455,8 +456,8 @@ void _showDislikeReasonsDialog({
   showDialog(
     context: context,
     builder: (dialogCtx) {
-      final theme = Theme.of(dialogCtx);
-      final cs = theme.colorScheme;
+      final tokens = AppThemeHost.of(dialogCtx);
+      final cs = tokens.colors;
 
       Widget makeChip(Reason reason, {required bool isFeedback}) {
         return ActionChip(

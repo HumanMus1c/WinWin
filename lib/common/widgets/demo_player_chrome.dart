@@ -9,6 +9,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 演示模式：播放器区域（灰色静态画面 + 与正常模式一致的控制栏）。
 ///
@@ -92,7 +93,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     final fraction = _total.inSeconds == 0
         ? 0.0
         : (_pos.inSeconds / _total.inSeconds).clamp(0.0, 1.0);

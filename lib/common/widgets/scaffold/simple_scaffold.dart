@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_chrome.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 export 'package:winwin/theme/app_icons.dart' show AppBackButton, AppIcons;
 
@@ -55,9 +56,9 @@ class SimpleScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
 
-    final bg = backgroundColor ?? theme.scaffoldBackgroundColor;
+    final bg = backgroundColor ?? tokens.colors.background;
 
     Widget content = body;
     if (topSafeArea || bottomSafeArea) {

@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/theme/app_shapes.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// Skeleton placeholder for the vertical video card.
 ///
@@ -12,8 +13,8 @@ class VideoCardVSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
     final blockColor = skeletonBlockColor(context);
 

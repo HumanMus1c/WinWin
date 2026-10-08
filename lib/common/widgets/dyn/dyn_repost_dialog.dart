@@ -5,6 +5,7 @@ import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 动态转发弹窗（对标 PiliPlus RepostPanel 的精简桌面版）：
 /// 展示被转发内容预览 + 转发理由输入，提交至 `/x/dynamic/feed/create/dyn`。
@@ -67,7 +68,8 @@ class _DynRepostDialogState extends State<DynRepostDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
     final target = widget.item.orig ?? widget.item;
 
     return AlertDialog(

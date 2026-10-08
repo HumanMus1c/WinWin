@@ -8,9 +8,9 @@ import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 视频卡片 - 水平布局（高性能适配版）。
 ///
@@ -50,7 +50,8 @@ class VideoCardH extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = VideoCardData.from(videoItem);
     final theme = Theme.of(context);
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final shapes = tokens.shapes;
     final radius = shapes.medium;
     final int duration = data.duration;
     final double? progress = data.progress;
@@ -156,7 +157,7 @@ class VideoCardH extends StatelessWidget {
                                 minHeight: 2,
                                 backgroundColor: Colors.transparent,
                                 valueColor: AlwaysStoppedAnimation(
-                                  theme.colorScheme.primary,
+                                  tokens.colors.primary,
                                 ),
                               ),
                             ),
@@ -166,7 +167,7 @@ class VideoCardH extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   // 右：标题 + UP + 统计
-                  Expanded(child: _buildTextContent(theme, data, demo: demo)),
+                  Expanded(child: _buildTextContent(theme, tokens, data, demo: demo)),
                 ],
               ),
             ),
@@ -178,11 +179,12 @@ class VideoCardH extends StatelessWidget {
 
   Widget _buildTextContent(
     ThemeData theme,
+    AppTokens tokens,
     VideoCardData data, {
     required bool demo,
   }) {
     final String title = data.title;
-    final cs = theme.colorScheme;
+    final cs = tokens.colors;
     final String ownerName = data.ownerName;
 
     return Column(

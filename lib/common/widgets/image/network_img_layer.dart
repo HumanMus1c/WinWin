@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/image_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// A cached network image layer with fast fade animation, rounded corners and a
 /// gray placeholder. [type] can be 'emote', 'avatar' or 'default'.
@@ -126,7 +127,7 @@ class NetworkImgLayer extends StatelessWidget {
   }
 
   Widget _placeholder(BuildContext context, {bool isAvatar = false}) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return Container(
       width: width,
       height: height,

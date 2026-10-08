@@ -2,6 +2,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 三处对话框共用外壳（SelectDialog / 弹幕设置 / 字幕设置）。
 ///
@@ -25,8 +26,8 @@ class MiuixDialogShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
 
     final content = ConstrainedBox(constraints: constraints, child: child);
 

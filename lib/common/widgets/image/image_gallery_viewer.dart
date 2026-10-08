@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -311,11 +312,10 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        final theme = Theme.of(ctx);
-        final cs = theme.colorScheme;
+        final cs = AppThemeHost.of(ctx).colors;
         return Container(
           decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor,
+            color: cs.background,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           ),
           child: SafeArea(

@@ -7,6 +7,7 @@ import 'package:winwin/core/emote/emote_store.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/image_utils.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 官方表情面板按钮（评论输入框 / 直播互动条共用）。
 ///
@@ -154,14 +155,14 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
 
     _overlay = OverlayEntry(
       builder: (ctx) {
-        final theme = Theme.of(ctx);
+        final tokens = AppThemeHost.of(ctx);
 
         final panel = FadeTransition(
           opacity: _controller,
           child: ScaleTransition(
             scale: _scale,
             alignment: anchor,
-            child: _buildPanel(theme),
+            child: _buildPanel(tokens),
           ),
         );
 
@@ -205,7 +206,7 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
     _precacheEmotes();
   }
 
-  Widget _buildPanel(ThemeData theme) {
+  Widget _buildPanel(AppTokens tokens) {
     // 共用浮层面板（MiuixOverlayPanel）：与"弹幕样式"面板统一样式，
     // 半透明底统一走 kMiuixSurfaceAlpha；对角线展开动画在 Overlay 层包裹。
     return MiuixOverlayPanel(
@@ -213,7 +214,7 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
       icon: Icon(
         Icons.sentiment_satisfied_alt_outlined,
         size: 16,
-        color: theme.colorScheme.primary,
+        color: tokens.colors.primary,
       ),
       child: _EmoteGridArea(
         onPick: (code) {
@@ -226,7 +227,7 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return Tooltip(
       message: '选择官方表情',
       waitDuration: const Duration(milliseconds: 600),
@@ -331,7 +332,7 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
   }
 
   Widget _buildPackageTab(BuildContext context, int i, int activeIndex) {
-    final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final active = i == activeIndex;
     return InkWell(
       borderRadius: BorderRadius.circular(6),
@@ -342,7 +343,7 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(6),
           color: active
-              ? theme.colorScheme.primary.withValues(alpha: 0.16)
+              ? tokens.colors.primary.withValues(alpha: 0.16)
               : null,
         ),
         child: Text(
@@ -351,8 +352,8 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
             fontSize: 12,
             fontWeight: active ? FontWeight.w600 : FontWeight.w400,
             color: active
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurfaceVariant,
+                ? tokens.colors.primary
+                : tokens.colors.onSurfaceVariant,
           ),
         ),
       ),

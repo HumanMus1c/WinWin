@@ -51,6 +51,26 @@ void main() {
     expect(p.error, miuixDarkError);
   });
 
+  test('AppPalette 基线字段（项目未覆写）与 M3 基线值一致', () {
+    // 这些字段迁移前取 ColorScheme 的默认值；此处显式钉住，防静默漂移
+    // （B2b：Toast 反色卡取 inverseSurface/onInverseSurface）。
+    const p = AppPalette.light;
+    expect(p.onSecondaryContainer, const Color(0xFF1D192B));
+    expect(p.surfaceContainerLow, const Color(0xFFF7F2FA));
+    expect(p.onError, miuixLightOnPrimary);
+    expect(p.inverseSurface, const Color(0xFF313033));
+    expect(p.onInverseSurface, const Color(0xFFF4EFF4));
+    expect(p.scrim, const Color(0xFF000000));
+
+    const d = AppPalette.dark;
+    expect(d.onSecondaryContainer, const Color(0xFFE8DEF8));
+    expect(d.surfaceContainerLow, const Color(0xFF1D1B20));
+    expect(d.onError, const Color(0xFF000000));
+    expect(d.inverseSurface, const Color(0xFFE6E1E5));
+    expect(d.onInverseSurface, const Color(0xFF313033));
+    expect(d.scrim, const Color(0xFF000000));
+  });
+
   test('AppThemeHost 按明暗装配对应单例（Token 通道口径）', () {
     final light = AppThemeHost.tokensFor(Brightness.light);
     expect(light.isDark, isFalse);

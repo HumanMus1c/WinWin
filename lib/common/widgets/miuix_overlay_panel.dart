@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/miuix_theme_bridge.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 共用毛玻璃浮层面板（弹幕样式 / 表情面板等二级浮层共用，样式单一来源）。
 ///
@@ -34,8 +35,9 @@ class MiuixOverlayPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final isDark = tokens.isDark;
     final baseColor = isDark ? const Color(0xFF262626) : const Color(0xFFEAEAEA);
     final dividerColor = isDark
         ? Colors.white.withValues(alpha: 0.10)

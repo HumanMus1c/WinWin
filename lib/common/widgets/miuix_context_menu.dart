@@ -8,6 +8,7 @@ import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 通用右键/坐标上下文菜单动作结构体（视频卡片、消息会话等共用）。
 class ContextMenuAction {
@@ -111,6 +112,7 @@ class _MiuixContextMenuOverlayState extends State<_MiuixContextMenuOverlay>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = AppThemeHost.of(context);
     final baseColors = MiuixDropdownDefaults.dropdownColors(context);
     final contentColor = baseColors.contentColor;
     final selectedContentColor = baseColors.selectedContentColor;
@@ -142,7 +144,7 @@ class _MiuixContextMenuOverlayState extends State<_MiuixContextMenuOverlay>
           title: widget.title,
           icon: AppIcon(AppIcons.more(),
             size: 16,
-            color: theme.colorScheme.primary,
+            color: tokens.colors.primary,
           ),
           child: SingleChildScrollView(
             child: Column(
