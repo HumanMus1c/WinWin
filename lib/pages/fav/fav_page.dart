@@ -27,7 +27,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixTopAppBar;
+import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
@@ -196,7 +196,7 @@ class _FavPageState extends State<FavPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      topBar: MiuixTopAppBar(title: '我的收藏'),
+      topBar: MiuixSmallTopAppBar(title: '我的收藏'),
       body: Pref.demoMode
           ? const DemoListSkeleton()
           : _loading && _folders.isEmpty
@@ -525,7 +525,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      topBar: MiuixTopAppBar(
+      topBar: MiuixSmallTopAppBar(
         title: Pref.demoMode ? '收藏夹' : widget.folder.title,
       ),
       floatingActionButton: _items.isNotEmpty
@@ -986,7 +986,7 @@ class _FavPanelState extends State<_FavPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          MiuixTopAppBar(
+          MiuixSmallTopAppBar(
             title: '添加到收藏夹',
             navigationIcon: IconButton(
               icon: AppIcon(AppIcons.clear()),
