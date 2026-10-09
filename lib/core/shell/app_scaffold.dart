@@ -1,6 +1,6 @@
 import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoIcons;
 import 'package:flutter/widgets.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixScaffold;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixScaffold;
 
 import 'app_theme_host.dart';
 
@@ -10,11 +10,13 @@ import 'app_theme_host.dart';
 /// topBar/bottomBar/FAB/floatingToolbar/snackbarHost/popupHost 槽位与
 /// 窗口内边距换算）；本类只补项目口径的默认值：
 /// - 背景默认取 [AppTokens] 的 `colors.background`（可由 [backgroundColor] 覆盖）；
-/// - `content` 槽位统一承载 [body]（把窗口内边距透传给页面内容）；
-/// - **悬浮返回按钮**（[showBackButton]）：可 pop 时在内容左上角悬浮显示，
-///   取代页面标题栏里的返回入口（2026-10-08 起项目去除页面标题栏，统一走此入口）。
+/// - **顶部安全行**（[reserveTopStrip]）：每个页面顶部预留一行（高度 = 此前的紧凑标题栏
+///   高度 [topStripHeight]）作为安全区域，避免内容贴顶；
+/// - **返回按钮**（[showBackButton]）：仅在**二级页面**（可 pop）的顶部安全行左侧显示
+///   悬浮返回按钮（Miuix 图标按钮规范 + 阴影）；
+/// - 顶部安全行右侧承载 [actions]（原顶栏操作按钮的落点）。
 ///
-/// L0 阶段：本文件零 Material 依赖，页面在 B5 批次分批从 `Scaffold` 切换过来。
+/// 2026-10-08 起项目去除页面标题栏，由上述安全行 + 悬浮按钮取代。
 class AppScaffold extends StatelessWidget {
   const AppScaffold({
     super.key,
@@ -25,14 +27,18 @@ class AppScaffold extends StatelessWidget {
     this.popupHost,
     this.backgroundColor,
     this.showBackButton = true,
+    this.reserveTopStrip = true,
     this.actions,
     required this.body,
   });
 
+  /// 顶部安全行高度（= 此前的紧凑标题栏高度口径）。
+  static const double topStripHeight = 50;
+
   /// 顶栏（通常为 MiuixTopAppBar 或页面自绘顶栏）。
   ///
   /// 2026-10-08 起项目**默认不再使用页面标题栏**（窗口标题条 + 左侧导航已表达位置），
-  /// 仅保留槽位供个别必需场景（如搜索页的输入框）使用。
+  /// 仅保留槽位供个别必需场景（如分类 Tab 栏）使用。
   final Widget? topBar;
 
   /// 底栏。
@@ -50,12 +56,13 @@ class AppScaffold extends StatelessWidget {
   /// 背景色；null 时取当前 Token 的应用背景色。
   final Color? backgroundColor;
 
-  /// 是否在内容左上角悬浮返回按钮（[Navigator.canPop] 为真时显示）。
+  /// 是否在顶部安全行左侧提供返回按钮（[Navigator.canPop] 为真时显示）。
   final bool showBackButton;
 
-  /// 悬浮操作区（右上角）：原顶栏 `actions` 的落点（刷新/清空/分享等）。
-  ///
-  /// 2026-10-08 起页面不再使用标题栏，顶栏里的操作按钮改由本槽位悬浮承载。
+  /// 是否预留顶部安全行（内嵌在别的页面里的子页面可关掉）。
+  final bool reserveTopStrip;
+
+  /// 顶部安全行右侧的操作区（刷新/清空/分享等）。
   final List<Widget>? actions;
 
   /// 页面主体。
@@ -72,34 +79,41 @@ class AppScaffold extends StatelessWidget {
       popupHost: popupHost,
       containerColor: backgroundColor ?? tokens.colors.background,
       content: (EdgeInsets padding) {
-        final content = Padding(padding: padding, child: body);
-        final canPop = showBackButton &&
-            (Navigator.maybeOf(context)?.canPop() ?? false);
+        final canPop =
+            showBackButton && (Navigator.maybeOf(context)?.canPop() ?? false);
         final hasActions = actions != null && actions!.isNotEmpty;
-        if (!canPop && !hasActions) return content;
-        return Stack(
-          children: [
-            content,
-            if (canPop)
-              Positioned(
-                left: 8,
-                top: 8,
-                child: FloatingBackButton(tokens: tokens),
+        if (!reserveTopStrip) {
+          return Padding(padding: padding, child: body);
+        }
+        return Padding(
+          padding: padding,
+          child: Column(
+            children: [
+              SizedBox(
+                height: topStripHeight,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 8),
+                    if (canPop) FloatingBackButton(tokens: tokens),
+                    const Spacer(),
+                    if (hasActions) ...actions!,
+                    const SizedBox(width: 8),
+                  ],
+                ),
               ),
-            if (hasActions)
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Row(mainAxisSize: MainAxisSize.min, children: actions!),
-              ),
-          ],
+              Expanded(child: body),
+            ],
+          ),
         );
       },
     );
   }
 }
 
-/// 悬浮返回按钮：小圆形半透明底 + 图标，无标题栏页面的返回入口。
+/// 悬浮返回按钮：Miuix 图标按钮规范（squircle + 按压反馈）+ 额外阴影。
+///
+/// 尺寸 48（相对初版 32 增大 50%）；Miuix 图标按钮默认 40 且**无阴影**，
+/// 按项目要求补一层柔和阴影以在内容上可辨识。
 class FloatingBackButton extends StatelessWidget {
   const FloatingBackButton({super.key, required this.tokens, this.onPressed});
 
@@ -111,22 +125,27 @@ class FloatingBackButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: '返回',
-      child: GestureDetector(
-        onTap: onPressed ?? () => Navigator.of(context).maybePop(),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: tokens.colors.surfaceContainerHighest.withValues(alpha: 0.85),
-              shape: BoxShape.circle,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0x33000000),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(
-              CupertinoIcons.chevron_back,
-              size: 20,
-              color: tokens.colors.onSurfaceVariant,
-            ),
+          ],
+        ),
+        child: MiuixIconButton(
+          onPressed: onPressed ?? () => Navigator.of(context).maybePop(),
+          minWidth: 48,
+          minHeight: 48,
+          backgroundColor:
+              tokens.colors.surfaceContainerHighest.withValues(alpha: 0.92),
+          child: Icon(
+            CupertinoIcons.chevron_back,
+            size: 26,
+            color: tokens.colors.onSurfaceVariant,
           ),
         ),
       ),
