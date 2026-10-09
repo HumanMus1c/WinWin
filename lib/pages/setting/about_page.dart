@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/pages/onboarding/user_agreement_page.dart';
@@ -119,10 +120,11 @@ class AboutPage extends StatelessWidget {
                           ),
                         ),
                       ),
-                      IconButton(
-                        icon: AppIcon(AppIcons.clear(), size: 20),
-                        tooltip: '关闭',
+                      MiuixIconButton(
+
                         onPressed: () => Navigator.pop(dialogCtx),
+
+                        child: Tooltip(message: '关闭', child: AppIcon(AppIcons.clear(), size: 20)),
                       ),
                     ],
                   ),

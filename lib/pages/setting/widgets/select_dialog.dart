@@ -59,11 +59,13 @@ class SelectDialog<T> extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(child: Text(title, style: titleMedium)),
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: AppIcon(AppIcons.clear()),
-                  tooltip: '关闭',
+                MiuixIconButton(
+                  minWidth: 24,
+                  minHeight: 24,
+                  child: Tooltip(
+                    message: '关闭',
+                    child: AppIcon(AppIcons.clear()),
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],

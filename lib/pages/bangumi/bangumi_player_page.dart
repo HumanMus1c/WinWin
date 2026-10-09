@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -887,12 +887,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       )
                     : const SizedBox.shrink(),
               ),
-              IconButton(
-                icon: AppIcon(AppIcons.info(),
-                  color: overVideo ? Colors.white : barContrast.contentColor,
-                  shadows: overVideo ? ContrastStyle.glyphShadows : null,
-                ),
-                tooltip: '查看番剧详情',
+              MiuixIconButton(
+
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -904,15 +900,21 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                     ),
                   );
                 },
+
+                child: Tooltip(message: '查看番剧详情', child: AppIcon(AppIcons.info(),
+                  color: overVideo ? Colors.white : barContrast.contentColor,
+                  shadows: overVideo ? ContrastStyle.glyphShadows : null,
+                )),
               ),
-              IconButton(
-                icon: Icon(
+              MiuixIconButton(
+
+                onPressed: () => DesktopPipController.instance.enterPip(),
+
+                child: Tooltip(message: '画中画', child: Icon(
                   AppIcons.pip(),
                   color: overVideo ? Colors.white : barContrast.contentColor,
                   shadows: overVideo ? ContrastStyle.glyphShadows : null,
-                ),
-                tooltip: '画中画',
-                onPressed: () => DesktopPipController.instance.enterPip(),
+                )),
               ),
               const SizedBox(width: 8),
             ],
@@ -1993,10 +1995,12 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   fillColor: tokens.colors.surfaceContainer
                       .withValues(alpha: 0.5),
                   suffixIcon: _replyRoot != null
-                      ? IconButton(
-                          icon: AppIcon(AppIcons.clear(), size: 16),
+                      ? MiuixIconButton(
+
                           onPressed: _clearReplyTarget,
-                        )
+
+                          child: AppIcon(AppIcons.clear(), size: 16),
+                      )
                       : null,
                 ),
                 onSubmitted: (_) => _sendComment(),

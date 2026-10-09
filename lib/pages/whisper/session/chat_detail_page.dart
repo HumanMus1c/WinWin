@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -206,15 +206,16 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final tokens = AppThemeHost.of(context);
     return AppScaffold(
       actions: [
-        IconButton(
-          icon: AppIcon(AppIcons.more()),
-          tooltip: '会话设置',
+        MiuixIconButton(
+
           onPressed: () => showSessionSettingsPage(
             context,
             talkerId: widget.talkerId,
             sessionType: widget.sessionType,
             title: widget.title,
           ),
+
+          child: Tooltip(message: '会话设置', child: AppIcon(AppIcons.more())),
         ),
       ], 
       body: Column(
@@ -313,15 +314,20 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               ),
             ),
             const SizedBox(width: Style.sm),
-            IconButton.filled(
+            MiuixIconButton(
+              backgroundColor: tokens.colors.primary,
               onPressed: _sending ? null : _send,
-              icon: _sending
+              child: _sending
                   ? const SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : AppIcon(AppIcons.send(), size: 20),
+                  : AppIcon(
+                      AppIcons.send(),
+                      size: 20,
+                      color: tokens.colors.onPrimary,
+                    ),
             ),
           ],
         ),

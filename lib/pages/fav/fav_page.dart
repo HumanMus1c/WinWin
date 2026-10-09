@@ -27,7 +27,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixCheckboxPreference, MiuixPressable, MiuixSmallTopAppBar;
+import 'package:flutter_miuix/miuix.dart' show MiuixCheckboxPreference, MiuixIconButton, MiuixPressable, MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
@@ -991,9 +991,11 @@ class _FavPanelState extends State<_FavPanel> {
         children: [
           MiuixSmallTopAppBar(
             title: '添加到收藏夹',
-            navigationIcon: IconButton(
-              icon: AppIcon(AppIcons.clear()),
+            navigationIcon: MiuixIconButton(
+
               onPressed: () => Navigator.of(context).pop(),
+
+              child: AppIcon(AppIcons.clear()),
             ),
           ),
           if (_loading)

@@ -451,13 +451,14 @@ class AppSearchField extends StatelessWidget {
               valueListenable: controller!,
               builder: (context, value, _) {
                 if (value.text.isEmpty) return const SizedBox.shrink();
-                return IconButton(
-                  icon: AppIcon(AppIcons.clear(), size: 18),
+                return MiuixIconButton(
+                  minWidth: 32,
+                  minHeight: 32,
+                  child: AppIcon(AppIcons.clear(), size: 18),
                   onPressed: () {
                     controller!.clear();
                     onChanged?.call('');
                   },
-                  visualDensity: VisualDensity.compact,
                 );
               },
             ),

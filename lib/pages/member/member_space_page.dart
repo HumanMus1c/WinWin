@@ -856,22 +856,26 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               expandedHeight: 330.0,
               elevation: 0,
               scrolledUnderElevation: 2,
-              leading: IconButton(
-                tooltip: '返回',
-                icon: Container(
+              leading: MiuixIconButton(
+
+                onPressed: () => Navigator.maybePop(context),
+
+                child: Tooltip(message: '返回', child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.35),
                     shape: BoxShape.circle,
                   ),
                   child: AppIcon(AppIcons.back(), color: Colors.white, size: 20),
-                ),
-                onPressed: () => Navigator.maybePop(context),
+                )),
               ),
               actions: [
                 if (!isOwner)
-                  IconButton(
-                    icon: Container(
+                  MiuixIconButton(
+
+                    onPressed: () => _copyToClipboard('https://space.bilibili.com/${widget.mid}', '主页链接已复制'),
+
+                    child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.35),
@@ -879,7 +883,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       ),
                       child: AppIcon(AppIcons.share(), color: Colors.white, size: 20),
                     ),
-                    onPressed: () => _copyToClipboard('https://space.bilibili.com/${widget.mid}', '主页链接已复制'),
                   ),
                 // 阶段5d-L1：M3 冻结分支已移除
                 MiuixPopupMenu(
@@ -1197,12 +1200,19 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               const Spacer(),
               // 操作按钮（关注 / 私信）
               if (!isOwner) ...[
-                IconButton.filledTonal(
+                MiuixIconButton(
+                  backgroundColor: cs.secondaryContainer,
+                  child: Tooltip(
+                    message: '私信',
+                    child: AppIcon(
+                      AppIcons.mail(),
+                      size: 20,
+                      color: cs.onSecondaryContainer,
+                    ),
+                  ),
                   onPressed: () {
                     _copyToClipboard('UID: ${widget.mid}', '用户已选择');
                   },
-                  tooltip: '私信',
-                  icon: AppIcon(AppIcons.mail(), size: 20),
                 ),
                 const SizedBox(width: Style.sm),
                 FilledButton.tonal(

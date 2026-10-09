@@ -872,14 +872,14 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       ],
                     ),
                     actions: [
-                      IconButton(
-                        icon: AppIcon(AppIcons.refresh()),
-                        tooltip: '刷新直播流',
+                      MiuixIconButton(
+
                         onPressed: _initLive,
+
+                        child: Tooltip(message: '刷新直播流', child: AppIcon(AppIcons.refresh())),
                       ),
-                      IconButton(
-                        icon: AppIcon(AppIcons.copy()),
-                        tooltip: '复制直播间链接',
+                      MiuixIconButton(
+
                         onPressed: () {
                           Clipboard.setData(
                             ClipboardData(
@@ -892,6 +892,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                             duration: const Duration(seconds: 1),
                           );
                         },
+
+                        child: Tooltip(message: '复制直播间链接', child: AppIcon(AppIcons.copy())),
                       ),
                       const SizedBox(width: 8),
                     ],
@@ -1148,10 +1150,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 ),
               ),
             const SizedBox(width: 8),
-            IconButton(
-              icon: AppIcon(AppIcons.fullscreen(active: true), color: Colors.white),
-              tooltip: '退出全屏',
+            MiuixIconButton(
+
               onPressed: _handleEscape,
+
+              child: Tooltip(message: '退出全屏', child: AppIcon(AppIcons.fullscreen(active: true), color: Colors.white)),
             ),
           ],
         ),
@@ -1315,14 +1318,15 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         child: Row(
           children: [
             // 1. 播放/暂停
-            IconButton(
-              icon: Icon(
+            MiuixIconButton(
+
+              onPressed: _togglePlay,
+
+              child: Tooltip(message: _isPlaying ? '暂停 (Space)' : '播放 (Space)', child: Icon(
                 _isPlaying ? AppIcons.pause(active: true) : AppIcons.play(active: true),
                 color: Colors.white,
                 size: 24,
-              ),
-              tooltip: _isPlaying ? '暂停 (Space)' : '播放 (Space)',
-              onPressed: _togglePlay,
+              )),
             ),
             const SizedBox(width: 6),
 
@@ -1364,27 +1368,29 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             const SizedBox(width: 10),
 
             // 3. 弹幕开/关
-            IconButton(
-              icon: Icon(
-                _danmakuVisible ? AppIcons.subtitle(active: true) : AppIcons.subtitle(active: false),
-                color: _danmakuVisible ? Colors.white : Colors.white54,
-                size: 20,
-              ),
-              tooltip: _danmakuVisible ? '关闭弹幕 (D)' : '开启弹幕 (D)',
+            MiuixIconButton(
+
               onPressed: () {
                 setState(() => _danmakuVisible = !_danmakuVisible);
               },
+
+              child: Tooltip(message: _danmakuVisible ? '关闭弹幕 (D)' : '开启弹幕 (D)', child: Icon(
+                _danmakuVisible ? AppIcons.subtitle(active: true) : AppIcons.subtitle(active: false),
+                color: _danmakuVisible ? Colors.white : Colors.white54,
+                size: 20,
+              )),
             ),
 
             // 4. 发弹幕快捷按钮
-            IconButton(
-              icon: const Icon(
+            MiuixIconButton(
+
+              onPressed: _showQuickSendDialog,
+
+              child: Tooltip(message: '发弹幕', child: const Icon(
                 Icons.comment_outlined,
                 color: Colors.white70,
                 size: 20,
-              ),
-              tooltip: '发弹幕',
-              onPressed: _showQuickSendDialog,
+              )),
             ),
 
             const Spacer(),
@@ -1524,14 +1530,15 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             const SizedBox(width: 6),
 
             // 8. 音量控制（静音图标 + 滑块）
-            IconButton(
-              icon: Icon(
+            MiuixIconButton(
+
+              onPressed: _toggleMute,
+
+              child: Tooltip(message: _volume > 0 ? '静音 (M)' : '取消静音 (M)', child: Icon(
                 _volume > 0 ? AppIcons.volumeUp() : AppIcons.volumeOff(),
                 color: Colors.white70,
                 size: 20,
-              ),
-              tooltip: _volume > 0 ? '静音 (M)' : '取消静音 (M)',
-              onPressed: _toggleMute,
+              )),
             ),
             SizedBox(
               width: 80,
@@ -1555,35 +1562,38 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             const SizedBox(width: 4),
 
             // 9. 刷新流
-            IconButton(
-              icon: AppIcon(AppIcons.refresh(), color: Colors.white70, size: 20),
-              tooltip: '重新加载流',
+            MiuixIconButton(
+
               onPressed: _initLive,
+
+              child: Tooltip(message: '重新加载流', child: AppIcon(AppIcons.refresh(), color: Colors.white70, size: 20)),
             ),
 
             // 10. 网页全屏（In-app 全屏）
             if (!_fullscreen)
-              IconButton(
-                icon: Icon(
+              MiuixIconButton(
+
+                onPressed: _toggleInAppFullscreen,
+
+                child: Tooltip(message: _inAppFullscreen ? '退出网页全屏 (W)' : '网页全屏 (W)', child: Icon(
                   _inAppFullscreen
                       ? AppIcons.inAppFullscreen(active: true)
                       : AppIcons.inAppFullscreen(active: false),
                   color: Colors.white70,
                   size: 20,
-                ),
-                tooltip: _inAppFullscreen ? '退出网页全屏 (W)' : '网页全屏 (W)',
-                onPressed: _toggleInAppFullscreen,
+                )),
               ),
 
             // 11. 窗口原生全屏
-            IconButton(
-              icon: Icon(
+            MiuixIconButton(
+
+              onPressed: _toggleFullscreen,
+
+              child: Tooltip(message: _fullscreen ? '退出全屏 (F / Esc)' : '全屏 (F)', child: Icon(
                 _fullscreen ? AppIcons.fullscreen(active: true) : AppIcons.fullscreen(active: false),
                 color: Colors.white70,
                 size: 22,
-              ),
-              tooltip: _fullscreen ? '退出全屏 (F / Esc)' : '全屏 (F)',
-              onPressed: _toggleFullscreen,
+              )),
             ),
           ],
         ),
@@ -2190,13 +2200,10 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     ),
                   ),
                   if (_danmakuInputCtrl.text.isNotEmpty)
-                    IconButton(
-                      icon: AppIcon(AppIcons.clear(), size: 16),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 24,
-                        minHeight: 24,
-                      ),
+                    MiuixIconButton(
+                      minWidth: 24,
+                      minHeight: 24,
+                      child: AppIcon(AppIcons.clear(), size: 16),
                       onPressed: () {
                         _danmakuInputCtrl.clear();
                         setState(() {});

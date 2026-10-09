@@ -834,17 +834,21 @@ class AppBackButton extends StatelessWidget {
     final tokens = AppThemeHost.of(context);
     final effectiveColor = color ?? tokens.colors.onSurface;
 
-    return IconButton(
-      icon: AppIcon(
-        iconData,
-        size: size,
-        color: effectiveColor,
-        shadows: shadows,
+    return MiuixIconButton(
+      minWidth: 0,
+      minHeight: 0,
+      child: Tooltip(
+        message: tooltip ?? (isClose ? '关闭' : '返回'),
+        child: Padding(
+          padding: padding,
+          child: AppIcon(
+            iconData,
+            size: size,
+            color: effectiveColor,
+            shadows: shadows,
+          ),
+        ),
       ),
-      color: effectiveColor,
-      tooltip: tooltip ?? (isClose ? '关闭' : '返回'),
-      padding: padding,
-      constraints: const BoxConstraints(),
       onPressed: () {
         if (onPressed != null) {
           onPressed!();

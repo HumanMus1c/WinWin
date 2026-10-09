@@ -2,6 +2,7 @@ import 'dart:typed_data' show Uint8List;
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -291,15 +292,17 @@ class VideoPopupMenu extends StatelessWidget {
     return SizedBox(
       width: 26,
       height: 26,
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        icon: Icon(
-          AppIcons.more(),
-          size: iconSize,
-          color: cs.outline.withValues(alpha: 0.8),
+      child: MiuixIconButton(
+        minWidth: 26,
+        minHeight: 26,
+        child: Tooltip(
+          message: '更多操作',
+          child: Icon(
+            AppIcons.more(),
+            size: iconSize,
+            color: cs.outline.withValues(alpha: 0.8),
+          ),
         ),
-        tooltip: '更多操作',
         onPressed: () {
           final box = context.findRenderObject() as RenderBox?;
           if (box != null) {

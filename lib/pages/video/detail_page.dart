@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -2329,10 +2329,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   fillColor: tokens.colors.surfaceContainer
                       .withValues(alpha: 0.5),
                   suffixIcon: _replyRoot != null
-                      ? IconButton(
-                          icon: AppIcon(AppIcons.clear(), size: 16),
+                      ? MiuixIconButton(
+
                           onPressed: _clearReplyTarget,
-                        )
+
+                          child: AppIcon(AppIcons.clear(), size: 16),
+                      )
                       : null,
                 ),
                 onSubmitted: (_) => _sendComment(),

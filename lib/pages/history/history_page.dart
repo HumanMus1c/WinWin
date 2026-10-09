@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -292,10 +292,11 @@ class _HistoryPageState extends State<HistoryPage> {
       title: '历史',
       actions: [
         if (_items.isNotEmpty)
-          IconButton(
-            icon: AppIcon(AppIcons.clearAll()),
-            tooltip: '清空',
+          MiuixIconButton(
+
             onPressed: _clearAll,
+
+            child: Tooltip(message: '清空', child: AppIcon(AppIcons.clearAll())),
           ),
       ],
       body: Pref.demoMode
@@ -605,17 +606,18 @@ class _HistoryCard extends StatelessWidget {
                                 ),
                               ),
                             const Spacer(),
-                            IconButton(
-                              icon: AppIcon(AppIcons.clear(), size: 14),
-                              tooltip: '删除此记录',
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 24,
-                                minHeight: 24,
-                              ),
-                              color: cs.outline,
+                            MiuixIconButton(
+                              minWidth: 24,
+                              minHeight: 24,
                               onPressed: onDelete,
+                              child: Tooltip(
+                                message: '删除此记录',
+                                child: AppIcon(
+                                  AppIcons.clear(),
+                                  size: 14,
+                                  color: cs.outline,
+                                ),
+                              ),
                             ),
                           ],
                         ),

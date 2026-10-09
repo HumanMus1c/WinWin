@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -140,10 +141,11 @@ class _DownloadPageState extends State<DownloadPage> {
 
     return AppScaffold(
       actions: [
-        IconButton(
-          tooltip: '刷新',
+        MiuixIconButton(
+
           onPressed: _loadCacheInfo,
-          icon: AppIcon(AppIcons.refresh(), size: 20),
+
+          child: Tooltip(message: '刷新', child: AppIcon(AppIcons.refresh(), size: 20)),
         ),
       ],
       body: _loading

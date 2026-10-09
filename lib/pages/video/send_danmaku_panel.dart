@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
@@ -247,10 +248,11 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: AppIcon(AppIcons.clear(), size: 20),
-                  tooltip: '关闭',
+                MiuixIconButton(
+
                   onPressed: () => Navigator.of(context).pop(),
+
+                  child: Tooltip(message: '关闭', child: AppIcon(AppIcons.clear(), size: 20)),
                 ),
               ],
             ),
@@ -431,10 +433,11 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   /// 内联模式设置按钮：点击展开弹幕样式设置面板。
   Widget _buildInlineSettingsButton(AppTokens tokens) {
     return Builder(
-      builder: (ctx) => IconButton(
-        icon: AppIcon(AppIcons.palette(), size: 20),
-        tooltip: '弹幕样式',
+      builder: (ctx) => MiuixIconButton(
+
         onPressed: () => _showInlineSettings(ctx),
+
+        child: Tooltip(message: '弹幕样式', child: AppIcon(AppIcons.palette(), size: 20)),
       ),
     );
   }

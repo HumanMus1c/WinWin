@@ -253,13 +253,14 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                       style: AppThemeHost.of(context).text.titleMedium,
                     ),
                     const Spacer(),
-                    IconButton(
-                      icon: AppIcon(AppIcons.clear()),
-                      tooltip: '关闭',
+                    MiuixIconButton(
+
                       onPressed: () {
                         widget.setState();
                         Navigator.pop(context);
                       },
+
+                      child: Tooltip(message: '关闭', child: AppIcon(AppIcons.clear())),
                     ),
                   ],
                 ),

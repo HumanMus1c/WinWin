@@ -703,15 +703,16 @@ class _PlayerPanelState extends State<PlayerPanel> {
         blur: 16,
         padding: const EdgeInsets.all(Style.xs),
         backgroundColor: Colors.black.withValues(alpha: 0.45),
-        child: IconButton(
-          icon: ContrastIcon(
+        child: MiuixIconButton(
+
+          onPressed: _toggleLock,
+
+          child: Tooltip(message: '解锁控制条', child: ContrastIcon(
             AppIcons.lock(),
             color: Colors.white,
             size: 32,
             shadows: ContrastStyle.boldGlyphShadows,
-          ),
-          onPressed: _toggleLock,
-          tooltip: '解锁控制条',
+          )),
         ),
       ),
     );
@@ -2346,9 +2347,11 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                 children: [
                   Text('截图预览', style: AppThemeHost.of(context).text.titleMedium),
                   const Spacer(),
-                  IconButton(
-                    icon: AppIcon(AppIcons.clear()),
+                  MiuixIconButton(
+
                     onPressed: () => Navigator.of(context).pop(),
+
+                    child: AppIcon(AppIcons.clear()),
                   ),
                 ],
               ),

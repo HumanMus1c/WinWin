@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -155,14 +156,14 @@ class _ArticlePageState extends State<ArticlePage> {
 
     return AppScaffold(
       actions: [
-        IconButton(
-          icon: AppIcon(AppIcons.refresh()),
-          tooltip: '重新加载',
+        MiuixIconButton(
+
           onPressed: _loadArticle,
+
+          child: Tooltip(message: '重新加载', child: AppIcon(AppIcons.refresh())),
         ),
-        IconButton(
-          icon: AppIcon(AppIcons.copy()),
-          tooltip: '复制专栏链接',
+        MiuixIconButton(
+
           onPressed: () {
             Clipboard.setData(
               ClipboardData(text: 'https://www.bilibili.com/read/cv$_cleanId'),
@@ -173,6 +174,8 @@ class _ArticlePageState extends State<ArticlePage> {
               duration: const Duration(seconds: 1),
             );
           },
+
+          child: Tooltip(message: '复制专栏链接', child: AppIcon(AppIcons.copy())),
         ),
         const SizedBox(width: 8),
       ], 

@@ -93,9 +93,11 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
               children: [
                 Text('字幕设置', style: tokens.text.titleMedium),
                 const Spacer(),
-                IconButton(
-                  icon: AppIcon(AppIcons.clear()),
+                MiuixIconButton(
+
                   onPressed: () => Navigator.of(context).pop(),
+
+                  child: AppIcon(AppIcons.clear()),
                 ),
               ],
             ),
@@ -415,17 +417,18 @@ class _SliderRow extends StatelessWidget {
               ),
               if (onReset != null) ...[
                 const SizedBox(width: 2),
-                IconButton(
-                  tooltip: '恢复默认',
-                  icon: AppIcon(AppIcons.refresh(), size: 15),
-                  color: AppThemeHost.of(context).colors.outline,
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 28,
-                    minHeight: 28,
-                  ),
+                MiuixIconButton(
+                  minWidth: 28,
+                  minHeight: 28,
                   onPressed: onReset,
+                  child: Tooltip(
+                    message: '恢复默认',
+                    child: AppIcon(
+                      AppIcons.refresh(),
+                      size: 15,
+                      color: AppThemeHost.of(context).colors.outline,
+                    ),
+                  ),
                 ),
               ],
             ],

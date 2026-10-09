@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -71,10 +71,11 @@ class ProfileSectionHeader extends StatelessWidget {
             ),
           ),
           if (onRefresh != null)
-            IconButton(
-              tooltip: '刷新$title',
+            MiuixIconButton(
+
               onPressed: isRefreshing ? null : onRefresh,
-              icon: isRefreshing
+
+              child: Tooltip(message: '刷新$title', child: isRefreshing
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -83,7 +84,7 @@ class ProfileSectionHeader extends StatelessWidget {
                         color: biliPink,
                       ),
                     )
-                  : AppIcon(AppIcons.refresh(), size: 20),
+                  : AppIcon(AppIcons.refresh(), size: 20)),
             ),
         ],
       ),
@@ -136,14 +137,15 @@ class ProfileHorizontalList extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 24),
                 child: Center(
-                  child: IconButton(
-                    tooltip: '查看更多',
-                    style: IconButton.styleFrom(
-                      padding: const EdgeInsets.all(12),
-                      backgroundColor: cs.secondaryContainer.withValues(alpha: 0.6),
-                    ),
+                  child: MiuixIconButton(
+                    minWidth: 42,
+                    minHeight: 42,
+                    backgroundColor: cs.secondaryContainer.withValues(alpha: 0.6),
                     onPressed: onMore,
-                    icon: AppIcon(AppIcons.chevronForward(), size: 18, color: biliPink),
+                    child: Tooltip(
+                      message: '查看更多',
+                      child: AppIcon(AppIcons.chevronForward(), size: 18, color: biliPink),
+                    ),
                   ),
                 ),
               );

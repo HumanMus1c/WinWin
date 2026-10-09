@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -329,10 +329,11 @@ class _ToviewPageState extends State<ToviewPage> {
     return AppScaffold(
       actions: [
         if (_items.isNotEmpty)
-          IconButton(
-            icon: AppIcon(AppIcons.clearAll()),
-            tooltip: '清空',
+          MiuixIconButton(
+
             onPressed: _clearAll,
+
+            child: Tooltip(message: '清空', child: AppIcon(AppIcons.clearAll())),
           ),
       ],
       floatingActionButton: _items.isNotEmpty
@@ -725,17 +726,18 @@ class _ToviewCard extends StatelessWidget {
                               onRemove: onRemove,
                             ),
                             const SizedBox(width: 4),
-                            IconButton(
-                              icon: AppIcon(AppIcons.clear(), size: 14),
-                              tooltip: '从稍后再看移除',
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 24,
-                                minHeight: 24,
-                              ),
-                              color: cs.outline,
+                            MiuixIconButton(
+                              minWidth: 24,
+                              minHeight: 24,
                               onPressed: onRemove,
+                              child: Tooltip(
+                                message: '从稍后再看移除',
+                                child: AppIcon(
+                                  AppIcons.clear(),
+                                  size: 14,
+                                  color: cs.outline,
+                                ),
+                              ),
                             ),
                           ],
                         ),

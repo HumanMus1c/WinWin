@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -442,14 +442,14 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
     return AppScaffold(
       actions: [
-        IconButton(
-          icon: AppIcon(AppIcons.refresh()),
-          tooltip: '刷新',
+        MiuixIconButton(
+
           onPressed: () => _loadDetail(),
+
+          child: Tooltip(message: '刷新', child: AppIcon(AppIcons.refresh())),
         ),
-        IconButton(
-          icon: AppIcon(AppIcons.share()),
-          tooltip: '分享',
+        MiuixIconButton(
+
           onPressed: () {
             final sid = _detail?.seasonId ?? widget.seasonId;
             if (sid != null && sid > 0) {
@@ -460,6 +460,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
               showToast(context, '番剧链接已复制到剪贴板');
             }
           },
+
+          child: Tooltip(message: '分享', child: AppIcon(AppIcons.share())),
         ),
       ],
       body: DemoMask(

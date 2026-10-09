@@ -1,6 +1,7 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -463,16 +464,19 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   top: 0,
                   bottom: 0,
                   child: Center(
-                    child: IconButton.filled(
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.black.withValues(alpha: 0.5),
-                        foregroundColor: Colors.white,
-                        hoverColor: Colors.black.withValues(alpha: 0.75),
-                        padding: const EdgeInsets.all(12),
-                      ),
+                    child: MiuixIconButton(
+                      minWidth: 52,
+                      minHeight: 52,
                       onPressed: _prevPage,
-                      icon: AppIcon(AppIcons.galleryPrev(), size: 28),
-                      tooltip: '上一张 (←)',
+                      backgroundColor: Colors.black.withValues(alpha: 0.5),
+                      child: Tooltip(
+                        message: '上一张 (←)',
+                        child: AppIcon(
+                          AppIcons.galleryPrev(),
+                          size: 28,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -484,16 +488,19 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   top: 0,
                   bottom: 0,
                   child: Center(
-                    child: IconButton.filled(
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.black.withValues(alpha: 0.5),
-                        foregroundColor: Colors.white,
-                        hoverColor: Colors.black.withValues(alpha: 0.75),
-                        padding: const EdgeInsets.all(12),
-                      ),
+                    child: MiuixIconButton(
+                      minWidth: 52,
+                      minHeight: 52,
                       onPressed: _nextPage,
-                      icon: AppIcon(AppIcons.chevronForward(), size: 28),
-                      tooltip: '下一张 (→)',
+                      backgroundColor: Colors.black.withValues(alpha: 0.5),
+                      child: Tooltip(
+                        message: '下一张 (→)',
+                        child: AppIcon(
+                          AppIcons.chevronForward(),
+                          size: 28,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -544,15 +551,17 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                         ),
                         const Spacer(),
                         // 保存到本地
-                        IconButton(
-                          style: IconButton.styleFrom(
-                            backgroundColor:
-                                Colors.black.withValues(alpha: 0.4),
-                            foregroundColor: Colors.white,
-                            hoverColor: Colors.black.withValues(alpha: 0.6),
+                        MiuixIconButton(
+                          backgroundColor:
+                              Colors.black.withValues(alpha: 0.4),
+                          child: Tooltip(
+                            message: '保存图片',
+                            child: AppIcon(
+                              AppIcons.download(),
+                              size: 18,
+                              color: Colors.white,
+                            ),
                           ),
-                          icon: AppIcon(AppIcons.download(), size: 18),
-                          tooltip: '保存图片',
                           onPressed: () {
                             final curUrl =
                                 getRawUrl(widget.imageUrls[_currentIndex]);
@@ -561,15 +570,17 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                         ),
                         const SizedBox(width: 8),
                         // 复制图片链接
-                        IconButton(
-                          style: IconButton.styleFrom(
-                            backgroundColor:
-                                Colors.black.withValues(alpha: 0.4),
-                            foregroundColor: Colors.white,
-                            hoverColor: Colors.black.withValues(alpha: 0.6),
+                        MiuixIconButton(
+                          backgroundColor:
+                              Colors.black.withValues(alpha: 0.4),
+                          child: Tooltip(
+                            message: '复制图片链接',
+                            child: Icon(
+                              AppIcons.copy(),
+                              size: 18,
+                              color: Colors.white,
+                            ),
                           ),
-                          icon: Icon(AppIcons.copy(), size: 18),
-                          tooltip: '复制图片链接',
                           onPressed: () {
                             final curUrl =
                                 getRawUrl(widget.imageUrls[_currentIndex]);
@@ -583,15 +594,17 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                         ),
                         const SizedBox(width: 8),
                         // 关闭按钮
-                        IconButton(
-                          style: IconButton.styleFrom(
-                            backgroundColor:
-                                Colors.black.withValues(alpha: 0.4),
-                            foregroundColor: Colors.white,
-                            hoverColor: Colors.black.withValues(alpha: 0.6),
+                        MiuixIconButton(
+                          backgroundColor:
+                              Colors.black.withValues(alpha: 0.4),
+                          child: Tooltip(
+                            message: '关闭 (Esc)',
+                            child: AppIcon(
+                              AppIcons.clear(),
+                              size: 20,
+                              color: Colors.white,
+                            ),
                           ),
-                          icon: AppIcon(AppIcons.clear(), size: 20),
-                          tooltip: '关闭 (Esc)',
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],

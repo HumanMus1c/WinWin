@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
@@ -210,13 +210,15 @@ class _SearchPageState extends State<SearchPage> {
           fillColor: AppThemeHost.of(context).colors.surfaceContainer.withValues(alpha: 0.5),
           contentPadding: const EdgeInsets.symmetric(horizontal: Style.md),
           suffixIcon: _controller.text.isNotEmpty
-              ? IconButton(
-                  icon: AppIcon(AppIcons.clear(), size: 18),
+              ? MiuixIconButton(
+
                   onPressed: () {
                     _controller.clear();
                     setState(() => _suggests = []);
                   },
-                )
+
+                  child: AppIcon(AppIcons.clear(), size: 18),
+              )
               : null,
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/account/accounts.dart';
@@ -188,17 +189,20 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
                 children: [
                   Text('弹幕屏蔽规则', style: tokens.text.titleMedium),
                   const Spacer(),
-                  IconButton(
-                    icon: AppIcon(AppIcons.refresh(), size: 20),
-                    tooltip: '刷新',
+                  MiuixIconButton(
+
                     onPressed: () {
                       setState(() => _loading = true);
                       _fetchRules();
                     },
+
+                    child: Tooltip(message: '刷新', child: AppIcon(AppIcons.refresh(), size: 20)),
                   ),
-                  IconButton(
-                    icon: AppIcon(AppIcons.clear()),
+                  MiuixIconButton(
+
                     onPressed: () => Navigator.of(context).pop(),
+
+                    child: AppIcon(AppIcons.clear()),
                   ),
                 ],
               ),
@@ -302,13 +306,10 @@ class _RuleListSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: Style.sm),
-              IconButton.filled(
-                icon: Icon(AppIcons.add()),
+              MiuixIconButton(
+                backgroundColor: biliPink,
+                child: Icon(AppIcons.add(), color: Colors.white),
                 onPressed: () => onAdd(type),
-                style: IconButton.styleFrom(
-                  backgroundColor: biliPink,
-                  foregroundColor: Colors.white,
-                ),
               ),
             ],
           ),

@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/models/common/home_tab.dart';
 import 'package:winwin/pages/follow/view.dart';
@@ -166,19 +167,20 @@ class _HomeHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: Style.sm),
-              IconButton(
-                tooltip: '设置',
-                icon: AppIcon(
-                  AppIcons.settings(),
-                  color: searchFg,
-                  size: 22,
-                ),
+              MiuixIconButton(
+
                 onPressed: () => Navigator.push(
                   context,
                   AppRoute(
                     builder: (_) => const SettingPage(),
                   ),
                 ),
+
+                child: Tooltip(message: '设置', child: AppIcon(
+                  AppIcons.settings(),
+                  color: searchFg,
+                  size: 22,
+                )),
               ),
             ],
           ),
