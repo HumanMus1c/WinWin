@@ -318,6 +318,113 @@ abstract final class AppIcons {
 
   /// 浏览 / 阅读数（眼睛）
   static IconData eye() => CupertinoIcons.eye;
+
+  // ---------------------------------------------------------------------------
+  // 9. 设置面语义（B6-2e：直参收敛——原 `AppIcon(Icons.xxx)` 的 1:1 语义封装，
+  //    字形暂与 M3 一致（零视觉变化），后续美术替换只改此处一处）。
+  // ---------------------------------------------------------------------------
+
+  /// 外观设置入口（主题/字重/缩放）
+  static IconData appearance() => Icons.style_outlined;
+
+  /// 播放交互手势（双击/触摸操作）
+  static IconData touchAction() => Icons.touch_app_outlined;
+
+  /// 音视频设置入口（画质/音质/硬解/缓冲）
+  static IconData videoSetting() => Icons.video_settings_outlined;
+
+  /// 其它设置入口（网络/代理/日志）
+  static IconData extraSetting() => Icons.extension_outlined;
+
+  /// 关于页 — 项目说明
+  static IconData aboutCode() => Icons.code;
+
+  /// 关于页 — 开源协议
+  static IconData openSource() => Icons.source_outlined;
+
+  /// 应用字体选择
+  static IconData appFont() => Icons.font_download_outlined;
+
+  /// 主题模式（跟随系统/浅色/深色）
+  static IconData themeMode() => Icons.brightness_6_outlined;
+
+  /// 纯黑主题（OLED 省电）
+  static IconData pureBlack() => Icons.contrast;
+
+  /// 字体大小缩放
+  static IconData fontSize() => Icons.text_fields;
+
+  /// 界面缩放
+  static IconData uiScale() => Icons.zoom_in_outlined;
+
+  /// 系统原生标题栏开关
+  static IconData nativeTitleBar() => Icons.window;
+
+  /// 托盘图标显隐
+  static IconData trayIcon() => Icons.donut_large_rounded;
+
+  /// 退出时最小化到托盘
+  static IconData minimizeToTray() => Icons.minimize;
+
+  /// 字体文件导入
+  static IconData fontImport() => Icons.file_upload_outlined;
+
+  /// 恢复默认字体
+  static IconData fontRestore() => Icons.restore;
+
+  /// 开启硬解
+  static IconData hardwareAccel() => Icons.flash_on_outlined;
+
+  /// 免登录 1080P
+  static IconData p1080() => Icons.hd_outlined;
+
+  /// 默认音质
+  static IconData defaultAudioQuality() => Icons.music_video_outlined;
+
+  /// 音频响度均衡
+  static IconData loudnessEqualizer() => Icons.equalizer_outlined;
+
+  /// CDN 服务节点
+  static IconData cdnNode() => Icons.cloud_outlined;
+
+  /// 硬件解码模式
+  static IconData decodeMode() => Icons.memory;
+
+  /// 播放缓冲大小
+  static IconData bufferSize() => Icons.storage;
+
+  /// 进入详情页自动播放
+  static IconData autoplay() => Icons.motion_photos_auto_outlined;
+
+  /// 全屏截图按钮显隐
+  static IconData screenshotButton() => Icons.photo_camera_outlined;
+
+  /// 键盘控制（空格/方向键）
+  static IconData keyboardControl() => Icons.keyboard_outlined;
+
+  /// 启用 HTTP/2
+  static IconData http2() => Icons.http;
+
+  /// 系统代理开关
+  static IconData systemProxy() => Icons.vpn_key;
+
+  /// 禁用 SSL 证书验证
+  static IconData sslBypass() => Icons.security;
+
+  /// APP 端推荐流
+  static IconData appRecommend() => Icons.explore_outlined;
+
+  /// 合并相同弹幕
+  static IconData mergeDanmaku() => Icons.merge;
+
+  /// 运行日志开关
+  static IconData runLog() => Icons.article_outlined;
+
+  /// 暂停观看历史
+  static IconData pauseHistory() => Icons.history_toggle_off;
+
+  /// 演示模式
+  static IconData demoMode() => Icons.slideshow;
 }
 
 /// 自适应图标部件：Miuix 风格下将具备 Miuix 矢量对应的字形升级为

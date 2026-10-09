@@ -1,5 +1,3 @@
-import 'package:material_ui/material_ui.dart';
-
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -18,7 +16,7 @@ List<SettingsModel> get playSettings => [
       SwitchModel(
         title: '自动播放',
         subtitle: '进入详情页自动播放',
-        leading: AppIcon(Icons.motion_photos_auto_outlined),
+        leading: AppIcon(AppIcons.autoplay()),
         setKey: SettingBoxKey.autoPlayEnable,
         defaultVal: false,
       ),
@@ -46,7 +44,7 @@ List<SettingsModel> get playSettings => [
       SwitchModel(
         title: '双击快退/快进',
         subtitle: '左侧双击快退/右侧双击快进，关闭则双击均为暂停/播放',
-        leading: AppIcon(Icons.touch_app_outlined),
+        leading: AppIcon(AppIcons.touchAction()),
         setKey: SettingBoxKey.enableQuickDouble,
         defaultVal: true,
       ),
@@ -58,14 +56,14 @@ List<SettingsModel> get playSettings => [
       ),
       SwitchModel(
         title: '全屏显示截图按钮',
-        leading: AppIcon(Icons.photo_camera_outlined),
+        leading: AppIcon(AppIcons.screenshotButton()),
         setKey: SettingBoxKey.showFsScreenshotBtn,
         defaultVal: true,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '键盘控制',
         subtitle: '空格暂停/方向键快进快退/全屏切换等',
-        leading: AppIcon(Icons.keyboard_outlined),
+        leading: AppIcon(AppIcons.keyboardControl()),
         setKey: SettingBoxKey.keyboardControl,
         defaultVal: true,
       ),

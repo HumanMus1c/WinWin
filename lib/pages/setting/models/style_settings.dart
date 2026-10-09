@@ -25,7 +25,7 @@ List<SettingsModel> get styleSettings => [
       // 应用字体（移植自 BiliPai AppFontFileStore）
       NormalModel(
         title: '应用字体',
-        leading: AppIcon(Icons.font_download_outlined),
+        leading: AppIcon(AppIcons.appFont()),
         getSubtitle: () => '当前：${AppFontNotifier.instance.displayName}',
         onTap: (context, setState) async {
           await showAppDialog<void>(
@@ -38,7 +38,7 @@ List<SettingsModel> get styleSettings => [
       // 主题模式
       NormalModel(
         title: '主题模式',
-        leading: AppIcon(Icons.brightness_6_outlined),
+        leading: AppIcon(AppIcons.themeMode()),
         getSubtitle: () => '当前模式：${ThemeNotifier.instance.value.label}',
         onTap: (context, setState) async {
           final res = await showSelectDialog<ThemeModeType>(
@@ -55,10 +55,10 @@ List<SettingsModel> get styleSettings => [
       ),
 
       // 纯黑主题（深色模式下背景纯黑）
-      const SwitchModel(
+      SwitchModel(
         title: '纯黑主题',
         subtitle: '深色模式下使用纯黑背景（OLED 省电）',
-        leading: AppIcon(Icons.contrast),
+        leading: AppIcon(AppIcons.pureBlack()),
         setKey: SettingBoxKey.isPureBlackTheme,
         defaultVal: false,
         needReboot: true,
@@ -67,7 +67,7 @@ List<SettingsModel> get styleSettings => [
       // 字体大小缩放
       NormalModel(
         title: '字体大小',
-        leading: AppIcon(Icons.text_fields),
+        leading: AppIcon(AppIcons.fontSize()),
         getSubtitle: () => '当前缩放：${(GStorage.setting.get(SettingBoxKey.defaultTextScale, defaultValue: 1.0) as double).toStringAsFixed(2)}',
         onTap: (context, setState) async {
           final current = GStorage.setting.get(SettingBoxKey.defaultTextScale,
@@ -97,7 +97,7 @@ List<SettingsModel> get styleSettings => [
       // 界面缩放
       NormalModel(
         title: '界面缩放',
-        leading: AppIcon(Icons.zoom_in_outlined),
+        leading: AppIcon(AppIcons.uiScale()),
         getSubtitle: () =>
             '当前缩放比例：${(GStorage.setting.get(SettingBoxKey.uiScale, defaultValue: 1.0) as double).toStringAsFixed(2)}',
         onTap: (context, setState) async {
@@ -126,29 +126,29 @@ List<SettingsModel> get styleSettings => [
       ),
 
       // 使用系统原生标题栏（桌面端）
-      const SwitchModel(
+      SwitchModel(
         title: '使用系统原生标题栏',
         subtitle: '关闭时使用应用自绘的沉浸式透明标题栏（需重启）',
-        leading: AppIcon(Icons.window),
+        leading: AppIcon(AppIcons.nativeTitleBar()),
         setKey: SettingBoxKey.useNativeTitleBar,
         defaultVal: false,
         needReboot: true,
       ),
 
       // 显示托盘图标（桌面端）
-      const SwitchModel(
+      SwitchModel(
         title: '显示托盘图标',
-        leading: AppIcon(Icons.donut_large_rounded),
+        leading: AppIcon(AppIcons.trayIcon()),
         setKey: SettingBoxKey.showTrayIcon,
         defaultVal: true,
         needReboot: true,
       ),
 
       // 退出时最小化到托盘
-      const SwitchModel(
+      SwitchModel(
         title: '退出时最小化到托盘',
         subtitle: '关闭窗口时最小化到系统托盘而非退出',
-        leading: AppIcon(Icons.minimize),
+        leading: AppIcon(AppIcons.minimizeToTray()),
         setKey: SettingBoxKey.minimizeOnExit,
         defaultVal: false,
       ),
@@ -328,7 +328,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                                   child:
                                       CircularProgressIndicator(strokeWidth: 2),
                                 )
-                              : AppIcon(Icons.file_upload_outlined, size: 18),
+                              : AppIcon(AppIcons.fontImport(), size: 18),
                           const SizedBox(width: 6),
                           Text(_importing ? '导入中…' : '导入字体文件'),
                         ],
@@ -344,7 +344,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            AppIcon(Icons.restore, size: 18),
+                            AppIcon(AppIcons.fontRestore(), size: 18),
                             const SizedBox(width: 6),
                             const Text('恢复默认'),
                           ],

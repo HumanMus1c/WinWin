@@ -1,5 +1,3 @@
-import 'package:material_ui/material_ui.dart';
-
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -16,23 +14,23 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 /// 移植自 PiliPlus 的 `videoSettings`，仅保留桌面端适用项。
 /// 画质/音质选择使用 [SelectDialog]。
 List<SettingsModel> get videoSettings => [
-      const SwitchModel(
+      SwitchModel(
         title: '开启硬解',
         subtitle: '以较低功耗播放视频，若异常卡死请关闭',
-        leading: AppIcon(Icons.flash_on_outlined),
+        leading: AppIcon(AppIcons.hardwareAccel()),
         setKey: SettingBoxKey.enableHA,
         defaultVal: true,
       ),
-      const SwitchModel(
+      SwitchModel(
         title: '免登录1080P',
         subtitle: '免登录查看1080P视频',
-        leading: AppIcon(Icons.hd_outlined),
+        leading: AppIcon(AppIcons.p1080()),
         setKey: SettingBoxKey.p1080,
         defaultVal: true,
       ),
       NormalModel(
         title: '默认画质',
-        leading: AppIcon(Icons.video_settings_outlined),
+        leading: AppIcon(AppIcons.videoSetting()),
         getSubtitle: () => '当前画质：${_videoQualityDesc(Pref.defaultVideoQa)}',
         onTap: (context, setState) async {
           final res = await showSelectDialog<int>(
@@ -49,7 +47,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: '默认音质',
-        leading: AppIcon(Icons.music_video_outlined),
+        leading: AppIcon(AppIcons.defaultAudioQuality()),
         getSubtitle: () => '当前音质：${_audioQualityDesc(Pref.defaultAudioQa)}',
         onTap: (context, setState) async {
           final res = await showSelectDialog<int>(
@@ -66,7 +64,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: '音频响度均衡',
-        leading: AppIcon(Icons.equalizer_outlined),
+        leading: AppIcon(AppIcons.loudnessEqualizer()),
         getSubtitle: () =>
             '当前配置：${AudioNormalization.getTitleFromConfig(Pref.audioNormalization)}',
         onTap: (context, setState) async {
@@ -88,7 +86,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: 'CDN 服务节点',
-        leading: AppIcon(Icons.cloud_outlined),
+        leading: AppIcon(AppIcons.cdnNode()),
         getSubtitle: () =>
             '当前使用：${Pref.defaultCDNService.desc}，如遇缓冲频繁请尝试切换',
         onTap: (context, setState) async {
@@ -106,7 +104,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: '硬件解码模式',
-        leading: AppIcon(Icons.memory),
+        leading: AppIcon(AppIcons.decodeMode()),
         getSubtitle: () => '当前模式：${Pref.hardwareDecoding}',
         onTap: (context, setState) async {
           final res = await showSelectDialog<String>(
@@ -151,7 +149,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: '缓冲大小',
-        leading: AppIcon(Icons.storage),
+        leading: AppIcon(AppIcons.bufferSize()),
         getSubtitle: () => '当前：${Pref.bufferSize.toStringAsFixed(1)} MB',
         onTap: (context, setState) async {
           final res = await showAppDialog<double>(

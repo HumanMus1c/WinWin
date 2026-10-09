@@ -29,22 +29,22 @@ class _SettingPageState extends State<SettingPage> {
     _SettingEntry(
       type: SettingType.styleSetting,
       subtitle: '主题模式、字重、界面缩放等',
-      icon: AppIcon(Icons.style_outlined),
+      icon: AppIcon(AppIcons.appearance()),
     ),
     _SettingEntry(
       type: SettingType.playSetting,
       subtitle: '弹幕开关、自动播放、全屏等',
-      icon: AppIcon(Icons.touch_app_outlined),
+      icon: AppIcon(AppIcons.touchAction()),
     ),
     _SettingEntry(
       type: SettingType.videoSetting,
       subtitle: '画质、音质、硬解、缓冲等',
-      icon: AppIcon(Icons.video_settings_outlined),
+      icon: AppIcon(AppIcons.videoSetting()),
     ),
     _SettingEntry(
       type: SettingType.extraSetting,
       subtitle: '网络、代理、日志等',
-      icon: AppIcon(Icons.extension_outlined),
+      icon: AppIcon(AppIcons.extraSetting()),
     ),
     _SettingEntry(
       type: SettingType.about,

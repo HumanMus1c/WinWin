@@ -80,12 +80,12 @@ class AboutPage extends StatelessWidget {
     return AppGroup(
       children: [
         AppListItem(
-          icon: AppIcon(Icons.code),
+          icon: AppIcon(AppIcons.aboutCode()),
           title: '项目说明',
           subtitle: 'WinWin 是基于 PiliPlus 的 Bilibili 桌面客户端移植版，使用 Flutter + fvp/mdk 内核构建。',
         ),
         AppListItem(
-          icon: AppIcon(Icons.source_outlined),
+          icon: AppIcon(AppIcons.openSource()),
           title: '开源协议',
           subtitle: 'GPL-3.0｜点击查看用户条款',
           onTap: () => _showAgreementClauses(context),
