@@ -329,7 +329,7 @@ class _ToviewPageState extends State<ToviewPage> {
       actions: [
         if (_items.isNotEmpty)
           IconButton(
-            icon: AppIcon(Icons.delete_sweep),
+            icon: AppIcon(AppIcons.clearAll()),
             tooltip: '清空',
             onPressed: _clearAll,
           ),
@@ -339,7 +339,7 @@ class _ToviewPageState extends State<ToviewPage> {
               onPressed: _playAll,
               backgroundColor: biliPink,
               foregroundColor: Colors.white,
-              icon: AppIcon(Icons.playlist_play),
+              icon: AppIcon(AppIcons.playAll()),
               label: const Text('播放全部'),
             )
           : null,

@@ -157,7 +157,7 @@ class _WhisperPageState extends State<WhisperPage>
               },
             ),
             _EntryItem(
-              icon: AppIcon(Icons.alternate_email_rounded),
+              icon: AppIcon(AppIcons.atMe()),
               label: '艾特我的',
               count: Pref.demoMode ? 0 : _atUnread,
               color: iosOrange,
@@ -177,7 +177,7 @@ class _WhisperPageState extends State<WhisperPage>
               },
             ),
             _EntryItem(
-              icon: AppIcon(Icons.campaign_outlined),
+              icon: AppIcon(AppIcons.sysNotice()),
               label: '系统消息',
               count: Pref.demoMode ? 0 : _sysUnread,
               color: iosTeal,

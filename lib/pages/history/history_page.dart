@@ -292,7 +292,7 @@ class _HistoryPageState extends State<HistoryPage> {
       actions: [
         if (_items.isNotEmpty)
           IconButton(
-            icon: AppIcon(Icons.delete_sweep),
+            icon: AppIcon(AppIcons.clearAll()),
             tooltip: '清空',
             onPressed: _clearAll,
           ),

@@ -208,8 +208,8 @@ class MsgFeedEmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AppEmptyState(
-      icon: AppIcon(Icons.notifications_none_rounded),
+    return AppEmptyState(
+      icon: AppIcon(AppIcons.emptyNotice()),
       title: '暂无消息',
       subtitle: '新的消息会出现在这里',
     );

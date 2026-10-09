@@ -425,6 +425,92 @@ abstract final class AppIcons {
 
   /// 演示模式
   static IconData demoMode() => Icons.slideshow;
+
+  // ---------------------------------------------------------------------------
+  // 10. 通用语义收敛（B6-2f：login/profile/whisper/空态等 35 处直参，
+  //    字形暂与 M3 一致，零视觉变化）。
+  // ---------------------------------------------------------------------------
+
+  /// 登录提交按钮（各未登录态 FilledButton.icon 共用）
+  static IconData loginSubmit() => Icons.login;
+
+  /// 账号输入框前缀
+  static IconData accountField() => Icons.account_box;
+
+  /// 密码输入框前缀
+  static IconData passwordField() => Icons.password;
+
+  /// 短信验证码输入框前缀
+  static IconData smsCodeField() => Icons.sms_outlined;
+
+  /// 扫码失败占位图
+  static IconData qrPlaceholder() => Icons.qr_code_2;
+
+  /// Cookie 输入框前缀
+  static IconData cookieField() => Icons.cookie_outlined;
+
+  /// 区号下拉小箭头
+  static IconData countryArrow() => Icons.arrow_drop_down;
+
+  /// 切换账号
+  static IconData switchAccount() => Icons.swap_horiz;
+
+  /// 退出登录
+  static IconData logout() => Icons.logout;
+
+  /// 离线缓存空态
+  static IconData offlineEmpty() => Icons.download_for_offline_outlined;
+
+  /// 历史空态
+  static IconData historyEmpty() => Icons.history_toggle_off;
+
+  /// 协议条款 — 开源免费
+  static IconData clauseOpenSource() => Icons.volunteer_activism_outlined;
+
+  /// 协议条款 — 免责声明
+  static IconData clauseDisclaimer() => Icons.balance_outlined;
+
+  /// 协议条款 — 问题反馈
+  static IconData clauseFeedback() => Icons.bug_report_outlined;
+
+  /// 消息中心 — @我的
+  static IconData atMe() => Icons.alternate_email_rounded;
+
+  /// 消息中心 — 系统通知
+  static IconData sysNotice() => Icons.campaign_outlined;
+
+  /// 消息流空态（免打扰铃铛）
+  static IconData emptyNotice() => Icons.notifications_none_rounded;
+
+  /// 举报行（红色）
+  static IconData reportAbuse() => Icons.report_outlined;
+
+  /// 收藏夹空态
+  static IconData folderEmpty() => Icons.folder_off_outlined;
+
+  /// 全部播放（播放列表）
+  static IconData playAll() => Icons.playlist_play;
+
+  /// 清空（删除横扫）
+  static IconData clearAll() => Icons.delete_sweep;
+
+  /// 搜索无结果空态
+  static IconData searchEmpty() => Icons.search_off;
+
+  /// 空间页加载失败
+  static IconData spaceOffline() => Icons.cloud_off_outlined;
+
+  /// 番剧播放主按钮
+  static IconData playEpisode() => Icons.play_arrow_rounded;
+
+  /// 下载空态
+  static IconData downloadEmpty() => Icons.download_done_outlined;
+
+  /// 动态商品入口
+  static IconData goodsEntry() => Icons.shopping_bag_outlined;
+
+  /// 画廊上一张
+  static IconData galleryPrev() => Icons.chevron_left;
 }
 
 /// 自适应图标部件：Miuix 风格下将具备 Miuix 矢量对应的字形升级为

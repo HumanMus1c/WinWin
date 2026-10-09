@@ -3374,7 +3374,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AppIcon(Icons.cloud_off_outlined, size: 48, color: tokens.colors.onSurfaceVariant),
+          AppIcon(AppIcons.spaceOffline(), size: 48, color: tokens.colors.onSurfaceVariant),
           const SizedBox(height: Style.lg),
           Text(errMsg ?? '加载失败', style: TextStyle(color: tokens.colors.onSurfaceVariant)),
           const SizedBox(height: Style.xl),

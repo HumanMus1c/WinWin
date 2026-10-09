@@ -149,21 +149,21 @@ class _Clause {
   final String desc;
 }
 
-const List<_Clause> _clauses = [
+final List<_Clause> _clauses = [
   _Clause(
-    AppIcon(Icons.volunteer_activism_outlined),
+    AppIcon(AppIcons.clauseOpenSource()),
     '开源且免费',
     'WinWin 是基于 GPL-3.0 协议开源、完全免费的第三方哔哩哔哩桌面客户端，'
     '与哔哩哔哩官方无任何关联，仅供个人学习交流，不用于商业用途。',
   ),
   _Clause(
-    AppIcon(Icons.balance_outlined),
+    AppIcon(AppIcons.clauseDisclaimer()),
     '免责与版权',
     '应用内所有内容数据均来自公开接口，版权归原作者及平台所有。'
     '本工具仅供学习与研究，请勿用于任何违反当地法律法规的用途。',
   ),
   _Clause(
-    AppIcon(Icons.bug_report_outlined),
+    AppIcon(AppIcons.clauseFeedback()),
     '反馈与日志',
     '如遇崩溃或异常，本地会保存脱敏日志用于问题排查。'
     '欢迎通过项目仓库（GitHub）反馈问题以帮助改进。',

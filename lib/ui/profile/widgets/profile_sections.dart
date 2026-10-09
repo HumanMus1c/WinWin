@@ -106,7 +106,7 @@ class ProfileDownloadSectionState extends State<ProfileDownloadSection> {
           const ProfileCardSkeleton(height: 120)
         else
           ProfileEmptyCard(
-            icon: AppIcon(Icons.download_for_offline_outlined),
+            icon: AppIcon(AppIcons.offlineEmpty()),
             message: _downloadCount > 0
                 ? '已缓存 $_downloadCount 个项目'
                 : '暂无离线缓存视频',
@@ -381,7 +381,7 @@ class ProfileHistorySectionState extends State<ProfileHistorySection> {
           )
         else if (_items.isEmpty)
           ProfileEmptyCard(
-            icon: AppIcon(Icons.history_toggle_off),
+            icon: AppIcon(AppIcons.historyEmpty()),
             message: '暂无观看历史',
             actionText: '前往查看 >',
             onTap: () => _gotoHistory(context),

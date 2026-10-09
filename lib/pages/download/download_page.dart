@@ -203,8 +203,8 @@ class _DownloadPageState extends State<DownloadPage> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                const AppEmptyState(
-                  icon: AppIcon(Icons.download_done_outlined),
+                AppEmptyState(
+                  icon: AppIcon(AppIcons.downloadEmpty()),
                   title: '暂无离线缓存视频',
                   subtitle: '视频播放页面下载功能将在后续版本中支持',
                 ),

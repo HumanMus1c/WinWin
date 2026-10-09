@@ -321,7 +321,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
             controller: _usernameCtrl,
             label: '账号',
             hint: '邮箱/手机号',
-            prefix: const AppIcon(Icons.account_box),
+            prefix: AppIcon(AppIcons.accountField()),
             inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
           ),
           const SizedBox(height: Style.md),
@@ -330,7 +330,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
             label: '密码',
             obscureText: !_showPassword,
             keyboardType: TextInputType.visiblePassword,
-            prefix: const AppIcon(Icons.password),
+            prefix: AppIcon(AppIcons.passwordField()),
             inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
           ),
           Row(
@@ -354,10 +354,10 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Row(
+                : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AppIcon(Icons.login, size: 18, color: Colors.white),
+                      AppIcon(AppIcons.loginSubmit(), size: 18, color: Colors.white),
                       SizedBox(width: 8),
                       Text('登录'),
                     ],
@@ -631,7 +631,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                           AppIcon(AppIcons.call(), color: cs.onSurfaceVariant),
                           const SizedBox(width: 4),
                           Text('+$_countryId'),
-                          const AppIcon(Icons.arrow_drop_down),
+                          AppIcon(AppIcons.countryArrow()),
                         ],
                       ),
                     ),
@@ -644,7 +644,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
             label: '验证码',
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            prefix: const AppIcon(Icons.sms_outlined),
+            prefix: AppIcon(AppIcons.smsCodeField()),
             suffix: TextButton.icon(
               onPressed: (_cooldown > 0 || _sending) ? null : _sendSms,
               icon: _sending
@@ -670,10 +670,10 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Row(
+                : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AppIcon(Icons.login, size: 18, color: Colors.white),
+                      AppIcon(AppIcons.loginSubmit(), size: 18, color: Colors.white),
                       SizedBox(width: 8),
                       Text('登录'),
                     ],
@@ -838,11 +838,11 @@ class _QRLoginTabState extends State<_QRLoginTab> {
                   height: 240,
                   cacheWidth: 480,
                   cacheHeight: 480,
-                  errorBuilder: (_, _, _) => const SizedBox(
+                  errorBuilder: (_, _, _) => SizedBox(
                     width: 240,
                     height: 240,
                     child: Center(
-                      child: AppIcon(Icons.qr_code_2,
+                      child: AppIcon(AppIcons.qrPlaceholder(),
                           size: 120, color: Colors.grey),
                     ),
                   ),
@@ -992,7 +992,7 @@ class _CookieLoginTabState extends State<_CookieLoginTab> {
             label: 'Cookie',
             minLines: 1,
             maxLines: 8,
-            prefix: const AppIcon(Icons.cookie_outlined),
+            prefix: AppIcon(AppIcons.cookieField()),
             inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
           ),
           const SizedBox(height: Style.lg),
@@ -1006,10 +1006,10 @@ class _CookieLoginTabState extends State<_CookieLoginTab> {
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Row(
+                : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AppIcon(Icons.login, size: 18, color: Colors.white),
+                      AppIcon(AppIcons.loginSubmit(), size: 18, color: Colors.white),
                       SizedBox(width: 8),
                       Text('登录'),
                     ],

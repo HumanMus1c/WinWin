@@ -204,8 +204,8 @@ class _FavPageState extends State<FavPage> {
           : _error != null && _folders.isEmpty
               ? _buildError()
               : _folders.isEmpty
-                  ? const AppEmptyState(
-                      icon: AppIcon(Icons.folder_off_outlined),
+                  ? AppEmptyState(
+                      icon: AppIcon(AppIcons.folderEmpty()),
                       title: '暂无收藏夹',
                       subtitle: '去创建或收藏喜欢的视频吧',
                     )
@@ -530,7 +530,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
               onPressed: _playAll,
               backgroundColor: biliPink,
               foregroundColor: Colors.white,
-              icon: AppIcon(Icons.playlist_play),
+              icon: AppIcon(AppIcons.playAll()),
               label: const Text('播放全部'),
             )
           : null,
@@ -539,8 +539,8 @@ class _FavDetailPageState extends State<FavDetailPage> {
           : _loading && _items.isEmpty
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : _items.isEmpty
-              ? const AppEmptyState(
-                  icon: AppIcon(Icons.folder_off_outlined),
+              ? AppEmptyState(
+                  icon: AppIcon(AppIcons.folderEmpty()),
                   title: '该收藏夹暂无视频',
                 )
               : NotificationListener<ScrollNotification>(

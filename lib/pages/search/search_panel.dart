@@ -717,7 +717,7 @@ class _SearchPanelState extends State<SearchPanel>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AppIcon(Icons.search_off,
+          AppIcon(AppIcons.searchEmpty(),
               size: 48, color: AppThemeHost.of(context).colors.outline),
           const SizedBox(height: Style.sm),
           Text(
