@@ -267,13 +267,14 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
     final cs = tokens.colors;
     final bvid = item.bvid;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: Style.sm),
-      elevation: 0,
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Style.radiusSm),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.2)),
+      decoration: ShapeDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Style.radiusSm),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.2)),
+        ),
       ),
       child: MiuixPressable(
         onPressed: bvid == null

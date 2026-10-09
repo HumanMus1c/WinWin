@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 
@@ -251,8 +251,7 @@ class _SearchPanelState extends State<SearchPanel>
 
   Widget _buildUserCard(SearchUserItemModel item) {
     final tokens = AppThemeHost.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
+    return MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           if (item.mid != null && (item.uname?.isNotEmpty ?? false)) {
@@ -375,8 +374,7 @@ class _SearchPanelState extends State<SearchPanel>
 
   Widget _buildLiveCard(SearchLiveItemModel item) {
     final tokens = AppThemeHost.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
+    return MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           // 直播间跳转暂未实现，显示提示
@@ -488,8 +486,7 @@ class _SearchPanelState extends State<SearchPanel>
 
   Widget _buildPgcCard(SearchPgcItemModel item) {
     final tokens = AppThemeHost.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
+    return MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           Navigator.push(
@@ -589,8 +586,7 @@ class _SearchPanelState extends State<SearchPanel>
   Widget _buildArticleCard(SearchArticleItemModel item) {
     final tokens = AppThemeHost.of(context);
     final hasImg = item.imageUrls != null && item.imageUrls!.isNotEmpty;
-    return Card(
-      margin: EdgeInsets.zero,
+    return MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           showToast(

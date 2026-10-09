@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -51,7 +51,7 @@ class VideoCardV extends StatelessWidget {
     return ValueListenableBuilder<bool>(
       valueListenable: Pref.demoModeNotifier,
       builder: (context, demo, _) => RepaintBoundary(
-        child: Card(
+        child: MiuixCard(
           child: GestureDetector(
             onSecondaryTapDown: (details) {
               lastTapPosition = details.globalPosition;

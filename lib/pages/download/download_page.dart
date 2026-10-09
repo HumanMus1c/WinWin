@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -153,10 +153,8 @@ class _DownloadPageState extends State<DownloadPage> {
           : ListView(
               padding: const EdgeInsets.all(Style.safeSpace),
               children: [
-                Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(shapes.medium),
-                  ),
+                MiuixCard(
+                  cornerRadius: shapes.medium.x,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(

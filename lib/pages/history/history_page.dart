@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -487,7 +487,7 @@ class _HistoryCard extends StatelessWidget {
       progressFraction = 1.0;
     }
 
-    return Card(
+    return MiuixCard(
       child: MiuixPressable(
         onPressed: onTap,
         borderRadius: BorderRadius.all(radius),

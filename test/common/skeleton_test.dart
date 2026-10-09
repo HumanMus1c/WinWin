@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixCard;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -69,7 +70,7 @@ void main() {
       );
 
       expect(find.byType(VideoCardVSkeleton), findsOneWidget);
-      expect(find.byType(Card), findsOneWidget);
+      expect(find.byType(MiuixCard), findsOneWidget);
       expect(find.byType(Skeleton), findsOneWidget);
     });
 
@@ -88,7 +89,7 @@ void main() {
       );
 
       expect(find.byType(VideoCardHSkeleton), findsNWidgets(2));
-      expect(find.byType(Card), findsOneWidget);
+      expect(find.byType(MiuixCard), findsOneWidget);
     });
   });
 }

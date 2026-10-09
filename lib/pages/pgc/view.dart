@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressable, MiuixSquircleBorder;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -674,8 +674,7 @@ class _MyBangumiCard extends StatelessWidget {
         ? progress!
         : (follow != null ? '${NumUtils.formatNum(follow)} 系列追番' : '');
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
+    return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           Navigator.push(
@@ -784,7 +783,8 @@ class _MyBangumiCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+      );
   }
 }
 
@@ -825,8 +825,7 @@ class _PgcCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
-    return Card(
-      clipBehavior: Clip.antiAlias,
+    return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           final sId = _seasonId;
@@ -964,6 +963,7 @@ class _PgcCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+      );
   }
 }

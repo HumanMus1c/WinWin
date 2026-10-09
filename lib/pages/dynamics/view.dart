@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressable, MiuixSquircleBorder;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
@@ -572,9 +572,7 @@ class _DemoDynCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = AppThemeHost.of(context).colors;
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
+    return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
         onPressed: onTap,
         child: Padding(
@@ -636,7 +634,8 @@ class _DemoDynCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+      );
   }
 }
 
@@ -711,8 +710,7 @@ class _DynCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = ColorScheme.of(context).onInverseSurface;
-    return Card(
-      margin: EdgeInsets.zero,
+    return MiuixCard(
       child: Padding(
         padding: const EdgeInsets.all(Style.md),
         child: Skeleton(
@@ -784,7 +782,7 @@ class _DynVideoCard extends StatelessWidget {
     final badge = archive?.badge;
 
     return RepaintBoundary(
-      child: Card(
+      child: MiuixCard(
         child: MiuixPressable(
         onPressed: () {
           if (bvid == null || bvid.isEmpty) return;
@@ -929,7 +927,7 @@ class _DynPgcCard extends StatelessWidget {
     final play = pgc?.play ?? item.archive?.play;
     final danmaku = pgc?.danmaku ?? item.archive?.danmaku;
 
-    return Card(
+    return MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           if (pgc?.jumpUrl != null && pgc!.jumpUrl!.isNotEmpty) {
@@ -1132,9 +1130,7 @@ class _DynCard extends StatelessWidget {
     final cs = tokens.colors;
     final author = item.author;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
+    return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           Navigator.push(
@@ -1283,7 +1279,8 @@ class _DynCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+      );
   }
 
   /// 转发动态内容渲染（嵌套原动态卡片，递归深度 ≤ 1）。
@@ -1594,13 +1591,14 @@ class _DynCard extends StatelessWidget {
     final cs = tokens.colors;
     final cover = article.covers.isNotEmpty ? article.covers.first : null;
 
-    return Card(
-      elevation: 0,
+    return Container(
       clipBehavior: Clip.antiAlias,
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Style.radiusMd),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+      decoration: ShapeDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+        ),
       ),
       child: MiuixPressable(
         onPressed: () {
@@ -1686,13 +1684,14 @@ class _DynCard extends StatelessWidget {
     final cs = tokens.colors;
     final isLiving = live.liveStatus == 1 || live.badge == '直播中';
 
-    return Card(
-      elevation: 0,
+    return Container(
       clipBehavior: Clip.antiAlias,
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Style.radiusMd),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+      decoration: ShapeDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+        ),
       ),
       child: MiuixPressable(
         onPressed: () {

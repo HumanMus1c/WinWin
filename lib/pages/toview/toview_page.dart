@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -546,7 +546,7 @@ class _ToviewCard extends StatelessWidget {
     final data = VideoCardData.from(item);
     Offset? lastTapPosition;
 
-    return Card(
+    return MiuixCard(
       child: GestureDetector(
         onSecondaryTapDown: (details) {
           lastTapPosition = details.globalPosition;

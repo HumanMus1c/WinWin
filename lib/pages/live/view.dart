@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressable, MiuixSquircleBorder;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -701,8 +701,7 @@ class _LiveCard extends StatelessWidget {
     final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
     final cs = theme.colorScheme;
-    return Card(
-      clipBehavior: Clip.antiAlias,
+    return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           final roomId = item.roomId;
@@ -878,6 +877,7 @@ class _LiveCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+      );
   }
 }

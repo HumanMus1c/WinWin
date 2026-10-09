@@ -1739,7 +1739,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final radius = shapes.medium;
     final bvid = item.bvid;
 
-    return Card(
+    return MiuixCard(
       child: MiuixPressable(
         onPressed: bvid == null
             ? null
@@ -1907,13 +1907,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final isSeason = meta.isSeason;
     final total = meta.total ?? 0;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: Style.md),
-      elevation: 0,
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Style.radiusMd),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.25)),
+      decoration: ShapeDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.25)),
+        ),
       ),
       child: MiuixPressable(
         onPressed: () {
@@ -2101,8 +2102,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildDynamicCardSkeleton() {
-    return const Card(
-      margin: EdgeInsets.zero,
+    return const MiuixCard(
       child: Padding(
         padding: EdgeInsets.all(Style.md),
         child: Column(
@@ -2139,9 +2139,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final cs = tokens.colors;
     final author = item.author;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
+    return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           Navigator.push(
@@ -2278,7 +2276,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           ),
         ),
       ),
-    );
+    ),
+      );
   }
 
   Widget _buildForwardContent(BuildContext context, DynItemModel orig) {
@@ -2549,13 +2548,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final cs = tokens.colors;
     final cover = article.covers.isNotEmpty ? article.covers.first : null;
 
-    return Card(
-      elevation: 0,
+    return Container(
       clipBehavior: Clip.antiAlias,
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Style.radiusMd),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+      decoration: ShapeDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+        ),
       ),
       child: MiuixPressable(
         onPressed: () {
@@ -2618,13 +2618,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
-    return Card(
-      elevation: 0,
+    return Container(
       clipBehavior: Clip.antiAlias,
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Style.radiusMd),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+      decoration: ShapeDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+        ),
       ),
       child: MiuixPressable(
         onPressed: () {
@@ -2909,7 +2910,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final shapes = tokens.shapes;
     final radius = shapes.medium;
 
-    return Card(
+    return MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           Navigator.push(
@@ -3097,7 +3098,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final shapes = tokens.shapes;
     final radius = shapes.medium;
 
-    return Card(
+    return MiuixCard(
       child: MiuixPressable(
         onPressed: () {
           Navigator.push(
@@ -3293,7 +3294,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     return ListView(
       padding: const EdgeInsets.all(Style.safeSpace),
       children: [
-        Card(
+        MiuixCard(
           child: Padding(
             padding: const EdgeInsets.all(Style.lg),
             child: Column(

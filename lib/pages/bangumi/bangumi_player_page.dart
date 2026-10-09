@@ -1232,15 +1232,16 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               final ep = ordered[index];
               final isCurrent = ep.id == _currentEpisode.id;
 
-              return Card(
+              return Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                color: isCurrent ? cs.primaryContainer.withValues(alpha: 0.5) : cs.surface,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(Style.radiusSm),
-                  side: BorderSide(
-                    color: isCurrent ? cs.primary : cs.outlineVariant.withValues(alpha: 0.4),
-                    width: isCurrent ? 1.5 : 1,
+                decoration: ShapeDecoration(
+                  color: isCurrent ? cs.primaryContainer.withValues(alpha: 0.5) : cs.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(Style.radiusSm),
+                    side: BorderSide(
+                      color: isCurrent ? cs.primary : cs.outlineVariant.withValues(alpha: 0.4),
+                      width: isCurrent ? 1.5 : 1,
+                    ),
                   ),
                 ),
                 child: MiuixPressable(

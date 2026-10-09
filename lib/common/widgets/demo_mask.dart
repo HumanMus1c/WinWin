@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -158,7 +158,7 @@ class DemoVideoCard extends StatelessWidget {
     Offset? lastTapPosition;
 
     return RepaintBoundary(
-      child: Card(
+      child: MiuixCard(
         child: GestureDetector(
           onSecondaryTapDown: (details) {
             lastTapPosition = details.globalPosition;
@@ -320,7 +320,7 @@ class DemoVideoCardH extends StatelessWidget {
     Offset? lastTapPosition;
 
     return RepaintBoundary(
-      child: Card(
+      child: MiuixCard(
         child: GestureDetector(
           onSecondaryTapDown: (details) {
             lastTapPosition = details.globalPosition;

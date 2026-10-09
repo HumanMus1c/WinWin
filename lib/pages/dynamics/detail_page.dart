@@ -959,12 +959,13 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     final cs = tokens.colors;
     final cover = article.covers.isNotEmpty ? article.covers.first : null;
 
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Style.radiusMd),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+    return Container(
+      decoration: ShapeDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+        ),
       ),
       child: MiuixPressable(
         onPressed: () {
@@ -1042,12 +1043,13 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     final cs = tokens.colors;
     final isLiving = live.liveStatus == 1 || live.badge == '直播中';
 
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Style.radiusMd),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+    return Container(
+      decoration: ShapeDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Style.radiusMd),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+        ),
       ),
       child: MiuixPressable(
         onPressed: () {

@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixCard;
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/theme/app_shapes.dart';
@@ -19,7 +20,7 @@ class VideoCardVSkeleton extends StatelessWidget {
     final blockColor = skeletonBlockColor(context);
 
     return RepaintBoundary(
-      child: Card(
+      child: MiuixCard(
         child: Skeleton(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

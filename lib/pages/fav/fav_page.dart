@@ -27,7 +27,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixCheckboxPreference, MiuixIconButton, MiuixPressable, MiuixSmallTopAppBar;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCheckboxPreference, MiuixIconButton, MiuixPressable, MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
@@ -309,7 +309,7 @@ class _FavFolderCard extends StatelessWidget {
     final radius = shapes.medium;
     final hasCover = folder.cover.isNotEmpty;
 
-    return Card(
+    return MiuixCard(
       child: MiuixPressable(
         onPressed: onTap,
         borderRadius: BorderRadius.all(radius),
@@ -626,7 +626,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
 
     return Padding(
       padding: const EdgeInsets.all(Style.safeSpace),
-      child: Card(
+      child: MiuixCard(
         child: Padding(
           padding: const EdgeInsets.all(Style.md),
           child: Row(
@@ -713,7 +713,7 @@ class _FavVideoCard extends StatelessWidget {
     final data = VideoCardData.from(item);
     Offset? lastTapPosition;
 
-    return Card(
+    return MiuixCard(
       child: GestureDetector(
         onSecondaryTapDown: (details) {
           lastTapPosition = details.globalPosition;
