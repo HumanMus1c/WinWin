@@ -48,6 +48,7 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 动态类型筛选枚举。
 enum _DynFilterType {
@@ -821,13 +822,13 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       body: switch (_spaceState) {
         Loading() => _buildSpaceContent(null),
-        Error(:final errMsg) => Scaffold(
-            appBar: AppBar(
-              leading: const AppBackButton(),
-              title: const Text('个人空间'),
+        Error(:final errMsg) => AppScaffold(
+            topBar: MiuixSmallTopAppBar(
+              navigationIcon: const AppBackButton(),
+              title: '个人空间',
             ),
             body: _buildError(errMsg, _loadAll),
           ),

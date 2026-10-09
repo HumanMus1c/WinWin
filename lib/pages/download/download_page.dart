@@ -13,6 +13,8 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 打开离线缓存页面。
 void showDownloadPage(BuildContext context) {
@@ -137,9 +139,9 @@ class _DownloadPageState extends State<DownloadPage> {
     final cs = tokens.colors;
     final shapes = tokens.shapes;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('离线缓存'),
+    return AppScaffold(
+      topBar: MiuixSmallTopAppBar(
+        title: '离线缓存',
         actions: [
           IconButton(
             tooltip: '刷新',

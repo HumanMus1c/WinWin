@@ -29,6 +29,8 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 动态详情页面。
 ///
@@ -243,10 +245,10 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: const AppBackButton(),
-        title: const Text('动态详情', style: TextStyle(fontSize: 16)),
+    return AppScaffold(
+      topBar: MiuixSmallTopAppBar(
+        navigationIcon: const AppBackButton(),
+        title: '动态详情',
         actions: [
           IconButton(
             icon: AppIcon(AppIcons.refresh()),

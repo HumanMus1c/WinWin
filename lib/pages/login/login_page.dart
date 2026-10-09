@@ -19,6 +19,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 登录页（移植自 PiliPlus `lib/pages/login/`）。
 ///
@@ -96,10 +97,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('登录'),
-        leading: const AppBackButton(),
+    return AppScaffold(
+      topBar: MiuixSmallTopAppBar(
+        title: '登录',
+        navigationIcon: const AppBackButton(),
       ),
       body: Column(
         children: [

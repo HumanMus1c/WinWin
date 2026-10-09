@@ -5,6 +5,8 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/models/search/search_type.dart';
 import 'package:winwin/pages/search/search_panel.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 搜索结果页 — TabBar 分类 + TabBarView 结果列表。
 ///
@@ -39,15 +41,11 @@ class _SearchResultPageState extends State<SearchResultPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: const AppBackButton(),
-        title: Text(
-          widget.keyword,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-        bottom: TabBar(
+    return AppScaffold(
+      topBar: MiuixSmallTopAppBar(
+        navigationIcon: const AppBackButton(),
+        title: widget.keyword,
+        bottomContent: TabBar(
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,

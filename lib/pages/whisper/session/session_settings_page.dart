@@ -10,6 +10,8 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 会话设置入口（阶段 D）。
 ///
@@ -143,8 +145,8 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
+    return AppScaffold(
+      topBar: MiuixSmallTopAppBar(title: widget.title),
       body: ListView(
         children: [
           SwitchListTile(
