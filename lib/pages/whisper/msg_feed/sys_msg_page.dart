@@ -11,6 +11,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 「系统消息」入口。
 void showSysMsgPage(BuildContext context) {
@@ -185,7 +186,7 @@ class _SysMsgTile extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final ok = await showDialog<bool>(
+    final ok = await showAppDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除该通知？'),

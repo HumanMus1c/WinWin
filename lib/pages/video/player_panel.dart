@@ -30,6 +30,7 @@ import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// Duration 没有 clamp 方法，手动实现（用于 seek 位置限制）。
 Duration _clampDuration(Duration value, Duration min, Duration max) {
@@ -217,7 +218,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   /// Phase 4.6：截图预览对话框 — 显示截图 + 保存按钮。
   void _showScreenshotPreview(Uint8List png) {
-    showDialog<void>(
+    showAppDialog<void>(
       context: context,
       builder: (context) => _ScreenshotPreviewDialog(png: png),
     );

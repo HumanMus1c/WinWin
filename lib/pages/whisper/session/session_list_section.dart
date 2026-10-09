@@ -19,6 +19,7 @@ import 'package:winwin/pages/whisper/session/session_pagination_policy.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 可内嵌的会话列表区（用于消息页直接展示）。
 ///
@@ -604,7 +605,7 @@ class _SessionTile extends StatelessWidget {
   }
 
   Future<void> _confirmRemove(BuildContext context) async {
-    final ok = await showDialog<bool>(
+    final ok = await showAppDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除会话'),

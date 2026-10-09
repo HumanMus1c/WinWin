@@ -16,6 +16,7 @@ import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/system_font_scanner.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 外观设置项列表。
 ///
@@ -27,7 +28,7 @@ List<SettingsModel> get styleSettings => [
         leading: const Icon(Icons.font_download_outlined),
         getSubtitle: () => '当前：${AppFontNotifier.instance.displayName}',
         onTap: (context, setState) async {
-          await showDialog<void>(
+          await showAppDialog<void>(
             context: context,
             builder: (context) => _FontPickerDialog(setState: setState),
           );
@@ -71,7 +72,7 @@ List<SettingsModel> get styleSettings => [
         onTap: (context, setState) async {
           final current = GStorage.setting.get(SettingBoxKey.defaultTextScale,
               defaultValue: 1.0) as double;
-          final res = await showDialog<double>(
+          final res = await showAppDialog<double>(
             context: context,
             builder: (context) => AppSliderDialog(
               title: '字体大小',
@@ -102,7 +103,7 @@ List<SettingsModel> get styleSettings => [
         onTap: (context, setState) async {
           final current = GStorage.setting.get(SettingBoxKey.uiScale,
               defaultValue: 1.0) as double;
-          final res = await showDialog<double>(
+          final res = await showAppDialog<double>(
             context: context,
             builder: (context) => AppSliderDialog(
               title: '界面缩放',

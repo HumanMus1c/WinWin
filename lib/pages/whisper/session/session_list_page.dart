@@ -19,6 +19,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 私信会话列表入口（阶段 C）。
 ///
@@ -473,7 +474,7 @@ class _SessionTile extends StatelessWidget {
   }
 
   Future<void> _confirmRemove(BuildContext context) async {
-    final ok = await showDialog<bool>(
+    final ok = await showAppDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除会话'),

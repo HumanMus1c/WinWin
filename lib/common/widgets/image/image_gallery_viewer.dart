@@ -9,6 +9,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 弹出多图画廊全屏浏览弹窗。
 ///
@@ -308,7 +309,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
 
   void _showActionMenu(BuildContext context, String rawUrl) {
     HapticFeedback.mediumImpact();
-    showModalBottomSheet<void>(
+    showAppSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {

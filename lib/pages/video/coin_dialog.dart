@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 投币对话框（对标 PiliPlus `pages/video/pay_coins` / BiliPai CoinDialog）。
 ///
@@ -13,7 +14,7 @@ Future<void> showCoinDialog(
 }) {
   int coinCount = 1;
   bool coinWithLike = false;
-  return showDialog<void>(
+  return showAppDialog<void>(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(

@@ -22,6 +22,7 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 聊天详情入口（阶段 D）。
 ///
@@ -532,7 +533,7 @@ class _ChatBubble extends StatelessWidget {
   }
 
   void _previewImage(BuildContext context, String url) {
-    showDialog<void>(
+    showAppDialog<void>(
       context: context,
       builder: (ctx) {
         final size = MediaQuery.sizeOf(ctx);

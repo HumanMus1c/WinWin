@@ -25,6 +25,7 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术单轨 Miuix（阶段5d-L4-2）。
 ///
@@ -170,7 +171,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _onLogout(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('退出登录'),

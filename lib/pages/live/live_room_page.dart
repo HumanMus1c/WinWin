@@ -34,6 +34,7 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 桌面原生直播间播放页面。
 ///
@@ -736,7 +737,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     }
 
     final ctrl = TextEditingController();
-    showDialog<void>(
+    showAppDialog<void>(
       context: context,
       builder: (dialogCtx) {
         return AlertDialog(

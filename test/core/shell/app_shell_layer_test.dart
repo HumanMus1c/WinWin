@@ -192,7 +192,7 @@ void main() {
     );
 
     final Future<String?> result = showAppDialog<String>(
-      hostContext,
+      context: hostContext,
       builder: (_) => const Text('对话框内容'),
     );
     await tester.pump();

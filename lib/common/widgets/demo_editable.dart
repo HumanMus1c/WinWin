@@ -5,6 +5,7 @@ import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 演示模式下可即时编辑的数字元素。
 ///
@@ -56,7 +57,7 @@ class _DemoEditableNumberState extends State<DemoEditableNumber> {
   num? get _display => DemoOverrides.number(widget.overrideKey) ?? widget.value;
 
   void _edit() {
-    showDialog<void>(
+    showAppDialog<void>(
       context: context,
       builder: (ctx) => _DemoNumberDialog(
         title: widget.title ?? '编辑数值',
@@ -136,7 +137,7 @@ class _DemoEditableChoiceState extends State<DemoEditableChoice> {
   int? get _display => DemoOverrides.choice(widget.overrideKey) ?? widget.value;
 
   void _edit() {
-    showDialog<void>(
+    showAppDialog<void>(
       context: context,
       builder: (ctx) => _DemoChoiceDialog(
         title: widget.title ?? '选择类型',

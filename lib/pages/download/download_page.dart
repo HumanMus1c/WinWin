@@ -12,6 +12,7 @@ import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 打开离线缓存页面。
 void showDownloadPage(BuildContext context) {
@@ -92,7 +93,7 @@ class _DownloadPageState extends State<DownloadPage> {
   }
 
   Future<void> _clearCache() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('清理离线缓存'),

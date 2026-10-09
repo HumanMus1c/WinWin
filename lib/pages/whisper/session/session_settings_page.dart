@@ -9,6 +9,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 会话设置入口（阶段 D）。
 ///
@@ -87,7 +88,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
   }
 
   Future<void> _deleteSession() async {
-    final ok = await showDialog<bool>(
+    final ok = await showAppDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除会话'),
@@ -111,7 +112,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
 
   Future<void> _report() async {
     final reasons = ['垃圾广告', '骚扰谩骂', '色情低俗', '违法信息', '其他'];
-    final reason = await showDialog<String>(
+    final reason = await showAppDialog<String>(
       context: context,
       builder: (ctx) => SimpleDialog(
         title: const Text('举报原因'),

@@ -9,6 +9,7 @@ import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
 import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 音视频设置项列表。
 ///
@@ -153,7 +154,7 @@ List<SettingsModel> get videoSettings => [
         leading: const Icon(Icons.storage),
         getSubtitle: () => '当前：${Pref.bufferSize.toStringAsFixed(1)} MB',
         onTap: (context, setState) async {
-          final res = await showDialog<double>(
+          final res = await showAppDialog<double>(
             context: context,
             builder: (context) => AppSliderDialog(
               title: '缓冲大小',
@@ -175,7 +176,7 @@ List<SettingsModel> get videoSettings => [
         leading: AppIcon(AppIcons.timer()),
         getSubtitle: () => '当前：${Pref.bufferSec.toStringAsFixed(0)} 秒',
         onTap: (context, setState) async {
-          final res = await showDialog<double>(
+          final res = await showAppDialog<double>(
             context: context,
             builder: (context) => AppSliderDialog(
               title: '缓冲时长',

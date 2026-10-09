@@ -77,10 +77,14 @@ class AppSheetRoute<T> extends PopupRoute<T> {
     this.barrierColor = const Color(0x8A000000),
     this.barrierLabel = '关闭',
     this.isScrollControlled = false,
+    this.backgroundColor,
     super.settings,
   });
 
   final WidgetBuilder builder;
+
+  /// 面板底色（对齐 Material 同名参数；null = 由内容自绘底色）。
+  final Color? backgroundColor;
 
   @override
   final bool barrierDismissible;
@@ -110,11 +114,14 @@ class AppSheetRoute<T> extends PopupRoute<T> {
     final maxHeight = isScrollControlled
         ? double.infinity
         : MediaQuery.sizeOf(context).height * 0.9;
+    final content = backgroundColor == null
+        ? builder(context)
+        : ColoredBox(color: backgroundColor!, child: builder(context));
     return Align(
       alignment: Alignment.bottomCenter,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
-        child: builder(context),
+        child: content,
       ),
     );
   }
@@ -142,8 +149,10 @@ class AppSheetRoute<T> extends PopupRoute<T> {
 }
 
 /// 弹出对话框（替身：`showDialog`）。默认挂到根 Navigator，与 Material 版一致。
-Future<T?> showAppDialog<T>(
-  BuildContext context, {
+///
+/// 签名与 Material 版对齐：`context` 为**具名必填**参数。
+Future<T?> showAppDialog<T>({
+  required BuildContext context,
   required WidgetBuilder builder,
   bool barrierDismissible = true,
   Color? barrierColor,
@@ -161,13 +170,16 @@ Future<T?> showAppDialog<T>(
 }
 
 /// 弹出底部面板（替身：`showModalBottomSheet`）。
-Future<T?> showAppSheet<T>(
-  BuildContext context, {
+///
+/// 签名与 Material 版对齐：`context` 为**具名必填**参数。
+Future<T?> showAppSheet<T>({
+  required BuildContext context,
   required WidgetBuilder builder,
   bool barrierDismissible = true,
   Color? barrierColor,
   String? barrierLabel,
   bool isScrollControlled = false,
+  Color? backgroundColor,
   bool useRootNavigator = true,
 }) {
   return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(
@@ -177,6 +189,7 @@ Future<T?> showAppSheet<T>(
       barrierColor: barrierColor ?? const Color(0x8A000000),
       barrierLabel: barrierLabel ?? '关闭',
       isScrollControlled: isScrollControlled,
+      backgroundColor: backgroundColor,
     ),
   );
 }

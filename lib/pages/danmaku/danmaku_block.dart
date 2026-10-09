@@ -12,6 +12,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/crc32.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 弹幕屏蔽规则管理页（移植自 PiliPlus `lib/pages/danmaku_block/view.dart`）。
 ///
@@ -29,7 +30,7 @@ void showDanmakuBlockPage(
   BuildContext context, {
   WinWinDanmakuController? danmakuController,
 }) {
-  showDialog<void>(
+  showAppDialog<void>(
     context: context,
     builder: (context) => _DanmakuBlockDialog(
       danmakuController: danmakuController,

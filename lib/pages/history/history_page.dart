@@ -26,6 +26,7 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 历史记录页面（移植自 PiliPlus `lib/pages/history/`，重构为自适应多列宫格排版）。
 void showHistoryPage(BuildContext context) {
@@ -251,7 +252,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _clearAll() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAppDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('清空历史'),

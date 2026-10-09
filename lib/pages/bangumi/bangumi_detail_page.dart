@@ -19,6 +19,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 番剧 / 影视详情主页（对标 BiliPai `BangumiDetailScreen` 与 PiliPlus）。
 ///
@@ -329,7 +330,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   void _showFollowStatusDialog(BangumiDetail detail) {
-    showDialog(
+    showAppDialog(
       context: context,
       builder: (ctx) => SimpleDialog(
         title: const Text('追番状态设置'),
@@ -376,7 +377,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
   void _showJumpDialog(List<BangumiEpisode> episodes) {
     final ctrl = TextEditingController();
-    showDialog(
+    showAppDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('跳转到集数'),

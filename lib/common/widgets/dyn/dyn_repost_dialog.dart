@@ -6,6 +6,7 @@ import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 动态转发弹窗（对标 PiliPlus RepostPanel 的精简桌面版）：
 /// 展示被转发内容预览 + 转发理由输入，提交至 `/x/dynamic/feed/create/dyn`。
@@ -16,7 +17,7 @@ class DynRepostDialog extends StatefulWidget {
 
   /// 打开弹窗，返回是否转发成功。
   static Future<bool> show(BuildContext context, DynItemModel item) async {
-    final res = await showDialog<bool>(
+    final res = await showAppDialog<bool>(
       context: context,
       builder: (_) => DynRepostDialog(item: item),
     );

@@ -11,6 +11,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 弹幕发送面板（移植自 BiliPai `DanmakuSendDialog` + `DanmakuComposerPolicy`）。
 ///
@@ -25,7 +26,7 @@ void showSendDanmakuPanel(
   BuildContext context, {
   required WinWinPlayerController controller,
 }) {
-  showModalBottomSheet<void>(
+  showAppSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

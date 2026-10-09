@@ -22,6 +22,7 @@ import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 String _errMsg(LoadingState state, [String fallback = '操作失败']) {
   if (state is Error) {
@@ -189,7 +190,7 @@ List<ContextMenuAction> buildVideoCardActions({
         title: Pref.demoMode ? '拉黑 UP 主' : '拉黑 UP 主：${ownerName.isNotEmpty ? ownerName : mid}',
         icon: AppIcon(AppIcons.block()),
         onTap: () {
-          showDialog(
+          showAppDialog(
             context: context,
             builder: (dialogCtx) {
               return AlertDialog(
@@ -326,7 +327,7 @@ void showVideoCoverDialog({
 }) {
   if (cover == null || cover.isEmpty) return;
 
-  showDialog(
+  showAppDialog(
     context: context,
     builder: (dialogCtx) {
       final tokens = AppThemeHost.of(dialogCtx);
@@ -454,7 +455,7 @@ void _showDislikeReasonsDialog({
   final goto = data.goto ?? 'av';
   final id = data.param ?? data.aid ?? 0;
 
-  showDialog(
+  showAppDialog(
     context: context,
     builder: (dialogCtx) {
       final tokens = AppThemeHost.of(dialogCtx);

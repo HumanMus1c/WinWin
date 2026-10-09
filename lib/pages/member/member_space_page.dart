@@ -47,6 +47,7 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 动态类型筛选枚举。
 enum _DynFilterType {
@@ -136,7 +137,7 @@ class _DemoMedalEditState extends State<_DemoMedalEdit> {
   }
 
   void _edit() {
-    showDialog<void>(
+    showAppDialog<void>(
       context: context,
       builder: (_) => _DemoMedalDialog(
         name: DemoOverrides.text('space.medal.name') ?? widget.medalName,

@@ -11,6 +11,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 字幕选择 + 样式设置面板（Phase 4.4）。
 ///
@@ -24,7 +25,7 @@ void showSubtitleSettingsPanel(
   required WinWinPlayerController controller,
   required bool fullscreen,
 }) {
-  showDialog<void>(
+  showAppDialog<void>(
     context: context,
     builder: (context) => _SubtitleSettingsDialog(
       controller: controller,

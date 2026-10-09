@@ -6,6 +6,7 @@ import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 单选对话框：用于画质/音质/主题模式等枚举值选择。
 ///
@@ -139,7 +140,7 @@ Future<T?> showSelectDialog<T>(
     'Coverage',
     'SelectDialog open $title (options=${values.length}, current=$value)',
   );
-  final result = await showDialog<T>(
+  final result = await showAppDialog<T>(
     context: context,
     builder: (context) => SelectDialog<T>(
       title: title,

@@ -9,6 +9,7 @@ import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 极验验证码 JS 资源（gt.0.5.0.js 旧版 / fullpage 新版均可）。
 const _geetestJsUri =
@@ -49,7 +50,7 @@ class GeetestWebviewDialog extends StatefulWidget {
     String gt,
     String challenge,
   ) {
-    return showDialog<Map<String, dynamic>>(
+    return showAppDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,
       // 灰蒙层：与 BiliPai `setDimAmount(0.42)` 对齐（登录页透出、压暗）。

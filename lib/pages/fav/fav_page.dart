@@ -26,6 +26,7 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
 void showFavPage(BuildContext context) {
@@ -885,7 +886,7 @@ void showFavPanel(
     showToast(context, '请先登录');
     return;
   }
-  showModalBottomSheet<void>(
+  showAppSheet<void>(
     context: context,
     isScrollControlled: true,
     builder: (_) => _FavPanel(rid: rid, type: type, onSuccess: onSuccess),

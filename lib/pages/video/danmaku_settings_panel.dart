@@ -12,6 +12,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 弹幕设置面板（移植自 PiliPlus `lib/pages/video/widgets/header_mixin.dart`
 /// 中的弹幕设置区）。
@@ -28,7 +29,7 @@ void showDanmakuSettingsPanel(
   required WinWinPlayerController controller,
   required bool fullscreen,
 }) {
-  showDialog<void>(
+  showAppDialog<void>(
     context: context,
     builder: (context) => _DanmakuSettingsDialog(
       controller: controller,

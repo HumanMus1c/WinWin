@@ -5,6 +5,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 关于页面。
 ///
@@ -92,7 +93,7 @@ class AboutPage extends StatelessWidget {
 
   /// 只读查看用户协议条款（复测反馈：条款在常规流程中无入口）。
   void _showAgreementClauses(BuildContext context) {
-    showDialog<void>(
+    showAppDialog<void>(
       context: context,
       builder: (dialogCtx) {
         final tokens = AppThemeHost.of(dialogCtx);

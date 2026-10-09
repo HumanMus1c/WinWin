@@ -45,6 +45,7 @@ import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 番剧播放页面（对标 BiliPai `BangumiPlayerScreen` 与 PiliPlus PGC 播放体系）。
 ///
@@ -2432,7 +2433,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   void _showFollowStatusDialog() {
-    showDialog(
+    showAppDialog(
       context: context,
       builder: (ctx) => SimpleDialog(
         title: const Text('追番状态设置'),
