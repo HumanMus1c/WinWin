@@ -321,7 +321,14 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           ),
           child: SafeArea(
-            child: Column(
+            // ListTile 的背景与水波绘制在最近的 Material 祖先上；外层
+            // AppSheetRoute 的 Material 会被中间 Container(DecoratedBox 底色)
+            // 遮挡（见 session_list_section.dart 同类注释），在此补一层
+            // 视口内透明 Material 并硬裁剪，保证三行操作样式正常显示。
+            child: Material(
+              type: MaterialType.transparency,
+              clipBehavior: Clip.hardEdge,
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
@@ -342,7 +349,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   },
                 ),
                 ListTile(
-                  leading: Icon(AppIcons.copy()),
+                  leading: AppIcon(AppIcons.copy()),
                   title: const Text('复制图片直链'),
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -364,6 +371,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                 ),
                 const SizedBox(height: 8),
               ],
+            ),
             ),
           ),
         );

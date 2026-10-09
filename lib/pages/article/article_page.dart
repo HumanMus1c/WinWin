@@ -179,7 +179,9 @@ class _ArticlePageState extends State<ArticlePage> {
       body: Pref.demoMode
           ? const DemoListSkeleton()
           : switch (_state) {
-        Loading() => const Center(child: CircularProgressIndicator()),
+        Loading() => Center(
+              child: CircularProgressIndicator(color: cs.primary),
+            ),
         Error(:final errMsg) => Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -222,10 +224,17 @@ class _ArticlePageState extends State<ArticlePage> {
   ) {
     final allImages = article.imageUrls;
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 860),
-        child: SelectionArea(
+    return LayoutBuilder(
+      builder: (context, constraints) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          // Center/ConstrainedBox 只提供宽松高度约束，CustomScrollView 会因
+          // 高度无界而空白/溢出；以 SizedBox 锁紧可用高度，保证滚动视口有界。
+          child: SizedBox(
+            height: constraints.hasBoundedHeight
+                ? constraints.maxHeight
+                : null,
+            child: SelectionArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: Style.lg,
@@ -311,7 +320,7 @@ class _ArticlePageState extends State<ArticlePage> {
                       ),
                       // 阅读量与点赞数
                       if (article.viewCount != null) ...[
-                        Icon(AppIcons.eye(), size: 14, color: cs.outline),
+                        AppIcon(AppIcons.eye(), size: 14, color: cs.outline),
                         const SizedBox(width: 3),
                         Text(
                           NumUtils.formatNum(article.viewCount),
@@ -332,8 +341,12 @@ class _ArticlePageState extends State<ArticlePage> {
                 ),
               ),
 
-              const SliverToBoxAdapter(
-                child: Divider(height: 1, thickness: 0.5),
+              SliverToBoxAdapter(
+                child: Divider(
+                  height: 1,
+                  thickness: 0.5,
+                  color: cs.outlineVariant,
+                ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: Style.md)),
 
@@ -411,10 +424,10 @@ class _ArticlePageState extends State<ArticlePage> {
               ),
 
               // 底部间隔与评论区分割线
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: Style.xl),
-                  child: Divider(thickness: 1),
+                  child: Divider(thickness: 0.5, color: cs.outlineVariant),
                 ),
               ),
 
@@ -439,18 +452,19 @@ class _ArticlePageState extends State<ArticlePage> {
 
               // 评论列表
               if (_loadingReplies)
-                const SliverToBoxAdapter(
+                SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.all(Style.lg),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: CircularProgressIndicator(color: cs.primary)),
                   ),
                 )
               else if (_replies.isEmpty && _repliesLoaded)
-                const SliverToBoxAdapter(
+                SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.all(Style.xl),
                     child: Center(
-                      child: Text('暂无评论，来发表第一条评论吧~', style: TextStyle(color: Colors.grey)),
+                      child: Text('暂无评论，来发表第一条评论吧~',
+                          style: TextStyle(color: cs.outline)),
                     ),
                   ),
                 )
@@ -533,7 +547,11 @@ class _ArticlePageState extends State<ArticlePage> {
                                     ],
                                   ),
                                   const SizedBox(height: 6),
-                                  const Divider(height: 1, thickness: 0.3),
+                                  Divider(
+                                    height: 1,
+                                    thickness: 0.3,
+                                    color: cs.outlineVariant,
+                                  ),
                                 ],
                               ),
                             ),
@@ -549,10 +567,12 @@ class _ArticlePageState extends State<ArticlePage> {
             ],
           ),
         ),
+            ),
+          ),
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   static String _formatTime(int ts) {
     if (ts <= 0) return '';

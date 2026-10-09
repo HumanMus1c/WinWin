@@ -822,12 +822,15 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   @override
   Widget build(BuildContext context) {
+    // 本页自带 SliverAppBar（含返回/分享/更多操作与 330 高折叠头图）与
+    // pinned Tab 栏，AppScaffold 不再预留顶部安全行与悬浮返回，避免双顶栏
+    //（50px 空白 + 双返回按钮）挤压头图。
     return AppScaffold(
+      reserveTopStrip: false,
+      showBackButton: false,
       body: switch (_spaceState) {
         Loading() => _buildSpaceContent(null),
-        Error(:final errMsg) => AppScaffold(
-            body: _buildError(errMsg, _loadAll),
-          ),
+        Error(:final errMsg) => _buildError(errMsg, _loadAll),
         Success(:final response) => _buildSpaceContent(response),
       },
     );

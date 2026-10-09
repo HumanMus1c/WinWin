@@ -1050,6 +1050,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     final isFillWindow = _fullscreen || _inAppFullscreen;
     return AppScaffold(
       backgroundColor: isFillWindow ? Colors.black : null,
+      // 本页自带渐变顶栏（含返回按钮，覆盖在播放器上显隐）；AppScaffold
+      // 不再预留顶部安全行与悬浮返回，避免双顶栏（50px 空白 + 双返回按钮）。
+      // 全屏/应用内全屏时更需整窗无安全行，保证播放器真正 edge-to-edge。
+      reserveTopStrip: false,
+      showBackButton: false,
       body: isFillWindow
           ? Stack(
               children: [
