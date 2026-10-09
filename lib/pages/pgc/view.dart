@@ -599,7 +599,7 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: () => showLoginPage(context),
-            icon: const Icon(Icons.login),
+            icon: AppIcon(Icons.login),
             label: const Text('登录'),
           ),
         ],

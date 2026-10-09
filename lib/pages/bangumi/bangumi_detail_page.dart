@@ -803,7 +803,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           flex: 3,
           child: FilledButton.icon(
             onPressed: startEp != null ? () => _openPlayer(detail, startEp) : null,
-            icon: const Icon(Icons.play_arrow_rounded, size: 22),
+            icon: AppIcon(Icons.play_arrow_rounded, size: 22),
             label: Text(
               playLabel,
               style: const TextStyle(fontWeight: FontWeight.bold),

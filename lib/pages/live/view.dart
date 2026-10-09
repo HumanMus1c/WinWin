@@ -432,7 +432,7 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
                 _load(refresh: true);
               }
             },
-            icon: const Icon(Icons.login),
+            icon: AppIcon(Icons.login),
             label: const Text('登录'),
           ),
         ],

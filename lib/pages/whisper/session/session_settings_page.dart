@@ -155,7 +155,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
           ),
           const Divider(height: 1),
           ListTile(
-            leading: Icon(Icons.report_outlined, color: tokens.colors.error),
+            leading: AppIcon(Icons.report_outlined, color: tokens.colors.error),
             title: Text('举报', style: TextStyle(color: tokens.colors.error)),
             onTap: _report,
           ),

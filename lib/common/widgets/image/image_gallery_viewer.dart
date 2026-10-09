@@ -471,7 +471,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                         padding: const EdgeInsets.all(12),
                       ),
                       onPressed: _prevPage,
-                      icon: const Icon(Icons.chevron_left, size: 28),
+                      icon: AppIcon(Icons.chevron_left, size: 28),
                       tooltip: '上一张 (←)',
                     ),
                   ),

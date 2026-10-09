@@ -1912,7 +1912,7 @@ class _DynCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.shopping_bag_outlined, size: 16, color: cs.primary),
+            AppIcon(Icons.shopping_bag_outlined, size: 16, color: cs.primary),
           ],
         ),
       ),
