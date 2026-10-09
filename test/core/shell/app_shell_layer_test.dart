@@ -205,6 +205,62 @@ void main() {
     expect(await result, '已确认');
   });
 
+  testWidgets('AppSheetRoute：isScrollControlled 下内容有界（Column+Expanded 不塌陷）且带面板底色',
+      (tester) async {
+    final navKey = GlobalKey<NavigatorState>();
+    late BuildContext hostContext;
+    await tester.pumpWidget(
+      AppThemeHost(
+        tokens: AppThemeHost.tokensFor(Brightness.light),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Navigator(
+            key: navKey,
+            onGenerateRoute: (RouteSettings settings) => PageRouteBuilder<void>(
+              pageBuilder: (context, animation, secondaryAnimation) => Builder(
+                builder: (context) {
+                  hostContext = context;
+                  return const Text('宿主页');
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // 复刻收藏夹面板结构：标题 + Expanded(ListView) + 底栏。
+    showAppSheet<void>(
+      context: hostContext,
+      isScrollControlled: true,
+      builder: (_) => Column(
+        children: [
+          const Text('面板标题'),
+          Expanded(
+            child: ListView(
+              children: [for (var i = 0; i < 40; i++) Text('条目$i')],
+            ),
+          ),
+          const Text('完成的按钮'),
+        ],
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    // 回归点：无"无界高度"布局异常（修复前 Expanded 会因 maxHeight=∞ 塌陷并报错）。
+    expect(tester.takeException(), isNull);
+    expect(find.text('面板标题'), findsOneWidget);
+    expect(find.text('完成的按钮'), findsOneWidget);
+    expect(find.text('条目0'), findsOneWidget);
+    // 默认面板底色：M3 surfaceContainerLow 已绘制（修复前面板透明、视频透出）。
+    final painted = tester.widgetList<ColoredBox>(find.byType(ColoredBox)).map((c) => c.color);
+    expect(
+      painted.contains(AppThemeHost.tokensFor(Brightness.light).colors.surfaceContainerLow),
+      isTrue,
+    );
+  });
+
   testWidgets('MiuixCompat：子树获得 Material 祖先 / MaterialLocalizations / SDK Theme',
       (tester) async {
     late legacy.MaterialLocalizations localizations;

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixMotion;
+import 'package:winwin/core/shell/app_theme_host.dart';
 
 import 'app_transition.dart';
 
@@ -111,17 +112,27 @@ class AppSheetRoute<T> extends PopupRoute<T> {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
   ) {
-    final maxHeight = isScrollControlled
-        ? double.infinity
-        : MediaQuery.sizeOf(context).height * 0.9;
-    final content = backgroundColor == null
-        ? builder(context)
-        : ColoredBox(color: backgroundColor!, child: builder(context));
+    // 高度上限对齐 Material：
+    // - isScrollControlled=false → 9/16 屏高（_ModalBottomSheetLayout 默认比例）；
+    // - isScrollControlled=true  → 整屏高度（**有界**，不是无限——否则内容里的
+    //   Column + Expanded 会因无界高度塌陷，见 2026-10-08 收藏面板回归）。
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final maxHeight = isScrollControlled ? screenHeight : screenHeight * 9 / 16;
+    // 表面背景对齐 Material：默认 M3 面板色（surfaceContainerLow）+ 顶部 28 圆角；
+    // 显式传 backgroundColor（如透明）时按传入值着色。
+    final sheetColor =
+        backgroundColor ?? AppThemeHost.of(context).colors.surfaceContainerLow;
     return Align(
       alignment: Alignment.bottomCenter,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
-        child: content,
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: ColoredBox(
+            color: sheetColor,
+            child: builder(context),
+          ),
+        ),
       ),
     );
   }
