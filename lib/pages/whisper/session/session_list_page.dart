@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -377,18 +378,18 @@ class _SessionTile extends StatelessWidget {
     final content = _lastMsg?['content']?.toString();
     final ts = (_lastMsg?['timestamp'] as num?)?.toInt();
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
+    return MiuixBasicComponent(
+      insideMargin: const EdgeInsets.symmetric(
         horizontal: Style.safeSpace,
         vertical: Style.xs,
       ),
-      onTap: () => showChatDetailPage(
+      onClick: () => showChatDetailPage(
         context,
         talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
         sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
         title: _name,
       ),
-      leading: Stack(
+      startAction: Stack(
         clipBehavior: Clip.none,
         children: [
           MsgFeedAvatar(src: _avatar),
@@ -415,48 +416,52 @@ class _SessionTile extends StatelessWidget {
             ),
         ],
       ),
-      title: Row(
-        children: [
-          Flexible(
-            child: Text(
-              _name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: tokens.text.bodyLarge,
-            ),
-          ),
-          if (isPinned) _flag(tokens, '置顶'),
-          if (isSpecial) _flag(tokens, '特别关注', color: biliPink),
-          if (isDnd) _flag(tokens, '免打扰'),
-        ],
-      ),
-      subtitle: Text(
-        MessagePreviewParser.parseSessionPreview(content, msgType),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: tokens.text.bodySmall?.copyWith(
-          color: tokens.colors.onSurfaceVariant,
-        ),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (ts != null && ts > 0)
-            Text(
-              msgFeedTime(ts),
-              style: tokens.text.bodySmall?.copyWith(
-                color: tokens.colors.outline,
+      content: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                _name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: tokens.text.bodyLarge,
               ),
             ),
-          SessionMoreMenuButton(
-            isPinned: isPinned,
-            isDnd: isDnd,
-            onToggleTop: onToggleTop,
-            onToggleDnd: onToggleDnd,
-            onRemove: () => _confirmRemove(context),
+            if (isPinned) _flag(tokens, '置顶'),
+            if (isSpecial) _flag(tokens, '特别关注', color: biliPink),
+            if (isDnd) _flag(tokens, '免打扰'),
+          ],
+        ),
+        Text(
+          MessagePreviewParser.parseSessionPreview(content, msgType),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: tokens.text.bodySmall?.copyWith(
+            color: tokens.colors.onSurfaceVariant,
           ),
-        ],
-      ),
+        ),
+      ],
+      endActions: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (ts != null && ts > 0)
+              Text(
+                msgFeedTime(ts),
+                style: tokens.text.bodySmall?.copyWith(
+                  color: tokens.colors.outline,
+                ),
+              ),
+            SessionMoreMenuButton(
+              isPinned: isPinned,
+              isDnd: isDnd,
+              onToggleTop: onToggleTop,
+              onToggleDnd: onToggleDnd,
+              onRemove: () => _confirmRemove(context),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

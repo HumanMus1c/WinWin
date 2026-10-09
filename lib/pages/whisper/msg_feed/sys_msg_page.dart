@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -152,22 +153,21 @@ class _SysMsgTile extends StatelessWidget {
     final title = item['title']?.toString() ?? '';
     final content = item['content']?.toString() ?? '';
     final timeAt = item['time_at']?.toString() ?? '';
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: Style.safeSpace,
-        vertical: Style.xs,
-      ),
-      title: title.isEmpty
-          ? null
-          : Text(
+    return GestureDetector(
+      onLongPress: () => _confirmDelete(context),
+      child: MiuixBasicComponent(
+        insideMargin: const EdgeInsets.symmetric(
+          horizontal: Style.safeSpace,
+          vertical: Style.xs,
+        ),
+        content: [
+          if (title.isNotEmpty)
+            Text(
               title,
               style: tokens.text.titleSmall,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
           if (content.isNotEmpty)
             Text(content, style: tokens.text.bodyMedium),
           if (timeAt.isNotEmpty)
@@ -181,7 +181,6 @@ class _SysMsgTile extends StatelessWidget {
             ),
         ],
       ),
-      onLongPress: () => _confirmDelete(context),
     );
   }
 

@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/account/accounts.dart';
@@ -340,15 +340,15 @@ class _RuleListSection extends StatelessWidget {
                         onDelete(type, r);
                         return true;
                       },
-                      child: ListTile(
-                        dense: true,
-                        title: Text(r.filter),
-                        subtitle: type == DmBlockType.uid.serverType
-                            ? Text('midHash', style: TextStyle(
-                                fontSize: 11,
-                                color: tokens.colors.outline,
-                              ))
-                            : null,
+                      child: MiuixBasicComponent(
+                        content: [
+                          Text(r.filter),
+                          if (type == DmBlockType.uid.serverType)
+                            Text('midHash', style: TextStyle(
+                              fontSize: 11,
+                              color: tokens.colors.outline,
+                            )),
+                        ],
                       ),
                     );
                   },

@@ -1,7 +1,7 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -341,18 +341,18 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                ListTile(
-                  leading: AppIcon(AppIcons.download()),
-                  title: const Text('保存图片到本地'),
-                  onTap: () {
+                MiuixBasicComponent(
+                  startAction: AppIcon(AppIcons.download()),
+                  title: '保存图片到本地',
+                  onClick: () {
                     Navigator.of(ctx).pop();
                     _saveImage(context, rawUrl);
                   },
                 ),
-                ListTile(
-                  leading: AppIcon(AppIcons.copy()),
-                  title: const Text('复制图片直链'),
-                  onTap: () {
+                MiuixBasicComponent(
+                  startAction: AppIcon(AppIcons.copy()),
+                  title: '复制图片直链',
+                  onClick: () {
                     Navigator.of(ctx).pop();
                     Clipboard.setData(ClipboardData(text: rawUrl));
                     showToast(
@@ -362,10 +362,10 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                     );
                   },
                 ),
-                ListTile(
-                  leading: AppIcon(AppIcons.clear()),
-                  title: const Text('关闭预览'),
-                  onTap: () {
+                MiuixBasicComponent(
+                  startAction: AppIcon(AppIcons.clear()),
+                  title: '关闭预览',
+                  onClick: () {
                     Navigator.of(ctx).pop();
                     Navigator.of(context).pop();
                   },

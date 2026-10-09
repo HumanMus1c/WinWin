@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -484,18 +485,18 @@ class _SessionTile extends StatelessWidget {
     return GestureDetector(
       onSecondaryTapUp: (details) =>
           _openMoreMenu(context, details.globalPosition),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
+      child: MiuixBasicComponent(
+        insideMargin: const EdgeInsets.symmetric(
           horizontal: Style.safeSpace,
           vertical: Style.xs,
         ),
-        onTap: () => showChatDetailPage(
+        onClick: () => showChatDetailPage(
           context,
           talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
           sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
           title: _name,
         ),
-        leading: Stack(
+        startAction: Stack(
           clipBehavior: Clip.none,
           children: [
             MsgFeedAvatar(src: _avatar),
@@ -523,52 +524,56 @@ class _SessionTile extends StatelessWidget {
               ),
           ],
         ),
-        title: Row(
-          children: [
-            Flexible(
-              child: Pref.demoMode
-                  ? const SkeletonLine(width: 120, height: 14)
-                  : Text(
-                      _name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: tokens.text.bodyLarge,
-                    ),
-            ),
-            if (isPinned) _flag(tokens, '置顶'),
-            if (isSpecial) _flag(tokens, '特别关注', color: biliPink),
-            if (isDnd) _flag(tokens, '免打扰'),
-          ],
-        ),
-        subtitle: Pref.demoMode
-            ? const SkeletonLine(width: double.infinity, height: 12)
-            : Text(
-                MessagePreviewParser.parseSessionPreview(content, msgType),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: tokens.text.bodySmall?.copyWith(
-                  color: tokens.colors.onSurfaceVariant,
-                ),
+        content: [
+          Row(
+            children: [
+              Flexible(
+                child: Pref.demoMode
+                    ? const SkeletonLine(width: 120, height: 14)
+                    : Text(
+                        _name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: tokens.text.bodyLarge,
+                      ),
               ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!Pref.demoMode && ts != null && ts > 0)
-              Text(
-                msgFeedTime(ts),
-                style: tokens.text.bodySmall?.copyWith(
-                  color: tokens.colors.outline,
+              if (isPinned) _flag(tokens, '置顶'),
+              if (isSpecial) _flag(tokens, '特别关注', color: biliPink),
+              if (isDnd) _flag(tokens, '免打扰'),
+            ],
+          ),
+          (Pref.demoMode
+              ? const SkeletonLine(width: double.infinity, height: 12)
+              : Text(
+                  MessagePreviewParser.parseSessionPreview(content, msgType),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.text.bodySmall?.copyWith(
+                    color: tokens.colors.onSurfaceVariant,
+                  ),
+                )),
+        ],
+        endActions: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!Pref.demoMode && ts != null && ts > 0)
+                Text(
+                  msgFeedTime(ts),
+                  style: tokens.text.bodySmall?.copyWith(
+                    color: tokens.colors.outline,
+                  ),
                 ),
+              SessionMoreMenuButton(
+                isPinned: isPinned,
+                isDnd: isDnd,
+                onToggleTop: () => onToggleTop(index),
+                onToggleDnd: () => onToggleDnd(index),
+                onRemove: () => _confirmRemove(context),
               ),
-            SessionMoreMenuButton(
-              isPinned: isPinned,
-              isDnd: isDnd,
-              onToggleTop: () => onToggleTop(index),
-              onToggleDnd: () => onToggleDnd(index),
-              onRemove: () => _confirmRemove(context),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }

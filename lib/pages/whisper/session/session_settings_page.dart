@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixBasicComponentColors, MiuixSwitchPreference;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/account/accounts.dart';
@@ -147,22 +148,32 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
     return AppScaffold(
       body: ListView(
         children: [
-          SwitchListTile(
-            title: const Text('消息免打扰'),
-            subtitle: Text(_dnd ? '已开启' : '关闭', style: tokens.text.bodySmall),
+          MiuixSwitchPreference(
+            title: '消息免打扰',
+            summary: _dnd ? '已开启' : '关闭',
             value: _dnd,
-            onChanged: _busy ? null : _toggleDnd,
+            enabled: !_busy,
+            onChanged: _toggleDnd,
           ),
           const Divider(height: 1),
-          ListTile(
-            leading: AppIcon(AppIcons.reportAbuse(), color: tokens.colors.error),
-            title: Text('举报', style: TextStyle(color: tokens.colors.error)),
-            onTap: _report,
+          MiuixBasicComponent(
+            startAction:
+                AppIcon(AppIcons.reportAbuse(), color: tokens.colors.error),
+            title: '举报',
+            titleColor: MiuixBasicComponentColors(
+              color: tokens.colors.error,
+              disabledColor: tokens.colors.error,
+            ),
+            onClick: _report,
           ),
-          ListTile(
-            leading: Icon(AppIcons.delete(), color: tokens.colors.error),
-            title: Text('删除会话', style: TextStyle(color: tokens.colors.error)),
-            onTap: _deleteSession,
+          MiuixBasicComponent(
+            startAction: Icon(AppIcons.delete(), color: tokens.colors.error),
+            title: '删除会话',
+            titleColor: MiuixBasicComponentColors(
+              color: tokens.colors.error,
+              disabledColor: tokens.colors.error,
+            ),
+            onClick: _deleteSession,
           ),
           Padding(
             padding: const EdgeInsets.all(Style.lg),

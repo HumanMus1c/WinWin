@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
@@ -472,10 +472,9 @@ class _SearchPageState extends State<SearchPage> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: 8,
-            itemBuilder: (context, index) => ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: SizedBox(
+            itemBuilder: (context, index) => MiuixBasicComponent(
+              insideMargin: EdgeInsets.zero,
+              startAction: SizedBox(
                 width: 28,
                 child: Text(
                   '${index + 1}',
@@ -486,10 +485,11 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 ),
               ),
-              title: const SkeletonLine(width: double.infinity, height: 13),
-              subtitle: index.isEven
-                  ? const SkeletonLine(width: 120, height: 10)
-                  : null,
+              content: [
+                const SkeletonLine(width: double.infinity, height: 13),
+                if (index.isEven)
+                  const SkeletonLine(width: 120, height: 10),
+              ],
             ),
           ),
         ],
@@ -518,10 +518,9 @@ class _SearchPageState extends State<SearchPage> {
           itemCount: _trending.length,
           itemBuilder: (context, index) {
             final item = _trending[index];
-            return ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: SizedBox(
+            return MiuixBasicComponent(
+              insideMargin: EdgeInsets.zero,
+              startAction: SizedBox(
                 width: 28,
                 child: Text(
                   '${index + 1}',
@@ -531,14 +530,9 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 ),
               ),
-              title: Text(item.keyword ?? ''),
-              subtitle: item.recommendReason != null
-                  ? Text(
-                      item.recommendReason!,
-                      style: const TextStyle(fontSize: 11),
-                    )
-                  : null,
-              onTap: () => _submitSearch(item.keyword ?? ''),
+              title: item.keyword ?? '',
+              summary: item.recommendReason,
+              onClick: () => _submitSearch(item.keyword ?? ''),
             );
           },
         ),
@@ -552,11 +546,10 @@ class _SearchPageState extends State<SearchPage> {
       itemCount: _suggests.length,
       itemBuilder: (context, index) {
         final item = _suggests[index];
-        return ListTile(
-          leading: AppIcon(AppIcons.search(), size: 18),
-          title: Text(item.name ?? ''),
-          dense: true,
-          onTap: () => _submitSearch(item.term ?? item.name ?? ''),
+        return MiuixBasicComponent(
+          startAction: AppIcon(AppIcons.search(), size: 18),
+          title: item.name ?? '',
+          onClick: () => _submitSearch(item.term ?? item.name ?? ''),
         );
       },
     );

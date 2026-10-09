@@ -38,7 +38,7 @@ Material Card 依赖 M3 主题色（surfaceContainerLow）、elevation 与圆角
   双分支构建通过（kernel 01:39:15 / app.so 01:40:32），构建后已自启 Release
   （PID 26544）。
 - 残留复核：`Card(` 全库 0 处；`MiuixCard` 51 处；闸门指标维持 **133**。
-- 提交推送：`（本批回填）`（代码+复盘+进度表同批）。
+- 提交推送：`5ab662e`（代码+复盘+进度表同批，已推 `origin/main`）。
 
 ## 5. 遗留与踩坑
 

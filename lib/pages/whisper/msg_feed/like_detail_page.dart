@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -145,22 +146,24 @@ class _LikeUserTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
+    return MiuixBasicComponent(
+      insideMargin: const EdgeInsets.symmetric(
         horizontal: Style.safeSpace,
         vertical: Style.xs,
       ),
-      leading: MsgFeedAvatar(src: _user?['avatar']?.toString(), size: 40),
-      title: Text(
-        _user?['nickname']?.toString() ?? '',
-        style: tokens.text.bodyLarge,
-      ),
-      subtitle: Text(
-        msgFeedTime(item['like_time'] as int?),
-        style: tokens.text.bodySmall
-            ?.copyWith(color: tokens.colors.outline),
-      ),
-      onTap: () {
+      startAction: MsgFeedAvatar(src: _user?['avatar']?.toString(), size: 40),
+      content: [
+        Text(
+          _user?['nickname']?.toString() ?? '',
+          style: tokens.text.bodyLarge,
+        ),
+        Text(
+          msgFeedTime(item['like_time'] as int?),
+          style: tokens.text.bodySmall
+              ?.copyWith(color: tokens.colors.outline),
+        ),
+      ],
+      onClick: () {
         final mid = _mid;
         if (mid == null) return;
         Navigator.of(context).push(

@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/http/msg.dart';
@@ -55,39 +56,39 @@ class _ReplyTile extends StatelessWidget {
     final counts = item['counts'];
     final isMulti = item['is_multi'] == 1;
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: Style.safeSpace,
-        vertical: Style.xs,
-      ),
-      leading: GestureDetector(
-        onTap: () => _goMember(context),
-        child: MsgFeedAvatar(src: _user?['avatar']?.toString()),
-      ),
-      title: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(
-              text: nickname,
-              style: tokens.text.titleSmall
-                  ?.copyWith(color: tokens.colors.primary),
-            ),
-            if (isMulti)
-              TextSpan(
-                text: ' 等人',
-                style: tokens.text.labelSmall,
-              ),
-            TextSpan(
-              text: ' 对我的$business发布了${counts ?? 0}条评论',
-              style: tokens.text.titleSmall
-                  ?.copyWith(color: tokens.colors.onSurfaceVariant),
-            ),
-          ],
+    return GestureDetector(
+      onLongPress: () => _confirmDelete(context),
+      child: MiuixBasicComponent(
+        insideMargin: const EdgeInsets.symmetric(
+          horizontal: Style.safeSpace,
+          vertical: Style.xs,
         ),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        startAction: GestureDetector(
+          onTap: () => _goMember(context),
+          child: MsgFeedAvatar(src: _user?['avatar']?.toString()),
+        ),
+        content: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: nickname,
+                  style: tokens.text.titleSmall
+                      ?.copyWith(color: tokens.colors.primary),
+                ),
+                if (isMulti)
+                  TextSpan(
+                    text: ' 等人',
+                    style: tokens.text.labelSmall,
+                  ),
+                TextSpan(
+                  text: ' 对我的$business发布了${counts ?? 0}条评论',
+                  style: tokens.text.titleSmall
+                      ?.copyWith(color: tokens.colors.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
           if (source.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(source, style: tokens.text.bodyMedium),
@@ -104,7 +105,6 @@ class _ReplyTile extends StatelessWidget {
           ),
         ],
       ),
-      onLongPress: () => _confirmDelete(context),
     );
   }
 

@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/http/msg.dart';
@@ -51,33 +52,36 @@ class _AtTile extends StatelessWidget {
     final business = _content?['business']?.toString() ?? '';
     final source = _content?['source_content']?.toString() ?? '';
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: Style.safeSpace,
-        vertical: Style.xs,
-      ),
-      leading: GestureDetector(
-        onTap: () => _goMember(context),
-        child: MsgFeedAvatar(src: _user?['avatar']?.toString()),
-      ),
-      title: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(
-              text: nickname,
-              style: tokens.text.titleSmall
-                  ?.copyWith(color: tokens.colors.primary),
-            ),
-            TextSpan(
-              text: ' 在$business中@了我',
-              style: tokens.text.titleSmall
-                  ?.copyWith(color: tokens.colors.onSurfaceVariant),
-            ),
-          ],
+    return GestureDetector(
+      onLongPress: () => _confirmDelete(context),
+      child: MiuixBasicComponent(
+        insideMargin: const EdgeInsets.symmetric(
+          horizontal: Style.safeSpace,
+          vertical: Style.xs,
         ),
-      ),
-      subtitle: source.isNotEmpty
-          ? Padding(
+        startAction: GestureDetector(
+          onTap: () => _goMember(context),
+          child: MsgFeedAvatar(src: _user?['avatar']?.toString()),
+        ),
+        content: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: nickname,
+                  style: tokens.text.titleSmall
+                      ?.copyWith(color: tokens.colors.primary),
+                ),
+                TextSpan(
+                  text: ' 在$business中@了我',
+                  style: tokens.text.titleSmall
+                      ?.copyWith(color: tokens.colors.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          if (source.isNotEmpty)
+            Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 source,
@@ -85,9 +89,9 @@ class _AtTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: tokens.text.bodyMedium,
               ),
-            )
-          : null,
-      onLongPress: () => _confirmDelete(context),
+            ),
+        ],
+      ),
     );
   }
 

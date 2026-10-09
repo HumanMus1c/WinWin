@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/http/msg.dart';
@@ -60,36 +61,36 @@ class _LikeTile extends StatelessWidget {
     final title = _content?['title']?.toString() ?? '';
     final isMulti = users.length > 1;
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: Style.safeSpace,
-        vertical: Style.xs,
-      ),
-      leading: MsgFeedAvatar(src: first?['avatar']?.toString()),
-      title: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(
-              text: nickname,
-              style: tokens.text.titleSmall
-                  ?.copyWith(color: tokens.colors.primary),
-            ),
-            if (isMulti)
-              TextSpan(
-                text: ' 等${users.length}人',
-                style: tokens.text.labelSmall,
-              ),
-            TextSpan(
-              text: ' 赞了我的动态',
-              style: tokens.text.titleSmall
-                  ?.copyWith(color: tokens.colors.onSurfaceVariant),
-            ),
-          ],
+    return GestureDetector(
+      onLongPress: () => _confirmDelete(context),
+      child: MiuixBasicComponent(
+        insideMargin: const EdgeInsets.symmetric(
+          horizontal: Style.safeSpace,
+          vertical: Style.xs,
         ),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        startAction: MsgFeedAvatar(src: first?['avatar']?.toString()),
+        content: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: nickname,
+                  style: tokens.text.titleSmall
+                      ?.copyWith(color: tokens.colors.primary),
+                ),
+                if (isMulti)
+                  TextSpan(
+                    text: ' 等${users.length}人',
+                    style: tokens.text.labelSmall,
+                  ),
+                TextSpan(
+                  text: ' 赞了我的动态',
+                  style: tokens.text.titleSmall
+                      ?.copyWith(color: tokens.colors.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
           if (title.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
@@ -106,13 +107,12 @@ class _LikeTile extends StatelessWidget {
                 ?.copyWith(color: tokens.colors.outline),
           ),
         ],
+        onClick: () => showLikeDetailPage(
+          context,
+          cardId: item['id']?.toString() ?? '',
+          counts: counts,
+        ),
       ),
-      onTap: () => showLikeDetailPage(
-        context,
-        cardId: item['id']?.toString() ?? '',
-        counts: counts,
-      ),
-      onLongPress: () => _confirmDelete(context),
     );
   }
 
