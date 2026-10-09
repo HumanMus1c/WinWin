@@ -17,7 +17,7 @@ List<SettingsModel> get extraSettings => [
       SwitchModel(
         title: '启用 HTTP/2',
         subtitle: '使用 HTTP/2 协议，可能提升连接速度',
-        leading: Icon(Icons.http),
+        leading: AppIcon(Icons.http),
         setKey: SettingBoxKey.enableHttp2,
         defaultVal: false,
       ),
@@ -70,14 +70,14 @@ List<SettingsModel> get extraSettings => [
       const SwitchModel(
         title: '启用系统代理',
         subtitle: '使用系统代理设置',
-        leading: Icon(Icons.vpn_key),
+        leading: AppIcon(Icons.vpn_key),
         setKey: SettingBoxKey.enableSystemProxy,
         defaultVal: false,
       ),
       SwitchModel(
         title: '禁用 SSL 证书验证',
         subtitle: '⚠️ 不安全，仅在调试时使用',
-        leading: Icon(Icons.security),
+        leading: AppIcon(Icons.security),
         setKey: SettingBoxKey.badCertificateCallback,
         defaultVal: false,
       ),
@@ -86,7 +86,7 @@ List<SettingsModel> get extraSettings => [
       const SwitchModel(
         title: '使用 APP 端推荐',
         subtitle: '获取 APP 端推荐流（含更多分类信息）',
-        leading: Icon(Icons.explore_outlined),
+        leading: AppIcon(Icons.explore_outlined),
         setKey: SettingBoxKey.appRcmd,
         defaultVal: true,
       ),
@@ -101,7 +101,7 @@ List<SettingsModel> get extraSettings => [
       const SwitchModel(
         title: '合并相同弹幕',
         subtitle: '将内容相同的弹幕合并显示',
-        leading: Icon(Icons.merge),
+        leading: AppIcon(Icons.merge),
         setKey: SettingBoxKey.mergeDanmaku,
         defaultVal: false,
       ),
@@ -110,7 +110,7 @@ List<SettingsModel> get extraSettings => [
       const SwitchModel(
         title: '启用日志',
         subtitle: '记录应用运行日志，用于问题排查',
-        leading: Icon(Icons.article_outlined),
+        leading: AppIcon(Icons.article_outlined),
         setKey: SettingBoxKey.enableLog,
         defaultVal: true,
       ),
@@ -119,7 +119,7 @@ List<SettingsModel> get extraSettings => [
       const SwitchModel(
         title: '暂停观看历史',
         subtitle: '不再记录观看历史',
-        leading: Icon(Icons.history_toggle_off),
+        leading: AppIcon(Icons.history_toggle_off),
         setKey: 'historyPause',
         defaultVal: false,
       ),
@@ -129,7 +129,7 @@ List<SettingsModel> get extraSettings => [
         title: '演示模式',
         subtitle: '云端内容以骨架屏显示；账号头像/昵称替换为程序默认值，'
             '其余账号数据照常展示并可在演示期即时编辑；不影响真实数据',
-        leading: const Icon(Icons.slideshow),
+        leading: AppIcon(Icons.slideshow),
         setKey: SettingBoxKey.demoMode,
         defaultVal: false,
         onChanged: Pref.setDemoMode,

@@ -18,7 +18,7 @@ List<SettingsModel> get playSettings => [
       SwitchModel(
         title: '自动播放',
         subtitle: '进入详情页自动播放',
-        leading: Icon(Icons.motion_photos_auto_outlined),
+        leading: AppIcon(Icons.motion_photos_auto_outlined),
         setKey: SettingBoxKey.autoPlayEnable,
         defaultVal: false,
       ),
@@ -46,7 +46,7 @@ List<SettingsModel> get playSettings => [
       SwitchModel(
         title: '双击快退/快进',
         subtitle: '左侧双击快退/右侧双击快进，关闭则双击均为暂停/播放',
-        leading: Icon(Icons.touch_app_outlined),
+        leading: AppIcon(Icons.touch_app_outlined),
         setKey: SettingBoxKey.enableQuickDouble,
         defaultVal: true,
       ),
@@ -58,14 +58,14 @@ List<SettingsModel> get playSettings => [
       ),
       SwitchModel(
         title: '全屏显示截图按钮',
-        leading: Icon(Icons.photo_camera_outlined),
+        leading: AppIcon(Icons.photo_camera_outlined),
         setKey: SettingBoxKey.showFsScreenshotBtn,
         defaultVal: true,
       ),
       const SwitchModel(
         title: '键盘控制',
         subtitle: '空格暂停/方向键快进快退/全屏切换等',
-        leading: Icon(Icons.keyboard_outlined),
+        leading: AppIcon(Icons.keyboard_outlined),
         setKey: SettingBoxKey.keyboardControl,
         defaultVal: true,
       ),

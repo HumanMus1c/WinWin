@@ -25,7 +25,7 @@ List<SettingsModel> get styleSettings => [
       // 应用字体（移植自 BiliPai AppFontFileStore）
       NormalModel(
         title: '应用字体',
-        leading: const Icon(Icons.font_download_outlined),
+        leading: AppIcon(Icons.font_download_outlined),
         getSubtitle: () => '当前：${AppFontNotifier.instance.displayName}',
         onTap: (context, setState) async {
           await showAppDialog<void>(
@@ -38,7 +38,7 @@ List<SettingsModel> get styleSettings => [
       // 主题模式
       NormalModel(
         title: '主题模式',
-        leading: const Icon(Icons.brightness_6_outlined),
+        leading: AppIcon(Icons.brightness_6_outlined),
         getSubtitle: () => '当前模式：${ThemeNotifier.instance.value.label}',
         onTap: (context, setState) async {
           final res = await showSelectDialog<ThemeModeType>(
@@ -58,7 +58,7 @@ List<SettingsModel> get styleSettings => [
       const SwitchModel(
         title: '纯黑主题',
         subtitle: '深色模式下使用纯黑背景（OLED 省电）',
-        leading: Icon(Icons.contrast),
+        leading: AppIcon(Icons.contrast),
         setKey: SettingBoxKey.isPureBlackTheme,
         defaultVal: false,
         needReboot: true,
@@ -67,7 +67,7 @@ List<SettingsModel> get styleSettings => [
       // 字体大小缩放
       NormalModel(
         title: '字体大小',
-        leading: const Icon(Icons.text_fields),
+        leading: AppIcon(Icons.text_fields),
         getSubtitle: () => '当前缩放：${(GStorage.setting.get(SettingBoxKey.defaultTextScale, defaultValue: 1.0) as double).toStringAsFixed(2)}',
         onTap: (context, setState) async {
           final current = GStorage.setting.get(SettingBoxKey.defaultTextScale,
@@ -97,7 +97,7 @@ List<SettingsModel> get styleSettings => [
       // 界面缩放
       NormalModel(
         title: '界面缩放',
-        leading: const Icon(Icons.zoom_in_outlined),
+        leading: AppIcon(Icons.zoom_in_outlined),
         getSubtitle: () =>
             '当前缩放比例：${(GStorage.setting.get(SettingBoxKey.uiScale, defaultValue: 1.0) as double).toStringAsFixed(2)}',
         onTap: (context, setState) async {
@@ -129,7 +129,7 @@ List<SettingsModel> get styleSettings => [
       const SwitchModel(
         title: '使用系统原生标题栏',
         subtitle: '关闭时使用应用自绘的沉浸式透明标题栏（需重启）',
-        leading: Icon(Icons.window),
+        leading: AppIcon(Icons.window),
         setKey: SettingBoxKey.useNativeTitleBar,
         defaultVal: false,
         needReboot: true,
@@ -138,7 +138,7 @@ List<SettingsModel> get styleSettings => [
       // 显示托盘图标（桌面端）
       const SwitchModel(
         title: '显示托盘图标',
-        leading: Icon(Icons.donut_large_rounded),
+        leading: AppIcon(Icons.donut_large_rounded),
         setKey: SettingBoxKey.showTrayIcon,
         defaultVal: true,
         needReboot: true,
@@ -148,7 +148,7 @@ List<SettingsModel> get styleSettings => [
       const SwitchModel(
         title: '退出时最小化到托盘',
         subtitle: '关闭窗口时最小化到系统托盘而非退出',
-        leading: Icon(Icons.minimize),
+        leading: AppIcon(Icons.minimize),
         setKey: SettingBoxKey.minimizeOnExit,
         defaultVal: false,
       ),

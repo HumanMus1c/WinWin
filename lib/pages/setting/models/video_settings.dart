@@ -19,20 +19,20 @@ List<SettingsModel> get videoSettings => [
       const SwitchModel(
         title: '开启硬解',
         subtitle: '以较低功耗播放视频，若异常卡死请关闭',
-        leading: Icon(Icons.flash_on_outlined),
+        leading: AppIcon(Icons.flash_on_outlined),
         setKey: SettingBoxKey.enableHA,
         defaultVal: true,
       ),
       const SwitchModel(
         title: '免登录1080P',
         subtitle: '免登录查看1080P视频',
-        leading: Icon(Icons.hd_outlined),
+        leading: AppIcon(Icons.hd_outlined),
         setKey: SettingBoxKey.p1080,
         defaultVal: true,
       ),
       NormalModel(
         title: '默认画质',
-        leading: const Icon(Icons.video_settings_outlined),
+        leading: AppIcon(Icons.video_settings_outlined),
         getSubtitle: () => '当前画质：${_videoQualityDesc(Pref.defaultVideoQa)}',
         onTap: (context, setState) async {
           final res = await showSelectDialog<int>(
@@ -49,7 +49,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: '默认音质',
-        leading: const Icon(Icons.music_video_outlined),
+        leading: AppIcon(Icons.music_video_outlined),
         getSubtitle: () => '当前音质：${_audioQualityDesc(Pref.defaultAudioQa)}',
         onTap: (context, setState) async {
           final res = await showSelectDialog<int>(
@@ -66,7 +66,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: '音频响度均衡',
-        leading: const Icon(Icons.equalizer_outlined),
+        leading: AppIcon(Icons.equalizer_outlined),
         getSubtitle: () =>
             '当前配置：${AudioNormalization.getTitleFromConfig(Pref.audioNormalization)}',
         onTap: (context, setState) async {
@@ -88,7 +88,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: 'CDN 服务节点',
-        leading: const Icon(Icons.cloud_outlined),
+        leading: AppIcon(Icons.cloud_outlined),
         getSubtitle: () =>
             '当前使用：${Pref.defaultCDNService.desc}，如遇缓冲频繁请尝试切换',
         onTap: (context, setState) async {
@@ -106,7 +106,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: '硬件解码模式',
-        leading: const Icon(Icons.memory),
+        leading: AppIcon(Icons.memory),
         getSubtitle: () => '当前模式：${Pref.hardwareDecoding}',
         onTap: (context, setState) async {
           final res = await showSelectDialog<String>(
@@ -151,7 +151,7 @@ List<SettingsModel> get videoSettings => [
       ),
       NormalModel(
         title: '缓冲大小',
-        leading: const Icon(Icons.storage),
+        leading: AppIcon(Icons.storage),
         getSubtitle: () => '当前：${Pref.bufferSize.toStringAsFixed(1)} MB',
         onTap: (context, setState) async {
           final res = await showAppDialog<double>(
