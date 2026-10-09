@@ -2,7 +2,7 @@ import 'dart:typed_data' show Uint8List;
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -515,7 +515,7 @@ void _showDislikeReasonsDialog({
             ),
             const SizedBox(height: 12),
           ],
-          const Divider(),
+          const SizedBox(height: 16, child: Center(child: MiuixHorizontalDivider())),
           Center(
             child: TextButton.icon(
               icon: AppIcon(AppIcons.undo(), size: 16),

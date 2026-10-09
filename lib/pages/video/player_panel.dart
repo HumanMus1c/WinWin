@@ -2355,7 +2355,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                   ),
                 ],
               ),
-              const Divider(height: 1),
+              const MiuixHorizontalDivider(),
               const SizedBox(height: Style.sm),
               Flexible(child: Image.memory(widget.png, fit: BoxFit.contain)),
               const SizedBox(height: Style.sm),

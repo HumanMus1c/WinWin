@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixHorizontalDivider;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -322,15 +322,9 @@ class SessionListSectionState extends State<SessionListSection> {
             ],
           ),
         ),
-        const Divider(height: 1),
+        const MiuixHorizontalDivider(),
         Expanded(
-          child: Material(
-            // ListTile 的 hover 高亮绘制在最近的 Material 祖先上，若为页面
-            // Scaffold 则不受滚动裁剪，滚动时会“残留”到固定栏区域；
-            // 在视口内提供独立的透明 Material 并硬裁剪即可限定绘制范围。
-            type: MaterialType.transparency,
-            clipBehavior: Clip.hardEdge,
-            child: CustomScrollView(
+          child: CustomScrollView(
               controller: _scrollCtrl,
               // AlwaysScrollable：列表不满一屏时仍可下拉刷新。
               physics: const AlwaysScrollableScrollPhysics(),
@@ -418,7 +412,6 @@ class SessionListSectionState extends State<SessionListSection> {
                   ),
               ],
             ),
-          ),
         ),
       ],
     );

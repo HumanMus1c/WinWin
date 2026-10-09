@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressable, MiuixSquircleBorder;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixHorizontalDivider, MiuixPressable, MiuixSquircleBorder;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
@@ -1255,7 +1255,7 @@ class _DynCard extends StatelessWidget {
               // 底部互动行
               if (item.stat != null) ...[
                 const SizedBox(height: Style.sm),
-                const Divider(height: 1, thickness: 0.5),
+                const MiuixHorizontalDivider(thickness: 0.5),
                 const SizedBox(height: Style.xs),
                 DynActionBar(
                   item: item,

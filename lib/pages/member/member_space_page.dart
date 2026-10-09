@@ -2249,7 +2249,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               // 底部互动行（转发/评论/点赞，均可交互）
               if (item.stat != null) ...[
                 const SizedBox(height: Style.sm),
-                const Divider(height: 1, thickness: 0.5),
+                const MiuixHorizontalDivider(thickness: 0.5),
                 const SizedBox(height: Style.xs),
                 DynActionBar(
                   item: item,

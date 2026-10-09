@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressable, MiuixVerticalDivider;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -1045,7 +1045,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           ),
         ),
         // 分割线
-        VerticalDivider(width: 1, thickness: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
+        MiuixVerticalDivider(thickness: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
         // 右栏：选集 / 评论
         Expanded(
           flex: 3,
@@ -1654,8 +1654,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   for (int i = 0; i < subReplies.length; i++) ...[
                     if (i > 0) ...[
                       const SizedBox(height: Style.xs),
-                      Divider(
-                        height: 1,
+                      MiuixHorizontalDivider(
                         thickness: 0.5,
                         color: tokens.colors.outlineVariant
                             .withValues(alpha: 0.2),
@@ -2252,7 +2251,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               _buildFollowButton(cs),
             ],
           ),
-          const Divider(height: Style.xl),
+          const SizedBox(height: Style.xl, child: Center(child: MiuixHorizontalDivider())),
           // 互动行（点赞/投币/收藏/点踩/分享/稍后再看 + 长按三连）
           VideoActionRow(
             stat: epStat,
@@ -2310,7 +2309,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             ),
           // 展开状态下展示声优和制作人员
           if (_descExpanded && (hasActors || hasStaff)) ...[
-            const Divider(height: Style.lg),
+            const SizedBox(height: Style.lg, child: Center(child: MiuixHorizontalDivider())),
             if (hasActors) ...[
               const Text('声优 / 演员', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
@@ -2487,7 +2486,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             },
             child: const Text('看过'),
           ),
-          const Divider(),
+          const SizedBox(height: 16, child: Center(child: MiuixHorizontalDivider())),
           SimpleDialogOption(
             onPressed: () async {
               Navigator.pop(ctx);

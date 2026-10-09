@@ -152,8 +152,8 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
                 ),
                 SizedBox(
                   height: 25,
-                  child: VerticalDivider(
-                    width: 1,
+                  child: MiuixVerticalDivider(
+                    thickness: 1,
                     color: tokens.colors.outline.withValues(alpha: 0.3),
                   ),
                 ),

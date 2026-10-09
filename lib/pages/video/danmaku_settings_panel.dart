@@ -133,7 +133,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
                 ),
               ],
             ),
-            const Divider(height: 1),
+            const MiuixHorizontalDivider(),
             Expanded(child: _buildList(tokens)),
           ],
         ),
@@ -298,7 +298,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
         ),
         const SizedBox(height: Style.sm),
         _buildBlockTypeChips(tokens),
-        const Divider(height: Style.xl),
+        const SizedBox(height: Style.xl, child: Center(child: MiuixHorizontalDivider())),
         _SwitchRow(
           label: '合并相同弹幕',
           value: _merge,

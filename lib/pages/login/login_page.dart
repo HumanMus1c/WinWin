@@ -122,7 +122,7 @@ class _LoginPageState extends State<LoginPage> {
               }),
             ),
           ),
-          const Divider(height: 1),
+          const MiuixHorizontalDivider(),
           // ── 内容区：懒加载 + 状态保留 ──
           Expanded(
             child: IndexedStack(

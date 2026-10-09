@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixBasicComponentColors, MiuixSwitchPreference;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixBasicComponentColors, MiuixHorizontalDivider, MiuixSwitchPreference;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/account/accounts.dart';
@@ -155,7 +155,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
             enabled: !_busy,
             onChanged: _toggleDnd,
           ),
-          const Divider(height: 1),
+          const MiuixHorizontalDivider(),
           MiuixBasicComponent(
             startAction:
                 AppIcon(AppIcons.reportAbuse(), color: tokens.colors.error),

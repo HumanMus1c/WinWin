@@ -72,7 +72,7 @@ class SelectDialog<T> extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Style.sm),
-          const Divider(height: 1),
+          const MiuixHorizontalDivider(),
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: Style.md),

@@ -101,7 +101,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                 ),
               ],
             ),
-            const Divider(height: 1),
+            const MiuixHorizontalDivider(),
             Expanded(child: _buildList(tokens)),
           ],
         ),
@@ -150,7 +150,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                 selected: sub.current?.id == item.id,
                 onTap: () => sub.select(item),
               ),
-            const Divider(height: Style.lg),
+            const SizedBox(height: Style.lg, child: Center(child: MiuixHorizontalDivider())),
 
             // ── AI 偏好策略 ──
             Text('AI 字幕策略', style: tokens.text.labelLarge),
@@ -173,7 +173,7 @@ class _SubtitleSettingsDialogState extends State<_SubtitleSettingsDialog> {
                   ),
               ],
             ),
-            const Divider(height: Style.lg),
+            const SizedBox(height: Style.lg, child: Center(child: MiuixHorizontalDivider())),
 
             // ── 样式设置 ──
             Text('字幕样式', style: tokens.text.labelLarge),

@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -345,8 +345,7 @@ class _ArticlePageState extends State<ArticlePage> {
               ),
 
               SliverToBoxAdapter(
-                child: Divider(
-                  height: 1,
+                child: MiuixHorizontalDivider(
                   thickness: 0.5,
                   color: cs.outlineVariant,
                 ),
@@ -430,7 +429,7 @@ class _ArticlePageState extends State<ArticlePage> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: Style.xl),
-                  child: Divider(thickness: 0.5, color: cs.outlineVariant),
+                  child: MiuixHorizontalDivider(thickness: 0.5, color: cs.outlineVariant),
                 ),
               ),
 
@@ -550,8 +549,7 @@ class _ArticlePageState extends State<ArticlePage> {
                                     ],
                                   ),
                                   const SizedBox(height: 6),
-                                  Divider(
-                                    height: 1,
+                                  MiuixHorizontalDivider(
                                     thickness: 0.3,
                                     color: cs.outlineVariant,
                                   ),

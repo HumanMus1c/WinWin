@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressable, MiuixVerticalDivider;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -340,7 +340,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           _buildDialogStatusOption(ctx, detail, 1, '想看'),
           _buildDialogStatusOption(ctx, detail, 2, '在看'),
           _buildDialogStatusOption(ctx, detail, 3, '看过'),
-          const Divider(),
+          const SizedBox(height: 16, child: Center(child: MiuixHorizontalDivider())),
           SimpleDialogOption(
             onPressed: () {
               Navigator.pop(ctx);
@@ -583,8 +583,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           ),
         ),
         // 分割线
-        VerticalDivider(
-          width: 1,
+        MiuixVerticalDivider(
           thickness: 1,
           color: cs.outlineVariant.withValues(alpha: 0.3),
         ),

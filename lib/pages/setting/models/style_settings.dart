@@ -309,7 +309,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                         ],
                       ),
               ),
-              const Divider(height: 1),
+              const MiuixHorizontalDivider(),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: Style.lg,

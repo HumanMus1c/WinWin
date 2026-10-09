@@ -573,7 +573,7 @@ class _ChatBubble extends StatelessWidget {
         json['thumb']?.toString() ?? json['image']?.toString());
     final title = json['title']?.toString() ?? '';
     final author = json['author']?.toString() ?? '';
-    return Material(
+    return Container(
       color: tokens.colors.surfaceContainerHighest,
       child: MiuixPressable(
         onPressed: sourceInt == 5 ? () => _openSharedVideo(context, tokens, json) : null,
@@ -614,7 +614,7 @@ class _ChatBubble extends StatelessWidget {
     final bvid = json['bvid']?.toString() ?? '';
     final title = json['title']?.toString() ?? '';
     final cover = SessionAccountResolver.normalizeAvatarUrl(json['cover']?.toString());
-    return Material(
+    return Container(
       color: tokens.colors.surfaceContainerHighest,
       child: MiuixPressable(
         onPressed: bvid.isEmpty ? null : () => _openVideo(context, bvid, cover),

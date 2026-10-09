@@ -1882,8 +1882,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               ],
             ),
           ),
-          Divider(
-            height: 1,
+          MiuixHorizontalDivider(
             thickness: 0.5,
             color: cs.outlineVariant.withValues(alpha: 0.3),
           ),

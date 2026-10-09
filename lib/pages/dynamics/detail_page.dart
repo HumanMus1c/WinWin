@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -507,7 +507,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: Style.md),
-                    child: Divider(thickness: 1),
+                    child: MiuixHorizontalDivider(thickness: 1),
                   ),
                 ),
 
@@ -655,7 +655,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                       ],
                                     ),
                                     const SizedBox(height: 6),
-                                    const Divider(height: 1, thickness: 0.3),
+                                    const MiuixHorizontalDivider(thickness: 0.3),
                                   ],
                                 ),
                               ),

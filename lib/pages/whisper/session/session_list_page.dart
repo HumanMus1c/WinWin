@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixHorizontalDivider;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -288,7 +288,7 @@ class _SessionListPageState extends State<SessionListPage> {
               ],
             ),
           ),
-          const Divider(height: 1),
+          const MiuixHorizontalDivider(),
           // 会话列表
           Expanded(
             child: Pref.demoMode
@@ -305,12 +305,7 @@ class _SessionListPageState extends State<SessionListPage> {
                 : RefreshIndicator(
                     color: biliPink,
                     onRefresh: () => _load(refresh: true),
-                    child: Material(
-                      // hover 高亮绘制在最近的 Material 祖先上，在视口内提供
-                      // 透明 Material 并硬裁剪，避免滚动时高亮泄漏到固定栏区域。
-                      type: MaterialType.transparency,
-                      clipBehavior: Clip.hardEdge,
-                      child: ListView.builder(
+                    child: ListView.builder(
                         itemCount: _sessions.length + 1,
                         itemBuilder: (context, index) {
                           if (index == _sessions.length) {
@@ -339,7 +334,6 @@ class _SessionListPageState extends State<SessionListPage> {
                           );
                         },
                       ),
-                    ),
                   ),
           ),
         ],

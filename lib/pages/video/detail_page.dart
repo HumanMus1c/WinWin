@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -1626,7 +1626,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 ),
             ],
           ),
-          const Divider(height: Style.xl),
+          const SizedBox(height: Style.xl, child: Center(child: MiuixHorizontalDivider())),
           // 互动行：点赞/投币/收藏/点踩/分享/稍后再看
           //（对标 BiliPai ActionButtonsRow）。
           VideoActionRow(
@@ -1701,11 +1701,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         runSpacing: Style.sm,
         children: [
           for (final tag in _tags.take(10))
-            Material(
-              color: tokens.colors.surfaceContainerHighest.withValues(
-                alpha: 0.8,
+            Container(
+              decoration: BoxDecoration(
+                color: tokens.colors.surfaceContainerHighest.withValues(
+                  alpha: 0.8,
+                ),
+                borderRadius: BorderRadius.circular(Style.radiusLg),
               ),
-              borderRadius: BorderRadius.circular(Style.radiusLg),
               child: MiuixPressable(
                 onPressed: () => Navigator.of(context).push(
                   AppRoute<void>(
@@ -2006,8 +2008,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   for (int i = 0; i < subReplies.length; i++) ...[
                     if (i > 0) ...[
                       const SizedBox(height: Style.xs),
-                      Divider(
-                        height: 1,
+                      MiuixHorizontalDivider(
                         thickness: 0.5,
                         color: tokens.colors.outlineVariant
                             .withValues(alpha: 0.2),
@@ -2776,7 +2777,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
             ],
           ),
-          const Divider(height: Style.xl),
+          const SizedBox(height: Style.xl, child: Center(child: MiuixHorizontalDivider())),
           VideoActionRow(
             stat: null,
             hasLike:
@@ -2891,7 +2892,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
             ],
           ),
-          const Divider(height: Style.xl),
+          const SizedBox(height: Style.xl, child: Center(child: MiuixHorizontalDivider())),
           VideoActionRow(
             stat: null,
             hasLike: false,

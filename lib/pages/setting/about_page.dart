@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/pages/onboarding/user_agreement_page.dart';
@@ -129,7 +129,7 @@ class AboutPage extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Divider(height: 1),
+                const MiuixHorizontalDivider(),
                 const Flexible(
                   child: SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(12, 8, 12, 16),

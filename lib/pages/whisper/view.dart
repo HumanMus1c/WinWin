@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/refresh_indicator.dart';
@@ -119,7 +120,7 @@ class _WhisperPageState extends State<WhisperPage>
             child: _buildEntries(tokens),
           ),
           // 阶段5d-L1：M3 分支已移除。
-          const Divider(height: 1),
+          const MiuixHorizontalDivider(),
           Expanded(
             child: AppRefreshIndicator(
               onRefresh: () async {
