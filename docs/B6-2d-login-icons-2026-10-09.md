@@ -43,7 +43,7 @@ B6-2d：单文件 9 处 `Icon(Icons.*)` → `AppIcon(Icons.*)`，零字形变化
 - `flutter build windows --debug` 通过（29.0s）；
   `flutter build windows --release` 通过（77.7s）。
   双编译前已结束残留 `winwin.exe`（防 WebView2Loader.dll 锁）。
-- 提交推送：`（本提交，推送后由 docs 订正提交回填）`。
+- 提交推送：`fd15113`（代码+复盘+进度表同批）。
 
 ## 5. 遗留与踩坑
 
