@@ -40,4 +40,24 @@
   3. **充分吸收与适配**：在现有优秀架构基础上进行直接移植、接口对齐并针对当前平台（如 Windows / Flutter）做必要的边界修复与健壮性增强。
 - **原创编写门槛约束**：**只有在本地参考库与全网深度检索后，确认 100% 完全不存在任何可参考、可借鉴或可移植的成熟代码时**，才允许从零构建全新的自研实现。
 
+## 核心规则 5：构建验证工作流（Windows 双分支）
+- 每次进入双分支编译（`flutter build windows --debug/--release`）前，**自动结束占用 `WebView2Loader.dll` 的残留 `winwin.exe` 进程**（免手动处理 DLL 锁死）。
+- 构建全部完成后，**自动启动本轮最后一次成功构建的产物**（debug 或 release 的 `winwin.exe`），供用户直接实机验证。
+
+## 核心规则 6：文档纪律（改动与文档同批闭环）
+- 每次代码改动必须同步落实到文档：新建/追补复盘（现象/定因/方案/验证/提交回滚五要素 + 遗留与踩坑 + 总结）+ `docs/MD3库级退役进度追踪-2026-10-07.md` 进度表回填，与代码**同批提交推送**，不拖欠。
+- **复盘缺档即视为任务未闭环**。
+
+## 项目概况与环境要点
+- WinWin = Bilibili 第三方 Flutter Windows 客户端；播放内核 **fvp/mdk**（非 media_kit）；上游参考 PiliPlus / BiliPai。
+- **运行时日志真实路径**：`D:\Documents\.winwin_logs.json`（catcher NDJSON 崩溃落盘）与 `D:\Documents\logs\runtime.log`；`getApplicationDocumentsDirectory()` 在本机重定向到 `D:\Documents`，排查日志勿查 `C:\Users\...\Documents`（2026-10-09 三轮误判的根因）。
+- **Git 提交信息**：经 UTF-8 临时文件 + `git commit -F` 写入（PowerShell 5.1 管道会破坏中文）；`git push` 偶发 443 超时，重试即可。
+- **UI 图标约定（B6-2 起）**：全库裸 `Icon(Icons.)` 已归零；新增/修改一律使用 `AppIcon(AppIcons.语义方法())`；语义方法为运行时映射，**不能加 `const`**。
+
+## MD3 退役进度与中断点（2026-10-09 23:45 快照 · 过渡信息）
+- 主线：MD3 `material_ui` 全库退役 → `flutter_miuix`（ChuxinNeko/flutter_miuix）。段位：L0/B1~B5 ✅ → B6-1~B6-2e ✅ → **B6-2f 进行中** → B6-3 InkWell/IconButton → B6-4 Card/ListTile → B6-5 Divider/Material → B6-6 Colors→Token → B7 摘除依赖封板；B1b 测试宿主统一暂缓。
+- 闸门指标：`lib` 内 `import material_ui` 文件数 **133**（起始 137，B7 前归零）。
+- **中断点**：B6-2f（35 处直参转语义）已完成约 33 处但**未提交（工作区 18 文件）**；剩 2 处：`lib/pages/follow/view.dart:270`、`lib/pages/pgc/view.dart:602`（`AppIcon(Icons.login)`）；未跑 analyze/test/双编译。
+- 进度与复盘细节以 `docs/MD3库级退役进度追踪-2026-10-07.md` 及 `docs/B6-2*.md` 为准。
+
 
