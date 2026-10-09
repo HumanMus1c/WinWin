@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 全局 Esc 路由器（[AppEscapeScope]）分层语义测试。
 ///
@@ -33,7 +34,7 @@ void main() {
         body: Center(
           child: TextButton(
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => target),
+              AppRoute<void>(builder: (_) => target),
             ),
             child: Text(label),
           ),

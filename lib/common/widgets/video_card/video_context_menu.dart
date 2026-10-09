@@ -21,6 +21,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 String _errMsg(LoadingState state, [String fallback = '操作失败']) {
   if (state is Error) {
@@ -105,7 +106,7 @@ List<ContextMenuAction> buildVideoCardActions({
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => MemberSpacePage(mid: mid),
             ),
           );

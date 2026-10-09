@@ -19,6 +19,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 专栏文章阅读页面。
 ///
@@ -281,7 +282,7 @@ class _ArticlePageState extends State<ArticlePage> {
                           if (article.authorMid != null) {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
+                              AppRoute(
                                 builder: (_) =>
                                     MemberSpacePage(mid: article.authorMid!),
                               ),
@@ -479,7 +480,7 @@ class _ArticlePageState extends State<ArticlePage> {
                                 if (mid != null && mid > 0) {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(
+                                    AppRoute(
                                       builder: (_) => MemberSpacePage(mid: mid),
                                     ),
                                   );

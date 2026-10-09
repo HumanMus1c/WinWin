@@ -5,11 +5,12 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 「回复我的」入口。
 void showReplyMePage(BuildContext context) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const ReplyMePage()),
+    AppRoute<void>(builder: (_) => const ReplyMePage()),
   );
 }
 
@@ -121,7 +122,7 @@ class _ReplyTile extends StatelessWidget {
     final mid = _mid;
     if (mid == null) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => MemberSpacePage(mid: mid)),
+      AppRoute(builder: (_) => MemberSpacePage(mid: mid)),
     );
   }
 

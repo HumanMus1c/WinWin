@@ -44,6 +44,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 番剧播放页面（对标 BiliPai `BangumiPlayerScreen` 与 PiliPlus PGC 播放体系）。
 ///
@@ -498,7 +499,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     if (mid == null || mid <= 0) return;
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => MemberSpacePage(mid: mid)),
+      AppRoute(builder: (_) => MemberSpacePage(mid: mid)),
     );
   }
 
@@ -892,7 +893,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
+                    AppRoute(
                       builder: (_) => BangumiDetailPage(
                         seasonId: widget.detail.seasonId,
                         detail: widget.detail,
@@ -2051,7 +2052,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   void _goToDetailPage() {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AppRoute(
         builder: (_) => BangumiDetailPage(
           seasonId: widget.detail.seasonId,
           detail: widget.detail,

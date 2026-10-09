@@ -5,11 +5,12 @@ import 'package:winwin/pages/whisper/msg_feed/like_detail_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 「点赞我的」入口。
 void showLikeMePage(BuildContext context) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const LikeMePage()),
+    AppRoute<void>(builder: (_) => const LikeMePage()),
   );
 }
 

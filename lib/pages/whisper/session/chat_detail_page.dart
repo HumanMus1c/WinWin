@@ -21,6 +21,7 @@ import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 聊天详情入口（阶段 D）。
 ///
@@ -35,7 +36,7 @@ void showChatDetailPage(
   required String title,
 }) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(
+    AppRoute<void>(
       builder: (_) => ChatDetailPage(
         talkerId: talkerId,
         sessionType: sessionType,
@@ -707,7 +708,7 @@ class _ChatBubble extends StatelessWidget {
 
   void _openVideo(BuildContext context, String bvid, String? cover) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      AppRoute<void>(
         builder: (_) => VideoDetailPage(
           bvid: bvid,
           cover: SessionAccountResolver.normalizeAvatarUrl(cover),

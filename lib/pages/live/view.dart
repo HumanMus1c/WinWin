@@ -16,6 +16,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 直播二级分类导航条目。
 class LiveCategoryTab {
@@ -707,7 +708,7 @@ class _LiveCard extends StatelessWidget {
           if (roomId == null || roomId <= 0) return;
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => LiveRoomPage(
                 roomId: roomId,
                 title: item.title,
@@ -825,7 +826,7 @@ class _LiveCard extends StatelessWidget {
                         if (uid != null && uid > 0) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
+                            AppRoute(
                               builder: (_) => MemberSpacePage(mid: uid),
                             ),
                           );

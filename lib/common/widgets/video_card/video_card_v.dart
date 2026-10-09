@@ -13,6 +13,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 视频卡片 - 垂直布局（高性能适配版）。
 ///
@@ -253,7 +254,7 @@ class VideoCardV extends StatelessWidget {
                             if (mid != null && mid > 0) {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
+                                AppRoute(
                                   builder: (_) => MemberSpacePage(mid: mid),
                                 ),
                               );

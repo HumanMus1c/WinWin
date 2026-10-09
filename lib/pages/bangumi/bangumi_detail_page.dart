@@ -18,6 +18,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 番剧 / 影视详情主页（对标 BiliPai `BangumiDetailScreen` 与 PiliPlus）。
 ///
@@ -252,7 +253,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   void _openPlayer(BangumiDetail detail, BangumiEpisode episode) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AppRoute(
         builder: (_) => BangumiPlayerPage(
           detail: detail,
           initialEpisode: episode,

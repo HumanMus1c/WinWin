@@ -24,6 +24,7 @@ import 'package:winwin/ui/profile/widgets/profile_sections.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术单轨 Miuix（阶段5d-L4-2）。
 ///
@@ -290,7 +291,7 @@ class _UserInfoSectionState extends State<_UserInfoSection> {
             if (mid != null && mid > 0) {
               Navigator.push(
                 context,
-                MaterialPageRoute(
+                AppRoute(
                   builder: (_) => MemberSpacePage(mid: mid),
                 ),
               );
@@ -654,7 +655,7 @@ class _SettingsGroup extends StatelessWidget {
               borderRadius: BorderRadius.all(r),
               onTap: (ctx, _) => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const SettingPage()),
+                AppRoute(builder: (_) => const SettingPage()),
               ),
             ),
           ],

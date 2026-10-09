@@ -18,6 +18,7 @@ import 'package:winwin/pages/whisper/session/session_pagination_policy.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 私信会话列表入口（阶段 C）。
 ///
@@ -26,7 +27,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 void showSessionListPage(BuildContext context) {
   Navigator.of(
     context,
-  ).push(MaterialPageRoute<void>(builder: (_) => const SessionListPage()));
+  ).push(AppRoute<void>(builder: (_) => const SessionListPage()));
 }
 
 class _Category {

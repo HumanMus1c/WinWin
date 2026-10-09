@@ -16,6 +16,7 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 用户合集/系列视频列表详情页面。
 class SeasonSeriesDetailPage extends StatefulWidget {
@@ -278,7 +279,7 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
             ? null
             : () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  AppRoute(
                     builder: (_) => VideoDetailPage(bvid: bvid, cover: item.pic),
                   ),
                 ),

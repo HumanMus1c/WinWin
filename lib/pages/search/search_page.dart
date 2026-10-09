@@ -19,6 +19,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 搜索页面 — 搜索框 + 热搜 + 历史 + 联想建议。
 ///
@@ -123,7 +124,7 @@ class _SearchPageState extends State<SearchPage> {
     _saveHistory(keyword);
     await Navigator.push(
       context,
-      MaterialPageRoute(
+      AppRoute(
         builder: (_) => SearchResultPage(keyword: keyword),
       ),
     );
@@ -375,7 +376,7 @@ class _SearchPageState extends State<SearchPage> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
+                AppRoute(
                   builder: (_) => MemberSpacePage(mid: user.mid),
                 ),
               );

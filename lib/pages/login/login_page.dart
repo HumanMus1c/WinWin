@@ -18,6 +18,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 登录页（移植自 PiliPlus `lib/pages/login/`）。
 ///
@@ -41,7 +42,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 ///   - 密码登录返回 status==2（需安全中心手机号验证）的完整流程未实现
 Future<void> showLoginPage(BuildContext context) {
   return Navigator.of(context).push(
-    MaterialPageRoute<void>(
+    AppRoute<void>(
       builder: (_) => const LoginPage(),
       fullscreenDialog: true,
     ),

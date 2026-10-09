@@ -8,6 +8,7 @@ import 'package:winwin/http/msg.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 会话设置入口（阶段 D）。
 ///
@@ -19,7 +20,7 @@ void showSessionSettingsPage(
   required String title,
 }) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(
+    AppRoute<void>(
       builder: (_) => SessionSettingsPage(
         talkerId: talkerId,
         sessionType: sessionType,

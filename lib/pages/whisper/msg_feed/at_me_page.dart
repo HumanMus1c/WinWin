@@ -5,11 +5,12 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 「艾特我的」入口。
 void showAtMePage(BuildContext context) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const AtMePage()),
+    AppRoute<void>(builder: (_) => const AtMePage()),
   );
 }
 
@@ -93,7 +94,7 @@ class _AtTile extends StatelessWidget {
     final mid = _mid;
     if (mid == null) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => MemberSpacePage(mid: mid)),
+      AppRoute(builder: (_) => MemberSpacePage(mid: mid)),
     );
   }
 

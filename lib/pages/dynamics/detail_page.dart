@@ -28,6 +28,7 @@ import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 动态详情页面。
 ///
@@ -335,7 +336,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                           if (author?.mid != null) {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
+                              AppRoute(
                                 builder: (_) =>
                                     MemberSpacePage(mid: author!.mid!),
                               ),
@@ -589,7 +590,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                   if (mid != null && mid > 0) {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(
+                                      AppRoute(
                                         builder: (_) =>
                                             MemberSpacePage(mid: mid),
                                       ),
@@ -802,7 +803,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         if (bvid == null) return;
         Navigator.push(
           context,
-          MaterialPageRoute(
+          AppRoute(
             builder: (_) => VideoDetailPage(bvid: bvid, cover: archive.cover),
           ),
         );
@@ -971,7 +972,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
           if (id != null) {
             Navigator.push(
               context,
-              MaterialPageRoute(
+              AppRoute(
                 builder: (_) => ArticlePage(
                   id: id.toString(),
                   title: article.title,
@@ -1059,7 +1060,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
           if (roomId != null && roomId > 0) {
             Navigator.push(
               context,
-              MaterialPageRoute(
+              AppRoute(
                 builder: (_) => LiveRoomPage(
                   roomId: roomId!,
                   title: live.title,
@@ -1146,7 +1147,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                 if (origAuthor.mid != null) {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
+                    AppRoute(
                       builder: (_) => MemberSpacePage(mid: origAuthor.mid!),
                     ),
                   );
@@ -1219,7 +1220,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
               if (bvid != null && bvid.isNotEmpty) {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: bvid)),
+                  AppRoute(builder: (_) => VideoDetailPage(bvid: bvid)),
                 );
               }
             },
@@ -1238,7 +1239,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
               if (mid != null && mid > 0) {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MemberSpacePage(mid: mid)),
+                  AppRoute(builder: (_) => MemberSpacePage(mid: mid)),
                 );
               }
             },
@@ -1274,7 +1275,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     if (result.isLive && result.roomId != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => LiveRoomPage(roomId: result.roomId!),
         ),
       );
@@ -1283,7 +1284,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     if (result.isArticle && result.articleId != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => ArticlePage(id: result.articleId!.toString()),
         ),
       );
@@ -1292,7 +1293,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     if (result.dynamicId != null && result.dynamicId != _effectiveId) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => DynamicDetailPage(dynamicId: result.dynamicId!),
         ),
       );
@@ -1301,7 +1302,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     if (result.isBangumi) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => BangumiDetailPage(
             seasonId: result.seasonId,
             epId: result.epId,
@@ -1314,14 +1315,14 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     if (result.bvid != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: result.bvid!)),
+        AppRoute(builder: (_) => VideoDetailPage(bvid: result.bvid!)),
       );
       return;
     }
     if (result.aid != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => VideoDetailPage(bvid: IdUtils.av2bv(result.aid!)),
         ),
       );

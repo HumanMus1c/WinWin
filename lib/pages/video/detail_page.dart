@@ -49,6 +49,7 @@ import 'package:winwin/ui/components/immersive_title_bar.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
@@ -997,7 +998,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (mid == null || mid <= 0) return;
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AppRoute(
         builder: (_) => MemberSpacePage(mid: mid),
       ),
     );
@@ -1700,7 +1701,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               borderRadius: BorderRadius.circular(Style.radiusLg),
               child: InkWell(
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
+                  AppRoute<void>(
                     builder: (_) =>
                         SearchResultPage(keyword: tag.tagName ?? ''),
                   ),
@@ -2618,7 +2619,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           : () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
+                AppRoute(
                   builder: (_) => VideoDetailPage(
                     bvid: bvid,
                     cover: item.pic,
@@ -2703,7 +2704,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   void _openDemoVideo(BuildContext context, int index) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AppRoute(
         builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
       ),
     );

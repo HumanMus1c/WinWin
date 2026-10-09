@@ -26,6 +26,7 @@ import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 import 'package:winwin/ui/profile/widgets/profile_horizontal_section.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 // ════════════════════════════════════════════════════════════════
 // 1. 离线缓存行 (ProfileDownloadSection)
@@ -247,7 +248,7 @@ class ProfileFavSectionState extends State<ProfileFavSection> {
                 heroTag: 'profile_fav_${item.id}',
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute<void>(
+                    AppRoute<void>(
                       builder: (_) => FavDetailPage(folder: item),
                     ),
                   ).then((_) => reload());
@@ -261,7 +262,7 @@ class ProfileFavSectionState extends State<ProfileFavSection> {
 
   void _openFavPage(BuildContext context) {
     Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const FavPage()))
+        .push(AppRoute<void>(builder: (_) => const FavPage()))
         .then((_) => reload());
   }
 }
@@ -427,7 +428,7 @@ class ProfileHistorySectionState extends State<ProfileHistorySection> {
                   if (bvid.isNotEmpty) {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      AppRoute(
                         builder: (_) => VideoDetailPage(
                           bvid: bvid,
                           cover: item.cover,
@@ -525,7 +526,7 @@ class ProfileToviewSectionState extends State<ProfileToviewSection> {
 
   void _openToviewPage(BuildContext context) {
     Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const ToviewPage()))
+        .push(AppRoute<void>(builder: (_) => const ToviewPage()))
         .then((_) => reload());
   }
 
@@ -590,7 +591,7 @@ class ProfileToviewSectionState extends State<ProfileToviewSection> {
                   if (bvid.isNotEmpty) {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      AppRoute(
                         builder: (_) => VideoDetailPage(
                           bvid: bvid,
                           cover: item.pic,

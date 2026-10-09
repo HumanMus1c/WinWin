@@ -6,9 +6,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_transition.dart';
 import 'package:winwin/theme/app_theme.dart';
-import 'package:winwin/theme/miuix_page_transitions.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
 
 /// 沉浸标题条布局与页面转场回归测试。
@@ -55,37 +56,17 @@ void main() {
     expect(tester.getTopLeft(dragArea), Offset.zero);
   });
 
-  test('页面转场主题注册：windows/linux/android/fuchsia 走 Miuix，iOS/macOS 保 Cupertino',
-      () {
+  test('路由替身：AppRoute 承载 Miuix 转场核与统一时长（B3 起唯一页面路由）', () {
+    final route = AppRoute<void>(builder: (_) => const SizedBox.shrink());
+    expect(route.transitionDuration, kMiuixTransitionDuration);
+    expect(route.reverseTransitionDuration, kMiuixTransitionDuration);
+    // Material 侧转场主题已退役：过渡期主题不再注册 pageTransitionsTheme 覆写。
     for (final theme in [AppTheme.lightFor(), AppTheme.darkFor()]) {
-      final builders = theme.pageTransitionsTheme.builders;
-      for (final platform in const [
-        TargetPlatform.windows,
-        TargetPlatform.linux,
-        TargetPlatform.android,
-        TargetPlatform.fuchsia,
-      ]) {
-        expect(
-          builders[platform],
-          isA<MiuixPageTransitionsBuilder>(),
-          reason: '$platform 应为 Miuix 转场（不回落 material_ui 默认 Zoom）',
-        );
-      }
-      for (final platform in const [
-        TargetPlatform.iOS,
-        TargetPlatform.macOS,
-      ]) {
-        expect(
-          builders[platform],
-          isA<CupertinoPageTransitionsBuilder>(),
-          reason: '$platform 应保留 Cupertino 转场（侧滑返回手势语义）',
-        );
-      }
+      expect(
+        theme.pageTransitionsTheme.builders[TargetPlatform.windows],
+        isNot(isA<CupertinoPageTransitionsBuilder>()),
+      );
     }
-    expect(
-      const MiuixPageTransitionsBuilder().transitionDuration,
-      kMiuixPageTransitionDuration,
-    );
   });
 
   testWidgets('Miuix 转场：进出页面全程标题条零覆盖', (tester) async {
@@ -158,7 +139,7 @@ Future<void> _runTransitionCoverageScenario(
   await _expectStripIntact(tester, boundaryKey, '$label 初始态');
 
   navKey.currentState!.push(
-    MaterialPageRoute<void>(
+        AppRoute<void>(
       builder: (_) =>
           const ColoredBox(color: _pushedColor, child: SizedBox.expand()),
     ),

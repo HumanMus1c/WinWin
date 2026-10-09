@@ -10,11 +10,12 @@ import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 「系统消息」入口。
 void showSysMsgPage(BuildContext context) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const SysMsgPage()),
+    AppRoute<void>(builder: (_) => const SysMsgPage()),
   );
 }
 

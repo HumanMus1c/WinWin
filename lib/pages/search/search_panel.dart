@@ -20,6 +20,7 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 搜索面板 — 单个 Tab 对应的结果列表。
 ///
@@ -236,7 +237,7 @@ class _SearchPanelState extends State<SearchPanel>
         if (item.bvid != null) {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => VideoDetailPage(bvid: item.bvid!),
             ),
           );
@@ -263,7 +264,7 @@ class _SearchPanelState extends State<SearchPanel>
           if (item.mid != null) {
             Navigator.push(
               context,
-              MaterialPageRoute(
+              AppRoute(
                 builder: (_) => MemberSpacePage(mid: item.mid!),
               ),
             );
@@ -492,7 +493,7 @@ class _SearchPanelState extends State<SearchPanel>
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => BangumiDetailPage(
                 seasonId: item.seasonId,
                 mediaId: item.mediaId,

@@ -13,6 +13,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 关系列表类型：关注列表 / 粉丝列表。
 enum RelationType { followings, fans }
@@ -24,7 +25,7 @@ void showMemberRelationPage(
   required int vmid,
 }) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(
+    AppRoute<void>(
       builder: (_) => MemberRelationPage(type: type, vmid: vmid),
     ),
   );
@@ -238,7 +239,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
     if (mid == null || mid <= 0) return;
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => MemberSpacePage(mid: mid)),
+      AppRoute(builder: (_) => MemberSpacePage(mid: mid)),
     );
   }
 }

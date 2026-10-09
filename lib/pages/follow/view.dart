@@ -14,6 +14,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 关注动态视频流页（移植自 PiliPlus 关注动态流）。
 ///
@@ -151,7 +152,7 @@ class _FollowPageState extends State<FollowPage>
                       if (bvid == null) return;
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
+                        AppRoute(
                           builder: (_) => VideoDetailPage(
                             bvid: bvid,
                             cover: item.cover,
@@ -190,7 +191,7 @@ class _FollowPageState extends State<FollowPage>
   void _openDemoDetail(BuildContext context, int index) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AppRoute(
         builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
       ),
     );

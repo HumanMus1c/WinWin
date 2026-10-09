@@ -18,6 +18,7 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 番剧二级分类枚举
 enum PgcSubTab {
@@ -678,7 +679,7 @@ class _MyBangumiCard extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => BangumiDetailPage(
                 seasonId: item.seasonId,
                 mediaId: item.mediaId,
@@ -832,7 +833,7 @@ class _PgcCard extends StatelessWidget {
           if (sId != null || mId != null) {
             Navigator.push(
               context,
-              MaterialPageRoute(
+              AppRoute(
                 builder: (_) => BangumiDetailPage(
                   seasonId: sId,
                   mediaId: mId,

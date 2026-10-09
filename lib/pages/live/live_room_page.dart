@@ -33,6 +33,7 @@ import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 桌面原生直播间播放页面。
 ///
@@ -1718,7 +1719,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               if (uid != null && uid > 0) {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MemberSpacePage(mid: uid)),
+                  AppRoute(builder: (_) => MemberSpacePage(mid: uid)),
                 );
               }
             },

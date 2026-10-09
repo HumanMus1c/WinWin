@@ -31,11 +31,12 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 推送动态页。
 void showDynamicsPage(BuildContext context) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const DynamicsPage()),
+    AppRoute<void>(builder: (_) => const DynamicsPage()),
   );
 }
 
@@ -410,14 +411,14 @@ class _DynTabPageState extends State<_DynTabPage>
         if (_isVideoTab || _isPgcTab) {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => VideoDetailPage(bvid: 'BV1demo$seed'),
             ),
           );
         } else {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => DynamicDetailPage(dynamicId: 'demo_$seed'),
             ),
           );
@@ -429,7 +430,7 @@ class _DynTabPageState extends State<_DynTabPage>
         if (bvid == null || bvid.isEmpty) return;
         Navigator.push(
           context,
-          MaterialPageRoute(
+          AppRoute(
             builder: (_) => VideoDetailPage(
               bvid: bvid,
               cover: item.archive?.cover,
@@ -448,7 +449,7 @@ class _DynTabPageState extends State<_DynTabPage>
         if (result != null && result.isBangumi) {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => BangumiDetailPage(
                 seasonId: result.seasonId,
                 epId: result.epId,
@@ -459,14 +460,14 @@ class _DynTabPageState extends State<_DynTabPage>
         } else if (result?.bvid != null) {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => VideoDetailPage(bvid: result!.bvid!),
             ),
           );
         } else if (item.archive?.bvid != null) {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => VideoDetailPage(
                 bvid: item.archive!.bvid!,
                 cover: pgc?.cover ?? item.archive?.cover,
@@ -479,7 +480,7 @@ class _DynTabPageState extends State<_DynTabPage>
       onTap = () {
         Navigator.push(
           context,
-          MaterialPageRoute(
+          AppRoute(
             builder: (_) => DynamicDetailPage(item: item),
           ),
         );
@@ -796,7 +797,7 @@ class _DynVideoCard extends StatelessWidget {
           if (bvid == null || bvid.isEmpty) return;
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => VideoDetailPage(
                 bvid: bvid,
                 cover: cover,
@@ -943,7 +944,7 @@ class _DynPgcCard extends StatelessWidget {
           } else if (item.archive?.bvid != null) {
             Navigator.push(
               context,
-              MaterialPageRoute(
+              AppRoute(
                 builder: (_) => VideoDetailPage(
                   bvid: item.archive!.bvid!,
                   cover: cover,
@@ -1059,7 +1060,7 @@ class _DynPgcCard extends StatelessWidget {
     if (result.isBangumi) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => BangumiDetailPage(
             seasonId: result.seasonId,
             epId: result.epId,
@@ -1072,21 +1073,21 @@ class _DynPgcCard extends StatelessWidget {
     if (result.bvid != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: result.bvid!)),
+        AppRoute(builder: (_) => VideoDetailPage(bvid: result.bvid!)),
       );
       return;
     }
     if (result.aid != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: IdUtils.av2bv(result.aid!))),
+        AppRoute(builder: (_) => VideoDetailPage(bvid: IdUtils.av2bv(result.aid!))),
       );
       return;
     }
     if (result.isLive || result.roomId != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => LiveRoomPage(roomId: result.roomId!),
         ),
       );
@@ -1095,7 +1096,7 @@ class _DynPgcCard extends StatelessWidget {
     if (result.isArticle || result.articleId != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => ArticlePage(id: result.articleId!.toString()),
         ),
       );
@@ -1104,7 +1105,7 @@ class _DynPgcCard extends StatelessWidget {
     if (result.dynamicId != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => DynamicDetailPage(dynamicId: result.dynamicId),
         ),
       );
@@ -1145,7 +1146,7 @@ class _DynCard extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => DynamicDetailPage(item: item),
             ),
           );
@@ -1275,7 +1276,7 @@ class _DynCard extends StatelessWidget {
                   onComment: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      AppRoute(
                         builder: (_) => DynamicDetailPage(
                           item: item,
                           focusComment: true,
@@ -1302,7 +1303,7 @@ class _DynCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
+          AppRoute(
             builder: (_) => DynamicDetailPage(item: orig),
           ),
         );
@@ -1614,7 +1615,7 @@ class _DynCard extends StatelessWidget {
           if (id != null && id > 0) {
             Navigator.push(
               context,
-              MaterialPageRoute(
+              AppRoute(
                 builder: (_) => ArticlePage(
                   id: id.toString(),
                   title: article.title,
@@ -1711,7 +1712,7 @@ class _DynCard extends StatelessWidget {
           if (roomId != null && roomId > 0) {
             Navigator.push(
               context,
-              MaterialPageRoute(
+              AppRoute(
                 builder: (_) => LiveRoomPage(
                   roomId: roomId!,
                   title: live.title,
@@ -1934,7 +1935,7 @@ class _DynCard extends StatelessWidget {
         if (bvid == null) return;
         Navigator.push(
           context,
-          MaterialPageRoute(
+          AppRoute(
             builder: (_) => VideoDetailPage(bvid: bvid, cover: archive.cover),
           ),
         );
@@ -2078,7 +2079,7 @@ class _DynCard extends StatelessWidget {
               if (bvid != null && bvid.isNotEmpty) {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: bvid)),
+                  AppRoute(builder: (_) => VideoDetailPage(bvid: bvid)),
                 );
               }
             },
@@ -2097,7 +2098,7 @@ class _DynCard extends StatelessWidget {
               if (mid != null && mid > 0) {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MemberSpacePage(mid: mid)),
+                  AppRoute(builder: (_) => MemberSpacePage(mid: mid)),
                 );
               }
             },
@@ -2130,7 +2131,7 @@ class _DynCard extends StatelessWidget {
     if (result.isBangumi) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => BangumiDetailPage(
             seasonId: result.seasonId,
             epId: result.epId,
@@ -2143,21 +2144,21 @@ class _DynCard extends StatelessWidget {
     if (result.bvid != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: result.bvid!)),
+        AppRoute(builder: (_) => VideoDetailPage(bvid: result.bvid!)),
       );
       return;
     }
     if (result.aid != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: IdUtils.av2bv(result.aid!))),
+        AppRoute(builder: (_) => VideoDetailPage(bvid: IdUtils.av2bv(result.aid!))),
       );
       return;
     }
     if (result.isLive || result.roomId != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => LiveRoomPage(roomId: result.roomId!),
         ),
       );
@@ -2166,7 +2167,7 @@ class _DynCard extends StatelessWidget {
     if (result.isArticle || result.articleId != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => ArticlePage(id: result.articleId!.toString()),
         ),
       );
@@ -2175,7 +2176,7 @@ class _DynCard extends StatelessWidget {
     if (result.dynamicId != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => DynamicDetailPage(dynamicId: result.dynamicId),
         ),
       );
@@ -2188,7 +2189,7 @@ class _DynCard extends StatelessWidget {
     if (mid == null || mid <= 0) return;
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => MemberSpacePage(mid: mid)),
+      AppRoute(builder: (_) => MemberSpacePage(mid: mid)),
     );
   }
 

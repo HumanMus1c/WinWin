@@ -46,6 +46,7 @@ import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 动态类型筛选枚举。
 enum _DynFilterType {
@@ -1733,7 +1734,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             ? null
             : () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  AppRoute(
                     builder: (_) => VideoDetailPage(bvid: bvid, cover: item.pic),
                   ),
                 ),
@@ -1907,7 +1908,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => SeasonSeriesDetailPage(
                 mid: widget.mid,
                 seasonId: meta.seasonId,
@@ -2134,7 +2135,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => DynamicDetailPage(item: item),
             ),
           );
@@ -2252,7 +2253,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   onComment: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      AppRoute(
                         builder: (_) => DynamicDetailPage(
                           item: item,
                           focusComment: true,
@@ -2278,7 +2279,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
+          AppRoute(
             builder: (_) => DynamicDetailPage(item: orig),
           ),
         );
@@ -2302,7 +2303,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   if (authorMid != null) {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => MemberSpacePage(mid: authorMid)),
+                      AppRoute(builder: (_) => MemberSpacePage(mid: authorMid)),
                     );
                   }
                 },
@@ -2343,7 +2344,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         if (bvid == null) return;
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: bvid, cover: archive.cover)),
+          AppRoute(builder: (_) => VideoDetailPage(bvid: bvid, cover: archive.cover)),
         );
       },
       child: ClipRRect(
@@ -2551,7 +2552,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           if (id != null && id > 0) {
             Navigator.push(
               context,
-              MaterialPageRoute(
+              AppRoute(
                 builder: (_) => ArticlePage(
                   id: id.toString(),
                   title: article.title,
@@ -2620,7 +2621,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           if (roomId != null && roomId > 0) {
             Navigator.push(
               context,
-              MaterialPageRoute(
+              AppRoute(
                 builder: (_) => LiveRoomPage(
                   roomId: roomId,
                   title: live.title,
@@ -2817,7 +2818,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           child: InkWell(
             onTap: () {
               if (bvid != null) {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => VideoDetailPage(bvid: bvid)));
+                Navigator.push(context, AppRoute(builder: (_) => VideoDetailPage(bvid: bvid)));
               }
             },
             child: Text(text, style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500)),
@@ -2830,7 +2831,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           child: InkWell(
             onTap: () {
               if (mid != null && mid > 0) {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => MemberSpacePage(mid: mid)));
+                Navigator.push(context, AppRoute(builder: (_) => MemberSpacePage(mid: mid)));
               }
             },
             child: Text(text, style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500)),
@@ -2902,7 +2903,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => FavDetailPage(folder: item),
             ),
           );
@@ -3090,7 +3091,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => BangumiDetailPage(
                 seasonId: item.seasonId,
                 mediaId: item.mediaId,

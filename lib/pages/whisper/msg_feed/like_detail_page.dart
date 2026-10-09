@@ -10,6 +10,7 @@ import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 「点赞详情」入口——展开单条点赞卡片的用户列表。
 void showLikeDetailPage(
@@ -18,7 +19,7 @@ void showLikeDetailPage(
   required int counts,
 }) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(
+    AppRoute<void>(
       builder: (_) => LikeDetailPage(cardId: cardId, counts: counts),
     ),
   );
@@ -163,7 +164,7 @@ class _LikeUserTile extends StatelessWidget {
         final mid = _mid;
         if (mid == null) return;
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => MemberSpacePage(mid: mid)),
+          AppRoute(builder: (_) => MemberSpacePage(mid: mid)),
         );
       },
     );

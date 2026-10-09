@@ -10,6 +10,7 @@ import 'package:winwin/pages/hot/controller.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 热门视频页（移植自 PiliPlus `HotPage`）。
 ///
@@ -131,7 +132,7 @@ class _HotPageState extends State<HotPage>
                       if (bvid == null) return;
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
+                        AppRoute(
                           builder: (_) => VideoDetailPage(
                             bvid: bvid,
                             cover: item.cover,
@@ -178,7 +179,7 @@ class _HotPageState extends State<HotPage>
   void _openDemoDetail(BuildContext context, int index) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AppRoute(
         builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
       ),
     );

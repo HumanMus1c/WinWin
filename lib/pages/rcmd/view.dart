@@ -10,6 +10,7 @@ import 'package:winwin/pages/rcmd/controller.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// Recommended videos feed — ported from PiliPlus's RcmdPage.
 class RcmdPage extends StatefulWidget {
@@ -131,7 +132,7 @@ class _RcmdPageState extends State<RcmdPage>
                       if (bvid == null) return;
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
+                        AppRoute(
                           builder: (_) => VideoDetailPage(
                             bvid: bvid,
                             cover: item.cover,
@@ -178,7 +179,7 @@ class _RcmdPageState extends State<RcmdPage>
   void _openDemoDetail(BuildContext context, int index) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AppRoute(
         builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
       ),
     );

@@ -31,11 +31,12 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 稍后再看页面（移植自 PiliPlus `lib/pages/later/`，重构为自适应多列宫格排版）。
 void showToviewPage(BuildContext context) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const ToviewPage()),
+    AppRoute<void>(builder: (_) => const ToviewPage()),
   );
 }
 
@@ -263,7 +264,7 @@ class _ToviewPageState extends State<ToviewPage> {
       return;
     }
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      AppRoute<void>(
         builder: (_) => VideoDetailPage(
           bvid: bvid,
           cover: item.pic,
@@ -462,7 +463,7 @@ class _ToviewPageState extends State<ToviewPage> {
   void _openDemoVideo(BuildContext context, int index) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AppRoute(
         builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
       ),
     );
@@ -650,7 +651,7 @@ class _ToviewCard extends StatelessWidget {
                               if (owner.mid != null && owner.mid! > 0) {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(
+                                  AppRoute(
                                     builder: (_) => MemberSpacePage(mid: owner.mid!),
                                   ),
                                 );

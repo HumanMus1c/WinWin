@@ -25,11 +25,12 @@ import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 历史记录页面（移植自 PiliPlus `lib/pages/history/`，重构为自适应多列宫格排版）。
 void showHistoryPage(BuildContext context) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const HistoryPage()),
+    AppRoute<void>(builder: (_) => const HistoryPage()),
   );
 }
 
@@ -239,7 +240,7 @@ class _HistoryPageState extends State<HistoryPage> {
       return;
     }
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      AppRoute<void>(
         builder: (_) => VideoDetailPage(
           bvid: bvid,
           cover: item.cover,
@@ -405,7 +406,7 @@ class _HistoryPageState extends State<HistoryPage> {
   void _openDemoVideo(BuildContext context, int index) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AppRoute(
         builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
       ),
     );
@@ -567,7 +568,7 @@ class _HistoryCard extends StatelessWidget {
                               if (authorMid > 0) {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(
+                                  AppRoute(
                                     builder: (_) => MemberSpacePage(mid: authorMid),
                                   ),
                                 );

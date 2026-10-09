@@ -11,11 +11,12 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 打开离线缓存页面。
 void showDownloadPage(BuildContext context) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const DownloadPage()),
+    AppRoute<void>(builder: (_) => const DownloadPage()),
   );
 }
 

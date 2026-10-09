@@ -25,11 +25,12 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
 void showFavPage(BuildContext context) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const FavPage()),
+    AppRoute<void>(builder: (_) => const FavPage()),
   );
 }
 
@@ -269,7 +270,7 @@ class _FavPageState extends State<FavPage> {
 
   void _openDetail(FavFolderInfo folder) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      AppRoute<void>(
         builder: (_) => FavDetailPage(folder: folder),
       ),
     );
@@ -495,7 +496,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
       return;
     }
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      AppRoute<void>(
         builder: (_) => VideoDetailPage(
           bvid: bvid,
           cover: item.cover,
@@ -661,7 +662,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
                           if (upper.mid != null && upper.mid! > 0) {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
+                              AppRoute(
                                 builder: (_) => MemberSpacePage(mid: upper.mid!),
                               ),
                             );

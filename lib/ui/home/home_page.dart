@@ -13,6 +13,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
@@ -132,7 +133,7 @@ class _HomeHeader extends StatelessWidget {
                     readOnly: true,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      AppRoute(
                         builder: (_) => const SearchPage(),
                       ),
                     ),
@@ -172,7 +173,7 @@ class _HomeHeader extends StatelessWidget {
                 ),
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  AppRoute(
                     builder: (_) => const SettingPage(),
                   ),
                 ),
