@@ -39,7 +39,7 @@ flutter_miuix 1.3.0 **实含** `MiuixHorizontalDivider` / `MiuixVerticalDivider`
   （PID 43080）。
 - 残留复核：`Divider`/`VerticalDivider` 0 处；`Material(` 剩 11 处
   （透明祖先 9 + 桥接 2，B7 处置）；闸门指标维持 **133**。
-- 提交推送：`（本批回填）`（代码+复盘+进度表同批）。
+- 提交推送：`3eec62e`（代码+复盘+进度表同批，已推 `origin/main`）。
 
 ## 5. 遗留与踩坑
 
