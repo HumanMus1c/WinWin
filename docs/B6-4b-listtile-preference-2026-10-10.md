@@ -39,7 +39,7 @@ B6-4a（Card 批）后，`lib` 内仍有 Material `ListTile` **16 处**（8 文�
   双分支构建通过（kernel 01:45:00 / app.so 01:46:18），构建后已自启 Release
   （PID 16428）。
 - 残留复核：`ListTile` 0 处、`SwitchListTile` 0 处；闸门指标维持 **133**。
-- 提交推送：`（本批回填）`（代码+复盘+进度表同批）。
+- 提交推送：`08ca0a4`（代码+复盘+进度表同批，已推 `origin/main`）。
 
 ## 5. 遗留与踩坑
 
