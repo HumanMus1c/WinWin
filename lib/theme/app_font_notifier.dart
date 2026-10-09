@@ -76,6 +76,30 @@ class AppFontNotifier extends ValueNotifier<String> {
       return;
     }
     value = family.isEmpty ? windowsDefault : family;
+    // 后台预热系统字体标签缓存（displayName 的中文名依赖它；此前仅在
+    // 字体选择对话框打开时才扫描，导致设置项常态 subtitle 只显示英文族名）。
+    _warmFontLabels(value);
+  }
+
+  /// 后台预热字体标签缓存（失败静默，displayName 回退英文族名）。
+  ///
+  /// 不阻塞启动：扫描在后台执行，完成后若中文标签与族名不同则 notify 一次，
+  /// 根节点监听本 notifier，会自动重建应用壳刷新 subtitle。
+  /// 早退分支（自定义字体/Windows 默认/空值）的显示名不依赖扫描，无需预热。
+  bool _labelsWarmed = false;
+
+  void _warmFontLabels(String resolved) {
+    if (_labelsWarmed) return;
+    if (resolved == customFontFamily ||
+        resolved == windowsDefault ||
+        resolved.isEmpty) {
+      return;
+    }
+    SystemFontScanner.scan().then((_) {
+      _labelsWarmed = true;
+      final info = SystemFontScanner.getByFamily(resolved);
+      if (info != null && info.label != info.family) notifyListeners();
+    }).catchError((_) {});
   }
 
   /// 切换到预设字体族并持久化。
