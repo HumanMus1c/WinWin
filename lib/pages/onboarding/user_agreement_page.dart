@@ -1,5 +1,6 @@
 import 'dart:io' show exit;
 
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/ui/components/app_components.dart';
@@ -206,8 +207,8 @@ class _ClauseTile extends StatelessWidget {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
-    return InkWell(
-      onTap: onTap,
+    return MiuixPressable(
+      onPressed: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(

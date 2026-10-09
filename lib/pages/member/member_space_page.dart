@@ -1396,8 +1396,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               followedUpper != null &&
               followedUpper.items.isNotEmpty) ...[
             const SizedBox(height: Style.sm),
-            InkWell(
-              onTap: () {
+            MiuixPressable(
+              onPressed: () {
                 showMemberRelationPage(
                   context,
                   type: RelationType.followings,
@@ -1593,8 +1593,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     );
 
     if (onTap != null) {
-      return InkWell(
-        onTap: onTap,
+      return MiuixPressable(
+        onPressed: onTap,
         borderRadius: BorderRadius.circular(Style.radiusSm),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -1730,8 +1730,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final bvid = item.bvid;
 
     return Card(
-      child: InkWell(
-        onTap: bvid == null
+      child: MiuixPressable(
+        onPressed: bvid == null
             ? null
             : () => Navigator.push(
                   context,
@@ -1905,8 +1905,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.25)),
       ),
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           Navigator.push(
             context,
             AppRoute(
@@ -2132,8 +2132,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           Navigator.push(
             context,
             AppRoute(
@@ -2276,8 +2276,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final cs = tokens.colors;
     final origAuthor = orig.author;
 
-    return InkWell(
-      onTap: () {
+    return MiuixPressable(
+      onPressed: () {
         Navigator.push(
           context,
           AppRoute(
@@ -2547,8 +2547,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           final id = article.id;
           if (id != null && id > 0) {
             Navigator.push(
@@ -2616,8 +2616,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           final roomId = live.roomId;
           if (roomId != null && roomId > 0) {
             Navigator.push(
@@ -2816,8 +2816,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         final bvid = node.rid ?? (text.startsWith('BV') ? text : null);
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: InkWell(
-            onTap: () {
+          child: MiuixPressable(
+            onPressed: () {
               if (bvid != null) {
                 Navigator.push(context, AppRoute(builder: (_) => VideoDetailPage(bvid: bvid)));
               }
@@ -2829,8 +2829,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         final mid = int.tryParse(node.rid ?? '');
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: InkWell(
-            onTap: () {
+          child: MiuixPressable(
+            onPressed: () {
               if (mid != null && mid > 0) {
                 Navigator.push(context, AppRoute(builder: (_) => MemberSpacePage(mid: mid)));
               }
@@ -2900,8 +2900,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final radius = shapes.medium;
 
     return Card(
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           Navigator.push(
             context,
             AppRoute(
@@ -3088,8 +3088,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final radius = shapes.medium;
 
     return Card(
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           Navigator.push(
             context,
             AppRoute(

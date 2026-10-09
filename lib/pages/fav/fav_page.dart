@@ -27,8 +27,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart'
-    show MiuixCheckboxPreference, MiuixSmallTopAppBar;
+import 'package:flutter_miuix/miuix.dart' show MiuixCheckboxPreference, MiuixPressable, MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
@@ -311,8 +310,8 @@ class _FavFolderCard extends StatelessWidget {
     final hasCover = folder.cover.isNotEmpty;
 
     return Card(
-      child: InkWell(
-        onTap: onTap,
+      child: MiuixPressable(
+        onPressed: onTap,
         borderRadius: BorderRadius.all(radius),
         child: Padding(
           padding: const EdgeInsets.all(8),
@@ -715,8 +714,7 @@ class _FavVideoCard extends StatelessWidget {
     Offset? lastTapPosition;
 
     return Card(
-      child: InkWell(
-        onTap: onTap,
+      child: GestureDetector(
         onSecondaryTapDown: (details) {
           lastTapPosition = details.globalPosition;
         },
@@ -728,6 +726,8 @@ class _FavVideoCard extends StatelessWidget {
             videoItem: item,
           );
         },
+        child: MiuixPressable(
+        onPressed: onTap,
         onLongPress: () {
           if (lastTapPosition != null) {
             showVideoContextMenu(
@@ -864,6 +864,8 @@ class _FavVideoCard extends StatelessWidget {
             ],
           ),
         ),
+      
+        )
       ),
     );
   }

@@ -141,8 +141,8 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
             child: Row(
               children: [
                 Expanded(
-                  child: InkWell(
-                    onTap: !val
+                  child: MiuixPressable(
+                    onPressed: !val
                         ? null
                         : (widget.onTap == null
                             ? switchChange

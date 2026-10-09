@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -934,8 +935,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           ),
         ),
         if (detail.evaluate.length > 80)
-          InkWell(
-            onTap: () => setState(() => _descExpanded = !_descExpanded),
+          MiuixPressable(
+            onPressed: () => setState(() => _descExpanded = !_descExpanded),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(
@@ -1161,10 +1162,10 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         final badgeRadius = (titleFontSize * 0.32).clamp(3.5, 5.0);
         final badgeOffset = 4.0;
 
-        return InkWell(
+        return MiuixPressable(
           key: isLastWatched ? _lastWatchedKey : null,
           borderRadius: BorderRadius.circular(Style.radiusSm),
-          onTap: () => _openPlayer(detail, ep),
+          onPressed: () => _openPlayer(detail, ep),
           child: Container(
             width: customWidth,
             decoration: BoxDecoration(

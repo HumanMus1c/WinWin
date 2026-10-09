@@ -1,5 +1,6 @@
 import 'dart:async' show unawaited;
 
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
@@ -334,9 +335,9 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
   Widget _buildPackageTab(BuildContext context, int i, int activeIndex) {
     final tokens = AppThemeHost.of(context);
     final active = i == activeIndex;
-    return InkWell(
+    return MiuixPressable(
       borderRadius: BorderRadius.circular(6),
-      onTap: () => setState(() => _packageIndex = i),
+      onPressed: () => setState(() => _packageIndex = i),
       child: Container(
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -404,9 +405,9 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
     return Tooltip(
       message: tooltip,
       waitDuration: const Duration(milliseconds: 600),
-      child: InkWell(
+      child: MiuixPressable(
         borderRadius: BorderRadius.circular(6),
-        onTap: () => widget.onPick(label),
+        onPressed: () => widget.onPick(label),
         child: Padding(
           padding: const EdgeInsets.all(4),
           child: Image.network(
@@ -439,9 +440,9 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
     return Tooltip(
       message: text,
       waitDuration: const Duration(milliseconds: 600),
-      child: InkWell(
+      child: MiuixPressable(
         borderRadius: BorderRadius.circular(6),
-        onTap: () => widget.onPick(text),
+        onPressed: () => widget.onPick(text),
         child: Center(
           child: Text(
             text,

@@ -1,4 +1,5 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -274,8 +275,8 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
         borderRadius: BorderRadius.circular(Style.radiusSm),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.2)),
       ),
-      child: InkWell(
-        onTap: bvid == null
+      child: MiuixPressable(
+        onPressed: bvid == null
             ? null
             : () => Navigator.push(
                   context,

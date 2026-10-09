@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -1240,9 +1241,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                     width: isCurrent ? 1.5 : 1,
                   ),
                 ),
-                child: InkWell(
+                child: MiuixPressable(
                   borderRadius: BorderRadius.circular(Style.radiusSm),
-                  onTap: () => _switchEpisode(ep),
+                  onPressed: () => _switchEpisode(ep),
                   child: Padding(
                     padding: const EdgeInsets.all(8),
                     child: Row(
@@ -2280,8 +2281,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            onTap: desc.isEmpty ? null : () => setState(() => _descExpanded = !_descExpanded),
+          MiuixPressable(
+            onPressed: desc.isEmpty ? null : () => setState(() => _descExpanded = !_descExpanded),
             borderRadius: BorderRadius.circular(Style.radiusSm),
             child: Text(
               desc.isEmpty ? '暂无简介' : desc,

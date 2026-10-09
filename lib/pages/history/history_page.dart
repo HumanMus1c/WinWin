@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -486,8 +487,8 @@ class _HistoryCard extends StatelessWidget {
     }
 
     return Card(
-      child: InkWell(
-        onTap: onTap,
+      child: MiuixPressable(
+        onPressed: onTap,
         borderRadius: BorderRadius.all(radius),
         child: Padding(
           padding: const EdgeInsets.all(8),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -1657,8 +1658,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            onTap: desc.isEmpty
+          MiuixPressable(
+            onPressed: desc.isEmpty
                 ? null
                 : () => setState(() => _descExpanded = !_descExpanded),
             borderRadius: BorderRadius.circular(Style.radiusSm),
@@ -1705,8 +1706,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 alpha: 0.8,
               ),
               borderRadius: BorderRadius.circular(Style.radiusLg),
-              child: InkWell(
-                onTap: () => Navigator.of(context).push(
+              child: MiuixPressable(
+                onPressed: () => Navigator.of(context).push(
                   AppRoute<void>(
                     builder: (_) =>
                         SearchResultPage(keyword: tag.tagName ?? ''),

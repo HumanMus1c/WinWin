@@ -1213,8 +1213,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     return Center(
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: _togglePlay,
+        child: MiuixPressable(
+          onPressed: _togglePlay,
           borderRadius: BorderRadius.circular(36),
           child: Container(
             padding: const EdgeInsets.all(14),

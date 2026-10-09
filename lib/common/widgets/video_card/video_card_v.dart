@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -51,8 +52,7 @@ class VideoCardV extends StatelessWidget {
       valueListenable: Pref.demoModeNotifier,
       builder: (context, demo, _) => RepaintBoundary(
         child: Card(
-          child: InkWell(
-            onTap: onTap,
+          child: GestureDetector(
             onSecondaryTapDown: (details) {
               lastTapPosition = details.globalPosition;
             },
@@ -65,6 +65,8 @@ class VideoCardV extends StatelessWidget {
                 onRemove: onRemove,
               );
             },
+            child: MiuixPressable(
+            onPressed: onTap,
             onLongPress: () {
               if (lastTapPosition != null) {
                 showVideoContextMenu(
@@ -143,6 +145,8 @@ class VideoCardV extends StatelessWidget {
                 _content(context, data, demo: demo),
               ],
             ),
+          
+            )
           ),
         ),
       ),

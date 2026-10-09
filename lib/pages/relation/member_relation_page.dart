@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -254,8 +255,8 @@ class _RelationCard extends StatelessWidget {
 
     return Card(
       margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap,
+      child: MiuixPressable(
+        onPressed: onTap,
         borderRadius: BorderRadius.all(radius),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -568,8 +569,8 @@ class _ChatBubble extends StatelessWidget {
     final author = json['author']?.toString() ?? '';
     return Material(
       color: tokens.colors.surfaceContainerHighest,
-      child: InkWell(
-        onTap: sourceInt == 5 ? () => _openSharedVideo(context, tokens, json) : null,
+      child: MiuixPressable(
+        onPressed: sourceInt == 5 ? () => _openSharedVideo(context, tokens, json) : null,
         child: Padding(
           padding: const EdgeInsets.all(Style.sm),
           child: Column(
@@ -609,8 +610,8 @@ class _ChatBubble extends StatelessWidget {
     final cover = SessionAccountResolver.normalizeAvatarUrl(json['cover']?.toString());
     return Material(
       color: tokens.colors.surfaceContainerHighest,
-      child: InkWell(
-        onTap: bvid.isEmpty ? null : () => _openVideo(context, bvid, cover),
+      child: MiuixPressable(
+        onPressed: bvid.isEmpty ? null : () => _openVideo(context, bvid, cover),
         child: Padding(
           padding: const EdgeInsets.all(Style.sm),
           child: Column(

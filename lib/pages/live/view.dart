@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -157,9 +158,9 @@ class _LivePageState extends State<LivePage>
           final tab = _tabs[index];
           return Material(
             color: Colors.transparent,
-            child: InkWell(
+            child: MiuixPressable(
               borderRadius: shapes.pillBorder,
-              onTap: () {
+              onPressed: () {
                 if (_selectedIndex != index) {
                   setState(() {
                     _selectedIndex = index;
@@ -702,8 +703,8 @@ class _LiveCard extends StatelessWidget {
     final cs = theme.colorScheme;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           final roomId = item.roomId;
           if (roomId == null || roomId <= 0) return;
           Navigator.push(

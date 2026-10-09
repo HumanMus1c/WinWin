@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
@@ -372,9 +373,9 @@ class _SearchPageState extends State<SearchPage> {
         separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
         itemBuilder: (context, index) {
           final user = _visitedUsers[index];
-          return InkWell(
+          return MiuixPressable(
             borderRadius: BorderRadius.circular(100),
-            onTap: () {
+            onPressed: () {
               Navigator.push(
                 context,
                 AppRoute(

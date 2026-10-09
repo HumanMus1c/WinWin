@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -319,8 +320,8 @@ class _ActionButton extends StatelessWidget {
     }
     return Tooltip(
       message: tooltip,
-      child: InkWell(
-        onTap: onTap,
+      child: MiuixPressable(
+        onPressed: onTap,
         borderRadius: BorderRadius.circular(8),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 56),

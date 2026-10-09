@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -898,8 +899,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     final cs = tokens.colors;
     final cover = pgc.cover;
 
-    return InkWell(
-      onTap: () {
+    return MiuixPressable(
+      onPressed: () {
         if (pgc.jumpUrl != null && pgc.jumpUrl!.isNotEmpty) {
           _handleJumpUrl(context, pgc.jumpUrl!);
         }
@@ -963,8 +964,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           final id = article.id;
           if (id != null) {
             Navigator.push(
@@ -1046,8 +1047,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           var roomId = live.roomId;
           if ((roomId == null || roomId <= 0) &&
               live.jumpUrl != null &&
@@ -1212,8 +1213,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         final bvid = node.rid ?? (text.startsWith('BV') ? text : null);
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: InkWell(
-            onTap: () {
+          child: MiuixPressable(
+            onPressed: () {
               if (bvid != null && bvid.isNotEmpty) {
                 Navigator.push(
                   context,
@@ -1231,8 +1232,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         final mid = int.tryParse(node.rid ?? '');
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: InkWell(
-            onTap: () {
+          child: MiuixPressable(
+            onPressed: () {
               if (mid != null && mid > 0) {
                 Navigator.push(
                   context,
@@ -1249,8 +1250,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       } else if (node.jumpUrl != null && node.jumpUrl!.isNotEmpty) {
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: InkWell(
-            onTap: () => _handleJumpUrl(context, node.jumpUrl!),
+          child: MiuixPressable(
+            onPressed: () => _handleJumpUrl(context, node.jumpUrl!),
             child: Text(
               text,
               style: TextStyle(

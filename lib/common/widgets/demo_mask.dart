@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -158,13 +159,14 @@ class DemoVideoCard extends StatelessWidget {
 
     return RepaintBoundary(
       child: Card(
-        child: InkWell(
-          onTap: onTap,
+        child: GestureDetector(
           onSecondaryTapDown: (details) {
             lastTapPosition = details.globalPosition;
           },
           onSecondaryTapUp: (details) =>
               _showDemoCardMenu(context, details.globalPosition, seed),
+          child: MiuixPressable(
+          onPressed: onTap,
           onLongPress: () {
             if (lastTapPosition != null) {
               _showDemoCardMenu(context, lastTapPosition!, seed);
@@ -293,6 +295,8 @@ class DemoVideoCard extends StatelessWidget {
               ),
             ],
           ),
+        
+          )
         ),
       ),
     );
@@ -317,13 +321,14 @@ class DemoVideoCardH extends StatelessWidget {
 
     return RepaintBoundary(
       child: Card(
-        child: InkWell(
-          onTap: onTap,
+        child: GestureDetector(
           onSecondaryTapDown: (details) {
             lastTapPosition = details.globalPosition;
           },
           onSecondaryTapUp: (details) =>
               _showDemoCardMenu(context, details.globalPosition, seed),
+          child: MiuixPressable(
+          onPressed: onTap,
           onLongPress: () {
             if (lastTapPosition != null) {
               _showDemoCardMenu(context, lastTapPosition!, seed);
@@ -413,6 +418,8 @@ class DemoVideoCardH extends StatelessWidget {
               ],
             ),
           ),
+        
+          )
         ),
       ),
     );

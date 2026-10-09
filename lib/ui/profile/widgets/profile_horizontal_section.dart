@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -35,8 +36,8 @@ class ProfileSectionHeader extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: InkWell(
-              onTap: onTapTitle,
+            child: MiuixPressable(
+              onPressed: onTapTitle,
               borderRadius: const BorderRadius.all(Radius.circular(8)),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -242,8 +243,8 @@ class ProfileEmptyCard extends StatelessWidget {
       height: 120,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        child: InkWell(
-          onTap: onTap,
+        child: MiuixPressable(
+          onPressed: onTap,
           borderRadius: BorderRadius.all(shapes.medium),
           child: Container(
             width: double.infinity,
@@ -320,8 +321,8 @@ class ProfileFavFolderCard extends StatelessWidget {
     final shapes = tokens.shapes;
     final radius = shapes.medium;
 
-    return InkWell(
-      onTap: onTap,
+    return MiuixPressable(
+      onPressed: onTap,
       borderRadius: BorderRadius.all(radius),
       child: SizedBox(
         width: 160,
@@ -418,8 +419,8 @@ class ProfileVideoCard extends StatelessWidget {
     final shapes = tokens.shapes;
     final radius = shapes.medium;
 
-    return InkWell(
-      onTap: onTap,
+    return MiuixPressable(
+      onPressed: onTap,
       borderRadius: BorderRadius.all(radius),
       child: SizedBox(
         width: 160,

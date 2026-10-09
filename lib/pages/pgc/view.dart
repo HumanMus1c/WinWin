@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -84,9 +85,9 @@ class _PgcPageState extends State<PgcPage>
                   padding: const EdgeInsets.only(right: Style.sm),
                   child: Material(
                     color: Colors.transparent,
-                    child: InkWell(
+                    child: MiuixPressable(
                       borderRadius: shapes.pillBorder,
-                      onTap: () {
+                      onPressed: () {
                         if (_selectedSubTab != tab) {
                           setState(() {
                             _selectedSubTab = tab;
@@ -675,8 +676,8 @@ class _MyBangumiCard extends StatelessWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           Navigator.push(
             context,
             AppRoute(
@@ -826,8 +827,8 @@ class _PgcCard extends StatelessWidget {
     final cs = tokens.colors;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           final sId = _seasonId;
           final mId = _mediaId;
           if (sId != null || mId != null) {

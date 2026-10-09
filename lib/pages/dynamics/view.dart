@@ -1,3 +1,4 @@
+import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
@@ -574,8 +575,8 @@ class _DemoDynCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
+      child: MiuixPressable(
+        onPressed: onTap,
         child: Padding(
           padding: const EdgeInsets.all(Style.md),
           child: Column(
@@ -685,8 +686,8 @@ class _DemoDynActionBarState extends State<_DemoDynActionBar> {
           AppIcon(AppIcons.comment(), size: 15, color: outline),
           'demo.dyn.${widget.seed}.comment',
         ),
-        InkWell(
-          onTap: () => setState(() => _liked = !_liked),
+        MiuixPressable(
+          onPressed: () => setState(() => _liked = !_liked),
           borderRadius: BorderRadius.circular(4),
           child: item(
             AppIcon(
@@ -784,8 +785,8 @@ class _DynVideoCard extends StatelessWidget {
 
     return RepaintBoundary(
       child: Card(
-        child: InkWell(
-        onTap: () {
+        child: MiuixPressable(
+        onPressed: () {
           if (bvid == null || bvid.isEmpty) return;
           Navigator.push(
             context,
@@ -929,8 +930,8 @@ class _DynPgcCard extends StatelessWidget {
     final danmaku = pgc?.danmaku ?? item.archive?.danmaku;
 
     return Card(
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           if (pgc?.jumpUrl != null && pgc!.jumpUrl!.isNotEmpty) {
             _handleUrl(context, pgc.jumpUrl!);
           } else if (item.archive?.bvid != null) {
@@ -1134,8 +1135,8 @@ class _DynCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           Navigator.push(
             context,
             AppRoute(
@@ -1291,8 +1292,8 @@ class _DynCard extends StatelessWidget {
     final cs = tokens.colors;
     final origAuthor = orig.author;
 
-    return InkWell(
-      onTap: () {
+    return MiuixPressable(
+      onPressed: () {
         Navigator.push(
           context,
           AppRoute(
@@ -1377,8 +1378,8 @@ class _DynCard extends StatelessWidget {
     final cs = tokens.colors;
     final cover = pgc.cover;
 
-    return InkWell(
-      onTap: () {
+    return MiuixPressable(
+      onPressed: () {
         if (pgc.jumpUrl != null && pgc.jumpUrl!.isNotEmpty) {
           _handleJumpUrl(context, pgc.jumpUrl!);
         }
@@ -1601,8 +1602,8 @@ class _DynCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           final id = article.id;
           if (id != null && id > 0) {
             Navigator.push(
@@ -1693,8 +1694,8 @@ class _DynCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(Style.radiusMd),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: InkWell(
-        onTap: () {
+      child: MiuixPressable(
+        onPressed: () {
           var roomId = live.roomId;
           if ((roomId == null || roomId <= 0) &&
               live.jumpUrl != null &&
@@ -1863,8 +1864,8 @@ class _DynCard extends StatelessWidget {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
-    return InkWell(
-      onTap: () {
+    return MiuixPressable(
+      onPressed: () {
         if (item.jumpUrl != null && item.jumpUrl!.isNotEmpty) {
           _handleJumpUrl(context, item.jumpUrl!);
         }
@@ -2066,8 +2067,8 @@ class _DynCard extends StatelessWidget {
         final bvid = node.rid ?? (text.startsWith('BV') ? text : null);
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: InkWell(
-            onTap: () {
+          child: MiuixPressable(
+            onPressed: () {
               if (bvid != null && bvid.isNotEmpty) {
                 Navigator.push(
                   context,
@@ -2085,8 +2086,8 @@ class _DynCard extends StatelessWidget {
         final mid = int.tryParse(node.rid ?? '');
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: InkWell(
-            onTap: () {
+          child: MiuixPressable(
+            onPressed: () {
               if (mid != null && mid > 0) {
                 Navigator.push(
                   context,
@@ -2103,8 +2104,8 @@ class _DynCard extends StatelessWidget {
       } else if (node.jumpUrl != null && node.jumpUrl!.isNotEmpty) {
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child: InkWell(
-            onTap: () => _handleJumpUrl(context, node.jumpUrl!),
+          child: MiuixPressable(
+            onPressed: () => _handleJumpUrl(context, node.jumpUrl!),
             child: Text(
               text,
               style: TextStyle(color: primaryColor, decoration: TextDecoration.underline),
