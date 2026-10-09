@@ -23,6 +23,8 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 聊天详情入口（阶段 D）。
 ///
@@ -202,15 +204,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          Pref.demoMode ? '会话' : widget.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        // 下方列表滚动时标题栏不叠加 surfaceTint 变色。
-        scrolledUnderElevation: 0,
+    return AppScaffold(
+      topBar: MiuixSmallTopAppBar(
+        title: Pref.demoMode ? '会话' : widget.title,
         actions: [
           IconButton(
             icon: AppIcon(AppIcons.more()),

@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 用户协议门禁页（移植自 BiliPai v0.2.3-beta.3 `OnboardingScreen`）。
 ///
@@ -45,7 +46,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
-    return Scaffold(
+    return AppScaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

@@ -14,6 +14,7 @@ import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
@@ -35,7 +36,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       body: Stack(
         children: [
           // ── Feed content (lazy IndexedStack preserves per-tab state) ──

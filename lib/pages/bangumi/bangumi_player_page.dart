@@ -46,6 +46,7 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 番剧播放页面（对标 BiliPai `BangumiPlayerScreen` 与 PiliPlus PGC 播放体系）。
 ///
@@ -769,7 +770,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       return KeyboardListener(
         focusNode: _keyboardFocusNode,
         onKeyEvent: _handleKey,
-        child: Scaffold(
+        child: AppScaffold(
           backgroundColor: Colors.black,
           body: _withDemoOverlay(
             playerController != null
@@ -791,7 +792,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     return KeyboardListener(
       focusNode: _keyboardFocusNode,
       onKeyEvent: _handleKey,
-      child: Scaffold(
+      child: AppScaffold(
         body: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth >= kDetailNarrowBreakpoint;

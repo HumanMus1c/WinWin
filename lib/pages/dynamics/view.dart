@@ -32,6 +32,8 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 推送动态页。
 void showDynamicsPage(BuildContext context) {
@@ -75,23 +77,15 @@ class _DynamicsPageState extends State<DynamicsPage>
 
   @override
   Widget build(BuildContext context) {
-    final tokens = AppThemeHost.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('动态'),
-        bottom: TabBar(
+    return AppScaffold(
+      topBar: MiuixSmallTopAppBar(
+        title: '动态',
+        bottomContent: TabBar(
           controller: _tabController,
           tabs: _tabs.map((t) => Tab(text: t.label)).toList(),
           dividerHeight: 0,
           indicatorSize: TabBarIndicatorSize.label,
           labelPadding: const EdgeInsets.symmetric(horizontal: Style.md),
-        ),
-        // 阶段5d-L1：M3 分支已移除（细分隔线恒用）。
-        shape: Border(
-          bottom: BorderSide(
-            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
-            width: 0.5,
-          ),
         ),
       ),
       body: TabBarView(

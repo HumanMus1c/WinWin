@@ -26,6 +26,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术单轨 Miuix（阶段5d-L4-2）。
 ///
@@ -108,7 +109,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final service = AccountService();
     final info = service.displayUserInfo;
     final isLogin = service.isLogin;
-    return Scaffold(
+    return AppScaffold(
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(

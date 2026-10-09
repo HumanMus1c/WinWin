@@ -20,6 +20,8 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 专栏文章阅读页面。
 ///
@@ -153,14 +155,9 @@ class _ArticlePageState extends State<ArticlePage> {
     final cs = tokens.colors;
     final fallbackTitle = widget.title ?? '专栏文章';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          Pref.demoMode ? '专栏文章' : (_state.dataOrNull?.title ?? fallbackTitle),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 16),
-        ),
+    return AppScaffold(
+      topBar: MiuixSmallTopAppBar(
+        title: Pref.demoMode ? '专栏文章' : (_state.dataOrNull?.title ?? fallbackTitle),
         actions: [
           IconButton(
             icon: AppIcon(AppIcons.refresh()),

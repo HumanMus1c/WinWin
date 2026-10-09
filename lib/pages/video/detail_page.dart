@@ -50,6 +50,7 @@ import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
@@ -1047,7 +1048,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Widget build(BuildContext context) {
     final String? upName = _detailState.dataOrNull?.owner?.name;
     final isFillWindow = _fullscreen || _inAppFullscreen;
-    return Scaffold(
+    return AppScaffold(
       backgroundColor: isFillWindow ? Colors.black : null,
       body: isFillWindow
           ? Stack(

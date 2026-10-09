@@ -20,6 +20,8 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 番剧 / 影视详情主页（对标 BiliPai `BangumiDetailScreen` 与 PiliPlus）。
 ///
@@ -438,18 +440,13 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   Widget build(BuildContext context) {
     final cs = AppThemeHost.of(context).colors;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: ValueListenableBuilder<bool>(
-          valueListenable: Pref.demoModeNotifier,
-          builder: (context, demo, _) => Text(
-            demo ? '番剧详情' : (_detail?.title ?? widget.title ?? '番剧详情'),
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-        leading: const AppBackButton(),
-        actions: [
+    return AppScaffold(
+      topBar: ValueListenableBuilder<bool>(
+        valueListenable: Pref.demoModeNotifier,
+        builder: (context, demo, _) => MiuixSmallTopAppBar(
+          navigationIcon: const AppBackButton(),
+          title: demo ? '番剧详情' : (_detail?.title ?? widget.title ?? '番剧详情'),
+          actions: [
           IconButton(
             icon: AppIcon(AppIcons.refresh()),
             tooltip: '刷新',
@@ -469,7 +466,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
             },
           ),
           const SizedBox(width: 8),
-        ],
+          ],
+        ),
       ),
       body: DemoMask(
         skeleton: () => _buildSkeleton(cs),

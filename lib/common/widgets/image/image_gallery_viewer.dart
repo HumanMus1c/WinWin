@@ -10,6 +10,7 @@ import 'package:winwin/http/init.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 弹出多图画廊全屏浏览弹窗。
 ///
@@ -414,7 +415,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
-      child: Scaffold(
+      child: AppScaffold(
         backgroundColor: Colors.transparent,
         body: ValueListenableBuilder<_GalleryDragState>(
           valueListenable: _dragNotifier,
