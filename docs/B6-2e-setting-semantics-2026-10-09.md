@@ -35,7 +35,7 @@ B6-2a~2d 把全库裸 `Icon(Icons.)` 清零，但留下 71 处 `AppIcon(Icons.xx
   `flutter test` 全量全绿；`flutter build windows --debug`（31.7s）/
   `--release`（78.8s）双通过；编译前已清残留进程。
 - setting 簇 `AppIcon(Icons.` 残留归零；全库直参 71→35。
-- 提交推送：`（本提交，推送后由 docs 订正提交回填）`。
+- 提交推送：`958f989`（代码+复盘+进度表同批）。
 
 ## 5. 遗留与踩坑
 
