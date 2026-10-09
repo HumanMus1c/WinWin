@@ -888,6 +888,9 @@ void showFavPanel(
   showAppSheet<void>(
     context: context,
     isScrollControlled: true,
+    // 面板底色取 Miuix 行容器色（surfaceContainer），与 MiuixCheckboxPreference
+    // 的行底色一致，避免行与面板出现两种灰。
+    backgroundColor: AppThemeHost.of(context).colors.surfaceContainer,
     builder: (_) => _FavPanel(rid: rid, type: type, onSuccess: onSuccess),
   );
 }
@@ -1002,14 +1005,12 @@ class _FavPanelState extends State<_FavPanel> {
                 itemBuilder: (context, index) {
                   final f = _folders![index];
                   // B6：Material CheckboxListTile → Miuix 偏好组件。
+                  // 不传 startAction：Miuix 会把 startAction 放进灰底圆形容器，
+                  // 与面板观感冲突（且项目图标在该容器内渲染异常）。
                   return MiuixCheckboxPreference(
                     value: f.favState == 1,
                     title: f.title,
                     summary: '${f.mediaCount} 个内容',
-                    startAction: AppIcon(
-                      f.isPublic ? AppIcons.folder() : AppIcons.lock(),
-                      color: biliPink,
-                    ),
                     onChanged: _sending
                         ? null
                         : (v) => setState(() {
