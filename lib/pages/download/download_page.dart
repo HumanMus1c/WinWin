@@ -13,7 +13,6 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 打开离线缓存页面。
@@ -140,16 +139,13 @@ class _DownloadPageState extends State<DownloadPage> {
     final shapes = tokens.shapes;
 
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(
-        title: '离线缓存',
-        actions: [
-          IconButton(
-            tooltip: '刷新',
-            onPressed: _loadCacheInfo,
-            icon: AppIcon(AppIcons.refresh(), size: 20),
-          ),
-        ],
-      ),
+      actions: [
+        IconButton(
+          tooltip: '刷新',
+          onPressed: _loadCacheInfo,
+          icon: AppIcon(AppIcons.refresh(), size: 20),
+        ),
+      ],
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: biliPink))
           : ListView(

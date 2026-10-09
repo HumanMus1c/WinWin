@@ -11,7 +11,6 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 「点赞详情」入口——展开单条点赞卡片的用户列表。
@@ -98,7 +97,6 @@ class _LikeDetailPageState extends State<LikeDetailPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(title: '点赞详情'),
       body: Pref.demoMode
           ? const DemoListSkeleton(coverWidth: 40, coverHeight: 40)
           : _loading && _items.isEmpty

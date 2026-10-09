@@ -98,10 +98,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(
-        title: '登录',
-        navigationIcon: const AppBackButton(),
-      ),
       body: Column(
         children: [
           // ── 风格自适应分段控件：切换 4 种登录方式 ──

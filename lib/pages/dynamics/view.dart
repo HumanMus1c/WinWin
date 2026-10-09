@@ -32,7 +32,6 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 推送动态页。
@@ -78,15 +77,13 @@ class _DynamicsPageState extends State<DynamicsPage>
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(
-        title: '动态',
-        bottomContent: TabBar(
-          controller: _tabController,
-          tabs: _tabs.map((t) => Tab(text: t.label)).toList(),
-          dividerHeight: 0,
-          indicatorSize: TabBarIndicatorSize.label,
-          labelPadding: const EdgeInsets.symmetric(horizontal: Style.md),
-        ),
+      // 仅保留分类标签条（无标题栏），TabBar 直接作为 topBar 槽位。
+      topBar: TabBar(
+        controller: _tabController,
+        tabs: _tabs.map((t) => Tab(text: t.label)).toList(),
+        dividerHeight: 0,
+        indicatorSize: TabBarIndicatorSize.label,
+        labelPadding: const EdgeInsets.symmetric(horizontal: Style.md),
       ),
       body: TabBarView(
         controller: _tabController,

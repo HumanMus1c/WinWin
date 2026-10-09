@@ -6,7 +6,6 @@ import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 关于页面。
@@ -21,7 +20,6 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     return AppScaffold(
-      topBar: showAppBar ? MiuixSmallTopAppBar(title: '关于') : null,
       body: ListView(
         padding: const EdgeInsets.all(Style.lg),
         children: [

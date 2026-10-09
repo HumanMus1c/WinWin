@@ -196,7 +196,6 @@ class _FavPageState extends State<FavPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(title: '我的收藏'),
       body: Pref.demoMode
           ? const DemoListSkeleton()
           : _loading && _folders.isEmpty
@@ -525,9 +524,6 @@ class _FavDetailPageState extends State<FavDetailPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(
-        title: Pref.demoMode ? '收藏夹' : widget.folder.title,
-      ),
       floatingActionButton: _items.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: _playAll,

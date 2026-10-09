@@ -12,7 +12,6 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 消息流加载器（游标分页）：回复我 / 艾特我 / 点赞我 共用此签名。
@@ -135,10 +134,7 @@ class _MsgFeedPageState extends State<MsgFeedPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(
-        title: widget.title,
-        actions: widget.actions,
-      ),
+      actions: widget.actions,
       body: Pref.demoMode
           ? const DemoListSkeleton(coverWidth: 40, coverHeight: 40)
           : _loading && _items.isEmpty

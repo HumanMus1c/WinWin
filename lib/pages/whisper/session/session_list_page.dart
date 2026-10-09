@@ -20,7 +20,6 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 私信会话列表入口（阶段 C）。
@@ -267,7 +266,6 @@ class _SessionListPageState extends State<SessionListPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(title: '私信'),
       body: Column(
         children: [
           // 分类 chips

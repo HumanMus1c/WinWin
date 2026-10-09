@@ -27,7 +27,6 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 历史记录页面（移植自 PiliPlus `lib/pages/history/`，重构为自适应多列宫格排版）。
@@ -289,17 +288,14 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(
-        title: '历史记录',
-        actions: [
-          if (_items.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_sweep),
-              tooltip: '清空',
-              onPressed: _clearAll,
-            ),
-        ],
-      ),
+      actions: [
+        if (_items.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            tooltip: '清空',
+            onPressed: _clearAll,
+          ),
+      ],
       body: Pref.demoMode
           ? _buildDemoList()
           : _loading && _items.isEmpty

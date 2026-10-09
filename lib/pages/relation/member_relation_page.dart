@@ -14,7 +14,6 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 关系列表类型：关注列表 / 粉丝列表。
@@ -59,9 +58,6 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
   bool _hasMore = true;
   bool _loading = true;
   String? _error;
-
-  String get _title =>
-      widget.type == RelationType.followings ? '关注' : '粉丝';
 
   @override
   void initState() {
@@ -121,10 +117,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final totalLabel =
-        (!Pref.demoMode && _total != null) ? ' $_total' : '';
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(title: '$_title$totalLabel'),
       body: Pref.demoMode
           ? const DemoListSkeleton(coverWidth: 44, coverHeight: 44)
           : _loading && _items.isEmpty

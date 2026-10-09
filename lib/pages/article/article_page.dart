@@ -20,7 +20,6 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 专栏文章阅读页面。
@@ -153,34 +152,30 @@ class _ArticlePageState extends State<ArticlePage> {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
-    final fallbackTitle = widget.title ?? '专栏文章';
 
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(
-        title: Pref.demoMode ? '专栏文章' : (_state.dataOrNull?.title ?? fallbackTitle),
-        actions: [
-          IconButton(
-            icon: AppIcon(AppIcons.refresh()),
-            tooltip: '重新加载',
-            onPressed: _loadArticle,
-          ),
-          IconButton(
-            icon: AppIcon(AppIcons.copy()),
-            tooltip: '复制专栏链接',
-            onPressed: () {
-              Clipboard.setData(
-                ClipboardData(text: 'https://www.bilibili.com/read/cv$_cleanId'),
-              );
-              showToast(
-                context,
-                '已复制专栏文章链接',
-                duration: const Duration(seconds: 1),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      actions: [
+        IconButton(
+          icon: AppIcon(AppIcons.refresh()),
+          tooltip: '重新加载',
+          onPressed: _loadArticle,
+        ),
+        IconButton(
+          icon: AppIcon(AppIcons.copy()),
+          tooltip: '复制专栏链接',
+          onPressed: () {
+            Clipboard.setData(
+              ClipboardData(text: 'https://www.bilibili.com/read/cv$_cleanId'),
+            );
+            showToast(
+              context,
+              '已复制专栏文章链接',
+              duration: const Duration(seconds: 1),
+            );
+          },
+        ),
+        const SizedBox(width: 8),
+      ], 
       body: Pref.demoMode
           ? const DemoListSkeleton()
           : switch (_state) {

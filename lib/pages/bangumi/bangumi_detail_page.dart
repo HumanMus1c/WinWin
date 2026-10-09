@@ -20,7 +20,6 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 番剧 / 影视详情主页（对标 BiliPai `BangumiDetailScreen` 与 PiliPlus）。
@@ -441,34 +440,27 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     final cs = AppThemeHost.of(context).colors;
 
     return AppScaffold(
-      topBar: ValueListenableBuilder<bool>(
-        valueListenable: Pref.demoModeNotifier,
-        builder: (context, demo, _) => MiuixSmallTopAppBar(
-          navigationIcon: const AppBackButton(),
-          title: demo ? '番剧详情' : (_detail?.title ?? widget.title ?? '番剧详情'),
-          actions: [
-          IconButton(
-            icon: AppIcon(AppIcons.refresh()),
-            tooltip: '刷新',
-            onPressed: () => _loadDetail(),
-          ),
-          IconButton(
-            icon: AppIcon(AppIcons.share()),
-            tooltip: '分享',
-            onPressed: () {
-              final sid = _detail?.seasonId ?? widget.seasonId;
-              if (sid != null && sid > 0) {
-                Clipboard.setData(
-                  ClipboardData(text: 'https://www.bilibili.com/bangumi/play/ss$sid'),
-                );
-                showToast(context, '番剧链接已复制到剪贴板');
-              }
-            },
-          ),
-          const SizedBox(width: 8),
-          ],
+      actions: [
+        IconButton(
+          icon: AppIcon(AppIcons.refresh()),
+          tooltip: '刷新',
+          onPressed: () => _loadDetail(),
         ),
-      ),
+        IconButton(
+          icon: AppIcon(AppIcons.share()),
+          tooltip: '分享',
+          onPressed: () {
+            final sid = _detail?.seasonId ?? widget.seasonId;
+            if (sid != null && sid > 0) {
+              Clipboard.setData(
+                ClipboardData(
+                    text: 'https://www.bilibili.com/bangumi/play/ss$sid'),
+              );
+              showToast(context, '番剧链接已复制到剪贴板');
+            }
+          },
+        ),
+      ],
       body: DemoMask(
         skeleton: () => _buildSkeleton(cs),
         child: () => switch (_state) {

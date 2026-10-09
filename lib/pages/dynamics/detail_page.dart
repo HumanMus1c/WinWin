@@ -29,7 +29,6 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 动态详情页面。
@@ -246,32 +245,28 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     final cs = tokens.colors;
 
     return AppScaffold(
-      topBar: MiuixSmallTopAppBar(
-        navigationIcon: const AppBackButton(),
-        title: '动态详情',
-        actions: [
-          IconButton(
-            icon: AppIcon(AppIcons.refresh()),
-            tooltip: '重新加载',
-            onPressed: _loadDetail,
-          ),
-          IconButton(
-            icon: AppIcon(AppIcons.copy()),
-            tooltip: '复制动态链接',
-            onPressed: () {
-              Clipboard.setData(
-                ClipboardData(text: 'https://t.bilibili.com/$_effectiveId'),
-              );
-              showToast(
-                context,
-                '已复制动态链接',
-                duration: const Duration(seconds: 1),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      actions: [
+        IconButton(
+          icon: AppIcon(AppIcons.refresh()),
+          tooltip: '重新加载',
+          onPressed: _loadDetail,
+        ),
+        IconButton(
+          icon: AppIcon(AppIcons.copy()),
+          tooltip: '复制动态链接',
+          onPressed: () {
+            Clipboard.setData(
+              ClipboardData(text: 'https://t.bilibili.com/$_effectiveId'),
+            );
+            showToast(
+              context,
+              '已复制动态链接',
+              duration: const Duration(seconds: 1),
+            );
+          },
+        ),
+        const SizedBox(width: 8),
+      ], 
       body: Pref.demoMode
           ? const DemoListSkeleton()
           : switch (_state) {

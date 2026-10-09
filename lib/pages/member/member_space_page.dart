@@ -826,10 +826,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       body: switch (_spaceState) {
         Loading() => _buildSpaceContent(null),
         Error(:final errMsg) => AppScaffold(
-            topBar: MiuixSmallTopAppBar(
-              navigationIcon: const AppBackButton(),
-              title: '个人空间',
-            ),
             body: _buildError(errMsg, _loadAll),
           ),
         Success(:final response) => _buildSpaceContent(response),
