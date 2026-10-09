@@ -27,7 +27,8 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixSmallTopAppBar;
+import 'package:flutter_miuix/miuix.dart'
+    show MiuixCheckboxPreference, MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
@@ -974,6 +975,7 @@ class _FavPanelState extends State<_FavPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = AppThemeHost.of(context);
     return Container(
       constraints: const BoxConstraints(maxHeight: 500),
       padding: EdgeInsets.only(
@@ -999,24 +1001,29 @@ class _FavPanelState extends State<_FavPanel> {
                 itemCount: _folders!.length,
                 itemBuilder: (context, index) {
                   final f = _folders![index];
-                  return CheckboxListTile(
+                  // B6：Material CheckboxListTile → Miuix 偏好组件。
+                  return MiuixCheckboxPreference(
                     value: f.favState == 1,
+                    title: f.title,
+                    summary: '${f.mediaCount} 个内容',
+                    startAction: AppIcon(
+                      f.isPublic ? AppIcons.folder() : AppIcons.lock(),
+                      color: biliPink,
+                    ),
                     onChanged: _sending
                         ? null
                         : (v) => setState(() {
                               f.favState = v == true ? 1 : 0;
                             }),
-                    title: Text(f.title),
-                    subtitle: Text('${f.mediaCount} 个内容'),
-                    secondary: AppIcon(
-                      f.isPublic ? AppIcons.folder() : AppIcons.lock(),
-                      color: biliPink,
-                    ),
                   );
                 },
               ),
             ),
-          const Divider(height: 1),
+          // B6：Material Divider → 0.5px 细分隔线（Miuix 口径）。
+          Container(
+            height: 0.5,
+            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
+          ),
           Padding(
             padding: const EdgeInsets.all(Style.md),
             child: Row(
