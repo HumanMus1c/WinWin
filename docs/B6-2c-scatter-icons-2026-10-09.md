@@ -39,7 +39,7 @@ B6-2c：15 文件 20 处 `Icon(Icons.*)` → `AppIcon(Icons.*)`，零字形变�
 - `flutter build windows --debug` 通过（30.8s）；
   `flutter build windows --release` 通过（77.6s）。
   双编译前已结束残留 `winwin.exe`。
-- 提交推送：`816f485` 之后的新提交（hash 待回填）。
+- 提交推送：`ec96a8b`（代码+复盘+进度表同批）。
 
 ## 5. 遗留与踩坑
 
