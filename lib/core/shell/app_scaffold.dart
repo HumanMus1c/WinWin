@@ -2,6 +2,9 @@ import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoIcons;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart'
     show MiuixIconButton, MiuixMotion, MiuixScaffold;
+// 过渡期依赖（B7 摘除 material_ui 时替换为 miuix 表面容器）：
+// 骨架必须提供 Material 祖先，见下方 [_AppScaffoldState] 注释。
+import 'package:material_ui/material_ui.dart' show Material, MaterialType;
 
 import 'app_theme_host.dart';
 
@@ -121,8 +124,18 @@ class _AppScaffoldState extends State<AppScaffold> {
             (Navigator.maybeOf(context)?.canPop() ?? false);
         final actions = widget.actions;
         final hasActions = actions != null && actions.isNotEmpty;
+        // B5-3 起骨架改用纯 widgets 实现的 MiuixScaffold，树上不再有 Material
+        // 祖先；Material 系控件（TextField/InkWell/ListTile 等）要求有 Material
+        // 祖先，否则整页红屏（2026-10-09 视频/专栏/空间/会话页回归，祖先链实测
+        // MiuixScaffold→AppScaffold 之上无 Material）。此处统一补一层透明
+        // Material（复用 session_list_section.dart 成熟模式），各页无需重复处理；
+        // 顶部安全行在 Material 之外，水波绘制限定在 body 区域内。
+        final body = Material(
+          type: MaterialType.transparency,
+          child: widget.body,
+        );
         if (!widget.reserveTopStrip) {
-          return Padding(padding: padding, child: widget.body);
+          return Padding(padding: padding, child: body);
         }
         final title = widget.title;
         final strip = Row(
@@ -160,7 +173,7 @@ class _AppScaffoldState extends State<AppScaffold> {
               Expanded(
                 child: NotificationListener<ScrollNotification>(
                   onNotification: _onScroll,
-                  child: widget.body,
+                  child: body,
                 ),
               ),
             ],
