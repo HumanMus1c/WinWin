@@ -45,7 +45,8 @@ B6-2a 先导批（零字形变化，仅统一部件，风险最低；完整语�
 - `flutter build windows --debug` 通过（28.2s）；
   `flutter build windows --release` 通过（71.5s）。
   双编译前已按工作流约定结束残留 `winwin.exe`（防 WebView2Loader.dll 锁）。
-- 提交推送：`a7c0684`（`git add -A; git commit; git push origin main`）。
+- 提交推送：`77d52d8`（`git add -A; git commit; git push origin main`，amend 后终值；
+  初值 `a7c0684` 已被 amend 替代）。
 
 ## 5. 遗留与踩坑
 
