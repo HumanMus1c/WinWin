@@ -12,6 +12,8 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 「系统消息」入口。
 void showSysMsgPage(BuildContext context) {
@@ -98,8 +100,8 @@ class _SysMsgPageState extends State<SysMsgPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('系统消息')),
+    return AppScaffold(
+      topBar: MiuixTopAppBar(title: '系统消息'),
       body: Pref.demoMode
           ? const DemoListSkeleton(coverWidth: 40, coverHeight: 40)
           : _loading && _items.isEmpty

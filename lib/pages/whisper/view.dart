@@ -17,6 +17,8 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 消息页（Phase 7.7.3）。
 ///
@@ -106,10 +108,9 @@ class _WhisperPageState extends State<WhisperPage>
     super.build(context);
     final tokens = AppThemeHost.of(context);
     // 四类互动入口固定在顶部，仅下方会话列表可滚动。
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('消息'),
-        scrolledUnderElevation: 0,
+    return AppScaffold(
+      topBar: MiuixTopAppBar(
+        title: '消息',
       ),
       body: Column(
         children: [

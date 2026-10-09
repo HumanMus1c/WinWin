@@ -14,6 +14,8 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 关系列表类型：关注列表 / 粉丝列表。
 enum RelationType { followings, fans }
@@ -121,8 +123,8 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
   Widget build(BuildContext context) {
     final totalLabel =
         (!Pref.demoMode && _total != null) ? ' $_total' : '';
-    return Scaffold(
-      appBar: AppBar(title: Text('$_title$totalLabel')),
+    return AppScaffold(
+      topBar: MiuixTopAppBar(title: '$_title$totalLabel'),
       body: Pref.demoMode
           ? const DemoListSkeleton(coverWidth: 44, coverHeight: 44)
           : _loading && _items.isEmpty

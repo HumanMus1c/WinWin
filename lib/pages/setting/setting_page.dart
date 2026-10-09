@@ -7,6 +7,8 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 设置主页面 — 桌面端双栏布局。
 ///
@@ -55,8 +57,8 @@ class _SettingPageState extends State<SettingPage> {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final padding = MediaQuery.viewPaddingOf(context);
-    return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+    return AppScaffold(
+      topBar: MiuixTopAppBar(title: '设置'),
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

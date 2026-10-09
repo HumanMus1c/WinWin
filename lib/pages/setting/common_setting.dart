@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/pages/setting/setting_type.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixTopAppBar;
+import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 通用设置列表：按 [settingType] 渲染对应的设置项列表。
 ///
@@ -28,8 +30,8 @@ class _CommonSettingState extends State<CommonSetting> {
     final settings = widget.settingType.settings;
     final showAppBar = widget.showAppBar;
     final padding = MediaQuery.viewPaddingOf(context);
-    return Scaffold(
-      appBar: showAppBar ? AppBar(title: Text(widget.settingType.title)) : null,
+    return AppScaffold(
+      topBar: showAppBar ? MiuixTopAppBar(title: widget.settingType.title) : null,
       body: ListView(
         key: ValueKey(widget.settingType.name),
         padding: EdgeInsets.only(
