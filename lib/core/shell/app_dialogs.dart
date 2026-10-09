@@ -1,5 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixMotion;
+// 过渡期依赖（B7 摘除 material_ui 时替换为 miuix 表面容器）：
+// 面板内容需要一个 Material 祖先，Material 原版面板同样会提供该层。
+import 'package:material_ui/material_ui.dart' show Material;
 import 'package:winwin/core/shell/app_theme_host.dart';
 
 import 'app_transition.dart';
@@ -118,20 +121,24 @@ class AppSheetRoute<T> extends PopupRoute<T> {
     //   Column + Expanded 会因无界高度塌陷，见 2026-10-08 收藏面板回归）。
     final screenHeight = MediaQuery.sizeOf(context).height;
     final maxHeight = isScrollControlled ? screenHeight : screenHeight * 9 / 16;
-    // 表面背景对齐 Material：默认 M3 面板色（surfaceContainerLow）+ 顶部 28 圆角；
-    // 显式传 backgroundColor（如透明）时按传入值着色。
-    final sheetColor =
-        backgroundColor ?? AppThemeHost.of(context).colors.surfaceContainerLow;
+    // 宽度上限对齐 M3 默认（BottomSheetThemeData.constraints = maxWidth 640）：
+    // 宽窗口下面板居中且不占满整屏。
     return Align(
       alignment: Alignment.bottomCenter,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: ColoredBox(
-            color: sheetColor,
-            child: builder(context),
+        constraints: BoxConstraints(maxHeight: maxHeight, maxWidth: 640),
+        // Material 的面板会给内容套一层 Material（底色 + 裁剪 + **Material 祖先**）；
+        // 缺这层祖先时，面板内的 Material 控件（如 CheckboxListTile）会构建失败，
+        // release 下渲染为大灰块（见 2026-10-08 收藏面板回归）。
+        // 过渡期使用 material_ui 的 Material，B7 摘除依赖时替换为 miuix 表面容器。
+        child: Material(
+          color: backgroundColor ??
+              AppThemeHost.of(context).colors.surfaceContainerLow,
+          clipBehavior: Clip.antiAlias,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
+          child: builder(context),
         ),
       ),
     );

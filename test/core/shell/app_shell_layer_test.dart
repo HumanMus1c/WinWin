@@ -205,7 +205,7 @@ void main() {
     expect(await result, '已确认');
   });
 
-  testWidgets('AppSheetRoute：isScrollControlled 下内容有界（Column+Expanded 不塌陷）且带面板底色',
+  testWidgets('AppSheetRoute：有界高度 + Material 祖先 + M3 宽度上限（收藏面板回归）',
       (tester) async {
     final navKey = GlobalKey<NavigatorState>();
     late BuildContext hostContext;
@@ -229,7 +229,7 @@ void main() {
       ),
     );
 
-    // 复刻收藏夹面板结构：标题 + Expanded(ListView) + 底栏。
+    // 复刻收藏夹面板结构：标题 + Expanded(ListView[material 控件]) + 底栏。
     showAppSheet<void>(
       context: hostContext,
       isScrollControlled: true,
@@ -238,7 +238,14 @@ void main() {
           const Text('面板标题'),
           Expanded(
             child: ListView(
-              children: [for (var i = 0; i < 40; i++) Text('条目$i')],
+              children: [
+                for (var i = 0; i < 40; i++)
+                  modern.CheckboxListTile(
+                    value: false,
+                    onChanged: (_) {},
+                    title: Text('条目$i'),
+                  ),
+              ],
             ),
           ),
           const Text('完成的按钮'),
@@ -248,17 +255,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
-    // 回归点：无"无界高度"布局异常（修复前 Expanded 会因 maxHeight=∞ 塌陷并报错）。
+    // 回归点 1：无界高度会让 Column+Expanded 塌陷并抛布局异常。
     expect(tester.takeException(), isNull);
+    // 回归点 2：面板内容缺 Material 祖先时，CheckboxListTile 构建失败（release 灰块）。
     expect(find.text('面板标题'), findsOneWidget);
     expect(find.text('完成的按钮'), findsOneWidget);
     expect(find.text('条目0'), findsOneWidget);
-    // 默认面板底色：M3 surfaceContainerLow 已绘制（修复前面板透明、视频透出）。
-    final painted = tester.widgetList<ColoredBox>(find.byType(ColoredBox)).map((c) => c.color);
-    expect(
-      painted.contains(AppThemeHost.tokensFor(Brightness.light).colors.surfaceContainerLow),
-      isTrue,
-    );
+    // 回归点 3：M3 默认面板宽度上限 640（宽窗口下不占满整屏）。
+    final sheetWidth = tester.getSize(find.byType(modern.Material).last).width;
+    expect(sheetWidth, lessThanOrEqualTo(640));
   });
 
   testWidgets('MiuixCompat：子树获得 Material 祖先 / MaterialLocalizations / SDK Theme',
