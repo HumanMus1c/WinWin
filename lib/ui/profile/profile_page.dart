@@ -622,7 +622,7 @@ class _SettingsGroup extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: Style.lg),
           children: [
             NormalItem(
-              leading: Icon(Icons.swap_horiz, color: cs.primary),
+              leading: AppIcon(Icons.swap_horiz, color: cs.primary),
               title: '账号切换',
               getTrailing: trailingChevron,
               borderRadius: isLogin
@@ -638,7 +638,7 @@ class _SettingsGroup extends StatelessWidget {
             ),
             if (isLogin)
               NormalItem(
-                leading: const Icon(Icons.logout, color: Colors.red),
+                leading: AppIcon(Icons.logout, color: Colors.red),
                 title: '退出登录',
                 titleStyle: const TextStyle(color: Colors.red),
                 getTrailing: trailingChevron,
