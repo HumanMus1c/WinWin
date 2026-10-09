@@ -44,7 +44,7 @@ constraints 参数）。
   （kernel_blob 01:28:27 / app.so 01:29:51；编译前已清残留进程，
   构建后按约定自启 Release，PID 10588）。
 - 残留复核：`IconButton` 全库 0 处；`MiuixIconButton` 78 处；闸门指标维持 **133**。
-- 提交推送：`（本批回填）`（代码+复盘+进度表同批）。
+- 提交推送：`6c1b4de`（代码+复盘+进度表同批，已推 `origin/main`）。
 
 ## 5. 遗留与踩坑
 
