@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressable, MiuixSquircleBorder;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -157,7 +158,7 @@ class _LivePageState extends State<LivePage>
           final isSelected = index == _selectedIndex;
           final tab = _tabs[index];
           return Material(
-            color: Colors.transparent,
+            color: AppColors.transparent,
             child: MiuixPressable(
               borderRadius: shapes.pillBorder,
               onPressed: () {
@@ -182,7 +183,7 @@ class _LivePageState extends State<LivePage>
                   border: Border.all(
                     color: isSelected
                         ? cs.primary.withValues(alpha: 0.45)
-                        : Colors.transparent,
+                        : AppColors.transparent,
                     width: 1,
                   ),
                 ),
@@ -745,7 +746,7 @@ class _LiveCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.85),
+                            color: AppColors.red.withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
@@ -753,14 +754,14 @@ class _LiveCard extends StatelessWidget {
                             children: [
                               AppIcon(AppIcons.recording(),
                                 size: 10,
-                                color: Colors.white,
+                                color: AppColors.white,
                               ),
                               SizedBox(width: 2),
                               Text(
                                 '直播中',
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: Colors.white,
+                                  color: AppColors.white,
                                 ),
                               ),
                             ],
@@ -778,7 +779,7 @@ class _LiveCard extends StatelessWidget {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
+                            color: AppColors.black.withValues(alpha: 0.65),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
@@ -786,14 +787,14 @@ class _LiveCard extends StatelessWidget {
                             children: [
                               AppIcon(AppIcons.people(),
                                 size: 10,
-                                color: Colors.white,
+                                color: AppColors.white,
                               ),
                               const SizedBox(width: 2),
                               Text(
                                 NumUtils.formatNum(item.online),
                                 style: const TextStyle(
                                   fontSize: 10,
-                                  color: Colors.white,
+                                  color: AppColors.white,
                                 ),
                               ),
                             ],

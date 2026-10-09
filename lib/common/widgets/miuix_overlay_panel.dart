@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 
@@ -39,8 +40,8 @@ class MiuixOverlayPanel extends StatelessWidget {
     final isDark = tokens.isDark;
     final baseColor = isDark ? const Color(0xFF262626) : const Color(0xFFEAEAEA);
     final dividerColor = isDark
-        ? Colors.white.withValues(alpha: 0.10)
-        : Colors.black.withValues(alpha: 0.08);
+        ? AppColors.white.withValues(alpha: 0.10)
+        : AppColors.black.withValues(alpha: 0.08);
 
     return Material(
       type: MaterialType.transparency,
@@ -49,7 +50,7 @@ class MiuixOverlayPanel extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.15),
+              color: AppColors.black.withValues(alpha: isDark ? 0.35 : 0.15),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -65,8 +66,8 @@ class MiuixOverlayPanel extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : Colors.black.withValues(alpha: 0.08),
+                      ? AppColors.white.withValues(alpha: 0.12)
+                      : AppColors.black.withValues(alpha: 0.08),
                   width: 1,
                 ),
               ),

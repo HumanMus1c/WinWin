@@ -2,13 +2,14 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/plugin/canvas_danmaku/models/danmaku_content_item.dart';
 
 abstract final class DmUtils {
   static double devicePixelRatio = 1;
   static final Paint _selfSendPaint = Paint()
     ..style = PaintingStyle.stroke
-    ..color = Colors.green;
+    ..color = AppColors.green;
 
   static void updateSelfSendPaint(double strokeWidth) {
     _selfSendPaint.strokeWidth = strokeWidth;
@@ -65,7 +66,7 @@ abstract final class DmUtils {
         colors: [Color(0xFFF2509E), Color(0xFF308BCD)],
       ).createShader(const Rect.fromLTWH(0, 0, 300, 30));
     } else {
-      strokePaint.color = Colors.black;
+      strokePaint.color = AppColors.black;
     }
 
     if (content.count case final count?) {
@@ -101,7 +102,7 @@ abstract final class DmUtils {
         color: content.color,
         fontSize: content.fontSize,
         shadows: content.hasStroke && strokeWidth > 0
-            ? [Shadow(color: Colors.black, blurRadius: strokeWidth)]
+            ? [Shadow(color: AppColors.black, blurRadius: strokeWidth)]
             : null,
       ))
       ..addText(content.text);

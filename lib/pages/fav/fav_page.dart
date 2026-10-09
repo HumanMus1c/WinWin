@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
@@ -528,7 +529,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
           ? FloatingActionButton.extended(
               onPressed: _playAll,
               backgroundColor: biliPink,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.white,
               icon: AppIcon(AppIcons.playAll()),
               label: const Text('播放全部'),
             )
@@ -1048,7 +1049,7 @@ class _FavPanelState extends State<_FavPanel> {
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white),
                           )
                         : const Text('完成'),
                   ),

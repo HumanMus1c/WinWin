@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/constants.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
@@ -884,7 +885,7 @@ class MemberFansMedalDetail {
   }
 
   Color get parsedBackgroundColor => ColorUtils.parseHex(medalColor, fallback: const Color(0xFFFA7298));
-  Color get parsedTextColor => ColorUtils.parseHex(medalColorName, fallback: Colors.white);
+  Color get parsedTextColor => ColorUtils.parseHex(medalColorName, fallback: AppColors.white);
 }
 
 /// “我关注的人也在关注”。

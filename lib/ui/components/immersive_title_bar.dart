@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/window/desktop_fullscreen.dart';
@@ -160,8 +161,8 @@ class _ImmersiveTitleBarShellState extends State<ImmersiveTitleBarShell>
     final onDark = stripColor.computeLuminance() < 0.5;
     final brightness = onDark ? Brightness.dark : Brightness.light;
     final foreground = onDark
-        ? Colors.white.withValues(alpha: 0.92)
-        : Colors.black.withValues(alpha: 0.78);
+        ? AppColors.white.withValues(alpha: 0.92)
+        : AppColors.black.withValues(alpha: 0.78);
     return Row(
       children: [
         Expanded(

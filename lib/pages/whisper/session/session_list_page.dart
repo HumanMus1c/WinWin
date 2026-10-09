@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixHorizontalDivider;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
@@ -404,7 +405,7 @@ class _SessionTile extends StatelessWidget {
                 ),
                 child: Text(
                   unread > 99 ? '99+' : '$unread',
-                  style: const TextStyle(color: Colors.white, fontSize: 10),
+                  style: const TextStyle(color: AppColors.white, fontSize: 10),
                 ),
               ),
             ),

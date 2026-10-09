@@ -6,6 +6,7 @@ import 'app_shapes.dart';
 import 'app_typography.dart';
 import 'colors.dart';
 import 'system_font_scanner.dart';
+import 'package:winwin/theme/app_colors.dart';
 
 /// App theme — 阶段5d-L4-2 单轨化后恒解析 Miuix ThemeData。
 ///
@@ -117,7 +118,7 @@ class AppTheme {
         // 其缩放会向路由视口外溢出并覆盖沉浸标题条，详见 miuix_page_transitions.dart）；
         // 关掉 kUseMiuixPageTransitions 即回退平台默认值（null = ThemeData 默认）。
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
         ),
@@ -182,7 +183,7 @@ class AppTheme {
         scaffoldBackgroundColor: miuixDarkBackground,
         // 页面转场：同浅色主题（见 _miuixLight 处说明）。
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
         ),

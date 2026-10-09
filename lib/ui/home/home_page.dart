@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/models/common/home_tab.dart';
 import 'package:winwin/pages/follow/view.dart';
 import 'package:winwin/pages/hot/view.dart';
@@ -203,7 +204,7 @@ class _HomeHeader extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isSelected
                           ? baseColor.withValues(alpha: 0.28)
-                          : Colors.transparent,
+                          : AppColors.transparent,
                       borderRadius: shapes.pillBorder,
                     ),
                     child: Text(

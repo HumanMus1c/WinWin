@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/theme/app_colors.dart';
 
 /// 主题对比度策略（ThemeContrastPolicy）。
 ///
@@ -35,7 +36,7 @@ Color opaqueCompositeOver(Color foreground, Color background) {
   final fa = foreground.a;
   final ba = background.a;
   final outAlpha = fa + ba * (1 - fa);
-  if (outAlpha == 0) return Colors.transparent;
+  if (outAlpha == 0) return AppColors.transparent;
   return Color.from(
     alpha: 1,
     red: (foreground.r * fa + background.r * ba * (1 - fa)) / outAlpha,

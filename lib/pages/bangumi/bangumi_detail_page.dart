@@ -4,6 +4,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIcon
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
@@ -346,7 +347,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
               Navigator.pop(ctx);
               _unfollowBangumi();
             },
-            child: const Text('取消追番', style: TextStyle(color: Colors.red)),
+            child: const Text('取消追番', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -369,7 +370,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label),
-          if (selected) Icon(AppIcons.check(), size: 18, color: Colors.blue),
+          if (selected) Icon(AppIcons.check(), size: 18, color: AppColors.blue),
         ],
       ),
     );
@@ -714,12 +715,12 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.65),
+                        color: AppColors.black.withValues(alpha: 0.65),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         detail.newEp!.desc,
-                        style: const TextStyle(fontSize: 10, color: Colors.white),
+                        style: const TextStyle(fontSize: 10, color: AppColors.white),
                       ),
                     ),
                   ),
@@ -754,14 +755,14 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
               if (detail.rating != null && detail.rating!.score > 0)
                 Row(
                   children: [
-                    AppIcon(AppIcons.favorite(active: true), color: Colors.amber, size: 20),
+                    AppIcon(AppIcons.favorite(active: true), color: AppColors.amber, size: 20),
                     const SizedBox(width: 4),
                     Text(
                       detail.rating!.score.toStringAsFixed(1),
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
-                        color: Colors.amber,
+                        color: AppColors.amber,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -1203,7 +1204,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [Colors.transparent, Colors.black87],
+                              colors: [AppColors.transparent, AppColors.black87],
                             ),
                           ),
                         ),
@@ -1219,14 +1220,14 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                               vertical: verticalPadding * 0.7,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.65),
+                              color: AppColors.black.withValues(alpha: 0.65),
                               borderRadius: BorderRadius.circular(badgeRadius * 0.75),
                             ),
                             child: Text(
                               ep.formattedDuration,
                               style: TextStyle(
                                 fontSize: badgeFontSize,
-                                color: Colors.white,
+                                color: AppColors.white,
                                 fontWeight: FontWeight.w500,
                                 height: 1.1,
                               ),
@@ -1245,14 +1246,14 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                             ),
                             decoration: BoxDecoration(
                               color: ep.badge!.contains('会员')
-                                  ? Colors.orange.shade800
+                                  ? AppColors.orange800
                                   : (ep.badge == '预告'
-                                      ? Colors.black.withValues(alpha: 0.65)
-                                      : Colors.pink.shade600),
+                                      ? AppColors.black.withValues(alpha: 0.65)
+                                      : AppColors.pink600),
                               borderRadius: BorderRadius.circular(badgeRadius),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.3),
+                                  color: AppColors.black.withValues(alpha: 0.3),
                                   blurRadius: 3,
                                   offset: const Offset(0, 1),
                                 ),
@@ -1262,7 +1263,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                               ep.badge!,
                               style: TextStyle(
                                 fontSize: badgeFontSize,
-                                color: Colors.white,
+                                color: AppColors.white,
                                 fontWeight: FontWeight.bold,
                                 height: 1.1,
                               ),
@@ -1284,7 +1285,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                               borderRadius: BorderRadius.circular(badgeRadius),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.35),
+                                  color: AppColors.black.withValues(alpha: 0.35),
                                   blurRadius: 3,
                                   offset: const Offset(0, 1),
                                 ),
@@ -1296,14 +1297,14 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                                 Icon(
                                   AppIcons.history(selected: false),
                                   size: badgeFontSize * 1.15,
-                                  color: Colors.white,
+                                  color: AppColors.white,
                                 ),
                                 SizedBox(width: titleFontSize * 0.2),
                                 Text(
                                   '上次看到',
                                   style: TextStyle(
                                     fontSize: badgeFontSize,
-                                    color: Colors.white,
+                                    color: AppColors.white,
                                     fontWeight: FontWeight.bold,
                                     height: 1.1,
                                   ),
@@ -1448,11 +1449,11 @@ class _FollowButtonState extends State<_FollowButton> {
       if (_isHovered) {
         label = '取消追番';
         icon = Icons.heart_broken_outlined;
-        color = Colors.red;
+        color = AppColors.red;
       } else {
         label = '正在追番';
         icon = AppIcons.favorite(active: true);
-        color = Colors.pink;
+        color = AppColors.pink;
       }
     }
 

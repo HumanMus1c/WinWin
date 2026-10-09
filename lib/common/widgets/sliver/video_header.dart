@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/theme/app_colors.dart';
 
 
 /// 视频详情页头部 Sliver（Phase 7.6.1）。
@@ -110,7 +111,7 @@ class VideoHeader extends StatelessWidget {
         builder: (context, scrollRatio) {
           return ClipRect(
             child: ColoredBox(
-              color: Colors.black,
+              color: AppColors.black,
               child: SizedBox(
                 width: double.infinity,
                 height: maxExtent,

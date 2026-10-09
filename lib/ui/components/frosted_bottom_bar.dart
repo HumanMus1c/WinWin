@@ -2,6 +2,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/services/msg_unread_service.dart';
@@ -97,7 +98,7 @@ class NavDestinationIcon extends StatelessWidget {
                   memCacheWidth: ImageUtils.decodeClamp(size, context, max: 256),
                   memCacheHeight: ImageUtils.decodeClamp(size, context, max: 256),
                   placeholder: (_, _) => const ColoredBox(
-                    color: Colors.grey,
+                    color: AppColors.grey,
                     child: SizedBox.expand(),
                   ),
                   errorBuilder: (_, _, _) => Icon(

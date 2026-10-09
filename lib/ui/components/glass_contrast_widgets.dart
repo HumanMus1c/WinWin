@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/theme/app_colors.dart';
 
 /// 高对比度阴影与排版视觉常量规范。
 class ContrastStyle {
@@ -23,7 +24,7 @@ class ContrastStyle {
 
   /// 默认高对比度文字样式。
   static const TextStyle labelStyle = TextStyle(
-    color: Colors.white,
+    color: AppColors.white,
     fontSize: 12,
     fontWeight: FontWeight.w500,
     shadows: glyphShadows,
@@ -61,9 +62,9 @@ class GlassCapsule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBg = backgroundColor ?? Colors.black.withValues(alpha: 0.35);
+    final effectiveBg = backgroundColor ?? AppColors.black.withValues(alpha: 0.35);
     final effectiveBorderColor =
-        borderColor ?? Colors.white.withValues(alpha: 0.15);
+        borderColor ?? AppColors.white.withValues(alpha: 0.15);
 
     final isCircle = shape == BoxShape.circle;
     final r = isCircle ? BorderRadius.zero : BorderRadius.circular(borderRadius);
@@ -106,7 +107,7 @@ class ContrastIcon extends StatelessWidget {
     this.icon, {
     super.key,
     this.size,
-    this.color = Colors.white,
+    this.color = AppColors.white,
     this.shadows = ContrastStyle.glyphShadows,
     this.semanticLabel,
   });
@@ -172,7 +173,7 @@ class GlassControlButton extends StatefulWidget {
     required this.onPressed,
     this.tooltip,
     this.size = 20,
-    this.iconColor = Colors.white,
+    this.iconColor = AppColors.white,
     this.useGlass = false,
     this.borderRadius = 6.0,
     this.padding = const EdgeInsets.all(6.0),
@@ -207,8 +208,8 @@ class _GlassControlButtonState extends State<GlassControlButton> {
         borderRadius: widget.borderRadius,
         padding: widget.padding,
         backgroundColor: _hovered
-            ? Colors.white.withValues(alpha: 0.22)
-            : Colors.black.withValues(alpha: 0.35),
+            ? AppColors.white.withValues(alpha: 0.22)
+            : AppColors.black.withValues(alpha: 0.35),
         child: iconWidget,
       );
     } else {
@@ -216,7 +217,7 @@ class _GlassControlButtonState extends State<GlassControlButton> {
         padding: widget.padding,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          color: _hovered ? Colors.white.withValues(alpha: 0.14) : Colors.transparent,
+          color: _hovered ? AppColors.white.withValues(alpha: 0.14) : AppColors.transparent,
         ),
         child: iconWidget,
       );
@@ -341,8 +342,8 @@ class ProgressiveGlass extends StatelessWidget {
     if (backgroundGradient != null) return backgroundGradient!;
     final colors = backgroundGradientColors ??
         [
-          Colors.black.withValues(alpha: 0.75),
-          Colors.transparent,
+          AppColors.black.withValues(alpha: 0.75),
+          AppColors.transparent,
         ];
     return LinearGradient(
       begin: begin,

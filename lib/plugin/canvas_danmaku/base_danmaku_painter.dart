@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/plugin/canvas_danmaku/models/danmaku_item.dart';
 
 abstract base class BaseDanmakuPainter extends CustomPainter {
@@ -16,7 +17,7 @@ abstract base class BaseDanmakuPainter extends CustomPainter {
   static final Paint _selfSendPaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 1.0
-    ..color = Colors.green;
+    ..color = AppColors.green;
 
   const BaseDanmakuPainter({
     required this.length,

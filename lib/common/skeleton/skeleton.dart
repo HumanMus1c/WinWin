@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 
@@ -48,13 +49,13 @@ class _SkeletonState extends State<Skeleton>
         final tokens = AppThemeHost.of(context);
         final isDark = tokens.isDark;
         final shimmerColor = isDark
-            ? Colors.white.withValues(alpha: 0.12)
-            : Colors.white.withValues(alpha: 0.75);
+            ? AppColors.white.withValues(alpha: 0.12)
+            : AppColors.white.withValues(alpha: 0.75);
         final colors = [
-          Colors.transparent,
+          AppColors.transparent,
           shimmerColor,
           shimmerColor,
-          Colors.transparent,
+          AppColors.transparent,
         ];
         return AnimatedBuilder(
           animation: _controller,

@@ -1,6 +1,7 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/account/login_utils.dart';
@@ -185,7 +186,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('确定', style: TextStyle(color: Colors.red)),
+            child: const Text('确定', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -323,7 +324,7 @@ class _UserInfoSectionState extends State<_UserInfoSection> {
                               ],
                             ),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
+                        color: AppColors.white.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
                     ),
@@ -337,17 +338,17 @@ class _UserInfoSectionState extends State<_UserInfoSection> {
                             memCacheHeight:
                                 ImageUtils.decodeClamp(55, context, max: 256),
                             placeholder: (_, _) => const ColoredBox(
-                              color: Colors.grey,
+                              color: AppColors.grey,
                               child: SizedBox.expand(),
                             ),
                             errorBuilder: (_, _, _) => Center(
                               child: AppIcon(AppIcons.profile(),
-                                  color: Colors.white, size: 28),
+                                  color: AppColors.white, size: 28),
                             ),
                             fit: BoxFit.cover,
                           )
                         : AppIcon(AppIcons.profile(),
-                            color: Colors.white, size: 28),
+                            color: AppColors.white, size: 28),
                   ),
                   if (isLogin)
                     Positioned(
@@ -371,7 +372,7 @@ class _UserInfoSectionState extends State<_UserInfoSection> {
                                 child: const Text(
                                   'VIP',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.white,
                                     fontSize: 8,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -638,9 +639,9 @@ class _SettingsGroup extends StatelessWidget {
             ),
             if (isLogin)
               NormalItem(
-                leading: AppIcon(AppIcons.logout(), color: Colors.red),
+                leading: AppIcon(AppIcons.logout(), color: AppColors.red),
                 title: '退出登录',
-                titleStyle: const TextStyle(color: Colors.red),
+                titleStyle: const TextStyle(color: AppColors.red),
                 getTrailing: trailingChevron,
                 borderRadius: BorderRadius.vertical(bottom: r),
                 onTap: (ctx, _) => onLogout(context),

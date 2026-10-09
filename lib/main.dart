@@ -27,6 +27,7 @@ import 'theme/colors.dart';
 import 'ui/app.dart';
 import 'utils/calc_window_position.dart';
 import 'utils/json_file_handler.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
 
 /// 全局路由观察器，供 VideoDetailPage 监听 push/pop 事件，
@@ -298,11 +299,11 @@ class _AgreementGateState extends State<AgreementGate> {
             constraints: const BoxConstraints(maxWidth: 440),
             padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF222429) : Colors.white,
+              color: isDark ? const Color(0xFF222429) : AppColors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                  color: AppColors.black.withValues(alpha: isDark ? 0.3 : 0.06),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -315,13 +316,13 @@ class _AgreementGateState extends State<AgreementGate> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    color: AppColors.redAccent.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: AppIcon(AppIcons.error(),
                       size: 28,
-                      color: Colors.redAccent,
+                      color: AppColors.redAccent,
                     ),
                   ),
                 ),
@@ -376,11 +377,11 @@ class _AgreementGateState extends State<AgreementGate> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF222429) : Colors.white,
+              color: isDark ? const Color(0xFF222429) : AppColors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                  color: AppColors.black.withValues(alpha: isDark ? 0.3 : 0.06),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),

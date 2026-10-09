@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'components/frosted_bottom_bar.dart';
@@ -172,7 +173,7 @@ class AppNavRail extends StatelessWidget {
                             // 阶段5d-L1：选中底衬恒为 Miuix 值。
                             color: selected
                                 ? d.color.withValues(alpha: 0.12)
-                                : Colors.transparent,
+                                : AppColors.transparent,
                             borderRadius: BorderRadius.circular(chrome.pillRadius),
                           ),
                           child: NavDestinationIcon(

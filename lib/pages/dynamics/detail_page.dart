@@ -2,6 +2,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIcon
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/dyn/dyn_action_bar.dart';
@@ -548,7 +549,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                           children: [
                             Text(
                               '评论加载失败：$_replyError',
-                              style: const TextStyle(color: Colors.grey),
+                              style: const TextStyle(color: AppColors.grey),
                             ),
                             const SizedBox(height: Style.md),
                             FilledButton.tonal(
@@ -567,7 +568,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                       child: Center(
                         child: Text(
                           '暂无评论，来发表第一条评论吧~',
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(color: AppColors.grey),
                         ),
                       ),
                     ),
@@ -837,8 +838,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.75),
+                        AppColors.transparent,
+                        AppColors.black.withValues(alpha: 0.75),
                       ],
                     ),
                   ),
@@ -851,7 +852,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.white,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -870,14 +871,14 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                               const SizedBox(width: 8),
                               AppIcon(AppIcons.viewCount(),
                                 size: 12,
-                                color: Colors.white70,
+                                color: AppColors.white70,
                               ),
                               const SizedBox(width: 2),
                               Text(
                                 NumUtils.formatNum(archive.play),
                                 style: const TextStyle(
                                   fontSize: 11,
-                                  color: Colors.white70,
+                                  color: AppColors.white70,
                                 ),
                               ),
                             ],
@@ -1112,7 +1113,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                       isLiving ? '● 正在直播中' : '已结束',
                       style: TextStyle(
                         fontSize: 12,
-                        color: isLiving ? Colors.redAccent : cs.outline,
+                        color: isLiving ? AppColors.redAccent : cs.outline,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:fvp/mdk.dart' as mdk;
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -744,15 +745,15 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           backgroundColor: const Color(0xE61E1E1E),
           title: const Text(
             '发送直播弹幕',
-            style: TextStyle(color: Colors.white, fontSize: 16),
+            style: TextStyle(color: AppColors.white, fontSize: 16),
           ),
           content: TextField(
             controller: ctrl,
             autofocus: true,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: AppColors.white),
             decoration: const InputDecoration(
               hintText: '输入弹幕内容...',
-              hintStyle: TextStyle(color: Colors.white54),
+              hintStyle: TextStyle(color: AppColors.white54),
               border: OutlineInputBorder(),
             ),
             onSubmitted: (text) async {
@@ -806,7 +807,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           // 1. 底层：主播自定义全屏背景 + 高性能降低分辨率 WebP 缩略图 + 轻量柔和模糊与半透明蒙版
           Positioned.fill(
             child: Container(
-              color: isFillWindow ? Colors.black : tokens.colors.background,
+              color: isFillWindow ? AppColors.black : tokens.colors.background,
               child: (!isFillWindow && customBgUrl != null && customBgUrl.isNotEmpty)
                   ? Stack(
                       fit: StackFit.expand,
@@ -830,11 +831,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                                 end: Alignment.bottomCenter,
                                 colors: [
                                   (tokens.isDark
-                                          ? Colors.black
+                                          ? AppColors.black
                                           : cs.surface)
                                       .withValues(alpha: 0.40),
                                   (tokens.isDark
-                                          ? Colors.black
+                                          ? AppColors.black
                                           : cs.surface)
                                       .withValues(alpha: 0.60),
                                 ],
@@ -850,12 +851,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
           // 2. 主页面骨架
           Scaffold(
-            backgroundColor: Colors.transparent,
+            backgroundColor: AppColors.transparent,
             appBar: isFillWindow
                 ? null
                 : AppBar(
                     leading: const AppBackButton(),
-                    backgroundColor: Colors.transparent,
+                    backgroundColor: AppColors.transparent,
                     elevation: 0,
                     title: Row(
                       children: [
@@ -1007,11 +1008,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       aspectRatio: 16 / 9,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.black,
+          color: AppColors.black,
           borderRadius: BorderRadius.circular(Style.radiusMd),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
+              color: AppColors.black.withValues(alpha: 0.35),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -1036,11 +1037,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               // 加载中菊花指示器
               if (_loading && _isLiving && _errorMessage == null)
                 Container(
-                  color: Colors.black54,
+                  color: AppColors.black54,
                   child: const Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
-                      color: Colors.white,
+                      color: AppColors.white,
                     ),
                   ),
                 ),
@@ -1072,11 +1073,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             _buildCenterPlayButton(),
           if (_loading && _isLiving && _errorMessage == null)
             Container(
-              color: Colors.black54,
+              color: AppColors.black54,
               child: const Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
-                  color: Colors.white,
+                  color: AppColors.white,
                 ),
               ),
             ),
@@ -1105,15 +1106,15 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.black.withValues(alpha: 0.45),
-              Colors.transparent,
+              AppColors.black.withValues(alpha: 0.45),
+              AppColors.transparent,
             ],
           ),
         ),
         child: Row(
           children: [
             AppBackButton(
-              color: Colors.white,
+              color: AppColors.white,
               tooltip: '退出全屏 (Esc)',
               size: 24,
               onPressed: _handleEscape,
@@ -1127,7 +1128,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1137,13 +1138,13 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: AppColors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '已播 $_liveDurationText',
                   style: const TextStyle(
-                    color: Colors.white70,
+                    color: AppColors.white70,
                     fontSize: 12,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
@@ -1154,7 +1155,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _handleEscape,
 
-              child: Tooltip(message: '退出全屏', child: AppIcon(AppIcons.fullscreen(active: true), color: Colors.white)),
+              child: Tooltip(message: '退出全屏', child: AppIcon(AppIcons.fullscreen(active: true), color: AppColors.white)),
             ),
           ],
         ),
@@ -1215,19 +1216,19 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   Widget _buildCenterPlayButton() {
     return Center(
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: MiuixPressable(
           onPressed: _togglePlay,
           borderRadius: BorderRadius.circular(36),
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
+              color: AppColors.black.withValues(alpha: 0.6),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.play_arrow_rounded,
-              color: Colors.white,
+              color: AppColors.white,
               size: 44,
             ),
           ),
@@ -1261,16 +1262,16 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   color: Color(0xFF67E8F9),
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  shadows: [Shadow(blurRadius: 2, color: Colors.black)],
+                  shadows: [Shadow(blurRadius: 2, color: AppColors.black)],
                 ),
               ),
               ..._buildDanmakuContentSpans(
                 dm.danmakuText ?? '',
                 dm.emots,
                 const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 13,
-                  shadows: [Shadow(blurRadius: 2, color: Colors.black)],
+                  shadows: [Shadow(blurRadius: 2, color: AppColors.black)],
                 ),
               ),
             ];
@@ -1280,7 +1281,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
+                  color: AppColors.black.withValues(alpha: 0.45),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text.rich(
@@ -1310,8 +1311,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
             colors: [
-              Colors.black.withValues(alpha: 0.45),
-              Colors.transparent,
+              AppColors.black.withValues(alpha: 0.45),
+              AppColors.transparent,
             ],
           ),
         ),
@@ -1324,7 +1325,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               child: Tooltip(message: _isPlaying ? '暂停 (Space)' : '播放 (Space)', child: Icon(
                 _isPlaying ? AppIcons.pause(active: true) : AppIcons.play(active: true),
-                color: Colors.white,
+                color: AppColors.white,
                 size: 24,
               )),
             ),
@@ -1334,18 +1335,18 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.redAccent,
+                color: AppColors.redAccent,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AppIcon(AppIcons.recording(), size: 8, color: Colors.white),
+                  AppIcon(AppIcons.recording(), size: 8, color: AppColors.white),
                   SizedBox(width: 3),
                   Text(
                     'LIVE',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1358,7 +1359,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               Text(
                 _liveDurationText,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   fontFeatures: [FontFeature.tabularFigures()],
@@ -1376,7 +1377,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               child: Tooltip(message: _danmakuVisible ? '关闭弹幕 (D)' : '开启弹幕 (D)', child: Icon(
                 _danmakuVisible ? AppIcons.subtitle(active: true) : AppIcons.subtitle(active: false),
-                color: _danmakuVisible ? Colors.white : Colors.white54,
+                color: _danmakuVisible ? AppColors.white : AppColors.white54,
                 size: 20,
               )),
             ),
@@ -1388,7 +1389,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               child: Tooltip(message: '发弹幕', child: const Icon(
                 Icons.comment_outlined,
-                color: Colors.white70,
+                color: AppColors.white70,
                 size: 20,
               )),
             ),
@@ -1419,21 +1420,21 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       horizontal: 8,
                       vertical: 3,
                     ),
-                    color: Colors.white.withValues(alpha: 0.12),
-                    hoverColor: Colors.white.withValues(alpha: 0.18),
+                    color: AppColors.white.withValues(alpha: 0.12),
+                    hoverColor: AppColors.white.withValues(alpha: 0.18),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           currentQnText,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontSize: 12,
                           ),
                         ),
                         const Icon(
                           Icons.arrow_drop_down,
-                          color: Colors.white70,
+                          color: AppColors.white70,
                           size: 16,
                         ),
                       ],
@@ -1468,21 +1469,21 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                         horizontal: 8,
                         vertical: 3,
                       ),
-                      color: Colors.white.withValues(alpha: 0.12),
-                      hoverColor: Colors.white.withValues(alpha: 0.18),
+                      color: AppColors.white.withValues(alpha: 0.12),
+                      hoverColor: AppColors.white.withValues(alpha: 0.18),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             '线路 ${_currentStreamIndex + 1}',
                             style: const TextStyle(
-                              color: Colors.white70,
+                              color: AppColors.white70,
                               fontSize: 12,
                             ),
                           ),
                           const Icon(
                             Icons.arrow_drop_down,
-                            color: Colors.white70,
+                            color: AppColors.white70,
                             size: 16,
                           ),
                         ],
@@ -1518,10 +1519,10 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   child: HoverContainer(
                     borderRadius: 4.0,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    hoverColor: Colors.white.withValues(alpha: 0.18),
+                    hoverColor: AppColors.white.withValues(alpha: 0.18),
                     child: const Icon(
                       Icons.aspect_ratio,
-                      color: Colors.white70,
+                      color: AppColors.white70,
                       size: 20,
                     ),
                   ),
@@ -1536,7 +1537,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               child: Tooltip(message: _volume > 0 ? '静音 (M)' : '取消静音 (M)', child: Icon(
                 _volume > 0 ? AppIcons.volumeUp() : AppIcons.volumeOff(),
-                color: Colors.white70,
+                color: AppColors.white70,
                 size: 20,
               )),
             ),
@@ -1547,9 +1548,9 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   trackHeight: 2.5,
                   thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                   overlayShape: SliderComponentShape.noOverlay,
-                  activeTrackColor: Colors.white,
-                  inactiveTrackColor: Colors.white30,
-                  thumbColor: Colors.white,
+                  activeTrackColor: AppColors.white,
+                  inactiveTrackColor: AppColors.white30,
+                  thumbColor: AppColors.white,
                 ),
                 child: Slider(
                   value: _volume,
@@ -1566,7 +1567,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _initLive,
 
-              child: Tooltip(message: '重新加载流', child: AppIcon(AppIcons.refresh(), color: Colors.white70, size: 20)),
+              child: Tooltip(message: '重新加载流', child: AppIcon(AppIcons.refresh(), color: AppColors.white70, size: 20)),
             ),
 
             // 10. 网页全屏（In-app 全屏）
@@ -1579,7 +1580,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   _inAppFullscreen
                       ? AppIcons.inAppFullscreen(active: true)
                       : AppIcons.inAppFullscreen(active: false),
-                  color: Colors.white70,
+                  color: AppColors.white70,
                   size: 20,
                 )),
               ),
@@ -1591,7 +1592,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               child: Tooltip(message: _fullscreen ? '退出全屏 (F / Esc)' : '全屏 (F)', child: Icon(
                 _fullscreen ? AppIcons.fullscreen(active: true) : AppIcons.fullscreen(active: false),
-                color: Colors.white70,
+                color: AppColors.white70,
                 size: 22,
               )),
             ),
@@ -1614,11 +1615,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           : '直播中';
       icon = AppIcons.recording();
     } else if (_liveStatus == 2) {
-      badgeColor = Colors.orangeAccent;
+      badgeColor = AppColors.orangeAccent;
       badgeText = '轮播中';
       icon = AppIcons.replay();
     } else {
-      badgeColor = Colors.white54;
+      badgeColor = AppColors.white54;
       badgeText = '未开播';
       icon = AppIcons.radio(selected: false);
     }
@@ -1667,7 +1668,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             borderRadius: BorderRadius.zero,
           ),
         Container(
-          color: Colors.black.withValues(alpha: 0.75),
+          color: AppColors.black.withValues(alpha: 0.75),
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1675,12 +1676,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 Icon(
                   isRound ? Icons.repeat : Icons.sensors_off_outlined,
                   size: 48,
-                  color: isRound ? Colors.orangeAccent : Colors.white60,
+                  color: isRound ? AppColors.orangeAccent : AppColors.white60,
                 ),
                 const SizedBox(height: 12),
                 Text(
                   _errorMessage ?? offlineText,
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  style: const TextStyle(color: AppColors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
                 FilledButton.tonal(
@@ -1785,7 +1786,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       Icon(
                         Icons.local_fire_department,
                         size: 14,
-                        color: Colors.orange.shade700,
+                        color: AppColors.orange700,
                       ),
                       const SizedBox(width: 2),
                       Text(
@@ -1793,7 +1794,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: Colors.orange.shade700,
+                          color: AppColors.orange700,
                         ),
                       ),
                     ],
@@ -1871,7 +1872,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   height: 7,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _isLiving ? Colors.greenAccent : Colors.grey,
+                    color: _isLiving ? AppColors.greenAccent : AppColors.grey,
                   ),
                 ),
                 const SizedBox(width: 5),
@@ -2237,7 +2238,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.white,
                       ),
                     )
                   : Row(

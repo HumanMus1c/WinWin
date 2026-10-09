@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/theme/app_colors.dart';
 
 abstract final class BiliUtils {
   static bool isDefaultFav(int? attr) {
@@ -34,7 +35,7 @@ abstract final class BiliUtils {
       style: TextStyle(
         fontSize: height,
         fontWeight: FontWeight.bold,
-        color: isSeniorMember ? Colors.orange : Colors.blue,
+        color: isSeniorMember ? AppColors.orange : AppColors.blue,
       ),
     );
   }

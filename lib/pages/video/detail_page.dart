@@ -5,6 +5,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIcon
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
@@ -461,7 +462,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 全屏/网页全屏时标题条转纯黑（与播放器底色一致）；其余沿用主题背景。
   void _syncTitleBarBackdrop() {
     if (_fullscreen || _inAppFullscreen) {
-      pushTitleBarBackdrop(this, Colors.black);
+      pushTitleBarBackdrop(this, AppColors.black);
     } else {
       clearTitleBarBackdrop(this);
     }
@@ -1050,7 +1051,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     final String? upName = _detailState.dataOrNull?.owner?.name;
     final isFillWindow = _fullscreen || _inAppFullscreen;
     return AppScaffold(
-      backgroundColor: isFillWindow ? Colors.black : null,
+      backgroundColor: isFillWindow ? AppColors.black : null,
       // 本页自带渐变顶栏（含返回按钮，覆盖在播放器上显隐）；AppScaffold
       // 不再预留顶部安全行与悬浮返回，避免双顶栏（50px 空白 + 双返回按钮）。
       // 全屏/应用内全屏时更需整窗无安全行，保证播放器真正 edge-to-edge。
@@ -1307,13 +1308,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             const Icon(
               Icons.videocam_off_outlined,
               size: 44,
-              color: Colors.white54,
+              color: AppColors.white54,
             ),
             const SizedBox(height: Style.md),
             Text(
               _friendlyVideoError(code, errMsg),
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Colors.white70),
+              style: const TextStyle(fontSize: 14, color: AppColors.white70),
             ),
             const SizedBox(height: Style.lg),
             FilledButton.tonal(
@@ -1398,7 +1399,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           child: Row(
             children: [
               AppBackButton(
-                color: overVideo ? Colors.white : barContrast.contentColor,
+                color: overVideo ? AppColors.white : barContrast.contentColor,
                 shadows: overVideo ? ContrastStyle.glyphShadows : null,
                 size: 24,
                 onBeforePop: () {
@@ -1463,7 +1464,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
         // 浮动/过渡态（overVideo 或滚动渐变）：朝下的纯渐进式压暗阴影，轻盈通透且零 GPU 滤镜开销
         final topColor = overVideo
-            ? Colors.black.withValues(
+            ? AppColors.black.withValues(
                 alpha: (0.45 * (1.0 - opacity) + 0.70 * opacity).clamp(0.0, 1.0))
             : tokens.colors.background
                 .withValues(alpha: (opacity * 0.95).clamp(0.0, 1.0));
@@ -1484,7 +1485,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   colors: [
                     topColor,
                     topColor.withValues(alpha: topColor.a * 0.4),
-                    Colors.transparent,
+                    AppColors.transparent,
                   ],
                 ),
               ),
@@ -2358,7 +2359,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.white,
                       ),
                     )
                   : const Text('发送'),
@@ -3095,7 +3096,7 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
       if (_isHovered) {
         label = '取消关注';
         icon = AppIcons.clear();
-        color = Colors.red;
+        color = AppColors.red;
       } else {
         label = '已关注';
         icon = AppIcons.check();

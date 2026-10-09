@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
@@ -156,7 +157,7 @@ class VideoCardH extends StatelessWidget {
                               child: LinearProgressIndicator(
                                 value: progress.clamp(0.0, 1.0),
                                 minHeight: 2,
-                                backgroundColor: Colors.transparent,
+                                backgroundColor: AppColors.transparent,
                                 valueColor: AlwaysStoppedAnimation(
                                   tokens.colors.primary,
                                 ),

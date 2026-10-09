@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -263,7 +264,7 @@ class _HistoryPageState extends State<HistoryPage> {
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
             child: const Text('清空'),
           ),
         ],
@@ -536,7 +537,7 @@ class _HistoryCard extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: progressFraction,
                             minHeight: 2.5,
-                            backgroundColor: Colors.black38,
+                            backgroundColor: AppColors.black38,
                             valueColor: AlwaysStoppedAnimation(cs.primary),
                           ),
                         ),

@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressable, MiuixSquircleBorder;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -84,7 +85,7 @@ class _PgcPageState extends State<PgcPage>
                 return Padding(
                   padding: const EdgeInsets.only(right: Style.sm),
                   child: Material(
-                    color: Colors.transparent,
+                    color: AppColors.transparent,
                     child: MiuixPressable(
                       borderRadius: shapes.pillBorder,
                       onPressed: () {
@@ -109,7 +110,7 @@ class _PgcPageState extends State<PgcPage>
                           border: Border.all(
                             color: isSelected
                                 ? cs.primary.withValues(alpha: 0.45)
-                                : Colors.transparent,
+                                : AppColors.transparent,
                             width: 1,
                           ),
                         ),
@@ -712,14 +713,14 @@ class _MyBangumiCard extends StatelessWidget {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.pink.withValues(alpha: 0.9),
+                            color: AppColors.pink.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             badge!,
                             style: const TextStyle(
                               fontSize: 10,
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -735,14 +736,14 @@ class _MyBangumiCard extends StatelessWidget {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
+                            color: AppColors.black.withValues(alpha: 0.65),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             indexShow!,
                             style: const TextStyle(
                               fontSize: 9,
-                              color: Colors.white,
+                              color: AppColors.white,
                             ),
                           ),
                         ),
@@ -869,14 +870,14 @@ class _PgcCard extends StatelessWidget {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.pink.withValues(alpha: 0.9),
+                            color: AppColors.pink.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             _badge!,
                             style: const TextStyle(
                               fontSize: 10,
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -892,14 +893,14 @@ class _PgcCard extends StatelessWidget {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.9),
+                            color: AppColors.orange.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             _score!.toStringAsFixed(1),
                             style: const TextStyle(
                               fontSize: 10,
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -915,14 +916,14 @@ class _PgcCard extends StatelessWidget {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
+                            color: AppColors.black.withValues(alpha: 0.65),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             _orderText!,
                             style: const TextStyle(
                               fontSize: 9,
-                              color: Colors.white,
+                              color: AppColors.white,
                             ),
                           ),
                         ),

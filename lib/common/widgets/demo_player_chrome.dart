@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/demo/demo_player_presets.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
@@ -114,7 +115,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
               child: Icon(
                 AppIcons.play(active: true),
                 size: 56,
-                color: Colors.white,
+                color: AppColors.white,
                 shadows: ContrastStyle.glyphShadows,
               ),
             ),
@@ -134,7 +135,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                     colors: [
                       Color(0x73000000),
                       Color(0x28000000),
-                      Colors.transparent,
+                      AppColors.transparent,
                     ],
                   ),
                 ),
@@ -167,7 +168,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                                   TextSpan(
                                     text: posText,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: AppColors.white,
                                       fontSize: 12,
                                       shadows: ContrastStyle.glyphShadows,
                                     ),
@@ -175,7 +176,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                                   TextSpan(
                                     text: ' / $durText',
                                     style: const TextStyle(
-                                      color: Colors.white70,
+                                      color: AppColors.white70,
                                       fontSize: 12,
                                       shadows: ContrastStyle.glyphShadows,
                                     ),
@@ -187,10 +188,10 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                             _capsule(
                               background: _danmakuOn
                                   ? biliBlue.withValues(alpha: 0.28)
-                                  : Colors.black.withValues(alpha: 0.35),
+                                  : AppColors.black.withValues(alpha: 0.35),
                               borderColor: _danmakuOn
                                   ? biliBlue.withValues(alpha: 0.45)
-                                  : Colors.white.withValues(alpha: 0.15),
+                                  : AppColors.white.withValues(alpha: 0.15),
                               onTap: _toggleDanmaku,
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -200,7 +201,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                                     size: 16.5,
                                     color: _danmakuOn
                                         ? const Color(0xFF00AEEC)
-                                        : Colors.white.withValues(alpha: 0.85),
+                                        : AppColors.white.withValues(alpha: 0.85),
                                     shadows: ContrastStyle.glyphShadows,
                                   ),
                                   const SizedBox(width: Style.xs),
@@ -209,7 +210,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                                     style: TextStyle(
                                       color: _danmakuOn
                                           ? const Color(0xFF00AEEC)
-                                          : Colors.white.withValues(
+                                          : AppColors.white.withValues(
                                               alpha: 0.85,
                                             ),
                                       fontSize: 12,
@@ -230,8 +231,8 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                               active: _speed != 1.0,
                             ),
                             _capsule(
-                              background: Colors.black.withValues(alpha: 0.35),
-                              borderColor: Colors.white.withValues(alpha: 0.15),
+                              background: AppColors.black.withValues(alpha: 0.35),
+                              borderColor: AppColors.white.withValues(alpha: 0.15),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -239,7 +240,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                                     AppIcons.subtitle(active: false),
                                     size: 16.5,
                                     color:
-                                        Colors.white.withValues(alpha: 0.85),
+                                        AppColors.white.withValues(alpha: 0.85),
                                     shadows: ContrastStyle.glyphShadows,
                                   ),
                                   const SizedBox(width: Style.xs),
@@ -247,7 +248,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                                     '字幕',
                                     style: TextStyle(
                                       color:
-                                          Colors.white.withValues(alpha: 0.85),
+                                          AppColors.white.withValues(alpha: 0.85),
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -298,7 +299,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                   Container(
                     height: 3,
                     decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: AppColors.white24,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -307,7 +308,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                     child: Container(
                       height: 3,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
+                        color: AppColors.white.withValues(alpha: 0.92),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -318,7 +319,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                       width: 12,
                       height: 12,
                       decoration: const BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.white,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -343,7 +344,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
         child: Icon(
           icon,
           size: first ? 20 : 18,
-          color: Colors.white,
+          color: AppColors.white,
           shadows: ContrastStyle.glyphShadows,
         ),
       ),
@@ -359,13 +360,13 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
         horizontal: Style.sm,
         vertical: 6,
       ),
-      hoverColor: Colors.white.withValues(alpha: 0.12),
+      hoverColor: AppColors.white.withValues(alpha: 0.12),
       child: ContrastText(
         text,
         style: TextStyle(
           color: active
               ? const Color(0xFF00AEEC)
-              : Colors.white.withValues(alpha: 0.85),
+              : AppColors.white.withValues(alpha: 0.85),
           fontSize: 12,
           fontWeight: active ? FontWeight.bold : FontWeight.normal,
         ),
@@ -394,7 +395,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
           horizontal: 9,
           vertical: 5,
         ),
-        hoverColor: Colors.white.withValues(alpha: 0.12),
+        hoverColor: AppColors.white.withValues(alpha: 0.12),
         child: child,
       ),
     );

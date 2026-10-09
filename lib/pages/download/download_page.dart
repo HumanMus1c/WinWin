@@ -4,6 +4,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
@@ -107,7 +108,7 @@ class _DownloadPageState extends State<DownloadPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('清空', style: TextStyle(color: Colors.red)),
+            child: const Text('清空', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -173,8 +174,8 @@ class _DownloadPageState extends State<DownloadPage> {
                             const Spacer(),
                             TextButton.icon(
                               onPressed: _clearCache,
-                              icon: Icon(AppIcons.delete(), size: 16, color: Colors.red),
-                              label: const Text('清空', style: TextStyle(color: Colors.red)),
+                              icon: Icon(AppIcons.delete(), size: 16, color: AppColors.red),
+                              label: const Text('清空', style: TextStyle(color: AppColors.red)),
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                               ),

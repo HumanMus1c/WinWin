@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/account/account.dart' show NoAccount;
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -54,7 +55,7 @@ class GeetestWebviewDialog extends StatefulWidget {
       context: context,
       barrierDismissible: false,
       // 灰蒙层：与 BiliPai `setDimAmount(0.42)` 对齐（登录页透出、压暗）。
-      barrierColor: Colors.black.withValues(alpha: 0.42),
+      barrierColor: AppColors.black.withValues(alpha: 0.42),
       builder: (_) => GeetestWebviewDialog(gt, challenge),
     );
   }
@@ -126,7 +127,7 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
     //   或极验页自身关闭回调（onClose → Navigator.pop）。
     return SizedBox.expand(
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -265,7 +266,7 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppIcon(AppIcons.error(), size: 48, color: Colors.red),
+            AppIcon(AppIcons.error(), size: 48, color: AppColors.red),
             const SizedBox(height: 16),
             Text(
               message,

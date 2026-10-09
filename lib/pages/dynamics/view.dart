@@ -2,6 +2,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, Miu
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
 import 'package:winwin/common/widgets/dyn/dyn_action_bar.dart';
@@ -553,7 +554,7 @@ class _DynTabPageState extends State<_DynTabPage>
         child: Center(
           child: Text(
             '没有更多了',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(fontSize: 12, color: AppColors.grey),
           ),
         ),
       );
@@ -1744,7 +1745,7 @@ class _DynCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                           decoration: BoxDecoration(
-                            color: isLiving ? Colors.redAccent : Colors.grey.shade600,
+                            color: isLiving ? AppColors.redAccent : AppColors.grey600,
                             borderRadius: BorderRadius.circular(3),
                           ),
                           child: Row(
@@ -1752,14 +1753,14 @@ class _DynCard extends StatelessWidget {
                             children: [
                               Icon(
                                 isLiving ? Icons.sensors : Icons.sensors_off,
-                                color: Colors.white,
+                                color: AppColors.white,
                                 size: 10,
                               ),
                               const SizedBox(width: 2),
                               Text(
                                 isLiving ? (live.badge ?? 'LIVE') : '已结束',
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.white,
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -1905,7 +1906,7 @@ class _DynCard extends StatelessWidget {
                       item.price!,
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.orange.shade700,
+                        color: AppColors.orange700,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1963,8 +1964,8 @@ class _DynCard extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.65),
+                      AppColors.transparent,
+                      AppColors.black.withValues(alpha: 0.65),
                     ],
                   ),
                 ),
@@ -1977,7 +1978,7 @@ class _DynCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1996,14 +1997,14 @@ class _DynCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             AppIcon(AppIcons.viewCount(),
                               size: 12,
-                              color: Colors.white70,
+                              color: AppColors.white70,
                             ),
                             const SizedBox(width: 2),
                             Text(
                               NumUtils.formatNum(archive.play),
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Colors.white70,
+                                color: AppColors.white70,
                               ),
                             ),
                           ],
@@ -2011,14 +2012,14 @@ class _DynCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             AppIcon(AppIcons.danmakuCount(),
                               size: 12,
-                              color: Colors.white70,
+                              color: AppColors.white70,
                             ),
                             const SizedBox(width: 2),
                             Text(
                               NumUtils.formatNum(archive.danmaku),
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Colors.white70,
+                                color: AppColors.white70,
                               ),
                             ),
                           ],

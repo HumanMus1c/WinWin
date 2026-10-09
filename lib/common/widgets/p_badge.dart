@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 
@@ -164,7 +165,7 @@ class POverlayBadge extends StatelessWidget {
     return Container(
       padding: padding ?? const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.70),
+        color: AppColors.black.withValues(alpha: 0.70),
         borderRadius: BorderRadius.all(radius ?? shapes.tiny),
       ),
       child: child,
@@ -193,7 +194,7 @@ class _DurationBadge extends StatelessWidget {
       padding: padding,
       child: Text(
         text,
-        style: TextStyle(fontSize: fontSize, color: Colors.white, height: 1.2),
+        style: TextStyle(fontSize: fontSize, color: AppColors.white, height: 1.2),
       ),
     );
   }
@@ -237,12 +238,12 @@ class _ThemedBadge extends StatelessWidget {
     // - error（警示）：红底白字
     final Color bgColor;
     final Color fgColor;
-    Color border = Colors.transparent;
+    Color border = AppColors.transparent;
 
     switch (type) {
       case PBadgeType.highlight:
         bgColor = isDark ? const Color(0xFFD66011) : const Color(0xFFFF7F24);
-        fgColor = Colors.white;
+        fgColor = AppColors.white;
         break;
       case PBadgeType.status:
         bgColor = cs.secondaryContainer.withValues(alpha: isDark ? 0.55 : 0.45);
@@ -254,15 +255,15 @@ class _ThemedBadge extends StatelessWidget {
         break;
       case PBadgeType.vip:
         bgColor = const Color(0xFFFB7299);
-        fgColor = Colors.white;
+        fgColor = AppColors.white;
         break;
       case PBadgeType.linePrimary:
-        bgColor = Colors.transparent;
+        bgColor = AppColors.transparent;
         fgColor = cs.primary;
         border = cs.primary;
         break;
       case PBadgeType.lineSecondary:
-        bgColor = Colors.transparent;
+        bgColor = AppColors.transparent;
         fgColor = cs.outline;
         border = cs.outlineVariant;
         break;
@@ -287,7 +288,7 @@ class _ThemedBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: resolvedBg,
         borderRadius: BorderRadius.all(r),
-        border: resolvedBorder != Colors.transparent ? Border.all(color: resolvedBorder, width: 0.8) : null,
+        border: resolvedBorder != AppColors.transparent ? Border.all(color: resolvedBorder, width: 0.8) : null,
       ),
       child: Text(
         text,
@@ -328,7 +329,7 @@ class _ProgressBadge extends StatelessWidget {
       ),
       child: Text(
         '${(progress * 100).round()}%',
-        style: const TextStyle(fontSize: 9, color: Colors.white, height: 1.2),
+        style: const TextStyle(fontSize: 9, color: AppColors.white, height: 1.2),
       ),
     );
   }

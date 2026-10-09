@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:winwin/theme/app_colors.dart';
 
 // ── Bilibili Brand ──
 const Color biliPink = Color(0xFFFA7298);
@@ -32,7 +33,7 @@ const Color darkSurfaceVariant = Color(0xFF262626);
 
 // ── Light Mode ──
 const Color lightBackground = iosSystemGray6;
-const Color lightSurface = Colors.white;
+const Color lightSurface = AppColors.white;
 
 // ── Bottom Bar Color Palette ──
 const List<Color> bottomBarColors = [
@@ -46,19 +47,19 @@ const List<Color> bottomBarColors = [
 // ── MD3 Color Tokens（Material Design 3 风格专用） ──
 // 标准 M3 种子色采用 B 站品牌色衍生，与 iOS 蓝区分以体现风格差异。
 const Color md3LightPrimary = Color(0xFF9C4146);      // 品牌粉衍生
-const Color md3LightOnPrimary = Colors.white;
+const Color md3LightOnPrimary = AppColors.white;
 const Color md3LightPrimaryContainer = Color(0xFFFFDADA);
 const Color md3LightOnPrimaryContainer = Color(0xFF400012);
 const Color md3LightSecondary = Color(0xFF775656);
-const Color md3LightOnSecondary = Colors.white;
+const Color md3LightOnSecondary = AppColors.white;
 const Color md3LightSecondaryContainer = Color(0xFFFFDADA);
 const Color md3LightOnSecondaryContainer = Color(0xFF5F1212);
 const Color md3LightTertiary = Color(0xFF735C2E);
-const Color md3LightOnTertiary = Colors.white;
+const Color md3LightOnTertiary = AppColors.white;
 const Color md3LightTertiaryContainer = Color(0xFFFFDEA8);
 const Color md3LightOnTertiaryContainer = Color(0xFF271900);
 const Color md3LightSurface = Color(0xFFFFF8F7);
-const Color md3LightSurfaceContainerLowest = Colors.white;
+const Color md3LightSurfaceContainerLowest = AppColors.white;
 const Color md3LightSurfaceContainerLow = Color(0xFFF7EFEE);
 const Color md3LightSurfaceContainer = Color(0xFFF3EDED);
 const Color md3LightSurfaceContainerHigh = Color(0xFFEEE0E0);
@@ -69,7 +70,7 @@ const Color md3LightOnSurfaceVariant = Color(0xFF534343);
 const Color md3LightOutline = Color(0xFF857373);
 const Color md3LightOutlineVariant = Color(0xFFD8C2C2);
 const Color md3LightError = Color(0xFFBA1A1A);
-const Color md3LightOnError = Colors.white;
+const Color md3LightOnError = AppColors.white;
 const Color md3LightErrorContainer = Color(0xFFFFDAD6);
 const Color md3LightOnErrorContainer = Color(0xFF410E0B);
 
@@ -78,11 +79,11 @@ const Color md3DarkOnPrimary = Color(0xFF5F131F);
 const Color md3DarkPrimaryContainer = Color(0xFF7E2A33);
 const Color md3DarkOnPrimaryContainer = Color(0xFFFFDADA);
 const Color md3DarkSecondary = Color(0xFFE6BDBD);
-const Color md3DarkOnSecondary = Colors.black;
+const Color md3DarkOnSecondary = AppColors.black;
 const Color md3DarkSecondaryContainer = Color(0xFF5D3F3F);
 const Color md3DarkOnSecondaryContainer = Color(0xFFFFDADA);
 const Color md3DarkTertiary = Color(0xFFE2C28D);
-const Color md3DarkOnTertiary = Colors.black;
+const Color md3DarkOnTertiary = AppColors.black;
 const Color md3DarkTertiaryContainer = Color(0xFF594418);
 const Color md3DarkOnTertiaryContainer = Color(0xFFFFDEA8);
 const Color md3DarkSurface = Color(0xFF1A1111);
@@ -97,7 +98,7 @@ const Color md3DarkOnSurfaceVariant = Color(0xFFD8C2C2);
 const Color md3DarkOutline = Color(0xFFA08C8C);
 const Color md3DarkOutlineVariant = Color(0xFF534343);
 const Color md3DarkError = Color(0xFFFFB4AB);
-const Color md3DarkOnError = Colors.black;
+const Color md3DarkOnError = AppColors.black;
 const Color md3DarkErrorContainer = Color(0xFF93000A);
 const Color md3DarkOnErrorContainer = Color(0xFFFFDAD6);
 
@@ -105,14 +106,14 @@ const Color md3DarkOnErrorContainer = Color(0xFFFFDAD6);
 // 参照 BiliPai `BiliMiuixTypography` 的视觉调性：扁平、低 elevation、
 // 更"中性"的表面色，与 MD3 的 tonal 区分层级形成可辨识差异。
 const Color miuixLightPrimary = Color(0xFFFA7298);     // B 站粉
-const Color miuixLightOnPrimary = Colors.white;
+const Color miuixLightOnPrimary = AppColors.white;
 const Color miuixLightPrimaryContainer = Color(0xFFFCE4EC);
 const Color miuixLightOnPrimaryContainer = Color(0xFF4A0E22);
 const Color miuixLightSecondary = Color(0xFF605B5F);
 const Color miuixLightSecondaryContainer = Color(0xFFE8E2E6);
 const Color miuixLightTertiary = Color(0xFF5B6354);
 const Color miuixLightTertiaryContainer = Color(0xFFDFE8D5);
-const Color miuixLightSurface = Colors.white;
+const Color miuixLightSurface = AppColors.white;
 const Color miuixLightSurfaceContainer = Color(0xFFF5F4F5);
 const Color miuixLightSurfaceContainerHighest = Color(0xFFEDEDEF);
 const Color miuixLightBackground = Color(0xFFFAF9FA);

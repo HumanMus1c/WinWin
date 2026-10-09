@@ -2,6 +2,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/video_card/video_card_h.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -315,13 +316,13 @@ class _SearchPanelState extends State<SearchPanel>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 4, vertical: 1),
                             decoration: BoxDecoration(
-                              color: Colors.orange,
+                              color: AppColors.orange,
                               borderRadius: BorderRadius.circular(2),
                             ),
                             child: Text(
                               'Lv${item.level}',
                               style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.white,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold),
                             ),
@@ -360,7 +361,7 @@ class _SearchPanelState extends State<SearchPanel>
                   ),
                   child: const Text(
                     '直播中',
-                    style: TextStyle(color: Colors.white, fontSize: 10),
+                    style: TextStyle(color: AppColors.white, fontSize: 10),
                   ),
                 ),
             ],
@@ -426,7 +427,7 @@ class _SearchPanelState extends State<SearchPanel>
                           child: Text(
                             '${NumUtils.formatNum(item.online)}人气',
                             style: const TextStyle(
-                                color: Colors.white, fontSize: 10),
+                                color: AppColors.white, fontSize: 10),
                           ),
                         ),
                       ),

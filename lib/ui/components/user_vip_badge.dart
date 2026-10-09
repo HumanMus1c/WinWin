@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 
@@ -51,8 +52,8 @@ AccessibleVipBadgeColors resolveVipBadgeColors({
       onSurface,
       onBackground,
       inverseOnSurface,
-      Colors.white,
-      Colors.black,
+      AppColors.white,
+      AppColors.black,
     ],
     minimumContrast: kAccessibleTextMinContrast,
   );
@@ -95,7 +96,7 @@ class UserVipBadge extends StatelessWidget {
     final shapes = tokens.shapes;
 
     final baseContainer = containerColor ?? const Color(0xFFFB7299);
-    final baseContent = contentColor ?? Colors.white;
+    final baseContent = contentColor ?? AppColors.white;
 
     final accessible = resolveVipBadgeColors(
       containerColor: baseContainer,

@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -30,7 +31,7 @@ void showSendDanmakuPanel(
   showAppSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.transparent,
+    backgroundColor: AppColors.transparent,
     builder: (context) => Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -329,7 +330,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                   child: FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: biliPink,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius:
                             BorderRadius.circular(Style.radiusSm),
@@ -342,7 +343,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: AppColors.white,
                             ),
                           )
                         : const Text(
@@ -463,7 +464,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: AppColors.white,
                   ),
                 )
               : const Text('发送');
@@ -533,7 +534,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
             GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: _closeInlineSettings,
-              child: Container(color: Colors.transparent),
+              child: Container(color: AppColors.transparent),
             ),
             Positioned(
               left: panelLeft,
@@ -615,7 +616,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: AppColors.white,
                   ),
                 ),
               )
@@ -675,15 +676,15 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
           color: selected
               ? cs.primaryContainer
               : (isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.05)),
+                  ? AppColors.white.withValues(alpha: 0.08)
+                  : AppColors.black.withValues(alpha: 0.05)),
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
             color: selected
                 ? cs.primary.withValues(alpha: 0.4)
                 : (isDark
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : Colors.black.withValues(alpha: 0.08)),
+                    ? AppColors.white.withValues(alpha: 0.12)
+                    : AppColors.black.withValues(alpha: 0.08)),
             width: 0.5,
           ),
         ),

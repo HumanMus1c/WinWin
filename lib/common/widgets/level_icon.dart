@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/semantics.dart';
+import 'package:winwin/theme/app_colors.dart';
 
 /// 哔哩哔哩官方风格等级图标（纯 Canvas 矢量自绘）。
 ///
@@ -87,7 +88,7 @@ class RenderLevel extends RenderBox {
       ..scale(size.height / LevelCanvas._totalB)
       ..drawLevelBack(paint, bolt: _flash)
       ..drawLevelLv()
-      ..drawLEDigit(_level, paint..color = Colors.white)
+      ..drawLEDigit(_level, paint..color = AppColors.white)
       ..restore();
   }
 
@@ -241,7 +242,7 @@ extension type LevelCanvas(Canvas _) implements Canvas {
 
   static final _lvPicture = () {
     final recorder = PictureRecorder();
-    final paint = Paint()..color = Colors.white;
+    final paint = Paint()..color = AppColors.white;
     final canvas = Canvas(recorder);
 
     const double vLeft = 296;

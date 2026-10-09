@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/theme/colors.dart';
@@ -462,7 +463,7 @@ class ProfileVideoCard extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: progressFraction!.clamp(0.0, 1.0),
                           minHeight: 3,
-                          backgroundColor: Colors.black26,
+                          backgroundColor: AppColors.black26,
                           valueColor: const AlwaysStoppedAnimation<Color>(biliPink),
                         ),
                       ),

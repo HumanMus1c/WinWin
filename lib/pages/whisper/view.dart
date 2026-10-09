@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/bootstrap.dart';
@@ -266,7 +267,7 @@ class _EntryItem extends StatelessWidget {
                       count > 99 ? '99+' : '$count',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                       ),

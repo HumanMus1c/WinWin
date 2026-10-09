@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 
@@ -15,7 +16,7 @@ class MedalWidget extends StatelessWidget {
     required this.medalName,
     required this.level,
     required this.backgroundColor,
-    this.nameColor = Colors.white,
+    this.nameColor = AppColors.white,
     this.fontSize = 10.0,
     this.onTap,
   });
@@ -67,7 +68,7 @@ class MedalWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.92),
+              color: AppColors.white.withValues(alpha: 0.92),
               borderRadius: innerRadius,
             ),
             child: Text(

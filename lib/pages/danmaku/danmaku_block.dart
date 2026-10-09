@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -308,7 +309,7 @@ class _RuleListSection extends StatelessWidget {
               const SizedBox(width: Style.sm),
               MiuixIconButton(
                 backgroundColor: biliPink,
-                child: Icon(AppIcons.add(), color: Colors.white),
+                child: Icon(AppIcons.add(), color: AppColors.white),
                 onPressed: () => onAdd(type),
               ),
             ],
@@ -333,8 +334,8 @@ class _RuleListSection extends StatelessWidget {
                       background: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: Style.lg),
-                        color: Colors.red,
-                        child: AppIcon(AppIcons.delete(), color: Colors.white),
+                        color: AppColors.red,
+                        child: AppIcon(AppIcons.delete(), color: AppColors.white),
                       ),
                       confirmDismiss: (_) async {
                         onDelete(type, r);

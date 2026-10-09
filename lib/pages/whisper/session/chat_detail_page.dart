@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
@@ -321,7 +322,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white),
                     )
                   : AppIcon(
                       AppIcons.send(),
@@ -537,7 +538,7 @@ class _ChatBubble extends StatelessWidget {
       builder: (ctx) {
         final size = MediaQuery.sizeOf(ctx);
         return Dialog(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.transparent,
           child: InteractiveViewer(
             child: Image.network(
               url,

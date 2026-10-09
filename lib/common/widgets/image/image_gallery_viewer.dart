@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -63,7 +64,7 @@ class _ImageGalleryRoute extends PopupRoute<void> {
   Duration get reverseTransitionDuration => const Duration(milliseconds: 240);
 
   @override
-  Color? get barrierColor => Colors.transparent;
+  Color? get barrierColor => AppColors.transparent;
 
   @override
   bool get barrierDismissible => true;
@@ -313,7 +314,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
     HapticFeedback.mediumImpact();
     showAppSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (ctx) {
         final cs = AppThemeHost.of(ctx).colors;
         return Container(
@@ -425,7 +426,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
       child: AppScaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         body: ValueListenableBuilder<_GalleryDragState>(
           valueListenable: _dragNotifier,
           child: galleryPageView,
@@ -436,7 +437,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                 (1.0 - dragState.progress * 0.35).clamp(0.5, 1.0);
 
             return Container(
-              color: Colors.black.withValues(alpha: bgAlpha),
+              color: AppColors.black.withValues(alpha: bgAlpha),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -468,13 +469,13 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                       minWidth: 52,
                       minHeight: 52,
                       onPressed: _prevPage,
-                      backgroundColor: Colors.black.withValues(alpha: 0.5),
+                      backgroundColor: AppColors.black.withValues(alpha: 0.5),
                       child: Tooltip(
                         message: '上一张 (←)',
                         child: AppIcon(
                           AppIcons.galleryPrev(),
                           size: 28,
-                          color: Colors.white,
+                          color: AppColors.white,
                         ),
                       ),
                     ),
@@ -492,13 +493,13 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                       minWidth: 52,
                       minHeight: 52,
                       onPressed: _nextPage,
-                      backgroundColor: Colors.black.withValues(alpha: 0.5),
+                      backgroundColor: AppColors.black.withValues(alpha: 0.5),
                       child: Tooltip(
                         message: '下一张 (→)',
                         child: AppIcon(
                           AppIcons.chevronForward(),
                           size: 28,
-                          color: Colors.white,
+                          color: AppColors.white,
                         ),
                       ),
                     ),
@@ -517,8 +518,8 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.7),
-                        Colors.transparent,
+                        AppColors.black.withValues(alpha: 0.7),
+                        AppColors.transparent,
                       ],
                     ),
                   ),
@@ -532,17 +533,17 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
+                            color: AppColors.black.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: AppColors.white.withValues(alpha: 0.2),
                               width: 0.5,
                             ),
                           ),
                           child: Text(
                             '${_currentIndex + 1} / $total',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 1,
@@ -553,13 +554,13 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                         // 保存到本地
                         MiuixIconButton(
                           backgroundColor:
-                              Colors.black.withValues(alpha: 0.4),
+                              AppColors.black.withValues(alpha: 0.4),
                           child: Tooltip(
                             message: '保存图片',
                             child: AppIcon(
                               AppIcons.download(),
                               size: 18,
-                              color: Colors.white,
+                              color: AppColors.white,
                             ),
                           ),
                           onPressed: () {
@@ -572,13 +573,13 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                         // 复制图片链接
                         MiuixIconButton(
                           backgroundColor:
-                              Colors.black.withValues(alpha: 0.4),
+                              AppColors.black.withValues(alpha: 0.4),
                           child: Tooltip(
                             message: '复制图片链接',
                             child: Icon(
                               AppIcons.copy(),
                               size: 18,
-                              color: Colors.white,
+                              color: AppColors.white,
                             ),
                           ),
                           onPressed: () {
@@ -596,13 +597,13 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                         // 关闭按钮
                         MiuixIconButton(
                           backgroundColor:
-                              Colors.black.withValues(alpha: 0.4),
+                              AppColors.black.withValues(alpha: 0.4),
                           child: Tooltip(
                             message: '关闭 (Esc)',
                             child: AppIcon(
                               AppIcons.clear(),
                               size: 20,
-                              color: Colors.white,
+                              color: AppColors.white,
                             ),
                           ),
                           onPressed: () => Navigator.of(context).pop(),
@@ -836,7 +837,7 @@ class _GalleryItemViewState extends State<_GalleryItemView>
                           height: 32,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white54,
+                            color: AppColors.white54,
                           ),
                         ),
                       ),
@@ -848,7 +849,7 @@ class _GalleryItemViewState extends State<_GalleryItemView>
                       height: 32,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white54,
+                        color: AppColors.white54,
                       ),
                     ),
                   );
@@ -859,12 +860,12 @@ class _GalleryItemViewState extends State<_GalleryItemView>
                     Icon(
                       Icons.broken_image_outlined,
                       size: 56,
-                      color: Colors.white54,
+                      color: AppColors.white54,
                     ),
                     SizedBox(height: 12),
                     Text(
                       '图片加载失败',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                      style: TextStyle(color: AppColors.white70, fontSize: 13),
                     ),
                   ],
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 
@@ -33,7 +34,7 @@ class MiuixDialogShell extends StatelessWidget {
 
     // 阶段5d-L1：M3 分支已移除，Miuix 材质为唯一实现。
     return Dialog(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       elevation: 0,
       shape: const RoundedRectangleBorder(),
       insetPadding: const EdgeInsets.symmetric(

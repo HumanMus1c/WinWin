@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/account_service.dart';
@@ -352,12 +353,12 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2, color: AppColors.white),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AppIcon(AppIcons.loginSubmit(), size: 18, color: Colors.white),
+                      AppIcon(AppIcons.loginSubmit(), size: 18, color: AppColors.white),
                       SizedBox(width: 8),
                       Text('登录'),
                     ],
@@ -668,12 +669,12 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2, color: AppColors.white),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AppIcon(AppIcons.loginSubmit(), size: 18, color: Colors.white),
+                      AppIcon(AppIcons.loginSubmit(), size: 18, color: AppColors.white),
                       SizedBox(width: 8),
                       Text('登录'),
                     ],
@@ -829,7 +830,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.white,
                   borderRadius: BorderRadius.circular(Style.radiusMd),
                 ),
                 child: Image.network(
@@ -843,7 +844,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
                     height: 240,
                     child: Center(
                       child: AppIcon(AppIcons.qrPlaceholder(),
-                          size: 120, color: Colors.grey),
+                          size: 120, color: AppColors.grey),
                     ),
                   ),
                 ),
@@ -873,7 +874,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AppIcon(AppIcons.refresh(), size: 18, color: Colors.white),
+                    AppIcon(AppIcons.refresh(), size: 18, color: AppColors.white),
                     SizedBox(width: 8),
                     Text('刷新二维码'),
                   ],
@@ -1004,12 +1005,12 @@ class _CookieLoginTabState extends State<_CookieLoginTab> {
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2, color: AppColors.white),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AppIcon(AppIcons.loginSubmit(), size: 18, color: Colors.white),
+                      AppIcon(AppIcons.loginSubmit(), size: 18, color: AppColors.white),
                       SizedBox(width: 8),
                       Text('登录'),
                     ],

@@ -1,3 +1,4 @@
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -54,7 +55,7 @@ class _HoverContainerState extends State<HoverContainer> {
           padding: widget.padding,
           decoration: BoxDecoration(
             color:
-                _isHovering ? hoverColor : (widget.color ?? Colors.transparent),
+                _isHovering ? hoverColor : (widget.color ?? AppColors.transparent),
             borderRadius: BorderRadius.circular(widget.borderRadius),
           ),
           child: widget.child,

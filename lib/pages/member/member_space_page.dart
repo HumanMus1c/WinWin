@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
@@ -159,7 +160,7 @@ class _DemoMedalEditState extends State<_DemoMedalEdit> {
         medalName: widget.medalName,
         level: widget.level,
         backgroundColor: widget.backgroundColor ?? biliPink,
-        nameColor: widget.nameColor ?? Colors.white,
+        nameColor: widget.nameColor ?? AppColors.white,
         onTap: () {
           showToast(context, '粉丝勋章: ${widget.medalName} Lv.${widget.level}');
         },
@@ -191,7 +192,7 @@ class _DemoMedalEditState extends State<_DemoMedalEdit> {
               decoration: BoxDecoration(
                 color: _hovered
                     ? cs.primary.withValues(alpha: 0.10)
-                    : Colors.transparent,
+                    : AppColors.transparent,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: (widget.visible || hasOverride)
@@ -199,7 +200,7 @@ class _DemoMedalEditState extends State<_DemoMedalEdit> {
                       medalName: name,
                       level: level,
                       backgroundColor: bg,
-                      nameColor: widget.nameColor ?? Colors.white,
+                      nameColor: widget.nameColor ?? AppColors.white,
                     )
                   : const SizedBox(width: 64, height: 16),
             ),
@@ -863,10 +864,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 child: Tooltip(message: '返回', child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.35),
+                    color: AppColors.black.withValues(alpha: 0.35),
                     shape: BoxShape.circle,
                   ),
-                  child: AppIcon(AppIcons.back(), color: Colors.white, size: 20),
+                  child: AppIcon(AppIcons.back(), color: AppColors.white, size: 20),
                 )),
               ),
               actions: [
@@ -878,10 +879,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.35),
+                        color: AppColors.black.withValues(alpha: 0.35),
                         shape: BoxShape.circle,
                       ),
-                      child: AppIcon(AppIcons.share(), color: Colors.white, size: 20),
+                      child: AppIcon(AppIcons.share(), color: AppColors.white, size: 20),
                     ),
                   ),
                 // 阶段5d-L1：M3 冻结分支已移除
@@ -917,12 +918,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.35),
+                          color: AppColors.black.withValues(alpha: 0.35),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           AppIcons.more(),
-                          color: Colors.white,
+                          color: AppColors.white,
                           size: 20,
                         ),
                       ),
@@ -1082,8 +1083,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withValues(alpha: 0.4),
-                Colors.transparent,
+                AppColors.black.withValues(alpha: 0.4),
+                AppColors.transparent,
                 tokens.colors.background.withValues(alpha: 0.8),
                 tokens.colors.background,
               ],
@@ -1149,7 +1150,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       border: Border.all(color: cs.surface, width: 3),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
+                          color: AppColors.black.withValues(alpha: 0.15),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -1190,8 +1191,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                           Icons.offline_bolt,
                           size: 20,
                           color: card?.officialVerify?.type == 0
-                              ? Colors.amber.shade600
-                              : Colors.blue.shade600,
+                              ? AppColors.amber600
+                              : AppColors.blue600,
                         ),
                       ),
                     ),
@@ -1223,7 +1224,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                         : biliPink,
                     foregroundColor: _relationStatus != 0
                         ? cs.onSurfaceVariant
-                        : Colors.white,
+                        : AppColors.white,
                     padding: const EdgeInsets.symmetric(horizontal: Style.lg, vertical: Style.sm),
                   ),
                   child: Row(
@@ -1336,7 +1337,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   Icon(
                     Icons.verified_user_outlined,
                     size: 14,
-                    color: Colors.amber.shade700,
+                    color: AppColors.amber700,
                   ),
                   const SizedBox(width: 4),
                   Flexible(
@@ -1446,15 +1447,15 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: Style.md, vertical: Style.xs),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.15),
+                color: AppColors.red.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(Style.radiusSm),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  AppIcon(AppIcons.block(), size: 16, color: Colors.red),
+                  AppIcon(AppIcons.block(), size: 16, color: AppColors.red),
                   SizedBox(width: Style.sm),
-                  Text('该账号当前处于封禁状态', style: TextStyle(color: Colors.red, fontSize: 12)),
+                  Text('该账号当前处于封禁状态', style: TextStyle(color: AppColors.red, fontSize: 12)),
                 ],
               ),
             ),
@@ -1522,7 +1523,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 height: 22,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(color: AppColors.white, width: 1.5),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: (items[i].face?.isNotEmpty ?? false)
@@ -1534,9 +1535,9 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                             ImageUtils.decodeClamp(22, context, max: 256),
                         memCacheHeight:
                             ImageUtils.decodeClamp(22, context, max: 256),
-                        errorBuilder: (_, _, _) => const ColoredBox(color: Colors.grey),
+                        errorBuilder: (_, _, _) => const ColoredBox(color: AppColors.grey),
                       )
-                    : const ColoredBox(color: Colors.grey),
+                    : const ColoredBox(color: AppColors.grey),
               ),
             ),
         ],
@@ -1997,7 +1998,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   ],
                 ),
               ),
-              AppIcon(AppIcons.chevronForward(), size: 20, color: Colors.grey),
+              AppIcon(AppIcons.chevronForward(), size: 20, color: AppColors.grey),
             ],
           ),
         ),
@@ -2378,7 +2379,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.65)],
+                    colors: [AppColors.transparent, AppColors.black.withValues(alpha: 0.65)],
                   ),
                 ),
                 child: Column(
@@ -2390,7 +2391,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -2403,11 +2404,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                             PBadge(text: archive.durationText, type: PBadgeType.duration),
                           if (archive.play != null) ...[
                             const SizedBox(width: 6),
-                            AppIcon(AppIcons.viewCount(), size: 12, color: Colors.white70),
+                            AppIcon(AppIcons.viewCount(), size: 12, color: AppColors.white70),
                             const SizedBox(width: 2),
                             Text(
                               NumUtils.formatNum(archive.play),
-                              style: const TextStyle(fontSize: 11, color: Colors.white70),
+                              style: const TextStyle(fontSize: 11, color: AppColors.white70),
                             ),
                           ],
                         ],
@@ -2664,12 +2665,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(
-                            color: Colors.redAccent,
+                            color: AppColors.redAccent,
                             borderRadius: BorderRadius.circular(3),
                           ),
                           child: const Text(
                             'LIVE',
-                            style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: AppColors.white, fontSize: 9, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
@@ -2785,7 +2786,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     item.price!,
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.orange.shade700,
+                      color: AppColors.orange700,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -2950,15 +2951,15 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6),
+                          color: AppColors.black.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            AppIcon(AppIcons.lock(), size: 10, color: Colors.white),
+                            AppIcon(AppIcons.lock(), size: 10, color: AppColors.white),
                             SizedBox(width: 2),
-                            Text('私密', style: TextStyle(color: Colors.white, fontSize: 10)),
+                            Text('私密', style: TextStyle(color: AppColors.white, fontSize: 10)),
                           ],
                         ),
                       ),

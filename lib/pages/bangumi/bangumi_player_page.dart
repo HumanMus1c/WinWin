@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -772,7 +773,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         focusNode: _keyboardFocusNode,
         onKeyEvent: _handleKey,
         child: AppScaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: AppColors.black,
           body: _withDemoOverlay(
             playerController != null
                 ? PlayerPanel(
@@ -807,7 +808,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   Widget _buildPlayerContent() {
     return _withDemoOverlay(
       Container(
-        color: Colors.black,
+        color: AppColors.black,
         child: playerController != null
             ? PlayerPanel(
                 controller: playerController!,
@@ -863,7 +864,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           child: Row(
             children: [
               AppBackButton(
-                color: overVideo ? Colors.white : barContrast.contentColor,
+                color: overVideo ? AppColors.white : barContrast.contentColor,
                 shadows: overVideo ? ContrastStyle.glyphShadows : null,
                 size: 24,
                 onBeforePop: () {
@@ -902,7 +903,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 },
 
                 child: Tooltip(message: '查看番剧详情', child: AppIcon(AppIcons.info(),
-                  color: overVideo ? Colors.white : barContrast.contentColor,
+                  color: overVideo ? AppColors.white : barContrast.contentColor,
                   shadows: overVideo ? ContrastStyle.glyphShadows : null,
                 )),
               ),
@@ -912,7 +913,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
                 child: Tooltip(message: '画中画', child: Icon(
                   AppIcons.pip(),
-                  color: overVideo ? Colors.white : barContrast.contentColor,
+                  color: overVideo ? AppColors.white : barContrast.contentColor,
                   shadows: overVideo ? ContrastStyle.glyphShadows : null,
                 )),
               ),
@@ -955,7 +956,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
         // 浮动/过渡态（overVideo 或滚动渐变）：朝下的纯渐进式压暗阴影，轻盈通透且零 GPU 滤镜开销
         final topColor = overVideo
-            ? Colors.black.withValues(
+            ? AppColors.black.withValues(
                 alpha: (0.45 * (1.0 - opacity) + 0.70 * opacity).clamp(0.0, 1.0))
             : tokens.colors.background
                 .withValues(alpha: (opacity * 0.95).clamp(0.0, 1.0));
@@ -976,7 +977,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   colors: [
                     topColor,
                     topColor.withValues(alpha: topColor.a * 0.4),
-                    Colors.transparent,
+                    AppColors.transparent,
                   ],
                 ),
               ),
@@ -1272,14 +1273,14 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
                                       decoration: BoxDecoration(
-                                        color: ep.badge!.contains('会员') ? Colors.orange : Colors.pink,
+                                        color: ep.badge!.contains('会员') ? AppColors.orange : AppColors.pink,
                                         borderRadius: BorderRadius.circular(2),
                                       ),
                                       child: Text(
                                         ep.badge!,
                                         style: const TextStyle(
                                           fontSize: 8,
-                                          color: Colors.white,
+                                          color: AppColors.white,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -1287,11 +1288,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                   ),
                                 if (isCurrent)
                                   Container(
-                                    color: Colors.black.withValues(alpha: 0.45),
+                                    color: AppColors.black.withValues(alpha: 0.45),
                                     child: Center(
                                       child: Icon(
                                         AppIcons.play(active: true),
-                                        color: Colors.white,
+                                        color: AppColors.white,
                                         size: 24,
                                       ),
                                     ),
@@ -2023,7 +2024,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.white,
                       ),
                     )
                   : const Text('发送'),
@@ -2113,7 +2114,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             Icon(
               AppIcons.favorite(active: _isFollowed),
               size: 16,
-              color: _isFollowed ? Colors.pink : null,
+              color: _isFollowed ? AppColors.pink : null,
             ),
             const SizedBox(width: 4),
             Text(_followStatusLabel),
@@ -2225,14 +2226,14 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       Row(
                         children: [
                           if (widget.detail.rating != null && widget.detail.rating!.score > 0) ...[
-                            AppIcon(AppIcons.favorite(active: true), color: Colors.amber, size: 15),
+                            AppIcon(AppIcons.favorite(active: true), color: AppColors.amber, size: 15),
                             const SizedBox(width: 2),
                             Text(
                               widget.detail.rating!.score.toStringAsFixed(1),
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.amber,
+                                color: AppColors.amber,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -2499,7 +2500,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 });
               }
             },
-            child: const Text('取消追番', style: TextStyle(color: Colors.red)),
+            child: const Text('取消追番', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/http/dyn.dart';
@@ -151,7 +152,7 @@ class _DynRepostDialogState extends State<DynRepostDialog> {
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: AppColors.white,
                   ),
                 )
               : const Text('转发'),

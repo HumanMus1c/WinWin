@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
@@ -113,7 +114,7 @@ class SimpleCommentInputBar extends StatelessWidget {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.white,
                       ),
                     )
                   : const Text('发送'),

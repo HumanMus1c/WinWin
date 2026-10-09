@@ -2,6 +2,7 @@ import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
@@ -151,7 +152,7 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
                                 ImageUtils.decodeClamp(110, context, max: 1080),
                             memCacheHeight:
                                 ImageUtils.decodeClamp(70, context, max: 1080),
-                            errorBuilder: (_, _, _) => const ColoredBox(color: Colors.grey),
+                            errorBuilder: (_, _, _) => const ColoredBox(color: AppColors.grey),
                           ),
                         ),
                         const SizedBox(width: Style.md),

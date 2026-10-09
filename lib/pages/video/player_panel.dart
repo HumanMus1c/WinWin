@@ -7,6 +7,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/progress_bar/audio_video_progress_bar.dart';
@@ -391,7 +392,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     final c = widget.controller;
     // 安全检查：controller 已销毁时不渲染，避免访问已释放的资源
     if (c.disposed) {
-      return const ColoredBox(color: Colors.black);
+      return const ColoredBox(color: AppColors.black);
     }
     return PlayerFocus(
       controller: c,
@@ -415,7 +416,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
         onEnter: (_) => _onPointerActivity(),
         onExit: (_) => _hideControlsNow(),
         child: ColoredBox(
-          color: Colors.black,
+          color: AppColors.black,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final panelWidth = (constraints.maxWidth / 3).clamp(240.0, 560.0);
@@ -504,7 +505,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(6),
                                   child: AppBackButton(
-                                    color: Colors.white,
+                                    color: AppColors.white,
                                     shadows: ContrastStyle.glyphShadows,
                                     size: 22,
                                     tooltip: widget.fullscreen
@@ -556,7 +557,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   horizontal: Style.lg,
                   vertical: Style.md,
                 ),
-                backgroundColor: Colors.black.withValues(alpha: 0.55),
+                backgroundColor: AppColors.black.withValues(alpha: 0.55),
                 borderRadius: Style.radiusSm,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -565,7 +566,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       feedback.isForward
                           ? AppIcons.fastForward()
                           : AppIcons.fastRewind(),
-                      color: Colors.white,
+                      color: AppColors.white,
                       size: 28,
                       shadows: ContrastStyle.boldGlyphShadows,
                     ),
@@ -573,7 +574,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     ContrastText(
                       '${feedback.isForward ? '+' : '-'}${feedback.deltaSec}s',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -604,7 +605,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   horizontal: Style.lg,
                   vertical: Style.md,
                 ),
-                backgroundColor: Colors.black.withValues(alpha: 0.55),
+                backgroundColor: AppColors.black.withValues(alpha: 0.55),
                 borderRadius: Style.radiusSm,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -619,7 +620,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     const ContrastText(
                       '倍速播放中',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -651,7 +652,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   horizontal: Style.lg,
                   vertical: Style.md,
                 ),
-                backgroundColor: Colors.black.withValues(alpha: 0.55),
+                backgroundColor: AppColors.black.withValues(alpha: 0.55),
                 borderRadius: Style.radiusSm,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -682,7 +683,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     const SizedBox(height: Style.xs),
                     ContrastText(
                       DurationUtils.formatDuration(feedback.target.inSeconds),
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      style: const TextStyle(color: AppColors.white, fontSize: 13),
                       shadows: ContrastStyle.glyphShadows,
                     ),
                   ],
@@ -702,14 +703,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
         shape: BoxShape.circle,
         blur: 16,
         padding: const EdgeInsets.all(Style.xs),
-        backgroundColor: Colors.black.withValues(alpha: 0.45),
+        backgroundColor: AppColors.black.withValues(alpha: 0.45),
         child: MiuixIconButton(
 
           onPressed: _toggleLock,
 
           child: Tooltip(message: '解锁控制条', child: ContrastIcon(
             AppIcons.lock(),
-            color: Colors.white,
+            color: AppColors.white,
             size: 32,
             shadows: ContrastStyle.boldGlyphShadows,
           )),
@@ -779,7 +780,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                           ),
                         )
                       else if (coverVisible)
-                        const ColoredBox(color: Colors.black),
+                        const ColoredBox(color: AppColors.black),
                     ],
                   );
                 },
@@ -826,12 +827,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AppIcon(AppIcons.error(), color: Colors.white70, size: 40),
+          AppIcon(AppIcons.error(), color: AppColors.white70, size: 40),
           const SizedBox(height: Style.sm),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            style: const TextStyle(color: AppColors.white70, fontSize: 14),
           ),
           const SizedBox(height: Style.md),
           TextButton(
@@ -862,12 +863,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 shape: BoxShape.circle,
                 blur: 16,
                 padding: const EdgeInsets.all(Style.md),
-                backgroundColor: Colors.black.withValues(alpha: 0.45),
+                backgroundColor: AppColors.black.withValues(alpha: 0.45),
                 child: ContrastIcon(
                   isCompleted
                       ? AppIcons.replay()
                       : AppIcons.play(active: true),
-                  color: Colors.white,
+                  color: AppColors.white,
                   size: 44,
                   shadows: ContrastStyle.boldGlyphShadows,
                 ),
@@ -892,7 +893,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
             colors: [
               Color(0x73000000), // 底部轻柔渐进压暗 (~45% 黑)
               Color(0x28000000), // 中部微弱过渡暗色 (~16% 黑)
-              Colors.transparent, // 向上延伸至进度条上方平滑消隐至完全透明
+              AppColors.transparent, // 向上延伸至进度条上方平滑消隐至完全透明
             ],
           ),
         ),
@@ -1087,7 +1088,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   TextSpan(
                     text: pos,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontSize: 12,
                       shadows: ContrastStyle.glyphShadows,
                     ),
@@ -1095,7 +1096,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   TextSpan(
                     text: ' / $dur',
                     style: const TextStyle(
-                      color: Colors.white70,
+                      color: AppColors.white70,
                       fontSize: 12,
                       shadows: ContrastStyle.glyphShadows,
                     ),
@@ -1110,7 +1111,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 blur: 8.0,
                 backgroundColor: _chapterPanelOpen
                     ? biliBlue.withValues(alpha: 0.25)
-                    : Colors.black.withValues(alpha: 0.35),
+                    : AppColors.black.withValues(alpha: 0.35),
                 padding: EdgeInsets.zero,
                 child: HoverContainer(
                   onTap: () {
@@ -1122,7 +1123,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     horizontal: 6,
                     vertical: 2,
                   ),
-                  color: Colors.transparent,
+                  color: AppColors.transparent,
                   hoverColor: biliBlue.withValues(alpha: 0.3),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1134,7 +1135,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                           style: TextStyle(
                             color: _chapterPanelOpen
                                 ? biliBlue
-                                : Colors.white.withValues(alpha: 0.88),
+                                : AppColors.white.withValues(alpha: 0.88),
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
                             shadows: ContrastStyle.glyphShadows,
@@ -1146,7 +1147,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       const SizedBox(width: 2),
                       ContrastIcon(AppIcons.chevronForward(),
                         size: 14,
-                        color: _chapterPanelOpen ? biliBlue : Colors.white54,
+                        color: _chapterPanelOpen ? biliBlue : AppColors.white54,
                         shadows: ContrastStyle.glyphShadows,
                       ),
                     ],
@@ -1226,12 +1227,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
                               color: const Color(0xF0181818),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.15),
+                                color: AppColors.white.withValues(alpha: 0.15),
                                 width: 0.5,
                               ),
                               boxShadow: const [
                                 BoxShadow(
-                                  color: Colors.black54,
+                                  color: AppColors.black54,
                                   blurRadius: 6,
                                   offset: Offset(0, 2),
                                 ),
@@ -1245,7 +1246,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                     previewSec.toInt(),
                                   ),
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.white,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -1310,8 +1311,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         barHeight: 3.5,
                         thumbRadius: 6.0,
                         thumbGlowRadius: 16.0,
-                        baseBarColor: Colors.white24,
-                        bufferedBarColor: Colors.white38,
+                        baseBarColor: AppColors.white24,
+                        bufferedBarColor: AppColors.white38,
                         progressBarColor: biliBlue,
                         thumbColor: biliBlue,
                         thumbGlowColor: const Color(0x3300AEEC),
@@ -1365,7 +1366,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                           painter: _ChapterMarkerPainter(
                             chapters: chapters,
                             durationSec: maxSec,
-                            color: Colors.white70,
+                            color: AppColors.white70,
                           ),
                         ),
                       ),
@@ -1412,13 +1413,13 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   horizontal: Style.sm,
                   vertical: 6,
                 ),
-                hoverColor: Colors.white.withValues(alpha: 0.12),
+                hoverColor: AppColors.white.withValues(alpha: 0.12),
                 child: ContrastText(
                   (current >= 0 && current < labels.length)
                       ? labels[current]
                       : '画质',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: AppColors.white.withValues(alpha: 0.85),
                     fontSize: 12,
                   ),
                   shadows: ContrastStyle.glyphShadows,
@@ -1440,10 +1441,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
       padding: EdgeInsets.zero,
       backgroundColor: enabled
           ? biliBlue.withValues(alpha: 0.28)
-          : Colors.black.withValues(alpha: 0.35),
+          : AppColors.black.withValues(alpha: 0.35),
       borderColor: enabled
           ? biliBlue.withValues(alpha: 0.45)
-          : Colors.white.withValues(alpha: 0.15),
+          : AppColors.white.withValues(alpha: 0.15),
       child: HoverContainer(
         onTap: _toggleDanmaku,
         borderRadius: Style.radiusFull,
@@ -1451,7 +1452,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
           horizontal: 9,
           vertical: 5,
         ),
-        hoverColor: Colors.white.withValues(alpha: 0.12),
+        hoverColor: AppColors.white.withValues(alpha: 0.12),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1460,7 +1461,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               size: 16.5,
               color: enabled
                   ? const Color(0xFF00AEEC)
-                  : Colors.white.withValues(alpha: 0.85),
+                  : AppColors.white.withValues(alpha: 0.85),
               shadows: ContrastStyle.glyphShadows,
             ),
             const SizedBox(width: Style.xs),
@@ -1469,7 +1470,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               style: TextStyle(
                 color: enabled
                     ? const Color(0xFF00AEEC)
-                    : Colors.white.withValues(alpha: 0.85),
+                    : AppColors.white.withValues(alpha: 0.85),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -1494,10 +1495,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
           padding: EdgeInsets.zero,
           backgroundColor: isActive
               ? biliBlue.withValues(alpha: 0.28)
-              : Colors.black.withValues(alpha: 0.35),
+              : AppColors.black.withValues(alpha: 0.35),
           borderColor: isActive
               ? biliBlue.withValues(alpha: 0.45)
-              : Colors.white.withValues(alpha: 0.15),
+              : AppColors.white.withValues(alpha: 0.15),
           child: HoverContainer(
             onTap: () => showSubtitleSettingsPanel(
               context,
@@ -1509,7 +1510,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               horizontal: 9,
               vertical: 5,
             ),
-            hoverColor: Colors.white.withValues(alpha: 0.12),
+            hoverColor: AppColors.white.withValues(alpha: 0.12),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1518,7 +1519,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   size: 16.5,
                   color: isActive
                       ? const Color(0xFF00AEEC)
-                      : Colors.white.withValues(alpha: 0.85),
+                      : AppColors.white.withValues(alpha: 0.85),
                   shadows: ContrastStyle.glyphShadows,
                 ),
                 const SizedBox(width: Style.xs),
@@ -1527,7 +1528,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   style: TextStyle(
                     color: isActive
                         ? const Color(0xFF00AEEC)
-                        : Colors.white.withValues(alpha: 0.85),
+                        : AppColors.white.withValues(alpha: 0.85),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1612,14 +1613,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   horizontal: Style.sm,
                   vertical: 6,
                 ),
-                hoverColor: Colors.white.withValues(alpha: 0.12),
+                hoverColor: AppColors.white.withValues(alpha: 0.12),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ContrastText(
                       codec,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: AppColors.white.withValues(alpha: 0.85),
                         fontSize: 12,
                       ),
                       shadows: ContrastStyle.glyphShadows,
@@ -1686,14 +1687,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 vertical: Style.xs,
               ),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: bgOpacity),
+                color: AppColors.black.withValues(alpha: bgOpacity),
                 borderRadius: BorderRadius.circular(Style.radiusXs),
               ),
               child: Text(
                 text,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 16 * scale,
                   height: 1.4,
                   fontWeight: fontWeight,
@@ -1702,7 +1703,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                           Shadow(
                             offset: const Offset(0, 1),
                             blurRadius: strokeWidth,
-                            color: Colors.black,
+                            color: AppColors.black,
                           ),
                         ]
                       : null,
@@ -1746,10 +1747,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
           padding: EdgeInsets.zero,
           backgroundColor: isOpen
               ? biliBlue.withValues(alpha: 0.28)
-              : Colors.black.withValues(alpha: 0.35),
+              : AppColors.black.withValues(alpha: 0.35),
           borderColor: isOpen
               ? biliBlue.withValues(alpha: 0.45)
-              : Colors.white.withValues(alpha: 0.15),
+              : AppColors.white.withValues(alpha: 0.15),
           child: HoverContainer(
             onTap: () {
               _setChapterPanelOpen(!_chapterPanelOpen);
@@ -1760,7 +1761,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
               horizontal: 9,
               vertical: 5,
             ),
-            hoverColor: Colors.white.withValues(alpha: 0.12),
+            hoverColor: AppColors.white.withValues(alpha: 0.12),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1769,7 +1770,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   size: 16.5,
                   color: isOpen
                       ? const Color(0xFF00AEEC)
-                      : Colors.white.withValues(alpha: 0.85),
+                      : AppColors.white.withValues(alpha: 0.85),
                   shadows: ContrastStyle.glyphShadows,
                 ),
                 const SizedBox(width: Style.xs),
@@ -1778,7 +1779,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   style: TextStyle(
                     color: isOpen
                         ? const Color(0xFF00AEEC)
-                        : Colors.white.withValues(alpha: 0.85),
+                        : AppColors.white.withValues(alpha: 0.85),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1817,8 +1818,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       duration: const Duration(milliseconds: 260),
                       curve: Curves.easeOutCubic,
                       color: _chapterPanelOpen
-                          ? Colors.black.withValues(alpha: 0.25)
-                          : Colors.transparent,
+                          ? AppColors.black.withValues(alpha: 0.25)
+                          : AppColors.transparent,
                     ),
                   ),
                 ),
@@ -1854,13 +1855,13 @@ class _PlayerPanelState extends State<PlayerPanel> {
                               ),
                               border: Border(
                                 left: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.15),
+                                  color: AppColors.white.withValues(alpha: 0.15),
                                   width: 0.8,
                                 ),
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.5),
+                                  color: AppColors.black.withValues(alpha: 0.5),
                                   blurRadius: 20,
                                   offset: const Offset(-4, 0),
                                 ),
@@ -1877,7 +1878,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                   decoration: BoxDecoration(
                                     border: Border(
                                       bottom: BorderSide(
-                                        color: Colors.white.withValues(
+                                        color: AppColors.white.withValues(
                                           alpha: 0.08,
                                         ),
                                         width: 0.5,
@@ -1888,14 +1889,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                     children: [
                                       Icon(
                                         AppIcons.chapter(),
-                                        color: Colors.white,
+                                        color: AppColors.white,
                                         size: 18,
                                       ),
                                       const SizedBox(width: Style.sm),
                                       Text(
                                         '章节 (${chapters.length})',
                                         style: const TextStyle(
-                                          color: Colors.white,
+                                          color: AppColors.white,
                                           fontSize: 15,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -1907,12 +1908,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                         },
                                         borderRadius: 6.0,
                                         padding: const EdgeInsets.all(4),
-                                        hoverColor: Colors.white.withValues(
+                                        hoverColor: AppColors.white.withValues(
                                           alpha: 0.12,
                                         ),
                                         child: Icon(
                                           AppIcons.clear(),
-                                          color: Colors.white70,
+                                          color: AppColors.white70,
                                           size: 18,
                                         ),
                                       ),
@@ -1970,12 +1971,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                   ? biliBlue.withValues(
                                                       alpha: 0.16,
                                                     )
-                                                  : Colors.transparent,
+                                                  : AppColors.transparent,
                                               hoverColor: isCurrent
                                                   ? biliBlue.withValues(
                                                       alpha: 0.24,
                                                     )
-                                                  : Colors.white.withValues(
+                                                  : AppColors.white.withValues(
                                                       alpha: 0.08,
                                                     ),
                                               child: Row(
@@ -2043,7 +2044,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                           ? biliBlue.withValues(
                                                               alpha: 0.22,
                                                             )
-                                                          : Colors.white
+                                                          : AppColors.white
                                                                 .withValues(
                                                                   alpha: 0.06,
                                                                 ),
@@ -2057,7 +2058,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                       style: TextStyle(
                                                         color: isCurrent
                                                             ? biliBlue
-                                                            : Colors.white
+                                                            : AppColors.white
                                                                   .withValues(
                                                                     alpha: 0.8,
                                                                   ),
@@ -2082,8 +2083,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                           : vp.title,
                                                       style: TextStyle(
                                                         color: isCurrent
-                                                            ? Colors.white
-                                                            : Colors.white
+                                                            ? AppColors.white
+                                                            : AppColors.white
                                                                   .withValues(
                                                                     alpha: 0.9,
                                                                   ),
@@ -2152,12 +2153,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   horizontal: Style.sm,
                   vertical: 6,
                 ),
-                hoverColor: Colors.white.withValues(alpha: 0.12),
+                hoverColor: AppColors.white.withValues(alpha: 0.12),
                 child: ContrastText(
                   speed == 1.0 ? '倍速' : '${speed.toStringAsFixed(1)}x',
                   style: TextStyle(
                     color: speed == 1.0
-                        ? Colors.white.withValues(alpha: 0.85)
+                        ? AppColors.white.withValues(alpha: 0.85)
                         : const Color(0xFF00AEEC),
                     fontSize: 12,
                     fontWeight:
@@ -2180,7 +2181,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
       bottom: 60,
       child: GlassCapsule(
         blur: 16,
-        backgroundColor: Colors.black.withValues(alpha: 0.55),
+        backgroundColor: AppColors.black.withValues(alpha: 0.55),
         borderRadius: Style.radiusSm,
         padding: const EdgeInsets.symmetric(
           horizontal: Style.md,
@@ -2198,7 +2199,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       : (vol > 100
                             ? AppIcons.volumeUp()
                             : AppIcons.volumeDown()),
-                  color: vol > 100 ? Colors.amberAccent : Colors.white,
+                  color: vol > 100 ? AppColors.amberAccent : AppColors.white,
                   size: 18,
                   shadows: ContrastStyle.glyphShadows,
                 );
@@ -2214,8 +2215,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     value: vol.clamp(0.0, Pref.maxVolume).toDouble(),
                     min: 0,
                     max: Pref.maxVolume,
-                    activeColor: vol > 100 ? Colors.amberAccent : biliPink,
-                    inactiveColor: Colors.white24,
+                    activeColor: vol > 100 ? AppColors.amberAccent : biliPink,
+                    inactiveColor: AppColors.white24,
                     onChanged: c.setVolume,
                   );
                 },
@@ -2229,7 +2230,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 return ContrastText(
                   rounded > 100 ? '$rounded% (增益)' : '$rounded%',
                   style: TextStyle(
-                    color: rounded > 100 ? Colors.amberAccent : Colors.white,
+                    color: rounded > 100 ? AppColors.amberAccent : AppColors.white,
                     fontWeight: rounded > 100
                         ? FontWeight.bold
                         : FontWeight.normal,
@@ -2428,7 +2429,7 @@ class _PlayerBarIconButtonState extends State<_PlayerBarIconButton> {
   Widget build(BuildContext context) {
     // 默认温和白 (~82% alpha)，避免纯白在深色控制条上刺目；hover 时提亮至纯白 (100%)
     final effectiveColor = widget.color ??
-        (_isHovering ? Colors.white : Colors.white.withValues(alpha: 0.82));
+        (_isHovering ? AppColors.white : AppColors.white.withValues(alpha: 0.82));
 
     final child = MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
@@ -2444,8 +2445,8 @@ class _PlayerBarIconButtonState extends State<_PlayerBarIconButton> {
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: _isHovering
-                ? Colors.white.withValues(alpha: 0.12)
-                : Colors.transparent,
+                ? AppColors.white.withValues(alpha: 0.12)
+                : AppColors.transparent,
             borderRadius: BorderRadius.circular(6.0),
           ),
           // 动态尺寸/亮度经 IconTheme 注入（hover 提亮）；字形阴影由传入
