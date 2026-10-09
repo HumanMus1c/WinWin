@@ -1,6 +1,7 @@
 import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoIcons;
 import 'package:flutter/widgets.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixScaffold;
+import 'package:flutter_miuix/miuix.dart'
+    show MiuixIconButton, MiuixMotion, MiuixScaffold;
 
 import 'app_theme_host.dart';
 
@@ -16,8 +17,9 @@ import 'app_theme_host.dart';
 ///   悬浮返回按钮（Miuix 图标按钮规范 + 阴影）；
 /// - 顶部安全行右侧承载 [actions]（原顶栏操作按钮的落点）。
 ///
-/// 2026-10-08 起项目去除页面标题栏，由上述安全行 + 悬浮按钮取代。
-class AppScaffold extends StatelessWidget {
+/// 2026-10-08 起项目去除页面标题栏，由上述安全行 + 悬浮按钮取代；
+/// **根页面**（一级页面）传入 [title]，安全行即显示页面标题，并可随滚动收缩。
+class AppScaffold extends StatefulWidget {
   const AppScaffold({
     super.key,
     this.topBar,
@@ -26,8 +28,10 @@ class AppScaffold extends StatelessWidget {
     this.snackbarHost,
     this.popupHost,
     this.backgroundColor,
+    this.title,
     this.showBackButton = true,
     this.reserveTopStrip = true,
+    this.collapsible = true,
     this.actions,
     required this.body,
   });
@@ -56,11 +60,17 @@ class AppScaffold extends StatelessWidget {
   /// 背景色；null 时取当前 Token 的应用背景色。
   final Color? backgroundColor;
 
+  /// 页面标题（**根页面**传入）：显示在顶部安全行左侧（二级页面为返回按钮位置）。
+  final String? title;
+
   /// 是否在顶部安全行左侧提供返回按钮（[Navigator.canPop] 为真时显示）。
   final bool showBackButton;
 
   /// 是否预留顶部安全行（内嵌在别的页面里的子页面可关掉）。
   final bool reserveTopStrip;
+
+  /// 顶部安全行是否随滚动收缩（向下滚动收起、向上滚动展开，Miuix 顶栏行为）。
+  final bool collapsible;
 
   /// 顶部安全行右侧的操作区（刷新/清空/分享等）。
   final List<Widget>? actions;
@@ -69,39 +79,90 @@ class AppScaffold extends StatelessWidget {
   final Widget body;
 
   @override
+  State<AppScaffold> createState() => _AppScaffoldState();
+}
+
+class _AppScaffoldState extends State<AppScaffold> {
+  bool _collapsed = false;
+
+  bool _onScroll(ScrollNotification notification) {
+    if (!widget.collapsible || widget.title == null || !widget.reserveTopStrip) {
+      return false;
+    }
+    const threshold = 8.0;
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta ?? 0;
+      final atTop = notification.metrics.pixels <= 0;
+      if (!_collapsed && delta > threshold && !atTop) {
+        setState(() => _collapsed = true);
+      } else if (_collapsed && (delta < -threshold || atTop)) {
+        setState(() => _collapsed = false);
+      }
+    } else if (notification is ScrollEndNotification &&
+        notification.metrics.pixels <= 0 &&
+        _collapsed) {
+      setState(() => _collapsed = false);
+    }
+    return false;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     return MiuixScaffold(
-      topBar: topBar,
-      bottomBar: bottomBar,
-      floatingActionButton: floatingActionButton,
-      snackbarHost: snackbarHost,
-      popupHost: popupHost,
-      containerColor: backgroundColor ?? tokens.colors.background,
+      topBar: widget.topBar,
+      bottomBar: widget.bottomBar,
+      floatingActionButton: widget.floatingActionButton,
+      snackbarHost: widget.snackbarHost,
+      popupHost: widget.popupHost,
+      containerColor: widget.backgroundColor ?? tokens.colors.background,
       content: (EdgeInsets padding) {
-        final canPop =
-            showBackButton && (Navigator.maybeOf(context)?.canPop() ?? false);
-        final hasActions = actions != null && actions!.isNotEmpty;
-        if (!reserveTopStrip) {
-          return Padding(padding: padding, child: body);
+        final canPop = widget.showBackButton &&
+            (Navigator.maybeOf(context)?.canPop() ?? false);
+        final actions = widget.actions;
+        final hasActions = actions != null && actions.isNotEmpty;
+        if (!widget.reserveTopStrip) {
+          return Padding(padding: padding, child: widget.body);
         }
+        final title = widget.title;
+        final strip = Row(
+          children: [
+            const SizedBox(width: 8),
+            if (canPop) FloatingBackButton(tokens: tokens),
+            if (!canPop && title != null) ...[
+              const SizedBox(width: 16),
+              Text(
+                title,
+                style: tokens.text.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: tokens.colors.onSurface,
+                ),
+              ),
+            ],
+            const Spacer(),
+            if (hasActions) ...actions,
+            const SizedBox(width: 8),
+          ],
+        );
         return Padding(
           padding: padding,
           child: Column(
             children: [
-              SizedBox(
-                height: topStripHeight,
-                child: Row(
-                  children: [
-                    const SizedBox(width: 8),
-                    if (canPop) FloatingBackButton(tokens: tokens),
-                    const Spacer(),
-                    if (hasActions) ...actions!,
-                    const SizedBox(width: 8),
-                  ],
+              // 安全行：向下滚动收起、向上滚动展开（Miuix 顶栏收缩行为）。
+              ClipRect(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: MiuixMotion.standardDecelerate,
+                  height: _collapsed ? 0 : AppScaffold.topStripHeight,
+                  child: strip,
                 ),
               ),
-              Expanded(child: body),
+              Expanded(
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _onScroll,
+                  child: widget.body,
+                ),
+              ),
             ],
           ),
         );
@@ -112,7 +173,7 @@ class AppScaffold extends StatelessWidget {
 
 /// 悬浮返回按钮：Miuix 图标按钮规范（squircle + 按压反馈）+ 额外阴影。
 ///
-/// 尺寸 48（相对初版 32 增大 50%）；Miuix 图标按钮默认 40 且**无阴影**，
+/// 尺寸 42；Miuix 图标按钮默认 40 且**无阴影**，
 /// 按项目要求补一层柔和阴影以在内容上可辨识。
 class FloatingBackButton extends StatelessWidget {
   const FloatingBackButton({super.key, required this.tokens, this.onPressed});
@@ -138,13 +199,13 @@ class FloatingBackButton extends StatelessWidget {
         ),
         child: MiuixIconButton(
           onPressed: onPressed ?? () => Navigator.of(context).maybePop(),
-          minWidth: 48,
-          minHeight: 48,
+          minWidth: 42,
+          minHeight: 42,
           backgroundColor:
               tokens.colors.surfaceContainerHighest.withValues(alpha: 0.92),
           child: Icon(
             CupertinoIcons.chevron_back,
-            size: 26,
+            size: 22,
             color: tokens.colors.onSurfaceVariant,
           ),
         ),

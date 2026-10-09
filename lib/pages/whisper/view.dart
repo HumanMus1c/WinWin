@@ -108,6 +108,7 @@ class _WhisperPageState extends State<WhisperPage>
     final tokens = AppThemeHost.of(context);
     // 四类互动入口固定在顶部，仅下方会话列表可滚动。
     return AppScaffold(
+      title: '消息',
       body: Column(
         children: [
           Padding(

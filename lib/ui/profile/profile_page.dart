@@ -110,6 +110,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final info = service.displayUserInfo;
     final isLogin = service.isLogin;
     return AppScaffold(
+      title: '我的',
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(

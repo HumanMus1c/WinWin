@@ -37,6 +37,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
+      title: '首页',
       body: Stack(
         children: [
           // ── Feed content (lazy IndexedStack preserves per-tab state) ──

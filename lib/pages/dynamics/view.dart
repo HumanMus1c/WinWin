@@ -77,6 +77,7 @@ class _DynamicsPageState extends State<DynamicsPage>
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
+      title: '动态',
       // 仅保留分类标签条（无标题栏），TabBar 直接作为 topBar 槽位。
       topBar: TabBar(
         controller: _tabController,

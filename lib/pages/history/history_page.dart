@@ -288,6 +288,7 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
+      title: '历史',
       actions: [
         if (_items.isNotEmpty)
           IconButton(
