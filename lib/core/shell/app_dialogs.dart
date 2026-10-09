@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixMotion;
 // 过渡期依赖（B7 摘除 material_ui 时替换为 miuix 表面容器）：
-// 面板内容需要一个 Material 祖先，Material 原版面板同样会提供该层。
-import 'package:material_ui/material_ui.dart' show Material;
+// 路由内容需要一个 Material 祖先，Material 原版 DialogRoute 同样会提供该层。
+import 'package:material_ui/material_ui.dart' show Material, MaterialType;
 import 'package:winwin/core/shell/app_theme_host.dart';
 
 import 'app_transition.dart';
@@ -48,8 +48,17 @@ class AppDialogRoute<T> extends PopupRoute<T> {
     BuildContext context,
     Animation<double> animation,
     Animation<double> secondaryAnimation,
-  ) =>
-      builder(context);
+  ) {
+    // 2026-10-09 收口-3：对话框内容统一包一层透明 Material（对齐 AppSheetRoute
+    // 134 行做法与 Material 原版 DialogRoute 契约）。此前无此祖先时，对话框内
+    // 的 Material 控件（TextButton/TextField 等，约 40 个 showAppDialog 调用点）
+    // 在 debug 下红屏、release 下 hover 空崩（当日崩溃日志实锤，含 2 起
+    // _TextFieldState.build）。透明层视觉零变化；内容自带 Dialog 时嵌套无害。
+    return Material(
+      type: MaterialType.transparency,
+      child: builder(context),
+    );
+  }
 
   @override
   Widget buildTransitions(

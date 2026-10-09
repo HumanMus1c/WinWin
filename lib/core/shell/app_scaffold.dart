@@ -128,14 +128,17 @@ class _AppScaffoldState extends State<AppScaffold> {
         // 祖先；Material 系控件（TextField/InkWell/ListTile 等）要求有 Material
         // 祖先，否则整页红屏（2026-10-09 视频/专栏/空间/会话页回归，祖先链实测
         // MiuixScaffold→AppScaffold 之上无 Material）。此处统一补一层透明
-        // Material（复用 session_list_section.dart 成熟模式），各页无需重复处理；
-        // 顶部安全行在 Material 之外，水波绘制限定在 body 区域内。
-        final body = Material(
-          type: MaterialType.transparency,
-          child: widget.body,
-        );
+        // Material（复用 session_list_section.dart 成熟模式），各页无需重复处理。
+        // 2026-10-09 收口-3：透明 Material 上提包裹整块 content（含顶部安全行）——
+        // 安全行 actions 槽位常放 IconButton/TextButton，之前在 Material 之外，
+        // 当日崩溃日志实锤 41 起 No-Material + 16 起 release-hover 空崩
+        //（history 清空按钮等，见 docs/B6-2d 后续 Material 祖先复盘）。透明层
+        // 视觉零变化，仅补祖先。
+        final body = widget.body;
+        Material materialOf(Widget child) =>
+            Material(type: MaterialType.transparency, child: child);
         if (!widget.reserveTopStrip) {
-          return Padding(padding: padding, child: body);
+          return Padding(padding: padding, child: materialOf(body));
         }
         final title = widget.title;
         final strip = Row(
@@ -159,24 +162,26 @@ class _AppScaffoldState extends State<AppScaffold> {
         );
         return Padding(
           padding: padding,
-          child: Column(
-            children: [
-              // 安全行：向下滚动收起、向上滚动展开（Miuix 顶栏收缩行为）。
-              ClipRect(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  curve: MiuixMotion.standardDecelerate,
-                  height: _collapsed ? 0 : AppScaffold.topStripHeight,
-                  child: strip,
+          child: materialOf(
+            Column(
+              children: [
+                // 安全行：向下滚动收起、向上滚动展开（Miuix 顶栏收缩行为）。
+                ClipRect(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: MiuixMotion.standardDecelerate,
+                    height: _collapsed ? 0 : AppScaffold.topStripHeight,
+                    child: strip,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: _onScroll,
-                  child: body,
+                Expanded(
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: _onScroll,
+                    child: body,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
