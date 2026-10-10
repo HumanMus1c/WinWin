@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -16,6 +16,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 弹幕发送面板（移植自 BiliPai `DanmakuSendDialog` + `DanmakuComposerPolicy`）。
 ///
@@ -308,10 +309,10 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
             // 设置区折叠开关（对标 BiliPai 「颜色、位置、大小」按钮）
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
+              child: MiuixTextButton(
+                _showSettings ? '收起弹幕设置' : '颜色、位置、大小',
                 onPressed: () =>
                     setState(() => _showSettings = !_showSettings),
-                child: Text(_showSettings ? '收起弹幕设置' : '颜色、位置、大小'),
               ),
             ),
             if (_showSettings) ...[
@@ -329,17 +330,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                 return SizedBox(
                   width: double.infinity,
                   height: 48,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: biliPink,
-                      foregroundColor: AppColors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(Style.radiusSm),
-                      ),
-                    ),
-                    onPressed: _canSend ? _onSend : null,
-                    child: sending
+                  child: AppPrimaryButton(onPressed: _canSend ? _onSend : null, child: sending
                         ? const SizedBox(
                             width: 20,
                             height: 20,
@@ -354,8 +345,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                             ),
-                          ),
-                  ),
+                          )),
                 );
               },
             ),
@@ -447,17 +437,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
 
   /// 内联模式发送按钮。
   Widget _buildInlineSendButton(AppTokens tokens) {
-    return FilledButton(
-      onPressed: _canSend ? _onSend : null,
-      style: FilledButton.styleFrom(
-        backgroundColor: biliPink,
-        padding: const EdgeInsets.symmetric(
-          horizontal: Style.lg,
-          vertical: Style.sm,
-        ),
-        minimumSize: const Size(0, 40),
-      ),
-      child: ValueListenableBuilder<bool>(
+    return AppPrimaryButton(onPressed: _canSend ? _onSend : null, child: ValueListenableBuilder<bool>(
         valueListenable: _sending,
         builder: (context, sending, _) {
           return sending
@@ -471,8 +451,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                 )
               : const Text('发送');
         },
-      ),
-    );
+      ));
   }
 
   /// 内联模式：点击设置按钮时弹出弹幕样式设置面板（Overlay）。

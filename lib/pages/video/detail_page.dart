@@ -6,7 +6,7 @@ import 'package:flutter_miuix/miuix.dart'
         MiuixHorizontalDivider,
         MiuixIconButton,
         MiuixPressFeedbackType,
-        MiuixPressable;
+        MiuixPressable, MiuixTextButton, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -61,6 +61,7 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
@@ -1341,10 +1342,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               style: const TextStyle(fontSize: 14, color: AppColors.white70),
             ),
             const SizedBox(height: Style.lg),
-            FilledButton.tonal(
-              onPressed: _loadDetail,
-              child: const Text('点击重试'),
-            ),
+            MiuixButton(onPressed: _loadDetail, child: const Text('点击重试')),
           ],
         ),
       ),
@@ -1712,9 +1710,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           if (desc.isNotEmpty)
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
+              child: MiuixTextButton(
+                _descExpanded ? '收起' : '展开',
                 onPressed: () => setState(() => _descExpanded = !_descExpanded),
-                child: Text(_descExpanded ? '收起' : '展开'),
               ),
             ),
         ],
@@ -2067,21 +2065,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   if (!subEnd && !subLoading && subReplies.length >= 3)
                     Padding(
                       padding: const EdgeInsets.only(top: Style.xs),
-                      child: TextButton.icon(
-                        onPressed: () => _loadSubReplies(reply),
-                        icon: AppIcon(AppIcons.expandMore(), size: 16),
-                        label: Text(
+                      child: MiuixButton(onPressed: () => _loadSubReplies(reply), child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.expandMore(), size: 16), const SizedBox(width: 6), Text(
                           '查看更多回复 ${reply.rcount != null ? "(${subReplies.length}/${reply.rcount})" : ""}',
                           style: const TextStyle(fontSize: 12),
-                        ),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: Style.sm,
-                            vertical: Style.xs,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
+                        )])),
                     ),
                 ],
               ),
@@ -2375,17 +2362,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
             ),
             const SizedBox(width: Style.sm),
-            FilledButton(
-              onPressed: enabled && !_sendingComment ? _sendComment : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: biliPink,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Style.lg,
-                  vertical: Style.sm,
-                ),
-                minimumSize: const Size(0, 40),
-              ),
-              child: _sendingComment
+            AppPrimaryButton(onPressed: enabled && !_sendingComment ? _sendComment : null, child: _sendingComment
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -2394,8 +2371,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                         color: AppColors.white,
                       ),
                     )
-                  : const Text('发送'),
-            ),
+                  : const Text('发送')),
           ],
         ),
       ),
@@ -2418,10 +2394,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
     if (_replyFailed) {
       return Center(
-        child: TextButton(
-          onPressed: _retryReplies,
-          child: const Text('评论加载失败，点击重试'),
-        ),
+        child: MiuixTextButton('评论加载失败，点击重试', onPressed: _retryReplies),
       );
     }
     if (_replies.isEmpty) {
@@ -2572,16 +2545,20 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     final tokens = AppThemeHost.of(context);
     Widget sortBtn(String label, int mode) {
       final selected = _replyMode == mode;
-      return TextButton(
+      return MiuixPressable(
         onPressed: () => _switchReplyMode(mode),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-            color: selected
-                ? tokens.colors.onSurface
-                : tokens.colors.onSurfaceVariant,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+              color: selected
+                  ? tokens.colors.onSurface
+                  : tokens.colors.onSurfaceVariant,
+            ),
           ),
         ),
       );
@@ -2796,27 +2773,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   ],
                 ),
               ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(Style.radiusSm),
-                  ),
-                ),
-                onPressed: () {},
-                icon: Icon(AppIcons.add(), size: 16),
-                label: Text(
+              MiuixButton(onPressed: () {}, child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(AppIcons.add(), size: 16), const SizedBox(width: 6), Text(
                   DemoOverrides.count('demo.followbtn.$bvid', min: 0, max: 1) ==
                           1
                       ? '已关注'
                       : '关注',
                   style: const TextStyle(fontSize: 12.5),
-                ),
-              ),
+                )])),
             ],
           ),
           const SizedBox(
@@ -2918,21 +2881,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               const Expanded(
                 child: Skeleton(child: SkeletonLine(width: 100, height: 14)),
               ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(Style.radiusSm),
-                  ),
-                ),
-                onPressed: null,
-                icon: Icon(AppIcons.add(), size: 16),
-                label: const Text('关注', style: TextStyle(fontSize: 12.5)),
-              ),
+              MiuixButton(onPressed: null, child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(AppIcons.add(), size: 16), const SizedBox(width: 6), const Text('关注', style: TextStyle(fontSize: 12.5))])),
             ],
           ),
           const SizedBox(
@@ -3066,7 +3015,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             ),
           ),
           const SizedBox(height: Style.xl),
-          FilledButton.tonal(onPressed: onRetry, child: const Text('点击重试')),
+          MiuixButton(onPressed: onRetry, child: const Text('点击重试')),
         ],
       ),
     );
@@ -3151,9 +3100,7 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
       onExit: (_) => setState(() => _isHovered = false),
       child: AppTooltip(
         message: widget.isFollowed ? '点击取消关注' : '点击关注',
-        child: OutlinedButton.icon(
-          onPressed: widget.isLoading ? null : widget.onPressed,
-          icon: widget.isLoading
+        child: MiuixButton(onPressed: widget.isLoading ? null : widget.onPressed, child: Row(mainAxisSize: MainAxisSize.min, children: [widget.isLoading
               ? SizedBox(
                   width: 14,
                   height: 14,
@@ -3162,8 +3109,7 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
                     color: color ?? cs.primary,
                   ),
                 )
-              : Icon(icon, size: 16, color: color),
-          label: Text(
+              : Icon(icon, size: 16, color: color), const SizedBox(width: 6), Text(
             label,
             style: TextStyle(
               fontSize: 12.5,
@@ -3172,18 +3118,7 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
                   ? FontWeight.w600
                   : FontWeight.normal,
             ),
-          ),
-          style: OutlinedButton.styleFrom(
-            visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            side: color != null
-                ? BorderSide(color: color.withValues(alpha: 0.6))
-                : null,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(Style.radiusSm),
-            ),
-          ),
-        ),
+          )])),
       ),
     );
   }

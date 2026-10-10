@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -20,6 +20,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 直播二级分类导航条目。
 class LiveCategoryTab {
@@ -433,16 +434,12 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
             style: TextStyle(color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () async {
+          AppPrimaryButton(onPressed: () async {
               await showLoginPage(context);
               if (mounted && AccountService().isLogin) {
                 _load(refresh: true);
               }
-            },
-            icon: AppIcon(AppIcons.loginSubmit()),
-            label: const Text('登录'),
-          ),
+            }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.loginSubmit()), const SizedBox(width: 6), const Text('登录')])),
         ],
       ),
     );
@@ -454,10 +451,7 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
           children: [
             Text(msg ?? '加载失败'),
             const SizedBox(height: Style.md),
-            FilledButton.tonal(
-              onPressed: () => _load(refresh: true),
-              child: const Text('重试'),
-            ),
+            MiuixButton(onPressed: () => _load(refresh: true), child: const Text('重试')),
           ],
         ),
       );
@@ -658,10 +652,7 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
           children: [
             Text(msg ?? '加载失败'),
             const SizedBox(height: Style.md),
-            FilledButton.tonal(
-              onPressed: () => _load(refresh: true),
-              child: const Text('重试'),
-            ),
+            MiuixButton(onPressed: () => _load(refresh: true), child: const Text('重试')),
           ],
         ),
       );

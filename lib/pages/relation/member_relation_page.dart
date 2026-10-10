@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -17,6 +17,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 关系列表类型：关注列表 / 粉丝列表。
 enum RelationType { followings, fans }
@@ -205,10 +206,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
             style: TextStyle(color: tokens.colors.outline),
           ),
           const SizedBox(height: Style.md),
-          OutlinedButton(
-            onPressed: () => _load(refresh: true),
-            child: const Text('刷新'),
-          ),
+          MiuixButton(onPressed: () => _load(refresh: true), child: const Text('刷新')),
         ],
       ),
     );
@@ -221,11 +219,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
         children: [
           Text(_error ?? '加载失败'),
           const SizedBox(height: Style.md),
-          FilledButton(
-            onPressed: () => _load(refresh: true),
-            style: FilledButton.styleFrom(backgroundColor: biliPink),
-            child: const Text('重试'),
-          ),
+          AppPrimaryButton(onPressed: () => _load(refresh: true), child: const Text('重试')),
         ],
       ),
     );

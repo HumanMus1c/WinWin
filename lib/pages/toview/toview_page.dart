@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -38,6 +38,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 稍后再看页面（移植自 PiliPlus `lib/pages/later/`，重构为自适应多列宫格排版）。
 void showToviewPage(BuildContext context) {
@@ -300,12 +301,8 @@ class _ToviewPageState extends State<ToviewPage> {
         title: const Text('清空稍后再看'),
         content: const Text('确定清空所有稍后再看？此操作不可撤销。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
-            child: const Text('清空'),
-          ),
+          MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx, false)),
+          AppPrimaryButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('清空')),
         ],
       ),
     );

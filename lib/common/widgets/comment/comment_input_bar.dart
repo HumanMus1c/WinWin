@@ -2,10 +2,10 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
-import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 简洁评论输入栏（专栏 / 动态详情页使用）：
 /// 官方表情面板按钮 + 胶囊输入框 + 粉色发送按钮。
@@ -99,17 +99,7 @@ class SimpleCommentInputBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: Style.sm),
-            FilledButton(
-              onPressed: (enabled && !sending) ? () => onSend() : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: biliPink,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Style.lg,
-                  vertical: Style.sm,
-                ),
-                minimumSize: const Size(0, 40),
-              ),
-              child: sending
+            AppPrimaryButton(onPressed: (enabled && !sending) ? () => onSend() : null, child: sending
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -118,8 +108,7 @@ class SimpleCommentInputBar extends StatelessWidget {
                         color: AppColors.white,
                       ),
                     )
-                  : const Text('发送'),
-            ),
+                  : const Text('发送')),
           ],
         ),
       ),

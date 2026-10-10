@@ -52,6 +52,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 动态类型筛选枚举。
 enum _DynFilterType {
@@ -306,12 +307,9 @@ class _DemoMedalDialogState extends State<_DemoMedalDialog> {
       ),
       actions: [
         if (widget.canReset)
-          TextButton(onPressed: _reset, child: const Text('恢复默认')),
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        FilledButton(onPressed: _apply, child: const Text('确定')),
+          MiuixTextButton('恢复默认', onPressed: _reset),
+        MiuixTextButton('取消', onPressed: () => Navigator.pop(context)),
+        AppPrimaryButton(onPressed: _apply, child: const Text('确定')),
       ],
     );
   }
@@ -1225,18 +1223,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   },
                 ),
                 const SizedBox(width: Style.sm),
-                FilledButton.tonal(
-                  onPressed: _isFollowingUpdating ? null : _toggleFollow,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _relationStatus != 0
-                        ? cs.surfaceContainerHighest
-                        : biliPink,
-                    foregroundColor: _relationStatus != 0
-                        ? cs.onSurfaceVariant
-                        : AppColors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: Style.lg, vertical: Style.sm),
-                  ),
-                  child: Row(
+                MiuixButton(onPressed: _isFollowingUpdating ? null : _toggleFollow, child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_isFollowingUpdating)
@@ -1265,8 +1252,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                         ),
                       ],
                     ],
-                  ),
-                ),
+                  )),
               ],
             ],
           ),
@@ -1734,13 +1720,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         if (_videoFailed)
           SliverToBoxAdapter(
             child: Center(
-              child: TextButton(
-                onPressed: () {
+              child: MiuixTextButton('加载失败，点击重试', onPressed: () {
                   setState(() => _videoFailed = false);
                   _loadMoreVideos();
-                },
-                child: const Text('加载失败，点击重试'),
-              ),
+                }),
             ),
           ),
       ],
@@ -1901,13 +1884,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         if (_seasonFailed)
           SliverToBoxAdapter(
             child: Center(
-              child: TextButton(
-                onPressed: () {
+              child: MiuixTextButton('加载失败，点击重试', onPressed: () {
                   setState(() => _seasonFailed = false);
                   _loadMoreSeasons();
-                },
-                child: const Text('加载失败，点击重试'),
-              ),
+                }),
             ),
           ),
       ],
@@ -2106,13 +2086,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         if (_dynamicFailed)
           SliverToBoxAdapter(
             child: Center(
-              child: TextButton(
-                onPressed: () {
+              child: MiuixTextButton('动态加载失败，点击重试', onPressed: () {
                   setState(() => _dynamicFailed = false);
                   _loadMoreDynamics();
-                },
-                child: const Text('动态加载失败，点击重试'),
-              ),
+                }),
             ),
           ),
       ],
@@ -3304,11 +3281,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             ),
             if (onRetry != null) ...[
               const SizedBox(height: Style.md),
-              TextButton.icon(
-                onPressed: onRetry,
-                icon: AppIcon(AppIcons.refresh(), size: 16),
-                label: const Text('重试'),
-              ),
+              MiuixButton(onPressed: onRetry, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.refresh(), size: 16), const SizedBox(width: 6), const Text('重试')])),
             ],
           ],
         ),
@@ -3423,7 +3396,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           const SizedBox(height: Style.lg),
           Text(errMsg ?? '加载失败', style: TextStyle(color: tokens.colors.onSurfaceVariant)),
           const SizedBox(height: Style.xl),
-          FilledButton.tonal(onPressed: onRetry, child: const Text('点击重试')),
+          MiuixButton(onPressed: onRetry, child: const Text('点击重试')),
         ],
       ),
     );

@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixHorizontalDivider, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixHorizontalDivider, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
@@ -520,10 +520,7 @@ class _DynTabPageState extends State<_DynTabPage>
           children: [
             Text(msg ?? '加载失败'),
             const SizedBox(height: Style.md),
-            FilledButton.tonal(
-              onPressed: () => _load(refresh: true),
-              child: const Text('重试'),
-            ),
+            MiuixButton(onPressed: () => _load(refresh: true), child: const Text('重试')),
           ],
         ),
       );

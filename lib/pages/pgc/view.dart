@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -22,6 +22,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 番剧二级分类枚举
 enum PgcSubTab {
@@ -360,10 +361,7 @@ class _HotBangumiViewState extends State<_HotBangumiView>
           children: [
             Text(msg ?? '加载失败'),
             const SizedBox(height: Style.md),
-            FilledButton.tonal(
-              onPressed: () => _load(refresh: true),
-              child: const Text('重试'),
-            ),
+            MiuixButton(onPressed: () => _load(refresh: true), child: const Text('重试')),
           ],
         ),
       );
@@ -602,11 +600,7 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
             style: TextStyle(color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => showLoginPage(context),
-            icon: AppIcon(AppIcons.loginSubmit()),
-            label: const Text('登录'),
-          ),
+          AppPrimaryButton(onPressed: () => showLoginPage(context), child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.loginSubmit()), const SizedBox(width: 6), const Text('登录')])),
         ],
       ),
     );
@@ -618,10 +612,7 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
           children: [
             Text(msg ?? '加载失败'),
             const SizedBox(height: Style.md),
-            FilledButton.tonal(
-              onPressed: () => _load(refresh: true),
-              child: const Text('重试'),
-            ),
+            MiuixButton(onPressed: () => _load(refresh: true), child: const Text('重试')),
           ],
         ),
       );

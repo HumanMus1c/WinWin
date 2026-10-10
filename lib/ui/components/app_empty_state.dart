@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:flutter_miuix/miuix.dart';
 
 /// 统一空状态组件（移植自 BiliPai v0.2.3-beta.3 `AppEmptyState`）。
 ///
@@ -102,10 +103,7 @@ class AppErrorState extends StatelessWidget {
       subtitle: message,
       action: onRetry == null
           ? null
-          : FilledButton.tonal(
-              onPressed: onRetry,
-              child: Text(retryLabel),
-            ),
+          : MiuixButton(onPressed: onRetry, child: Text(retryLabel)),
     );
   }
 }

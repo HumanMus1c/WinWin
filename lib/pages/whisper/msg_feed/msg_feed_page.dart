@@ -14,6 +14,7 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 消息流加载器（游标分页）：回复我 / 艾特我 / 点赞我 共用此签名。
 typedef MsgFeedLoader = Future<LoadingState<Map<String, dynamic>>> Function({
@@ -192,11 +193,7 @@ class MsgFeedErrorView extends StatelessWidget {
         children: [
           Text(error),
           const SizedBox(height: Style.md),
-          FilledButton(
-            onPressed: onRetry,
-            style: FilledButton.styleFrom(backgroundColor: biliPink),
-            child: const Text('重试'),
-          ),
+          AppPrimaryButton(onPressed: onRetry, child: const Text('重试')),
         ],
       ),
     );

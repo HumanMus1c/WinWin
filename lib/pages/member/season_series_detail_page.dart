@@ -1,5 +1,5 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -251,10 +251,7 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
             if (_failed)
               SliverToBoxAdapter(
                 child: Center(
-                  child: TextButton(
-                    onPressed: () => _loadVideos(),
-                    child: const Text('加载失败，点击重试'),
-                  ),
+                  child: MiuixTextButton('加载失败，点击重试', onPressed: () => _loadVideos()),
                 ),
               ),
             const SliverToBoxAdapter(child: SizedBox(height: Style.xxl)),

@@ -28,6 +28,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:flutter_miuix/miuix.dart';
 
 /// 个人页 — 布局参照 PiliPlus `MinePage`，控件美术单轨 Miuix（阶段5d-L4-2）。
 ///
@@ -180,14 +181,8 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text('退出登录'),
         content: const Text('确定要退出当前账号吗？'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('确定', style: TextStyle(color: AppColors.red)),
-          ),
+          MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx, false)),
+          MiuixTextButton('确定', onPressed: () => Navigator.pop(ctx, true), colors: MiuixButtonColors(color: AppColors.transparent, disabledColor: AppColors.transparent, contentColor: AppColors.red, disabledContentColor: AppColors.red)),
         ],
       ),
     );

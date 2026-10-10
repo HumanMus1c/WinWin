@@ -28,6 +28,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 聊天详情入口（阶段 D）。
 ///
@@ -233,11 +234,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                           children: [
                             Text(_error!),
                             const SizedBox(height: Style.md),
-                            FilledButton(
-                              onPressed: () => _load(refresh: true),
-                              style: FilledButton.styleFrom(backgroundColor: biliPink),
-                              child: const Text('重试'),
-                            ),
+                            AppPrimaryButton(onPressed: () => _load(refresh: true), child: const Text('重试')),
                           ],
                         ),
                       )

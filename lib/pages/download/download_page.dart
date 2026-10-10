@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixTextButton, MiuixButton, MiuixButtonColors;
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -104,14 +104,8 @@ class _DownloadPageState extends State<DownloadPage> {
         title: const Text('清理离线缓存'),
         content: const Text('确定要清空已下载的离线缓存文件吗？'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('清空', style: TextStyle(color: AppColors.red)),
-          ),
+          MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx, false)),
+          MiuixTextButton('清空', onPressed: () => Navigator.pop(ctx, true), colors: MiuixButtonColors(color: AppColors.transparent, disabledColor: AppColors.transparent, contentColor: AppColors.red, disabledContentColor: AppColors.red)),
         ],
       ),
     );
@@ -174,14 +168,7 @@ class _DownloadPageState extends State<DownloadPage> {
                               ),
                             ),
                             const Spacer(),
-                            TextButton.icon(
-                              onPressed: _clearCache,
-                              icon: Icon(AppIcons.delete(), size: 16, color: AppColors.red),
-                              label: const Text('清空', style: TextStyle(color: AppColors.red)),
-                              style: TextButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
+                            MiuixButton(onPressed: _clearCache, child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(AppIcons.delete(), size: 16, color: AppColors.red), const SizedBox(width: 6), const Text('清空', style: TextStyle(color: AppColors.red))])),
                           ],
                         ),
                         const SizedBox(height: 10),

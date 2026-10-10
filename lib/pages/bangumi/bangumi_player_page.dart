@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
-import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixVerticalDivider;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixVerticalDivider, MiuixTextButton, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -51,6 +51,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 番剧播放页面（对标 BiliPai `BangumiPlayerScreen` 与 PiliPlus PGC 播放体系）。
 ///
@@ -1208,22 +1209,14 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 '选集 (${_episodes.length})',
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
               ),
-              TextButton.icon(
-                onPressed: () {
+              MiuixButton(onPressed: () {
                   Pref.setBangumiEpisodesDescending(!_episodesDescending);
-                },
-                icon: Icon(
+                }, child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(
                   _episodesDescending
                       ? AppIcons.chevronDown()
                       : AppIcons.chevronUp(),
                   size: 16,
-                ),
-                label: Text(_episodesDescending ? '倒序' : '正序'),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  textStyle: const TextStyle(fontSize: 12),
-                ),
-              ),
+                ), const SizedBox(width: 6), Text(_episodesDescending ? '倒序' : '正序')])),
             ],
           ),
         ),
@@ -1364,21 +1357,25 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     final tokens = AppThemeHost.of(context);
     Widget sortBtn(String label, int mode) {
       final selected = _replyMode == mode;
-      return TextButton(
+      return MiuixPressable(
         onPressed: () {
           if (_replyMode != mode) {
             setState(() => _replyMode = mode);
             _loadReplies(refresh: true);
           }
         },
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-            color: selected
-                ? tokens.colors.onSurface
-                : tokens.colors.onSurfaceVariant,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+              color: selected
+                  ? tokens.colors.onSurface
+                  : tokens.colors.onSurfaceVariant,
+            ),
           ),
         ),
       );
@@ -1682,21 +1679,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   if (!subEnd && !subLoading && subReplies.length >= 3)
                     Padding(
                       padding: const EdgeInsets.only(top: Style.xs),
-                      child: TextButton.icon(
-                        onPressed: () => _loadSubReplies(reply),
-                        icon: AppIcon(AppIcons.expandMore(), size: 16),
-                        label: Text(
+                      child: MiuixButton(onPressed: () => _loadSubReplies(reply), child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.expandMore(), size: 16), const SizedBox(width: 6), Text(
                           '查看更多回复 ${reply.rcount != null ? "(${subReplies.length}/${reply.rcount})" : ""}',
                           style: const TextStyle(fontSize: 12),
-                        ),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: Style.sm,
-                            vertical: Style.xs,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
+                        )])),
                     ),
                 ],
               ),
@@ -1907,10 +1893,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     }
     if (_replyFailed) {
       return Center(
-        child: TextButton(
-          onPressed: _retryReplies,
-          child: const Text('评论加载失败，点击重试'),
-        ),
+        child: MiuixTextButton('评论加载失败，点击重试', onPressed: _retryReplies),
       );
     }
     if (_replies.isEmpty) {
@@ -2012,17 +1995,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               ),
             ),
             const SizedBox(width: Style.sm),
-            FilledButton(
-              onPressed: enabled && !_sendingComment ? _sendComment : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: biliPink,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Style.lg,
-                  vertical: Style.sm,
-                ),
-                minimumSize: const Size(0, 40),
-              ),
-              child: _sendingComment
+            AppPrimaryButton(onPressed: enabled && !_sendingComment ? _sendComment : null, child: _sendingComment
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -2031,8 +2004,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                         color: AppColors.white,
                       ),
                     )
-                  : const Text('发送'),
-            ),
+                  : const Text('发送')),
           ],
         ),
       ),
@@ -2106,13 +2078,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   Widget _buildFollowButton(AppPalette cs) {
     return GestureDetector(
       onSecondaryTap: _isFollowed ? _showFollowStatusDialog : null,
-      child: FilledButton.tonal(
-        style: FilledButton.styleFrom(
-          visualDensity: VisualDensity.compact,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        ),
-        onPressed: _toggleFollow,
-        child: Row(
+      child: MiuixButton(onPressed: _toggleFollow, child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
@@ -2123,8 +2089,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             const SizedBox(width: 4),
             Text(_followStatusLabel),
           ],
-        ),
-      ),
+        )),
     );
   }
 
@@ -2309,9 +2274,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           if (desc.isNotEmpty)
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
+              child: MiuixTextButton(
+                _descExpanded ? '收起' : '展开',
                 onPressed: () => setState(() => _descExpanded = !_descExpanded),
-                child: Text(_descExpanded ? '收起' : '展开'),
               ),
             ),
           // 展开状态下展示声优和制作人员

@@ -1,6 +1,6 @@
 import 'dart:io' show exit;
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/ui/components/app_components.dart';
@@ -97,18 +97,10 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => exit(0),
-                          style: OutlinedButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
-                            side: BorderSide(color: cs.outlineVariant),
-                          ),
-                          child: Text(
+                        child: MiuixButton(onPressed: () => exit(0), child: Text(
                             '我不同意',
                             style: TextStyle(color: cs.onSurfaceVariant),
-                          ),
-                        ),
+                          )),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

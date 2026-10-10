@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -283,10 +283,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
               children: [
                 Text(errMsg ?? '动态加载失败'),
                 const SizedBox(height: Style.md),
-                FilledButton.tonal(
-                  onPressed: _loadDetail,
-                  child: const Text('重试'),
-                ),
+                MiuixButton(onPressed: _loadDetail, child: const Text('重试')),
               ],
             ),
           ),
@@ -554,10 +551,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                               style: const TextStyle(color: AppColors.grey),
                             ),
                             const SizedBox(height: Style.md),
-                            FilledButton.tonal(
-                              onPressed: _retryReplies,
-                              child: const Text('重试'),
-                            ),
+                            MiuixButton(onPressed: _retryReplies, child: const Text('重试')),
                           ],
                         ),
                       ),

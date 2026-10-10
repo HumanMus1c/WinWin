@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixVerticalDivider;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixVerticalDivider, MiuixTextButton, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -24,6 +24,7 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 番剧 / 影视详情主页（对标 BiliPai `BangumiDetailScreen` 与 PiliPlus）。
 ///
@@ -395,12 +396,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
+          MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx)),
+          AppPrimaryButton(onPressed: () {
               final val = int.tryParse(ctrl.text.trim());
               if (val != null && val >= 1) {
                 BangumiEpisode? targetEp = episodes.cast<BangumiEpisode?>().firstWhere(
@@ -428,9 +425,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                 }
               }
               showToast(ctx, '未找到对应集数');
-            },
-            child: const Text('跳转播放'),
-          ),
+            }, child: const Text('跳转播放')),
         ],
       ),
     );
@@ -546,10 +541,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         children: [
           Text(msg ?? '加载番剧详情失败'),
           const SizedBox(height: 16),
-          FilledButton.tonal(
-            onPressed: () => _loadDetail(),
-            child: const Text('重试'),
-          ),
+          MiuixButton(onPressed: () => _loadDetail(), child: const Text('重试')),
         ],
       ),
     );
@@ -805,20 +797,10 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         // 主行动按钮：播放
         Expanded(
           flex: 3,
-          child: FilledButton.icon(
-            onPressed: startEp != null ? () => _openPlayer(detail, startEp) : null,
-            icon: AppIcon(AppIcons.playEpisode(), size: 22),
-            label: Text(
+          child: AppPrimaryButton(onPressed: startEp != null ? () => _openPlayer(detail, startEp) : null, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.playEpisode(), size: 22), const SizedBox(width: 6), Text(
               playLabel,
               style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-              ),
-            ),
-          ),
+            )])),
         ),
         const SizedBox(width: 10),
         // 追番按钮
@@ -1016,34 +998,18 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
             Row(
               children: [
                 // 正倒序切换
-                TextButton.icon(
-                  onPressed: () {
+                MiuixButton(onPressed: () {
                     Pref.setBangumiEpisodesDescending(!_episodesDescending);
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _scrollToTargetEpisode();
                     });
-                  },
-                  icon: Icon(
+                  }, child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(
                     _episodesDescending ? Icons.arrow_downward : Icons.arrow_upward,
                     size: 15,
-                  ),
-                  label: Text(_episodesDescending ? '倒序' : '正序'),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                ),
+                  ), const SizedBox(width: 6), Text(_episodesDescending ? '倒序' : '正序')])),
                 const SizedBox(width: 4),
                 // 精准跳转
-                TextButton.icon(
-                  onPressed: () => _showJumpDialog(all),
-                  icon: AppIcon(AppIcons.location(), size: 15),
-                  label: const Text('跳转'),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                ),
+                MiuixButton(onPressed: () => _showJumpDialog(all), child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.location(), size: 15), const SizedBox(width: 6), const Text('跳转')])),
               ],
             ),
           ],
@@ -1469,7 +1435,8 @@ class _FollowButtonState extends State<_FollowButton> {
         message: widget.isFollowed ? '点击取消追番，右键/长按更改追番状态' : '点击追番',
         child: GestureDetector(
           onSecondaryTap: widget.isFollowed ? widget.onShowStatusMenu : null,
-          child: OutlinedButton.icon(
+          onLongPress: widget.isFollowed ? widget.onShowStatusMenu : null,
+          child: MiuixButton(
             onPressed: () {
               if (widget.isFollowed) {
                 widget.onUnfollow();
@@ -1477,24 +1444,24 @@ class _FollowButtonState extends State<_FollowButton> {
                 widget.onFollow();
               }
             },
-            onLongPress: widget.isFollowed ? widget.onShowStatusMenu : null,
-            icon: Icon(icon, size: 18, color: color),
-            label: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: color,
-                fontWeight: widget.isFollowed ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              side: color != null
-                  ? BorderSide(color: color.withValues(alpha: 0.6))
-                  : null,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(Style.radiusSm),
-              ),
+            minWidth: 44,
+            minHeight: 40,
+            cornerRadius: Style.radiusSm + 4,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: color,
+                    fontWeight:
+                        widget.isFollowed ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

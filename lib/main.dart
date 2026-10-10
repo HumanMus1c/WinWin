@@ -30,6 +30,7 @@ import 'utils/json_file_handler.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 全局路由观察器，供 VideoDetailPage 监听 push/pop 事件，
 /// 在页面被覆盖时暂停播放器、返回时恢复播放。
@@ -349,18 +350,7 @@ class _AgreementGateState extends State<AgreementGate> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: _load,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: biliPink,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 28, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text('重试'),
-                ),
+                AppPrimaryButton(onPressed: _load, child: const Text('重试')),
               ],
             ),
           ),

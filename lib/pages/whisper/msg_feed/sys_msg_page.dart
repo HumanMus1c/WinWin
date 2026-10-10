@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -191,14 +191,8 @@ class _SysMsgTile extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('删除该通知？'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除'),
-          ),
+          MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx, false)),
+          MiuixTextButton('删除', onPressed: () => Navigator.pop(ctx, true)),
         ],
       ),
     );

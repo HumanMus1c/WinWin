@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -193,10 +193,7 @@ class _ArticlePageState extends State<ArticlePage> {
               children: [
                 Text(errMsg ?? '专栏内容加载失败'),
                 const SizedBox(height: Style.md),
-                FilledButton.tonal(
-                  onPressed: _loadArticle,
-                  child: const Text('重试'),
-                ),
+                MiuixButton(onPressed: _loadArticle, child: const Text('重试')),
               ],
             ),
           ),

@@ -38,6 +38,7 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 桌面原生直播间播放页面。
 ///
@@ -765,18 +766,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             },
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () async {
+            MiuixTextButton('取消', onPressed: () => Navigator.pop(dialogCtx)),
+            AppPrimaryButton(onPressed: () async {
                 Navigator.pop(dialogCtx);
                 _danmakuInputCtrl.text = ctrl.text;
                 await _sendDanmaku();
-              },
-              child: const Text('发送'),
-            ),
+              }, child: const Text('发送')),
           ],
         );
       },
@@ -1688,10 +1683,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   style: const TextStyle(color: AppColors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 16),
-                FilledButton.tonal(
-                  onPressed: _initLive,
-                  child: const Text('重试刷新'),
-                ),
+                MiuixButton(onPressed: _initLive, child: const Text('重试刷新')),
               ],
             ),
           ),
@@ -2222,21 +2214,11 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           // 3. 发送按钮（严格 40px 高度，与输入框和表情按钮完全等高且拥有同款 20px 圆角）
           SizedBox(
             height: barItemHeight,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(68, barItemHeight),
-                maximumSize: const Size(double.infinity, barItemHeight),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(barItemRadius),
-                ),
-              ),
-              onPressed: (_isLiving &&
+            child: AppPrimaryButton(onPressed: (_isLiving &&
                       _danmakuInputCtrl.text.trim().isNotEmpty &&
                       !_isSendingDanmaku)
                   ? _sendDanmaku
-                  : null,
-              child: _isSendingDanmaku
+                  : null, child: _isSendingDanmaku
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -2252,8 +2234,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                         SizedBox(width: 4),
                         AppIcon(AppIcons.send(), size: 14),
                       ],
-                    ),
-            ),
+                    )),
           ),
         ],
       ),

@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixHorizontalDivider;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixHorizontalDivider, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -481,14 +481,8 @@ class _SessionTile extends StatelessWidget {
         title: const Text('删除会话'),
         content: const Text('会话会从列表中移除，但不会删除聊天记录。'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除'),
-          ),
+          MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx, false)),
+          MiuixTextButton('删除', onPressed: () => Navigator.pop(ctx, true)),
         ],
       ),
     );

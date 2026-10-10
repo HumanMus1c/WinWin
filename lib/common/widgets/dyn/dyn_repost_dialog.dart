@@ -9,6 +9,8 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:flutter_miuix/miuix.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 动态转发弹窗（对标 PiliPlus RepostPanel 的精简桌面版）：
 /// 展示被转发内容预览 + 转发理由输入，提交至 `/x/dynamic/feed/create/dyn`。
@@ -141,13 +143,8 @@ class _DynRepostDialogState extends State<DynRepostDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: _sending ? null : () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: _sending ? null : _submit,
-          child: _sending
+        MiuixTextButton('取消', onPressed: _sending ? null : () => Navigator.of(context).pop(false)),
+        AppPrimaryButton(onPressed: _sending ? null : _submit, child: _sending
               ? const SizedBox(
                   width: 16,
                   height: 16,
@@ -156,8 +153,7 @@ class _DynRepostDialogState extends State<DynRepostDialog> {
                     color: AppColors.white,
                   ),
                 )
-              : const Text('转发'),
-        ),
+              : const Text('转发')),
       ],
     );
   }

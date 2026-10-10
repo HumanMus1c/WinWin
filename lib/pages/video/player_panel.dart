@@ -34,6 +34,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// Duration 没有 clamp 方法，手动实现（用于 seek 位置限制）。
 Duration _clampDuration(Duration value, Duration min, Duration max) {
@@ -837,11 +838,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
             style: const TextStyle(color: AppColors.white70, fontSize: 14),
           ),
           const SizedBox(height: Style.md),
-          TextButton(
-            onPressed: () =>
-                widget.controller.load(start: widget.controller.position.value),
-            child: const Text('重试'),
-          ),
+          MiuixTextButton('重试', onPressed: () =>
+                widget.controller.load(start: widget.controller.position.value)),
         ],
       ),
     );
@@ -2373,22 +2371,15 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('关闭'),
-                  ),
+                  MiuixTextButton('关闭', onPressed: () => Navigator.of(context).pop()),
                   const SizedBox(width: Style.sm),
-                  FilledButton.icon(
-                    onPressed: _saving ? null : _save,
-                    icon: _saving
+                  AppPrimaryButton(onPressed: _saving ? null : _save, child: Row(mainAxisSize: MainAxisSize.min, children: [_saving
                         ? const SizedBox(
                             width: 16,
                             height: 16,
                             child: AppProgressIndicator(strokeWidth: 2),
                           )
-                        : AppIcon(AppIcons.download(), size: 18),
-                    label: Text(_savedPath != null ? '已保存' : '保存'),
-                  ),
+                        : AppIcon(AppIcons.download(), size: 18), const SizedBox(width: 6), Text(_savedPath != null ? '已保存' : '保存')])),
                 ],
               ),
             ],

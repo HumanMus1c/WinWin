@@ -28,9 +28,10 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCheckboxPreference, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixSmallTopAppBar;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCheckboxPreference, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixSmallTopAppBar, MiuixButton;
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
 void showFavPage(BuildContext context) {
@@ -1034,24 +1035,17 @@ class _FavPanelState extends State<_FavPanel> {
             child: Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: _sending ? null : () => Navigator.of(context).pop(),
-                    child: const Text('取消'),
-                  ),
+                  child: MiuixButton(onPressed: _sending ? null : () => Navigator.of(context).pop(), child: const Text('取消')),
                 ),
                 const SizedBox(width: Style.md),
                 Expanded(
-                  child: FilledButton(
-                    onPressed: _sending ? null : _submit,
-                    style: FilledButton.styleFrom(backgroundColor: biliPink),
-                    child: _sending
+                  child: AppPrimaryButton(onPressed: _sending ? null : _submit, child: _sending
                         ? const SizedBox(
                             width: 18,
                             height: 18,
                             child: AppProgressIndicator(strokeWidth: 2, color: AppColors.white),
                           )
-                        : const Text('完成'),
-                  ),
+                        : const Text('完成')),
                 ),
               ],
             ),

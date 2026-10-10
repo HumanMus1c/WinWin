@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixBasicComponentColors, MiuixHorizontalDivider, MiuixSwitchPreference;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixBasicComponentColors, MiuixHorizontalDivider, MiuixSwitchPreference, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/core/account/accounts.dart';
@@ -96,8 +96,8 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
         title: const Text('删除会话'),
         content: const Text('会话会从列表中移除，聊天记录仍由服务端保留。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('删除')),
+          MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx, false)),
+          MiuixTextButton('删除', onPressed: () => Navigator.pop(ctx, true)),
         ],
       ),
     );

@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -229,13 +229,10 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
                                     style: tokens.text.bodyMedium),
                                 const SizedBox(height: Style.sm),
                                 if (Accounts.main.isLogin)
-                                  TextButton(
-                                    onPressed: () {
+                                  MiuixTextButton('重试', onPressed: () {
                                       setState(() => _loading = true);
                                       _fetchRules();
-                                    },
-                                    child: const Text('重试'),
-                                  ),
+                                    }),
                               ],
                             ),
                           )

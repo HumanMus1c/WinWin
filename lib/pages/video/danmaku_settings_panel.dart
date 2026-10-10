@@ -379,14 +379,10 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
           const SizedBox(height: Style.sm),
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              icon: AppIcon(AppIcons.block(), size: 18),
-              label: const Text('屏蔽规则管理'),
-              onPressed: () => showDanmakuBlockPage(
+            child: MiuixButton(onPressed: () => showDanmakuBlockPage(
                 context,
                 danmakuController: widget.controller.danmaku,
-              ),
-            ),
+              ), child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.block(), size: 18), const SizedBox(width: 6), const Text('屏蔽规则管理')])),
           ),
         ],
       ),

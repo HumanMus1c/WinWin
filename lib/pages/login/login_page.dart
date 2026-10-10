@@ -648,19 +648,15 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             prefix: AppIcon(AppIcons.smsCodeField()),
-            suffix: TextButton.icon(
-              onPressed: (_cooldown > 0 || _sending) ? null : _sendSms,
-              icon: _sending
+            suffix: MiuixButton(onPressed: (_cooldown > 0 || _sending) ? null : _sendSms, child: Row(mainAxisSize: MainAxisSize.min, children: [_sending
                   ? const SizedBox(
                       width: 16,
                       height: 16,
                       child: AppProgressIndicator(strokeWidth: 2),
                     )
-                  : AppIcon(AppIcons.send()),
-              label: Text(
+                  : AppIcon(AppIcons.send()), const SizedBox(width: 6), Text(
                 _cooldown > 0 ? '等待$_cooldown秒' : '获取验证码',
-              ),
-            ),
+              )])),
           ),
           const SizedBox(height: Style.lg),
           AppPrimaryButton(

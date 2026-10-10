@@ -8,6 +8,8 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:flutter_miuix/miuix.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 演示模式下可即时编辑的数字元素。
 ///
@@ -386,21 +388,12 @@ class _DemoNumberDialogState extends State<_DemoNumberDialog> {
       ),
       actions: [
         if (widget.canReset)
-          TextButton(
-            onPressed: () {
+          MiuixTextButton('恢复默认', onPressed: () {
               widget.onReset();
               Navigator.pop(context);
-            },
-            child: const Text('恢复默认'),
-          ),
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: const Text('确定'),
-        ),
+            }),
+        MiuixTextButton('取消', onPressed: () => Navigator.pop(context)),
+        AppPrimaryButton(onPressed: _submit, child: const Text('确定')),
       ],
     );
   }
@@ -455,13 +448,10 @@ class _DemoChoiceDialog extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () {
+              child: MiuixTextButton('恢复默认', onPressed: () {
                   onReset();
                   Navigator.pop(context);
-                },
-                child: const Text('恢复默认'),
-              ),
+                }),
             ),
           ),
       ],

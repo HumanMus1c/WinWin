@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
@@ -162,17 +162,14 @@ class _SearchPageState extends State<SearchPage> {
         title: const Text('清空搜索历史'),
         content: const Text('确定要清空所有搜索历史吗？'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(
-            onPressed: () {
+          MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx)),
+          MiuixTextButton('清空', onPressed: () {
               _history.clear();
               GStorage.localCache.delete('searchHistory');
               SearchHistoryService().clearVisitedUsers();
               Navigator.pop(ctx);
               setState(() {});
-            },
-            child: const Text('清空'),
-          ),
+            }),
         ],
       ),
     );
@@ -224,10 +221,7 @@ class _SearchPageState extends State<SearchPage> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => _submitSearch(_controller.text),
-          child: const Text('搜索'),
-        ),
+        MiuixTextButton('搜索', onPressed: () => _submitSearch(_controller.text)),
       ],
     );
   }

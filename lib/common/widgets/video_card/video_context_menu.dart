@@ -2,7 +2,7 @@ import 'dart:typed_data' show Uint8List;
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixTextButton, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -25,6 +25,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 String _errMsg(LoadingState state, [String fallback = '操作失败']) {
   if (state is Error) {
@@ -202,17 +203,8 @@ List<ContextMenuAction> buildVideoCardActions({
                   '注：拉黑后将不再向您推荐该 UP 主的稿件。可在「隐私设置 - 黑名单管理」中解除。',
                 ),
                 actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(dialogCtx),
-                    child: Text(
-                      '点错了',
-                      style: TextStyle(
-                        color: AppThemeHost.of(dialogCtx).colors.outline,
-                      ),
-                    ),
-                  ),
-                  FilledButton(
-                    onPressed: () async {
+                  MiuixTextButton('点错了', onPressed: () => Navigator.pop(dialogCtx)),
+                  AppPrimaryButton(onPressed: () async {
                       Navigator.pop(dialogCtx);
                       final res = await MemberHttp.relationMod(
                         mid: mid,
@@ -229,9 +221,7 @@ List<ContextMenuAction> buildVideoCardActions({
                           showToast(context, _errMsg(res, '拉黑失败'));
                         }
                       }
-                    },
-                    child: const Text('确认拉黑'),
-                  ),
+                    }, child: const Text('确认拉黑')),
                 ],
               );
             },
@@ -375,26 +365,13 @@ void showVideoCoverDialog({
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         // 复制封面链接
-                        OutlinedButton.icon(
-                          icon: AppIcon(AppIcons.link(), size: 16),
-                          label: const Text('复制链接'),
-                          style: OutlinedButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          onPressed: () {
+                        MiuixButton(onPressed: () {
                             Utils.copyText(cover);
                             showToast(dialogCtx, '已复制封面图片链接');
-                          },
-                        ),
+                          }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.link(), size: 16), const SizedBox(width: 6), const Text('复制链接')])),
                         const SizedBox(width: 8),
                         // 另存为图片文件
-                        FilledButton.tonalIcon(
-                          icon: AppIcon(AppIcons.download(), size: 16),
-                          label: const Text('保存封面'),
-                          style: FilledButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          onPressed: () async {
+                        MiuixButton(onPressed: () async {
                             final defaultName = '${bvid ?? "cover_${DateTime.now().millisecondsSinceEpoch}"}.jpg';
                             try {
                               final response = await Request().get<List<int>>(
@@ -425,13 +402,9 @@ void showVideoCoverDialog({
                                 showToast(dialogCtx, '保存封面失败：$e');
                               }
                             }
-                          },
-                        ),
+                          }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.download(), size: 16), const SizedBox(width: 6), const Text('保存封面')])),
                         const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogCtx),
-                          child: const Text('关闭'),
-                        ),
+                        MiuixTextButton('关闭', onPressed: () => Navigator.pop(dialogCtx)),
                       ],
                     ),
                   ],
@@ -518,11 +491,7 @@ void _showDislikeReasonsDialog({
           ],
           const SizedBox(height: 16, child: Center(child: MiuixHorizontalDivider())),
           Center(
-            child: TextButton.icon(
-              icon: AppIcon(AppIcons.undo(), size: 16),
-              label: const Text('撤销不感兴趣'),
-              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-              onPressed: () async {
+            child: MiuixButton(onPressed: () async {
                 Navigator.pop(dialogCtx);
                 final res = await VideoHttp.feedDislikeCancel(
                   goto: goto,
@@ -531,8 +500,7 @@ void _showDislikeReasonsDialog({
                 if (context.mounted) {
                   showToast(context, res.isSuccess ? '已撤销不感兴趣' : _errMsg(res, '撤销失败'));
                 }
-              },
-            ),
+              }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.undo(), size: 16), const SizedBox(width: 6), const Text('撤销不感兴趣')])),
           ),
         ],
       );

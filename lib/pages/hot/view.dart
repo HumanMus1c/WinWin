@@ -11,6 +11,7 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:flutter_miuix/miuix.dart';
 
 /// 热门视频页（移植自 PiliPlus `HotPage`）。
 ///
@@ -209,10 +210,7 @@ class _HotPageState extends State<HotPage>
             ),
           ),
           const SizedBox(height: 24),
-          FilledButton.tonal(
-            onPressed: controller.onReload,
-            child: const Text('点击重试'),
-          ),
+          MiuixButton(onPressed: controller.onReload, child: const Text('点击重试')),
         ],
       ),
     );

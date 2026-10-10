@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable, MiuixButton, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 
@@ -694,10 +694,7 @@ class _SearchPanelState extends State<SearchPanel>
       return Padding(
         padding: const EdgeInsets.all(Style.md),
         child: Center(
-          child: TextButton(
-            onPressed: _loadMore,
-            child: Text(_errorMsg!),
-          ),
+          child: MiuixTextButton(_errorMsg!, onPressed: _loadMore),
         ),
       );
     }
@@ -713,7 +710,7 @@ class _SearchPanelState extends State<SearchPanel>
           const SizedBox(height: Style.sm),
           Text(_errorMsg!),
           const SizedBox(height: Style.md),
-          OutlinedButton(onPressed: _onRefresh, child: const Text('重试')),
+          MiuixButton(onPressed: _onRefresh, child: const Text('重试')),
         ],
       ),
     );

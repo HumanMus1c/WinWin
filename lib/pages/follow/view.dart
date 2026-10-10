@@ -15,6 +15,8 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/ui/components/app_components.dart';
+import 'package:flutter_miuix/miuix.dart';
 
 /// 关注动态视频流页（移植自 PiliPlus 关注动态流）。
 ///
@@ -242,10 +244,7 @@ class _FollowPageState extends State<FollowPage>
             ),
           ),
           const SizedBox(height: 24),
-          FilledButton.tonal(
-            onPressed: controller.onReload,
-            child: const Text('点击重试'),
-          ),
+          MiuixButton(onPressed: controller.onReload, child: const Text('点击重试')),
         ],
       ),
     );
@@ -268,11 +267,7 @@ class _FollowPageState extends State<FollowPage>
             style: TextStyle(color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => showLoginPage(context),
-            icon: AppIcon(AppIcons.loginSubmit()),
-            label: const Text('登录'),
-          ),
+          AppPrimaryButton(onPressed: () => showLoginPage(context), child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.loginSubmit()), const SizedBox(width: 6), const Text('登录')])),
         ],
       ),
     );

@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:flutter_miuix/miuix.dart';
+import 'package:winwin/ui/components/app_components.dart';
 
 /// 投币对话框（对标 PiliPlus `pages/video/pay_coins` / BiliPai CoinDialog）。
 ///
@@ -51,17 +53,11 @@ Future<void> showCoinDialog(
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
+          MiuixTextButton('取消', onPressed: () => Navigator.of(context).pop()),
+          AppPrimaryButton(onPressed: () {
               Navigator.of(context).pop();
               onPay(coinCount, coinWithLike);
-            },
-            child: const Text('确定'),
-          ),
+            }, child: const Text('确定')),
         ],
       ),
     ),
