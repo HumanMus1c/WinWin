@@ -80,9 +80,9 @@ class _HotPageState extends State<HotPage>
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
       child: RefreshIndicator(
-        // 浮动顶栏(52)+分类标签行(36) 叠在滚动区之上，指示器下移避开（实机反馈#4）。
-        displacement: 24,
-        edgeOffset: 88,
+        // 实机反馈#5：指示器出现在可见滚动区域顶部（浮动组合控件下方，页内预留 120）。
+        displacement: 12,
+        edgeOffset: 120,
         onRefresh: controller.onRefresh,
         child: CustomScrollView(
           controller: controller.scrollController,

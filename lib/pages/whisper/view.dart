@@ -111,32 +111,32 @@ class _WhisperPageState extends State<WhisperPage>
     // 四类互动入口固定在顶部，仅下方会话列表可滚动。
     return AppScaffold(
       title: '消息',
-      body: AppRefreshIndicator(
-        onRefresh: () async {
-          await Future.wait([
-            _load(),
-            _sessionListKey.currentState?.reload() ?? Future.value(),
-          ]);
-        },
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: Style.safeSpace,
-                vertical: Style.md,
-              ),
-              child: _buildEntries(tokens),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Style.safeSpace,
+              vertical: Style.md,
             ),
-            // 阶段5d-L1：M3 分支已移除。
-            const MiuixHorizontalDivider(),
-            Expanded(
+            child: _buildEntries(tokens),
+          ),
+          // 阶段5d-L1：M3 分支已移除。
+          const MiuixHorizontalDivider(),
+          Expanded(
+            child: AppRefreshIndicator(
+              onRefresh: () async {
+                await Future.wait([
+                  _load(),
+                  _sessionListKey.currentState?.reload() ?? Future.value(),
+                ]);
+              },
               child: SessionListSection(
                 key: _sessionListKey,
                 onRefreshUnread: () => _clearDmUnread(),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
