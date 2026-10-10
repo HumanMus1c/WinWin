@@ -43,7 +43,7 @@ flutter_miuix，并建立两个替身组件收敛调用面。
 
 - `dart analyze` 零问题；`flutter test` **164/164 全绿**；
   双分支构建 Debug **33.3s** / Release **75.8s**（0 错误 0 警告）。
-- 快照：`f46e92b7`；提交 `（回填）`；回滚基准 `git reset --hard f46e92b7`。
+- 快照：`f46e92b7`；提交 `67fdce1`；回滚基准 `git reset --hard f46e92b7`。
 
 ## 5. 遗留与踩坑
 
