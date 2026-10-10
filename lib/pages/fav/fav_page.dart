@@ -28,7 +28,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCheckboxPreference, MiuixIconButton, MiuixPressable, MiuixSmallTopAppBar;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCheckboxPreference, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
@@ -312,6 +312,8 @@ class _FavFolderCard extends StatelessWidget {
 
     return MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: onTap,
         borderRadius: BorderRadius.all(radius),
         child: Padding(
@@ -712,13 +714,9 @@ class _FavVideoCard extends StatelessWidget {
     final upper = item.upper;
     final cnt = item.cntInfo;
     final data = VideoCardData.from(item);
-    Offset? lastTapPosition;
 
     return MiuixCard(
       child: GestureDetector(
-        onSecondaryTapDown: (details) {
-          lastTapPosition = details.globalPosition;
-        },
         onSecondaryTapUp: (details) {
           showVideoContextMenu(
             context: context,
@@ -727,18 +725,18 @@ class _FavVideoCard extends StatelessWidget {
             videoItem: item,
           );
         },
-        child: MiuixPressable(
-        onPressed: onTap,
-        onLongPress: () {
-          if (lastTapPosition != null) {
-            showVideoContextMenu(
-              context: context,
-              position: lastTapPosition!,
-              data: data,
-              videoItem: item,
-            );
-          }
+        onLongPressStart: (details) {
+          showVideoContextMenu(
+            context: context,
+            position: details.globalPosition,
+            data: data,
+            videoItem: item,
+          );
         },
+        child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
+        onPressed: onTap,
         borderRadius: BorderRadius.all(radius),
         child: Padding(
           padding: const EdgeInsets.all(8),

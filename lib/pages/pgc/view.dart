@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressable, MiuixSquircleBorder;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -87,6 +87,8 @@ class _PgcPageState extends State<PgcPage>
                   child: Material(
                     color: AppColors.transparent,
                     child: MiuixPressable(
+                      feedbackType: MiuixPressFeedbackType.sink,
+                      sinkAmount: 0.98,
                       borderRadius: shapes.pillBorder,
                       onPressed: () {
                         if (_selectedSubTab != tab) {
@@ -677,6 +679,8 @@ class _MyBangumiCard extends StatelessWidget {
 
     return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           Navigator.push(
             context,
@@ -828,6 +832,8 @@ class _PgcCard extends StatelessWidget {
     final cs = tokens.colors;
     return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           final sId = _seasonId;
           final mId = _mediaId;

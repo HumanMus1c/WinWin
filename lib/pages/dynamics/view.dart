@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixHorizontalDivider, MiuixPressable, MiuixSquircleBorder;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixHorizontalDivider, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
@@ -575,6 +575,8 @@ class _DemoDynCard extends StatelessWidget {
     final cs = AppThemeHost.of(context).colors;
     return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: onTap,
         child: Padding(
           padding: const EdgeInsets.all(Style.md),
@@ -687,6 +689,8 @@ class _DemoDynActionBarState extends State<_DemoDynActionBar> {
           'demo.dyn.${widget.seed}.comment',
         ),
         MiuixPressable(
+          feedbackType: MiuixPressFeedbackType.sink,
+          sinkAmount: 0.98,
           onPressed: () => setState(() => _liked = !_liked),
           borderRadius: BorderRadius.circular(4),
           child: item(
@@ -785,6 +789,8 @@ class _DynVideoCard extends StatelessWidget {
     return RepaintBoundary(
       child: MiuixCard(
         child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           if (bvid == null || bvid.isEmpty) return;
           Navigator.push(
@@ -930,6 +936,8 @@ class _DynPgcCard extends StatelessWidget {
 
     return MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           if (pgc?.jumpUrl != null && pgc!.jumpUrl!.isNotEmpty) {
             _handleUrl(context, pgc.jumpUrl!);
@@ -1133,6 +1141,8 @@ class _DynCard extends StatelessWidget {
 
     return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           Navigator.push(
             context,
@@ -1291,6 +1301,8 @@ class _DynCard extends StatelessWidget {
     final origAuthor = orig.author;
 
     return MiuixPressable(
+      feedbackType: MiuixPressFeedbackType.sink,
+      sinkAmount: 0.98,
       onPressed: () {
         Navigator.push(
           context,
@@ -1377,6 +1389,8 @@ class _DynCard extends StatelessWidget {
     final cover = pgc.cover;
 
     return MiuixPressable(
+      feedbackType: MiuixPressFeedbackType.sink,
+      sinkAmount: 0.98,
       onPressed: () {
         if (pgc.jumpUrl != null && pgc.jumpUrl!.isNotEmpty) {
           _handleJumpUrl(context, pgc.jumpUrl!);
@@ -1602,6 +1616,8 @@ class _DynCard extends StatelessWidget {
         ),
       ),
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           final id = article.id;
           if (id != null && id > 0) {
@@ -1695,6 +1711,8 @@ class _DynCard extends StatelessWidget {
         ),
       ),
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           var roomId = live.roomId;
           if ((roomId == null || roomId <= 0) &&
@@ -1865,6 +1883,8 @@ class _DynCard extends StatelessWidget {
     final cs = tokens.colors;
 
     return MiuixPressable(
+      feedbackType: MiuixPressFeedbackType.sink,
+      sinkAmount: 0.98,
       onPressed: () {
         if (item.jumpUrl != null && item.jumpUrl!.isNotEmpty) {
           _handleJumpUrl(context, item.jumpUrl!);
@@ -2068,6 +2088,8 @@ class _DynCard extends StatelessWidget {
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
             onPressed: () {
               if (bvid != null && bvid.isNotEmpty) {
                 Navigator.push(
@@ -2087,6 +2109,8 @@ class _DynCard extends StatelessWidget {
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
             onPressed: () {
               if (mid != null && mid > 0) {
                 Navigator.push(
@@ -2105,6 +2129,8 @@ class _DynCard extends StatelessWidget {
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
             onPressed: () => _handleJumpUrl(context, node.jumpUrl!),
             child: Text(
               text,

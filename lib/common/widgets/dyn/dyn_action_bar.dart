@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/dyn/dyn_repost_dialog.dart';
@@ -167,6 +167,8 @@ class _DynActionBarState extends State<DynActionBar> {
       child: MouseRegion(
         cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
         child: MiuixPressable(
+          feedbackType: MiuixPressFeedbackType.sink,
+          sinkAmount: 0.98,
           onPressed: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Padding(

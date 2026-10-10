@@ -1218,6 +1218,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       child: Material(
         color: AppColors.transparent,
         child: MiuixPressable(
+          feedbackType: MiuixPressFeedbackType.sink,
+          sinkAmount: 0.98,
           onPressed: _togglePlay,
           borderRadius: BorderRadius.circular(36),
           child: Container(

@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -56,7 +56,6 @@ class VideoCardH extends StatelessWidget {
     final radius = shapes.medium;
     final int duration = data.duration;
     final double? progress = data.progress;
-    Offset? lastTapPosition;
 
     // 演示模式：卡片保留完整交互（左键进入详情 / 右键菜单），
     // 文本与封面角标换为静态占位（无云端数据）。
@@ -65,9 +64,6 @@ class VideoCardH extends StatelessWidget {
       builder: (context, demo, _) => RepaintBoundary(
         child: MiuixCard(
           child: GestureDetector(
-            onSecondaryTapDown: (details) {
-              lastTapPosition = details.globalPosition;
-            },
             onSecondaryTapUp: (details) {
               showVideoContextMenu(
                 context: context,
@@ -77,19 +73,19 @@ class VideoCardH extends StatelessWidget {
                 onRemove: onRemove,
               );
             },
-            child: MiuixPressable(
-            onPressed: onTap,
-            onLongPress: () {
-              if (lastTapPosition != null) {
-                showVideoContextMenu(
-                  context: context,
-                  position: lastTapPosition!,
-                  data: data,
-                  videoItem: videoItem,
-                  onRemove: onRemove,
-                );
-              }
+            onLongPressStart: (details) {
+              showVideoContextMenu(
+                context: context,
+                position: details.globalPosition,
+                data: data,
+                videoItem: videoItem,
+                onRemove: onRemove,
+              );
             },
+            child: MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
+            onPressed: onTap,
             borderRadius: BorderRadius.all(radius),
             child: Padding(
               padding: const EdgeInsets.all(8),

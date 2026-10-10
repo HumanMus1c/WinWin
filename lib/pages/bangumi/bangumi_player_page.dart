@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
-import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressable, MiuixVerticalDivider;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixVerticalDivider;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -1246,6 +1246,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   ),
                 ),
                 child: MiuixPressable(
+                  feedbackType: MiuixPressFeedbackType.sink,
+                  sinkAmount: 0.98,
                   borderRadius: BorderRadius.circular(Style.radiusSm),
                   onPressed: () => _switchEpisode(ep),
                   child: Padding(
@@ -2287,6 +2289,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
             onPressed: desc.isEmpty ? null : () => setState(() => _descExpanded = !_descExpanded),
             borderRadius: BorderRadius.circular(Style.radiusSm),
             child: Text(

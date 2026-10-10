@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -38,6 +38,8 @@ class ProfileSectionHeader extends StatelessWidget {
         children: [
           Expanded(
             child: MiuixPressable(
+              feedbackType: MiuixPressFeedbackType.sink,
+              sinkAmount: 0.98,
               onPressed: onTapTitle,
               borderRadius: const BorderRadius.all(Radius.circular(8)),
               child: Padding(
@@ -247,6 +249,8 @@ class ProfileEmptyCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: MiuixPressable(
+          feedbackType: MiuixPressFeedbackType.sink,
+          sinkAmount: 0.98,
           onPressed: onTap,
           borderRadius: BorderRadius.all(shapes.medium),
           child: Container(
@@ -325,6 +329,8 @@ class ProfileFavFolderCard extends StatelessWidget {
     final radius = shapes.medium;
 
     return MiuixPressable(
+      feedbackType: MiuixPressFeedbackType.sink,
+      sinkAmount: 0.98,
       onPressed: onTap,
       borderRadius: BorderRadius.all(radius),
       child: SizedBox(
@@ -423,6 +429,8 @@ class ProfileVideoCard extends StatelessWidget {
     final radius = shapes.medium;
 
     return MiuixPressable(
+      feedbackType: MiuixPressFeedbackType.sink,
+      sinkAmount: 0.98,
       onPressed: onTap,
       borderRadius: BorderRadius.all(radius),
       child: SizedBox(

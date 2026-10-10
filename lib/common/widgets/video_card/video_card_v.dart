@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -44,7 +44,6 @@ class VideoCardV extends StatelessWidget {
     final data = VideoCardData.from(videoItem);
     final shapes = AppThemeHost.of(context).shapes;
     final radius = shapes.medium;
-    Offset? lastTapPosition;
 
     // 演示模式：卡片保留完整交互（左键进入详情 / 右键菜单），
     // 文本与封面角标换为静态占位（无云端数据）。
@@ -53,9 +52,6 @@ class VideoCardV extends StatelessWidget {
       builder: (context, demo, _) => RepaintBoundary(
         child: MiuixCard(
           child: GestureDetector(
-            onSecondaryTapDown: (details) {
-              lastTapPosition = details.globalPosition;
-            },
             onSecondaryTapUp: (details) {
               showVideoContextMenu(
                 context: context,
@@ -65,19 +61,19 @@ class VideoCardV extends StatelessWidget {
                 onRemove: onRemove,
               );
             },
-            child: MiuixPressable(
-            onPressed: onTap,
-            onLongPress: () {
-              if (lastTapPosition != null) {
-                showVideoContextMenu(
-                  context: context,
-                  position: lastTapPosition!,
-                  data: data,
-                  videoItem: videoItem,
-                  onRemove: onRemove,
-                );
-              }
+            onLongPressStart: (details) {
+              showVideoContextMenu(
+                context: context,
+                position: details.globalPosition,
+                data: data,
+                videoItem: videoItem,
+                onRemove: onRemove,
+              );
             },
+            child: MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
+            onPressed: onTap,
             borderRadius: BorderRadius.all(radius),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -10,6 +10,7 @@ import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
+import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/common/widgets/video_card/video_card_h.dart';
@@ -1660,6 +1661,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
             onPressed: desc.isEmpty
                 ? null
                 : () => setState(() => _descExpanded = !_descExpanded),
@@ -1710,6 +1713,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 borderRadius: BorderRadius.circular(Style.radiusLg),
               ),
               child: MiuixPressable(
+                feedbackType: MiuixPressFeedbackType.sink,
+                sinkAmount: 0.98,
                 onPressed: () => Navigator.of(context).push(
                   AppRoute<void>(
                     builder: (_) =>
@@ -2518,7 +2523,16 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           padding: const EdgeInsets.fromLTRB(Style.sm, Style.xs, Style.sm, 0),
           child: _buildCommentSortRow(),
         ),
-        Expanded(child: _buildReplyListView()),
+        Expanded(
+          child: AppRefreshIndicator(
+            // 实机反馈#4：评论区补下拉刷新（重拉首页评论）。
+            onRefresh: () async {
+              final aid = _detailState.dataOrNull?.aid;
+              if (aid != null) await _loadReplies(oid: aid, refresh: true);
+            },
+            child: _buildReplyListView(),
+          ),
+        ),
         _buildCommentInputBar(),
       ],
     );
@@ -2551,6 +2565,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 尾部统一交给 [_buildReplyTrailer]（spinner/重试/空态/到底）。
   Widget _buildReplyListView() {
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         Style.cardSpace,
         Style.xs,

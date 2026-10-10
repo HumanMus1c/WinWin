@@ -93,7 +93,9 @@ class MedalWidget extends StatelessWidget {
 
     if (onTap != null) {
       // 阶段5d-L1：M3 分支已移除；点按反馈为原生 MiuixPressable（扁平按压）。
-      return MiuixPressable(onPressed: onTap, child: child);
+      return MiuixPressable(
+  feedbackType: MiuixPressFeedbackType.sink,
+  sinkAmount: 0.98,onPressed: onTap, child: child);
     }
     return child;
   }

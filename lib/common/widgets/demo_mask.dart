@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -155,23 +155,18 @@ class DemoVideoCard extends StatelessWidget {
     final durationText = DurationUtils.formatDuration(
       DemoOverrides.durationSeconds('demo.card.$seed'),
     );
-    Offset? lastTapPosition;
 
     return RepaintBoundary(
       child: MiuixCard(
         child: GestureDetector(
-          onSecondaryTapDown: (details) {
-            lastTapPosition = details.globalPosition;
-          },
           onSecondaryTapUp: (details) =>
               _showDemoCardMenu(context, details.globalPosition, seed),
+          onLongPressStart: (details) =>
+              _showDemoCardMenu(context, details.globalPosition, seed),
           child: MiuixPressable(
+          feedbackType: MiuixPressFeedbackType.sink,
+          sinkAmount: 0.98,
           onPressed: onTap,
-          onLongPress: () {
-            if (lastTapPosition != null) {
-              _showDemoCardMenu(context, lastTapPosition!, seed);
-            }
-          },
           borderRadius: BorderRadius.circular(Style.radiusMd),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -317,23 +312,18 @@ class DemoVideoCardH extends StatelessWidget {
     final durationText = DurationUtils.formatDuration(
       DemoOverrides.durationSeconds('demo.hcard.$seed'),
     );
-    Offset? lastTapPosition;
 
     return RepaintBoundary(
       child: MiuixCard(
         child: GestureDetector(
-          onSecondaryTapDown: (details) {
-            lastTapPosition = details.globalPosition;
-          },
           onSecondaryTapUp: (details) =>
               _showDemoCardMenu(context, details.globalPosition, seed),
+          onLongPressStart: (details) =>
+              _showDemoCardMenu(context, details.globalPosition, seed),
           child: MiuixPressable(
+          feedbackType: MiuixPressFeedbackType.sink,
+          sinkAmount: 0.98,
           onPressed: onTap,
-          onLongPress: () {
-            if (lastTapPosition != null) {
-              _showDemoCardMenu(context, lastTapPosition!, seed);
-            }
-          },
           borderRadius: BorderRadius.circular(Style.radiusMd),
           child: Padding(
             padding: const EdgeInsets.all(8),

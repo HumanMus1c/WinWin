@@ -142,6 +142,8 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
               children: [
                 Expanded(
                   child: MiuixPressable(
+                    feedbackType: MiuixPressFeedbackType.sink,
+                    sinkAmount: 0.98,
                     onPressed: !val
                         ? null
                         : (widget.onTap == null

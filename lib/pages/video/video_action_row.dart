@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -321,6 +321,8 @@ class _ActionButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: onTap,
         borderRadius: BorderRadius.circular(8),
         child: ConstrainedBox(

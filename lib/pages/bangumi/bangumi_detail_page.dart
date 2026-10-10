@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressable, MiuixVerticalDivider;
+import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixVerticalDivider;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -938,6 +938,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         ),
         if (detail.evaluate.length > 80)
           MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
             onPressed: () => setState(() => _descExpanded = !_descExpanded),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1165,6 +1167,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         final badgeOffset = 4.0;
 
         return MiuixPressable(
+          feedbackType: MiuixPressFeedbackType.sink,
+          sinkAmount: 0.98,
           key: isLastWatched ? _lastWatchedKey : null,
           borderRadius: BorderRadius.circular(Style.radiusSm),
           onPressed: () => _openPlayer(detail, ep),

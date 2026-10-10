@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
+import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -268,7 +269,9 @@ class _SessionListPageState extends State<SessionListPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      body: Column(
+      body: AppRefreshIndicator(
+        onRefresh: () => _load(refresh: true),
+        child: Column(
         children: [
           // 分类 chips
           SizedBox(
@@ -303,10 +306,7 @@ class _SessionListPageState extends State<SessionListPage> {
                     error: _error!,
                     onRetry: () => _load(refresh: true),
                   )
-                : RefreshIndicator(
-                    color: biliPink,
-                    onRefresh: () => _load(refresh: true),
-                    child: ListView.builder(
+                : ListView.builder(
                         itemCount: _sessions.length + 1,
                         itemBuilder: (context, index) {
                           if (index == _sessions.length) {
@@ -335,9 +335,9 @@ class _SessionListPageState extends State<SessionListPage> {
                           );
                         },
                       ),
-                  ),
           ),
         ],
+        ),
       ),
     );
   }

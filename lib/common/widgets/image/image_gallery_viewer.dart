@@ -426,6 +426,8 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
       child: AppScaffold(
+        reserveTopStrip: false,
+        showBackButton: false,
         backgroundColor: AppColors.transparent,
         body: ValueListenableBuilder<_GalleryDragState>(
           valueListenable: _dragNotifier,
@@ -526,40 +528,60 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   child: SafeArea(
                     child: Row(
                       children: [
-                        // 序号指示器
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.black.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppColors.white.withValues(alpha: 0.2),
-                              width: 0.5,
-                            ),
-                          ),
-                          child: Text(
-                            '${_currentIndex + 1} / $total',
-                            style: const TextStyle(
-                              color: AppColors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1,
+                        // 序号指示器（顶部居中）
+                        Expanded(
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.black.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppColors.white.withValues(alpha: 0.2),
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Text(
+                                '${_currentIndex + 1} / $total',
+                                style: const TextStyle(
+                                  color: AppColors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                        const Spacer(),
-                        // 保存到本地
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // 底部操作栏（下载/复制/关闭：水平居中、底部稍偏上；42 尺寸对齐全局返回按钮）
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 28),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                         MiuixIconButton(
+                          minWidth: 42,
+                          minHeight: 42,
                           backgroundColor:
                               AppColors.black.withValues(alpha: 0.4),
                           child: Tooltip(
                             message: '保存图片',
                             child: AppIcon(
                               AppIcons.download(),
-                              size: 18,
+                              size: 20,
                               color: AppColors.white,
                             ),
                           ),
@@ -569,16 +591,17 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                             _saveImage(context, curUrl);
                           },
                         ),
-                        const SizedBox(width: 8),
-                        // 复制图片链接
+                        const SizedBox(width: 16),
                         MiuixIconButton(
+                          minWidth: 42,
+                          minHeight: 42,
                           backgroundColor:
                               AppColors.black.withValues(alpha: 0.4),
                           child: Tooltip(
                             message: '复制图片链接',
                             child: Icon(
                               AppIcons.copy(),
-                              size: 18,
+                              size: 20,
                               color: AppColors.white,
                             ),
                           ),
@@ -593,9 +616,10 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                             );
                           },
                         ),
-                        const SizedBox(width: 8),
-                        // 关闭按钮
+                        const SizedBox(width: 16),
                         MiuixIconButton(
+                          minWidth: 42,
+                          minHeight: 42,
                           backgroundColor:
                               AppColors.black.withValues(alpha: 0.4),
                           child: Tooltip(

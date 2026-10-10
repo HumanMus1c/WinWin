@@ -546,6 +546,8 @@ class AppActionTile extends StatelessWidget {
 
     // 阶段5d-L1：M3 分支已移除；按压反馈恒为原生 MiuixPressable。
     final pressed = MiuixPressable(
+      feedbackType: MiuixPressFeedbackType.sink,
+      sinkAmount: 0.98,
       onPressed: onTap,
       enabled: onTap != null,
       child: tile,

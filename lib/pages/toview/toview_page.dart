@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -545,13 +545,9 @@ class _ToviewCard extends StatelessWidget {
     }
 
     final data = VideoCardData.from(item);
-    Offset? lastTapPosition;
 
     return MiuixCard(
       child: GestureDetector(
-        onSecondaryTapDown: (details) {
-          lastTapPosition = details.globalPosition;
-        },
         onSecondaryTapUp: (details) {
           showVideoContextMenu(
             context: context,
@@ -561,19 +557,19 @@ class _ToviewCard extends StatelessWidget {
             onRemove: onRemove,
           );
         },
-        child: MiuixPressable(
-        onPressed: onTap,
-        onLongPress: () {
-          if (lastTapPosition != null) {
-            showVideoContextMenu(
-              context: context,
-              position: lastTapPosition!,
-              data: data,
-              videoItem: item,
-              onRemove: onRemove,
-            );
-          }
+        onLongPressStart: (details) {
+          showVideoContextMenu(
+            context: context,
+            position: details.globalPosition,
+            data: data,
+            videoItem: item,
+            onRemove: onRemove,
+          );
         },
+        child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
+        onPressed: onTap,
         borderRadius: BorderRadius.all(radius),
         child: Padding(
           padding: const EdgeInsets.all(8),

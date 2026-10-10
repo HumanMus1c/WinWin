@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -490,6 +490,8 @@ class _HistoryCard extends StatelessWidget {
 
     return MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: onTap,
         borderRadius: BorderRadius.all(radius),
         child: Padding(

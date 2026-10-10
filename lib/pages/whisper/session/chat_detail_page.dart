@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -577,6 +577,8 @@ class _ChatBubble extends StatelessWidget {
     return Container(
       color: tokens.colors.surfaceContainerHighest,
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: sourceInt == 5 ? () => _openSharedVideo(context, tokens, json) : null,
         child: Padding(
           padding: const EdgeInsets.all(Style.sm),
@@ -618,6 +620,8 @@ class _ChatBubble extends StatelessWidget {
     return Container(
       color: tokens.colors.surfaceContainerHighest,
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: bvid.isEmpty ? null : () => _openVideo(context, bvid, cover),
         child: Padding(
           padding: const EdgeInsets.all(Style.sm),

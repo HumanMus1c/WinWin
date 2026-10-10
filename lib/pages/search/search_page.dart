@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
@@ -376,6 +376,8 @@ class _SearchPageState extends State<SearchPage> {
         itemBuilder: (context, index) {
           final user = _visitedUsers[index];
           return MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
             borderRadius: BorderRadius.circular(100),
             onPressed: () {
               Navigator.push(

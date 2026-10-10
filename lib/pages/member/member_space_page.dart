@@ -1003,9 +1003,16 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       _SpaceTabType.liked => _buildLikedTab(),
       _SpaceTabType.about => _buildAboutTab(card),
     };
+    // 实机反馈#4：页签内容各自可下拉刷新（NestedScrollView 内层拖拽不会被
+    // 外层指示器接住，故在内层再补一层；外层保留覆盖头图区拖拽）。
+    final refreshable =
+        AppRefreshIndicator(onRefresh: _loadAll, child: content);
     // 演示模式：除「自己的空间·详细资料」外，页签内容一律以骨架显示。
-    if (isOwner && type == _SpaceTabType.about) return content;
-    return DemoMask(skeleton: _buildSpaceTabSkeleton, child: () => content);
+    if (isOwner && type == _SpaceTabType.about) return refreshable;
+    return DemoMask(
+      skeleton: _buildSpaceTabSkeleton,
+      child: () => refreshable,
+    );
   }
 
   /// 空间页签通用骨架（演示模式占位）。
@@ -1408,6 +1415,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               followedUpper.items.isNotEmpty) ...[
             const SizedBox(height: Style.sm),
             MiuixPressable(
+              feedbackType: MiuixPressFeedbackType.sink,
+              sinkAmount: 0.98,
               onPressed: () {
                 showMemberRelationPage(
                   context,
@@ -1605,6 +1614,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     if (onTap != null) {
       return MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: onTap,
         borderRadius: BorderRadius.circular(Style.radiusSm),
         child: Padding(
@@ -1742,6 +1753,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: bvid == null
             ? null
             : () => Navigator.push(
@@ -1918,6 +1931,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         ),
       ),
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           Navigator.push(
             context,
@@ -2142,6 +2157,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           Navigator.push(
             context,
@@ -2287,6 +2304,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final origAuthor = orig.author;
 
     return MiuixPressable(
+      feedbackType: MiuixPressFeedbackType.sink,
+      sinkAmount: 0.98,
       onPressed: () {
         Navigator.push(
           context,
@@ -2559,6 +2578,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         ),
       ),
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           final id = article.id;
           if (id != null && id > 0) {
@@ -2629,6 +2650,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         ),
       ),
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           final roomId = live.roomId;
           if (roomId != null && roomId > 0) {
@@ -2829,6 +2852,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
             onPressed: () {
               if (bvid != null) {
                 Navigator.push(context, AppRoute(builder: (_) => VideoDetailPage(bvid: bvid)));
@@ -2842,6 +2867,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         spans.add(WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: MiuixPressable(
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
             onPressed: () {
               if (mid != null && mid > 0) {
                 Navigator.push(context, AppRoute(builder: (_) => MemberSpacePage(mid: mid)));
@@ -2913,6 +2940,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           Navigator.push(
             context,
@@ -3101,6 +3130,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           Navigator.push(
             context,

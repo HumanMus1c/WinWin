@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressable, MiuixSquircleBorder;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -160,6 +160,8 @@ class _LivePageState extends State<LivePage>
           return Material(
             color: AppColors.transparent,
             child: MiuixPressable(
+              feedbackType: MiuixPressFeedbackType.sink,
+              sinkAmount: 0.98,
               borderRadius: shapes.pillBorder,
               onPressed: () {
                 if (_selectedIndex != index) {
@@ -704,6 +706,8 @@ class _LiveCard extends StatelessWidget {
     final cs = theme.colorScheme;
     return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           final roomId = item.roomId;
           if (roomId == null || roomId <= 0) return;

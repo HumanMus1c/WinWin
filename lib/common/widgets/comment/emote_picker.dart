@@ -1,6 +1,6 @@
 import 'dart:async' show unawaited;
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
@@ -336,6 +336,8 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
     final tokens = AppThemeHost.of(context);
     final active = i == activeIndex;
     return MiuixPressable(
+      feedbackType: MiuixPressFeedbackType.sink,
+      sinkAmount: 0.98,
       borderRadius: BorderRadius.circular(6),
       onPressed: () => setState(() => _packageIndex = i),
       child: Container(
@@ -406,6 +408,8 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
       message: tooltip,
       waitDuration: const Duration(milliseconds: 600),
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         borderRadius: BorderRadius.circular(6),
         onPressed: () => widget.onPick(label),
         child: Padding(
@@ -441,6 +445,8 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
       message: text,
       waitDuration: const Duration(milliseconds: 600),
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         borderRadius: BorderRadius.circular(6),
         onPressed: () => widget.onPick(text),
         child: Center(

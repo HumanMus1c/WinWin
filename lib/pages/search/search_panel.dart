@@ -1,4 +1,4 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 
@@ -254,6 +254,8 @@ class _SearchPanelState extends State<SearchPanel>
     final tokens = AppThemeHost.of(context);
     return MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           if (item.mid != null && (item.uname?.isNotEmpty ?? false)) {
             SearchHistoryService().addVisitedUser(
@@ -377,6 +379,8 @@ class _SearchPanelState extends State<SearchPanel>
     final tokens = AppThemeHost.of(context);
     return MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           // 直播间跳转暂未实现，显示提示
           showToast(
@@ -489,6 +493,8 @@ class _SearchPanelState extends State<SearchPanel>
     final tokens = AppThemeHost.of(context);
     return MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           Navigator.push(
             context,
@@ -589,6 +595,8 @@ class _SearchPanelState extends State<SearchPanel>
     final hasImg = item.imageUrls != null && item.imageUrls!.isNotEmpty;
     return MiuixCard(
       child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
         onPressed: () {
           showToast(
             context,
