@@ -30,6 +30,8 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 历史记录页面（移植自 PiliPlus `lib/pages/history/`，重构为自适应多列宫格排版）。
 void showHistoryPage(BuildContext context) {
@@ -297,7 +299,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
             onPressed: _clearAll,
 
-            child: Tooltip(message: '清空', child: AppIcon(AppIcons.clearAll())),
+            child: AppTooltip(message: '清空', child: AppIcon(AppIcons.clearAll())),
           ),
       ],
       body: Pref.demoMode
@@ -349,7 +351,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                 child: Padding(
                                   padding: EdgeInsets.all(Style.md),
                                   child: Center(
-                                    child: CircularProgressIndicator(
+                                    child: AppProgressIndicator(
                                       strokeWidth: 2,
                                       color: biliPink,
                                     ),
@@ -536,11 +538,11 @@ class _HistoryCard extends StatelessWidget {
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          child: LinearProgressIndicator(
+                          child: AppLinearProgressIndicator(
                             value: progressFraction,
                             minHeight: 2.5,
                             backgroundColor: AppColors.black38,
-                            valueColor: AlwaysStoppedAnimation(cs.primary),
+                            color: cs.primary,
                           ),
                         ),
                     ],
@@ -613,7 +615,7 @@ class _HistoryCard extends StatelessWidget {
                               minWidth: 24,
                               minHeight: 24,
                               onPressed: onDelete,
-                              child: Tooltip(
+                              child: AppTooltip(
                                 message: '删除此记录',
                                 child: AppIcon(
                                   AppIcons.clear(),

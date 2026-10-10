@@ -22,6 +22,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 可内嵌的会话列表区（用于消息页直接展示）。
 ///
@@ -352,7 +353,7 @@ class SessionListSectionState extends State<SessionListSection> {
                     child: Padding(
                       padding: EdgeInsets.all(Style.xxl),
                       child: Center(
-                        child: CircularProgressIndicator(color: biliPink),
+                        child: AppProgressIndicator(color: biliPink),
                       ),
                     ),
                   )
@@ -395,7 +396,7 @@ class SessionListSectionState extends State<SessionListSection> {
                         return const Padding(
                           padding: EdgeInsets.all(Style.md),
                           child: Center(
-                            child: CircularProgressIndicator(
+                            child: AppProgressIndicator(
                               strokeWidth: 2,
                               color: biliPink,
                             ),

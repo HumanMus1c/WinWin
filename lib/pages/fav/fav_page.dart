@@ -30,6 +30,7 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCheckboxPreference, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixSmallTopAppBar;
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 收藏夹页面（移植自 PiliPlus `lib/pages/fav/`，重构为自适应宫格排版）。
 void showFavPage(BuildContext context) {
@@ -200,7 +201,7 @@ class _FavPageState extends State<FavPage> {
       body: Pref.demoMode
           ? const DemoListSkeleton()
           : _loading && _folders.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: biliPink))
+          ? const Center(child: AppProgressIndicator(color: biliPink))
           : _error != null && _folders.isEmpty
               ? _buildError()
               : _folders.isEmpty
@@ -242,7 +243,7 @@ class _FavPageState extends State<FavPage> {
                                 child: Padding(
                                   padding: EdgeInsets.all(Style.md),
                                   child: Center(
-                                    child: CircularProgressIndicator(
+                                    child: AppProgressIndicator(
                                       strokeWidth: 2,
                                       color: biliPink,
                                     ),
@@ -539,7 +540,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
       body: Pref.demoMode
           ? const DemoListSkeleton()
           : _loading && _items.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: biliPink))
+          ? const Center(child: AppProgressIndicator(color: biliPink))
           : _items.isEmpty
               ? AppEmptyState(
                   icon: AppIcon(AppIcons.folderEmpty()),
@@ -591,7 +592,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
                             child: Padding(
                               padding: EdgeInsets.all(Style.md),
                               child: Center(
-                                child: CircularProgressIndicator(
+                                child: AppProgressIndicator(
                                   strokeWidth: 2,
                                   color: biliPink,
                                 ),
@@ -998,7 +999,7 @@ class _FavPanelState extends State<_FavPanel> {
             ),
           ),
           if (_loading)
-            const Expanded(child: Center(child: CircularProgressIndicator(color: biliPink)))
+            const Expanded(child: Center(child: AppProgressIndicator(color: biliPink)))
           else if (_folders == null || _folders!.isEmpty)
             const Expanded(child: Center(child: Text('暂无收藏夹')))
           else
@@ -1047,7 +1048,7 @@ class _FavPanelState extends State<_FavPanel> {
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white),
+                            child: AppProgressIndicator(strokeWidth: 2, color: AppColors.white),
                           )
                         : const Text('完成'),
                   ),

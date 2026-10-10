@@ -23,6 +23,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 私信会话列表入口（阶段 C）。
 ///
@@ -296,7 +297,7 @@ class _SessionListPageState extends State<SessionListPage> {
                 ? const DemoListSkeleton(coverWidth: 44, coverHeight: 44)
                 : _loading && _sessions.isEmpty
                 ? const Center(
-                    child: CircularProgressIndicator(color: biliPink),
+                    child: AppProgressIndicator(color: biliPink),
                   )
                 : _error != null && _sessions.isEmpty
                 ? MsgFeedErrorView(
@@ -315,7 +316,7 @@ class _SessionListPageState extends State<SessionListPage> {
                               return const Padding(
                                 padding: EdgeInsets.all(Style.md),
                                 child: Center(
-                                  child: CircularProgressIndicator(
+                                  child: AppProgressIndicator(
                                     strokeWidth: 2,
                                     color: biliPink,
                                   ),

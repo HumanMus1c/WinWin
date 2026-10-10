@@ -19,6 +19,7 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 直播二级分类导航条目。
 class LiveCategoryTab {
@@ -368,7 +369,7 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
         child: DemoMask(
           skeleton: _buildLiveSkeletonGrid,
           child: () => switch (_state) {
-            Loading() => const Center(child: CircularProgressIndicator()),
+            Loading() => const Center(child: AppProgressIndicator()),
             Error(:final errMsg) => _buildError(errMsg),
             Success() => _items.isEmpty
                 ? _buildEmpty()
@@ -477,7 +478,7 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
           child: SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: AppProgressIndicator(strokeWidth: 2),
           ),
         ),
       );
@@ -603,7 +604,7 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
         child: DemoMask(
           skeleton: _buildLiveSkeletonGrid,
           child: () => switch (_state) {
-            Loading() => const Center(child: CircularProgressIndicator()),
+            Loading() => const Center(child: AppProgressIndicator()),
             Error(:final errMsg) => _buildError(errMsg),
             Success() => _items.isEmpty
                 ? _buildEmpty()
@@ -681,7 +682,7 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
           child: SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: AppProgressIndicator(strokeWidth: 2),
           ),
         ),
       );

@@ -10,6 +10,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 动态互动条（转发 / 评论 / 点赞），动态卡片、详情页与空间动态共用。
 ///
@@ -161,9 +162,8 @@ class _DynActionBarState extends State<DynActionBar> {
     required String tooltip,
     required VoidCallback? onTap,
   }) {
-    return Tooltip(
+    return AppTooltip(
       message: tooltip,
-      waitDuration: const Duration(milliseconds: 500),
       child: MouseRegion(
         cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
         child: MiuixPressable(

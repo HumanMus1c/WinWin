@@ -7,6 +7,7 @@ import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 演示模式下可即时编辑的数字元素。
 ///
@@ -272,7 +273,7 @@ class _DemoInlineEditNumberState extends State<DemoInlineEditNumber> {
         ),
       );
     }
-    return Tooltip(
+    return AppTooltip(
       message: '演示模式：双击编辑数值',
       child: GestureDetector(
         onDoubleTap: _start,
@@ -302,7 +303,7 @@ class _DemoEditShellState extends State<_DemoEditShell> {
   @override
   Widget build(BuildContext context) {
     final cs = AppThemeHost.of(context).colors;
-    return Tooltip(
+    return AppTooltip(
       message: '演示模式：点击编辑',
       child: MouseRegion(
         cursor: SystemMouseCursors.click,

@@ -13,6 +13,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 弹幕设置面板（移植自 PiliPlus `lib/pages/video/widgets/header_mixin.dart`
 /// 中的弹幕设置区）。
@@ -444,7 +445,7 @@ class _SliderRow extends StatelessWidget {
                   minWidth: 28,
                   minHeight: 28,
                   onPressed: onReset,
-                  child: Tooltip(
+                  child: AppTooltip(
                     message: '恢复默认',
                     child: AppIcon(
                       AppIcons.refresh(),

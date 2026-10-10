@@ -32,6 +32,8 @@ import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// Duration 没有 clamp 方法，手动实现（用于 seek 位置限制）。
 Duration _clampDuration(Duration value, Duration min, Duration max) {
@@ -708,7 +710,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
           onPressed: _toggleLock,
 
-          child: Tooltip(message: '解锁控制条', child: ContrastIcon(
+          child: AppTooltip(message: '解锁控制条', child: ContrastIcon(
             AppIcons.lock(),
             color: AppColors.white,
             size: 32,
@@ -810,7 +812,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 final showSpinner = isBuffering || !isReady;
                 if (!showSpinner) return const SizedBox.shrink();
                 return const Center(
-                  child: CircularProgressIndicator(color: biliPink),
+                  child: AppProgressIndicator(color: biliPink),
                 );
               },
             );
@@ -1405,7 +1407,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
             ],
             title: '画质',
             itemTextStyle: const TextStyle(fontSize: 12),
-            child: Tooltip(
+            child: AppTooltip(
               message: '画质',
               child: HoverContainer(
                 borderRadius: 6.0,
@@ -1605,7 +1607,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
             ],
             title: '音频设置',
             itemTextStyle: const TextStyle(fontSize: 12),
-            child: Tooltip(
+            child: AppTooltip(
               message: '音频设置',
               child: HoverContainer(
                 borderRadius: 6.0,
@@ -2145,7 +2147,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
             ],
             title: '倍速',
             itemTextStyle: const TextStyle(fontSize: 12),
-            child: Tooltip(
+            child: AppTooltip(
               message: '倍速',
               child: HoverContainer(
                 borderRadius: 6.0,
@@ -2387,7 +2389,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                         ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: AppProgressIndicator(strokeWidth: 2),
                           )
                         : AppIcon(AppIcons.download(), size: 18),
                     label: Text(_savedPath != null ? '已保存' : '保存'),
@@ -2460,7 +2462,7 @@ class _PlayerBarIconButtonState extends State<_PlayerBarIconButton> {
     );
 
     if (widget.tooltip != null && widget.tooltip!.isNotEmpty) {
-      return Tooltip(
+      return AppTooltip(
         message: widget.tooltip!,
         child: child,
       );

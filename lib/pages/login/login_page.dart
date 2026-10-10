@@ -21,6 +21,8 @@ import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 登录页（移植自 PiliPlus `lib/pages/login/`）。
 ///
@@ -352,7 +354,7 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(
+                    child: AppProgressIndicator(
                         strokeWidth: 2, color: AppColors.white),
                   )
                 : Row(
@@ -624,7 +626,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                         ],
                       ),
                     ],
-                    child: Tooltip(
+                    child: AppTooltip(
                       message: '选择国际冠码，当前为+$_countryId',
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -652,7 +654,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: AppProgressIndicator(strokeWidth: 2),
                     )
                   : AppIcon(AppIcons.send()),
               label: Text(
@@ -668,7 +670,7 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(
+                    child: AppProgressIndicator(
                         strokeWidth: 2, color: AppColors.white),
                   )
                 : Row(
@@ -825,7 +827,7 @@ class _QRLoginTabState extends State<_QRLoginTab> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (_loading)
-              CircularProgressIndicator(color: cs.primary)
+              AppProgressIndicator(color: cs.primary)
             else if (_qrUrl != null)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -1004,7 +1006,7 @@ class _CookieLoginTabState extends State<_CookieLoginTab> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(
+                    child: AppProgressIndicator(
                         strokeWidth: 2, color: AppColors.white),
                   )
                 : Row(

@@ -50,6 +50,8 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 动态类型筛选枚举。
 enum _DynFilterType {
@@ -175,7 +177,7 @@ class _DemoMedalEditState extends State<_DemoMedalEdit> {
         DemoOverrides.choice('space.medal.level') != null ||
         DemoOverrides.choice('space.medal.color') != null;
     final cs = AppThemeHost.of(context).colors;
-    return Tooltip(
+    return AppTooltip(
       message: '演示模式：点击编辑',
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -861,7 +863,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
                 onPressed: () => Navigator.maybePop(context),
 
-                child: Tooltip(message: '返回', child: Container(
+                child: AppTooltip(message: '返回', child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: AppColors.black.withValues(alpha: 0.35),
@@ -913,7 +915,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                         ],
                       ),
                     ],
-                    child: Tooltip(
+                    child: AppTooltip(
                       message: '更多选项',
                       child: Container(
                         padding: const EdgeInsets.all(6),
@@ -1210,7 +1212,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               if (!isOwner) ...[
                 MiuixIconButton(
                   backgroundColor: cs.secondaryContainer,
-                  child: Tooltip(
+                  child: AppTooltip(
                     message: '私信',
                     child: AppIcon(
                       AppIcons.mail(),
@@ -1241,7 +1243,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                         const SizedBox(
                           width: 14,
                           height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: AppProgressIndicator(strokeWidth: 2),
                         )
                       else ...[
                         Icon(
@@ -1724,7 +1726,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 child: SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: AppProgressIndicator(strokeWidth: 2),
                 ),
               ),
             ),
@@ -1891,7 +1893,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 child: SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: AppProgressIndicator(strokeWidth: 2),
                 ),
               ),
             ),
@@ -2096,7 +2098,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 child: SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: AppProgressIndicator(strokeWidth: 2),
                 ),
               ),
             ),
@@ -3113,7 +3115,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   child: SizedBox(
                     width: 24,
                     height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: AppProgressIndicator(strokeWidth: 2),
                   ),
                 ),
               ),

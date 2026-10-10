@@ -26,6 +26,8 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 聊天详情入口（阶段 D）。
 ///
@@ -216,14 +218,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             title: widget.title,
           ),
 
-          child: Tooltip(message: '会话设置', child: AppIcon(AppIcons.more())),
+          child: AppTooltip(message: '会话设置', child: AppIcon(AppIcons.more())),
         ),
       ], 
       body: Column(
         children: [
           Expanded(
             child: _loading && _messages.isEmpty
-                ? const Center(child: CircularProgressIndicator(color: biliPink))
+                ? const Center(child: AppProgressIndicator(color: biliPink))
                 : _error != null && _messages.isEmpty
                     ? Center(
                         child: Column(
@@ -257,7 +259,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                 child: SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: biliPink),
+                                  child: AppProgressIndicator(strokeWidth: 2, color: biliPink),
                                 ),
                               ),
                             );
@@ -322,7 +324,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white),
+                      child: AppProgressIndicator(strokeWidth: 2, color: AppColors.white),
                     )
                   : AppIcon(
                       AppIcons.send(),

@@ -8,6 +8,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 关于页面。
 ///
@@ -124,7 +125,7 @@ class AboutPage extends StatelessWidget {
 
                         onPressed: () => Navigator.pop(dialogCtx),
 
-                        child: Tooltip(message: '关闭', child: AppIcon(AppIcons.clear(), size: 20)),
+                        child: AppTooltip(message: '关闭', child: AppIcon(AppIcons.clear(), size: 20)),
                       ),
                     ],
                   ),

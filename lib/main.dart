@@ -29,6 +29,7 @@ import 'utils/calc_window_position.dart';
 import 'utils/json_file_handler.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 全局路由观察器，供 VideoDetailPage 监听 push/pop 事件，
 /// 在页面被覆盖时暂停播放器、返回时恢复播放。
@@ -401,7 +402,7 @@ class _AgreementGateState extends State<AgreementGate> {
                     child: SizedBox(
                       width: 26,
                       height: 26,
-                      child: CircularProgressIndicator(
+                      child: AppProgressIndicator(
                         strokeWidth: 2.8,
                         color: biliPink,
                       ),

@@ -11,6 +11,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 极验验证码 JS 资源（gt.0.5.0.js 旧版 / fullpage 新版均可）。
 const _geetestJsUri =
@@ -135,7 +136,7 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
               future: _future,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: AppProgressIndicator());
                 }
                 final config = snapshot.data!;
                 if (config is Error) {
@@ -156,7 +157,7 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
               },
             ),
             if (_loading)
-              const Center(child: CircularProgressIndicator()),
+              const Center(child: AppProgressIndicator()),
           ],
         ),
       ),

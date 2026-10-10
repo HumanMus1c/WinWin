@@ -19,6 +19,7 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 用户合集/系列视频列表详情页面。
 class SeasonSeriesDetailPage extends StatefulWidget {
@@ -242,7 +243,7 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
                     child: SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: AppProgressIndicator(strokeWidth: 2),
                     ),
                   ),
                 ),

@@ -9,6 +9,7 @@ import 'app_icons_bili.g.dart';
 import 'app_icons_builtin.g.dart';
 import 'app_icons_official.g.dart';
 import 'app_icons_web.g.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 全局语义图标中心（阶段5d-L4-2 单轨化：原 `*Of(style)` 与 `*(context)` 双分发
 /// 已收敛为无参静态方法，字形恒定 Miuix / Apple 图标集；字形→Miuix 矢量映射
@@ -837,7 +838,7 @@ class AppBackButton extends StatelessWidget {
     return MiuixIconButton(
       minWidth: 0,
       minHeight: 0,
-      child: Tooltip(
+      child: AppTooltip(
         message: tooltip ?? (isClose ? '关闭' : '返回'),
         child: Padding(
           padding: padding,

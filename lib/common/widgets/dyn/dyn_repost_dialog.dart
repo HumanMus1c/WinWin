@@ -8,6 +8,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 动态转发弹窗（对标 PiliPlus RepostPanel 的精简桌面版）：
 /// 展示被转发内容预览 + 转发理由输入，提交至 `/x/dynamic/feed/create/dyn`。
@@ -150,7 +151,7 @@ class _DynRepostDialogState extends State<DynRepostDialog> {
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(
+                  child: AppProgressIndicator(
                     strokeWidth: 2,
                     color: AppColors.white,
                   ),

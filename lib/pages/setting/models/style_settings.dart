@@ -17,6 +17,8 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/system_font_scanner.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 外观设置项列表。
 ///
@@ -260,7 +262,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                         Navigator.pop(context);
                       },
 
-                      child: Tooltip(message: '关闭', child: AppIcon(AppIcons.clear())),
+                      child: AppTooltip(message: '关闭', child: AppIcon(AppIcons.clear())),
                     ),
                   ],
                 ),
@@ -281,7 +283,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
               const SizedBox(height: Style.sm),
               Expanded(
                 child: _scanning
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: AppProgressIndicator())
                     : ListView(
                         children: [
                           for (final font in _filteredFonts)
@@ -327,7 +329,7 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
                                   width: 16,
                                   height: 16,
                                   child:
-                                      CircularProgressIndicator(strokeWidth: 2),
+                                      AppProgressIndicator(strokeWidth: 2),
                                 )
                               : AppIcon(AppIcons.fontImport(), size: 18),
                           const SizedBox(width: 6),

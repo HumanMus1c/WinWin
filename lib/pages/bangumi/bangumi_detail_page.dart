@@ -23,6 +23,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 番剧 / 影视详情主页（对标 BiliPai `BangumiDetailScreen` 与 PiliPlus）。
 ///
@@ -447,7 +448,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
           onPressed: () => _loadDetail(),
 
-          child: Tooltip(message: '刷新', child: AppIcon(AppIcons.refresh())),
+          child: AppTooltip(message: '刷新', child: AppIcon(AppIcons.refresh())),
         ),
         MiuixIconButton(
 
@@ -462,7 +463,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
             }
           },
 
-          child: Tooltip(message: '分享', child: AppIcon(AppIcons.share())),
+          child: AppTooltip(message: '分享', child: AppIcon(AppIcons.share())),
         ),
       ],
       body: DemoMask(
@@ -1464,7 +1465,7 @@ class _FollowButtonState extends State<_FollowButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Tooltip(
+      child: AppTooltip(
         message: widget.isFollowed ? '点击取消追番，右键/长按更改追番状态' : '点击追番',
         child: GestureDetector(
           onSecondaryTap: widget.isFollowed ? widget.onShowStatusMenu : null,

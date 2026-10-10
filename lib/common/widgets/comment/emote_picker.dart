@@ -9,6 +9,7 @@ import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 官方表情面板按钮（评论输入框 / 直播互动条共用）。
 ///
@@ -229,9 +230,8 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
   @override
   Widget build(BuildContext context) {
     final cs = AppThemeHost.of(context).colors;
-    return Tooltip(
+    return AppTooltip(
       message: '选择官方表情',
-      waitDuration: const Duration(milliseconds: 600),
       child: MouseRegion(
         cursor:
             widget.enabled ? SystemMouseCursors.click : MouseCursor.defer,
@@ -404,9 +404,8 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
     required String tooltip,
   }) {
     final cacheSize = ImageUtils.decodeClamp(_tileSize, context, max: 128);
-    return Tooltip(
+    return AppTooltip(
       message: tooltip,
-      waitDuration: const Duration(milliseconds: 600),
       child: MiuixPressable(
         feedbackType: MiuixPressFeedbackType.sink,
         sinkAmount: 0.98,
@@ -441,9 +440,8 @@ class _EmoteGridAreaState extends State<_EmoteGridArea> {
   }
 
   Widget _buildTextTile(String text) {
-    return Tooltip(
+    return AppTooltip(
       message: text,
-      waitDuration: const Duration(milliseconds: 600),
       child: MiuixPressable(
         feedbackType: MiuixPressFeedbackType.sink,
         sinkAmount: 0.98,

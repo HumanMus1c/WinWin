@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// [SelectDialog] / [showSelectDialog] 契约测试。
 ///
@@ -138,7 +139,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('重试次数'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('关闭'));
+    await tester.tap(find.byWidgetPredicate(
+        (w) => w is AppTooltip && w.message == '关闭'));
     await tester.pumpAndSettle();
 
     expect(written, isNull);
@@ -180,7 +182,8 @@ void main() {
       expect(width, greaterThanOrEqualTo(320));
       expect(width, lessThanOrEqualTo(420));
 
-      await tester.tap(find.byTooltip('关闭'));
+      await tester.tap(find.byWidgetPredicate(
+        (w) => w is AppTooltip && w.message == '关闭'));
       await tester.pumpAndSettle();
       expect(find.text('界面风格'), findsNothing);
   });

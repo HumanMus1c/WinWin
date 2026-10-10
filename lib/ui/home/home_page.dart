@@ -17,6 +17,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
@@ -177,7 +178,7 @@ class _HomeHeader extends StatelessWidget {
                   ),
                 ),
 
-                child: Tooltip(message: '设置', child: AppIcon(
+                child: AppTooltip(message: '设置', child: AppIcon(
                   AppIcons.settings(),
                   color: searchFg,
                   size: 22,

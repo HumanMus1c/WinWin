@@ -9,6 +9,8 @@ import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 个人页各内容分区的统一标题行（对齐 PiliPlus `ListTile` 标题规范）。
 class ProfileSectionHeader extends StatelessWidget {
@@ -78,11 +80,11 @@ class ProfileSectionHeader extends StatelessWidget {
 
               onPressed: isRefreshing ? null : onRefresh,
 
-              child: Tooltip(message: '刷新$title', child: isRefreshing
+              child: AppTooltip(message: '刷新$title', child: isRefreshing
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(
+                      child: AppProgressIndicator(
                         strokeWidth: 2,
                         color: biliPink,
                       ),
@@ -145,7 +147,7 @@ class ProfileHorizontalList extends StatelessWidget {
                     minHeight: 42,
                     backgroundColor: cs.secondaryContainer.withValues(alpha: 0.6),
                     onPressed: onMore,
-                    child: Tooltip(
+                    child: AppTooltip(
                       message: '查看更多',
                       child: AppIcon(AppIcons.chevronForward(), size: 18, color: biliPink),
                     ),
@@ -468,11 +470,11 @@ class ProfileVideoCard extends StatelessWidget {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        child: LinearProgressIndicator(
+                        child: AppLinearProgressIndicator(
                           value: progressFraction!.clamp(0.0, 1.0),
                           minHeight: 3,
                           backgroundColor: AppColors.black26,
-                          valueColor: const AlwaysStoppedAnimation<Color>(biliPink),
+                          color: biliPink,
                         ),
                       ),
                   ],

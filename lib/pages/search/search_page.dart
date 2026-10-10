@@ -22,6 +22,7 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 搜索页面 — 搜索框 + 热搜 + 历史 + 联想建议。
 ///
@@ -500,7 +501,7 @@ class _SearchPageState extends State<SearchPage> {
     if (_trendingLoading) {
       return const Padding(
         padding: EdgeInsets.all(Style.xl),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: AppProgressIndicator()),
       );
     }
     if (_trending.isEmpty) return const SizedBox.shrink();

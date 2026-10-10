@@ -23,6 +23,7 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 搜索面板 — 单个 Tab 对应的结果列表。
 ///
@@ -176,7 +177,7 @@ class _SearchPanelState extends State<SearchPanel>
       return const DemoListSkeleton();
     }
     if (!_firstLoaded && _loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: AppProgressIndicator());
     }
     if (_firstLoaded && _items.isEmpty && _errorMsg != null) {
       return _buildErrorView();
@@ -674,7 +675,7 @@ class _SearchPanelState extends State<SearchPanel>
     if (_loading) {
       return const Padding(
         padding: EdgeInsets.all(Style.md),
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        child: Center(child: AppProgressIndicator(strokeWidth: 2)),
       );
     }
     if (!_hasMore) {

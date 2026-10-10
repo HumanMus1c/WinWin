@@ -21,6 +21,8 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 弹出多图画廊全屏浏览弹窗。
 ///
@@ -480,7 +482,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                       minHeight: 52,
                       onPressed: _prevPage,
                       backgroundColor: AppColors.black.withValues(alpha: 0.5),
-                      child: Tooltip(
+                      child: AppTooltip(
                         message: '上一张 (←)',
                         child: AppIcon(
                           AppIcons.galleryPrev(),
@@ -504,7 +506,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                       minHeight: 52,
                       onPressed: _nextPage,
                       backgroundColor: AppColors.black.withValues(alpha: 0.5),
-                      child: Tooltip(
+                      child: AppTooltip(
                         message: '下一张 (→)',
                         child: AppIcon(
                           AppIcons.chevronForward(),
@@ -585,7 +587,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                           minHeight: 42,
                           backgroundColor:
                               AppColors.black.withValues(alpha: 0.4),
-                          child: Tooltip(
+                          child: AppTooltip(
                             message: '保存图片',
                             child: AppIcon(
                               AppIcons.download(),
@@ -605,7 +607,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                           minHeight: 42,
                           backgroundColor:
                               AppColors.black.withValues(alpha: 0.4),
-                          child: Tooltip(
+                          child: AppTooltip(
                             message: '复制图片链接',
                             child: Icon(
                               AppIcons.copy(),
@@ -630,7 +632,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                           minHeight: 42,
                           backgroundColor:
                               AppColors.black.withValues(alpha: 0.4),
-                          child: Tooltip(
+                          child: AppTooltip(
                             message: '关闭 (Esc)',
                             child: AppIcon(
                               AppIcons.clear(),
@@ -919,7 +921,7 @@ class _GalleryItemViewState extends State<_GalleryItemView>
                             child: SizedBox(
                               width: 32,
                               height: 32,
-                              child: CircularProgressIndicator(
+                              child: AppProgressIndicator(
                                 strokeWidth: 2,
                                 color: AppColors.white54,
                               ),
@@ -931,7 +933,7 @@ class _GalleryItemViewState extends State<_GalleryItemView>
                         child: SizedBox(
                           width: 32,
                           height: 32,
-                          child: CircularProgressIndicator(
+                          child: AppProgressIndicator(
                             strokeWidth: 2,
                             color: AppColors.white54,
                           ),

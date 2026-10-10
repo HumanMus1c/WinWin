@@ -49,6 +49,8 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 番剧播放页面（对标 BiliPai `BangumiPlayerScreen` 与 PiliPlus PGC 播放体系）。
 ///
@@ -785,7 +787,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                     onToggleInAppFullscreen: _toggleInAppFullscreen,
                     onEscape: _handleEscape,
                   )
-                : const Center(child: CircularProgressIndicator()),
+                : const Center(child: AppProgressIndicator()),
           ),
         ),
       );
@@ -819,7 +821,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 onToggleInAppFullscreen: _toggleInAppFullscreen,
                 onEscape: _handleEscape,
               )
-            : const Center(child: CircularProgressIndicator()),
+            : const Center(child: AppProgressIndicator()),
       ),
     );
   }
@@ -902,7 +904,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   );
                 },
 
-                child: Tooltip(message: '查看番剧详情', child: AppIcon(AppIcons.info(),
+                child: AppTooltip(message: '查看番剧详情', child: AppIcon(AppIcons.info(),
                   color: overVideo ? AppColors.white : barContrast.contentColor,
                   shadows: overVideo ? ContrastStyle.glyphShadows : null,
                 )),
@@ -911,7 +913,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
                 onPressed: () => DesktopPipController.instance.enterPip(),
 
-                child: Tooltip(message: '画中画', child: Icon(
+                child: AppTooltip(message: '画中画', child: Icon(
                   AppIcons.pip(),
                   color: overVideo ? AppColors.white : barContrast.contentColor,
                   shadows: overVideo ? ContrastStyle.glyphShadows : null,
@@ -1416,7 +1418,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   /// 评论列表（使用普通视频稿件设计）
   Widget _buildReplyListView(AppPalette cs) {
     if (_replies.isEmpty && _loadingReplies) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: AppProgressIndicator());
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(
@@ -1673,7 +1675,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                         child: SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: AppProgressIndicator(strokeWidth: 2),
                         ),
                       ),
                     ),
@@ -1898,7 +1900,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           child: SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: AppProgressIndicator(strokeWidth: 2),
           ),
         ),
       );
@@ -2024,7 +2026,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(
+                      child: AppProgressIndicator(
                         strokeWidth: 2,
                         color: AppColors.white,
                       ),

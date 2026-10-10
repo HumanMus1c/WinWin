@@ -14,6 +14,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 「系统消息」入口。
 void showSysMsgPage(BuildContext context) {
@@ -104,7 +105,7 @@ class _SysMsgPageState extends State<SysMsgPage> {
       body: Pref.demoMode
           ? const DemoListSkeleton(coverWidth: 40, coverHeight: 40)
           : _loading && _items.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: biliPink))
+          ? const Center(child: AppProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
               ? MsgFeedErrorView(error: _error!, onRetry: () => _load(refresh: true))
               : RefreshIndicator(
@@ -119,7 +120,7 @@ class _SysMsgPageState extends State<SysMsgPage> {
                           return const Padding(
                             padding: EdgeInsets.all(Style.md),
                             child: Center(
-                              child: CircularProgressIndicator(
+                              child: AppProgressIndicator(
                                 strokeWidth: 2,
                                 color: biliPink,
                               ),

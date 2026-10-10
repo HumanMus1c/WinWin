@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/theme/app_colors.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 高对比度阴影与排版视觉常量规范。
 class ContrastStyle {
@@ -237,7 +238,7 @@ class _GlassControlButtonState extends State<GlassControlButton> {
     );
 
     if (widget.tooltip != null && widget.tooltip!.isNotEmpty) {
-      return Tooltip(message: widget.tooltip!, child: button);
+      return AppTooltip(message: widget.tooltip!, child: button);
     }
     return button;
   }

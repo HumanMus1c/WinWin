@@ -16,6 +16,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 关系列表类型：关注列表 / 粉丝列表。
 enum RelationType { followings, fans }
@@ -122,7 +123,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
       body: Pref.demoMode
           ? const DemoListSkeleton(coverWidth: 44, coverHeight: 44)
           : _loading && _items.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: biliPink))
+          ? const Center(child: AppProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
               ? _buildErrorView()
               : _items.isEmpty
@@ -159,7 +160,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
                               child: Padding(
                                 padding: EdgeInsets.all(Style.md),
                                 child: Center(
-                                  child: CircularProgressIndicator(
+                                  child: AppProgressIndicator(
                                     strokeWidth: 2,
                                     color: biliPink,
                                   ),

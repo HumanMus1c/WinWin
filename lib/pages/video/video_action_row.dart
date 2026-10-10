@@ -10,6 +10,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 视频详情页互动行（对标 BiliPai
 /// `feature/video/ui/section/VideoActionSection.ActionButtonsRow`）。
@@ -318,7 +319,7 @@ class _ActionButton extends StatelessWidget {
         child: iconWidget,
       );
     }
-    return Tooltip(
+    return AppTooltip(
       message: tooltip,
       child: MiuixPressable(
         feedbackType: MiuixPressFeedbackType.sink,

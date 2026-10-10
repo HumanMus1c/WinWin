@@ -21,6 +21,7 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 番剧二级分类枚举
 enum PgcSubTab {
@@ -311,7 +312,7 @@ class _HotBangumiViewState extends State<_HotBangumiView>
         child: DemoMask(
           skeleton: () => _buildPgcSkeletonGrid(gridDelegate),
           child: () => switch (_state) {
-            Loading() => const Center(child: CircularProgressIndicator()),
+            Loading() => const Center(child: AppProgressIndicator()),
             Error(:final errMsg) => _buildError(errMsg),
             Success() => _items.isEmpty
                 ? _buildEmpty()
@@ -383,7 +384,7 @@ class _HotBangumiViewState extends State<_HotBangumiView>
           child: SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: AppProgressIndicator(strokeWidth: 2),
           ),
         ),
       );
@@ -543,7 +544,7 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
         child: DemoMask(
           skeleton: () => _buildPgcSkeletonGrid(gridDelegate),
           child: () => switch (_state) {
-            Loading() => const Center(child: CircularProgressIndicator()),
+            Loading() => const Center(child: AppProgressIndicator()),
             Error(:final errMsg) => _buildError(errMsg),
             Success() => _items.isEmpty
                 ? _buildEmpty()
@@ -641,7 +642,7 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
           child: SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: AppProgressIndicator(strokeWidth: 2),
           ),
         ),
       );

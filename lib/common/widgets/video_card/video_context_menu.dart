@@ -24,6 +24,7 @@ import 'package:winwin/utils/utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 String _errMsg(LoadingState state, [String fallback = '操作失败']) {
   if (state is Error) {
@@ -295,7 +296,7 @@ class VideoPopupMenu extends StatelessWidget {
       child: MiuixIconButton(
         minWidth: 26,
         minHeight: 26,
-        child: Tooltip(
+        child: AppTooltip(
           message: '更多操作',
           child: Icon(
             AppIcons.more(),

@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/pages/whisper/session/session_more_menu_button.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 void main() {
   group('AppIcons 静态方法双风格分发测试', () {
@@ -293,7 +294,8 @@ void main() {
       expect(find.byIcon(Icons.more_vert), findsNothing);
 
       // 点击打开菜单（Tooltip 命中层保持可用）
-      await tester.tap(find.byTooltip('更多选项'));
+      await tester.tap(find.byWidgetPredicate(
+          (w) => w is AppTooltip && w.message == '更多选项'));
       await tester.pumpAndSettle();
 
       expect(find.text('取消置顶'), findsOneWidget);

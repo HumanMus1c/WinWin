@@ -13,6 +13,7 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 视频卡片 - 水平布局（高性能适配版）。
 ///
@@ -150,13 +151,11 @@ class VideoCardH extends StatelessWidget {
                               left: 0,
                               right: 0,
                               bottom: 0,
-                              child: LinearProgressIndicator(
+                              child: AppLinearProgressIndicator(
                                 value: progress.clamp(0.0, 1.0),
                                 minHeight: 2,
                                 backgroundColor: AppColors.transparent,
-                                valueColor: AlwaysStoppedAnimation(
-                                  tokens.colors.primary,
-                                ),
+                                color: tokens.colors.primary,
                               ),
                             ),
                         ],

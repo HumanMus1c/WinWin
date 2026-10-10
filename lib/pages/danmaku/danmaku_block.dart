@@ -15,6 +15,8 @@ import 'package:winwin/utils/crc32.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 弹幕屏蔽规则管理页（移植自 PiliPlus `lib/pages/danmaku_block/view.dart`）。
 ///
@@ -197,7 +199,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
                       _fetchRules();
                     },
 
-                    child: Tooltip(message: '刷新', child: AppIcon(AppIcons.refresh(), size: 20)),
+                    child: AppTooltip(message: '刷新', child: AppIcon(AppIcons.refresh(), size: 20)),
                   ),
                   MiuixIconButton(
 
@@ -217,7 +219,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
               const SizedBox(height: Style.sm),
               Expanded(
                 child: _loading
-                    ? const Center(child: CircularProgressIndicator(color: biliPink))
+                    ? const Center(child: AppProgressIndicator(color: biliPink))
                     : _errorMsg != null
                         ? Center(
                             child: Column(

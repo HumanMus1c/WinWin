@@ -5,6 +5,7 @@ import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 构建会话「更多选项」动作列表（三点菜单与右键菜单共用）。
 ///
@@ -106,7 +107,7 @@ class SessionMoreMenuButton extends StatelessWidget {
             ],
           ),
         ],
-        child: Tooltip(
+        child: AppTooltip(
           message: '更多选项',
           child: AppIcon(
             AppIcons.moreOptions(),

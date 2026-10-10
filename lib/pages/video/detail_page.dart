@@ -54,6 +54,8 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
@@ -2030,7 +2032,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                         child: SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: AppProgressIndicator(strokeWidth: 2),
                         ),
                       ),
                     ),
@@ -2362,7 +2364,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(
+                      child: AppProgressIndicator(
                         strokeWidth: 2,
                         color: AppColors.white,
                       ),
@@ -2384,7 +2386,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           child: SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: AppProgressIndicator(strokeWidth: 2),
           ),
         ),
       );
@@ -3122,7 +3124,7 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Tooltip(
+      child: AppTooltip(
         message: widget.isFollowed ? '点击取消关注' : '点击关注',
         child: OutlinedButton.icon(
           onPressed: widget.isLoading ? null : widget.onPressed,
@@ -3130,7 +3132,7 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
               ? SizedBox(
                   width: 14,
                   height: 14,
-                  child: CircularProgressIndicator(
+                  child: AppProgressIndicator(
                     strokeWidth: 2,
                     color: color ?? cs.primary,
                   ),

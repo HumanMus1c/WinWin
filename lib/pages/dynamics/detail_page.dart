@@ -32,6 +32,8 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 动态详情页面。
 ///
@@ -252,7 +254,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
 
           onPressed: _loadDetail,
 
-          child: Tooltip(message: '重新加载', child: AppIcon(AppIcons.refresh())),
+          child: AppTooltip(message: '重新加载', child: AppIcon(AppIcons.refresh())),
         ),
         MiuixIconButton(
 
@@ -267,14 +269,14 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
             );
           },
 
-          child: Tooltip(message: '复制动态链接', child: AppIcon(AppIcons.copy())),
+          child: AppTooltip(message: '复制动态链接', child: AppIcon(AppIcons.copy())),
         ),
         const SizedBox(width: 8),
       ], 
       body: Pref.demoMode
           ? const DemoListSkeleton()
           : switch (_state) {
-        Loading() => const Center(child: CircularProgressIndicator()),
+        Loading() => const Center(child: AppProgressIndicator()),
         Error(:final errMsg) => Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -536,7 +538,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                   const SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.all(Style.lg),
-                      child: Center(child: CircularProgressIndicator()),
+                      child: Center(child: AppProgressIndicator()),
                     ),
                   )
                 else if (_replyError != null)

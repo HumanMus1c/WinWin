@@ -35,6 +35,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 推送动态页。
 void showDynamicsPage(BuildContext context) {
@@ -543,7 +544,7 @@ class _DynTabPageState extends State<_DynTabPage>
           child: SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: AppProgressIndicator(strokeWidth: 2),
           ),
         ),
       );

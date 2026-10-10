@@ -36,6 +36,8 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 桌面原生直播间播放页面。
 ///
@@ -877,7 +879,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
                         onPressed: _initLive,
 
-                        child: Tooltip(message: '刷新直播流', child: AppIcon(AppIcons.refresh())),
+                        child: AppTooltip(message: '刷新直播流', child: AppIcon(AppIcons.refresh())),
                       ),
                       MiuixIconButton(
 
@@ -894,7 +896,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                           );
                         },
 
-                        child: Tooltip(message: '复制直播间链接', child: AppIcon(AppIcons.copy())),
+                        child: AppTooltip(message: '复制直播间链接', child: AppIcon(AppIcons.copy())),
                       ),
                       const SizedBox(width: 8),
                     ],
@@ -1039,7 +1041,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 Container(
                   color: AppColors.black54,
                   child: const Center(
-                    child: CircularProgressIndicator(
+                    child: AppProgressIndicator(
                       strokeWidth: 3,
                       color: AppColors.white,
                     ),
@@ -1075,7 +1077,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             Container(
               color: AppColors.black54,
               child: const Center(
-                child: CircularProgressIndicator(
+                child: AppProgressIndicator(
                   strokeWidth: 3,
                   color: AppColors.white,
                 ),
@@ -1155,7 +1157,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _handleEscape,
 
-              child: Tooltip(message: '退出全屏', child: AppIcon(AppIcons.fullscreen(active: true), color: AppColors.white)),
+              child: AppTooltip(message: '退出全屏', child: AppIcon(AppIcons.fullscreen(active: true), color: AppColors.white)),
             ),
           ],
         ),
@@ -1325,7 +1327,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _togglePlay,
 
-              child: Tooltip(message: _isPlaying ? '暂停 (Space)' : '播放 (Space)', child: Icon(
+              child: AppTooltip(message: _isPlaying ? '暂停 (Space)' : '播放 (Space)', child: Icon(
                 _isPlaying ? AppIcons.pause(active: true) : AppIcons.play(active: true),
                 color: AppColors.white,
                 size: 24,
@@ -1377,7 +1379,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 setState(() => _danmakuVisible = !_danmakuVisible);
               },
 
-              child: Tooltip(message: _danmakuVisible ? '关闭弹幕 (D)' : '开启弹幕 (D)', child: Icon(
+              child: AppTooltip(message: _danmakuVisible ? '关闭弹幕 (D)' : '开启弹幕 (D)', child: Icon(
                 _danmakuVisible ? AppIcons.subtitle(active: true) : AppIcons.subtitle(active: false),
                 color: _danmakuVisible ? AppColors.white : AppColors.white54,
                 size: 20,
@@ -1389,7 +1391,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _showQuickSendDialog,
 
-              child: Tooltip(message: '发弹幕', child: const Icon(
+              child: AppTooltip(message: '发弹幕', child: const Icon(
                 Icons.comment_outlined,
                 color: AppColors.white70,
                 size: 20,
@@ -1414,7 +1416,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     ],
                   ),
                 ],
-                child: Tooltip(
+                child: AppTooltip(
                   message: '画质清晰度',
                   child: HoverContainer(
                     borderRadius: 4.0,
@@ -1463,7 +1465,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                       ],
                     ),
                   ],
-                  child: Tooltip(
+                  child: AppTooltip(
                     message: '推流线路/CDN',
                     child: HoverContainer(
                       borderRadius: 4.0,
@@ -1516,7 +1518,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     ],
                   ),
                 ],
-                child: Tooltip(
+                child: AppTooltip(
                   message: '画面比例',
                   child: HoverContainer(
                     borderRadius: 4.0,
@@ -1537,7 +1539,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _toggleMute,
 
-              child: Tooltip(message: _volume > 0 ? '静音 (M)' : '取消静音 (M)', child: Icon(
+              child: AppTooltip(message: _volume > 0 ? '静音 (M)' : '取消静音 (M)', child: Icon(
                 _volume > 0 ? AppIcons.volumeUp() : AppIcons.volumeOff(),
                 color: AppColors.white70,
                 size: 20,
@@ -1569,7 +1571,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _initLive,
 
-              child: Tooltip(message: '重新加载流', child: AppIcon(AppIcons.refresh(), color: AppColors.white70, size: 20)),
+              child: AppTooltip(message: '重新加载流', child: AppIcon(AppIcons.refresh(), color: AppColors.white70, size: 20)),
             ),
 
             // 10. 网页全屏（In-app 全屏）
@@ -1578,7 +1580,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
                 onPressed: _toggleInAppFullscreen,
 
-                child: Tooltip(message: _inAppFullscreen ? '退出网页全屏 (W)' : '网页全屏 (W)', child: Icon(
+                child: AppTooltip(message: _inAppFullscreen ? '退出网页全屏 (W)' : '网页全屏 (W)', child: Icon(
                   _inAppFullscreen
                       ? AppIcons.inAppFullscreen(active: true)
                       : AppIcons.inAppFullscreen(active: false),
@@ -1592,7 +1594,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _toggleFullscreen,
 
-              child: Tooltip(message: _fullscreen ? '退出全屏 (F / Esc)' : '全屏 (F)', child: Icon(
+              child: AppTooltip(message: _fullscreen ? '退出全屏 (F / Esc)' : '全屏 (F)', child: Icon(
                 _fullscreen ? AppIcons.fullscreen(active: true) : AppIcons.fullscreen(active: false),
                 color: AppColors.white70,
                 size: 22,
@@ -2238,7 +2240,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(
+                      child: AppProgressIndicator(
                         strokeWidth: 2,
                         color: AppColors.white,
                       ),

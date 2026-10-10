@@ -13,6 +13,7 @@ import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 消息流加载器（游标分页）：回复我 / 艾特我 / 点赞我 共用此签名。
 typedef MsgFeedLoader = Future<LoadingState<Map<String, dynamic>>> Function({
@@ -138,7 +139,7 @@ class _MsgFeedPageState extends State<MsgFeedPage> {
       body: Pref.demoMode
           ? const DemoListSkeleton(coverWidth: 40, coverHeight: 40)
           : _loading && _items.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: biliPink))
+          ? const Center(child: AppProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
               ? MsgFeedErrorView(error: _error!, onRetry: () => _load(refresh: true))
               : RefreshIndicator(
@@ -153,7 +154,7 @@ class _MsgFeedPageState extends State<MsgFeedPage> {
                           return const Padding(
                             padding: EdgeInsets.all(Style.md),
                             child: Center(
-                              child: CircularProgressIndicator(
+                              child: AppProgressIndicator(
                                 strokeWidth: 2,
                                 color: biliPink,
                               ),

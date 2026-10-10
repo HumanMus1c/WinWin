@@ -7,6 +7,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 单选对话框：用于画质/音质/主题模式等枚举值选择。
 ///
@@ -62,7 +63,7 @@ class SelectDialog<T> extends StatelessWidget {
                 MiuixIconButton(
                   minWidth: 24,
                   minHeight: 24,
-                  child: Tooltip(
+                  child: AppTooltip(
                     message: '关闭',
                     child: AppIcon(AppIcons.clear()),
                   ),

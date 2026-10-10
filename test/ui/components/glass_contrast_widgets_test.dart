@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/ui/components/glass_contrast_widgets.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -136,7 +137,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(Tooltip), findsOneWidget);
+      expect(find.byType(AppTooltip), findsOneWidget);
       expect(find.byType(GlassCapsule), findsOneWidget);
 
       await tester.tap(find.byType(GlassControlButton));

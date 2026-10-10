@@ -16,6 +16,8 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 打开离线缓存页面。
 void showDownloadPage(BuildContext context) {
@@ -146,11 +148,11 @@ class _DownloadPageState extends State<DownloadPage> {
 
           onPressed: _loadCacheInfo,
 
-          child: Tooltip(message: '刷新', child: AppIcon(AppIcons.refresh(), size: 20)),
+          child: AppTooltip(message: '刷新', child: AppIcon(AppIcons.refresh(), size: 20)),
         ),
       ],
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: biliPink))
+          ? const Center(child: AppProgressIndicator(color: biliPink))
           : ListView(
               padding: const EdgeInsets.all(Style.safeSpace),
               children: [

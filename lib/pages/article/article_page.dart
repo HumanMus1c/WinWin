@@ -22,6 +22,8 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 专栏文章阅读页面。
 ///
@@ -160,7 +162,7 @@ class _ArticlePageState extends State<ArticlePage> {
 
           onPressed: _loadArticle,
 
-          child: Tooltip(message: '重新加载', child: AppIcon(AppIcons.refresh())),
+          child: AppTooltip(message: '重新加载', child: AppIcon(AppIcons.refresh())),
         ),
         MiuixIconButton(
 
@@ -175,7 +177,7 @@ class _ArticlePageState extends State<ArticlePage> {
             );
           },
 
-          child: Tooltip(message: '复制专栏链接', child: AppIcon(AppIcons.copy())),
+          child: AppTooltip(message: '复制专栏链接', child: AppIcon(AppIcons.copy())),
         ),
         const SizedBox(width: 8),
       ], 
@@ -183,7 +185,7 @@ class _ArticlePageState extends State<ArticlePage> {
           ? const DemoListSkeleton()
           : switch (_state) {
         Loading() => Center(
-              child: CircularProgressIndicator(color: cs.primary),
+              child: AppProgressIndicator(color: cs.primary),
             ),
         Error(:final errMsg) => Center(
             child: Column(
@@ -457,7 +459,7 @@ class _ArticlePageState extends State<ArticlePage> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.all(Style.lg),
-                    child: Center(child: CircularProgressIndicator(color: cs.primary)),
+                    child: Center(child: AppProgressIndicator(color: cs.primary)),
                   ),
                 )
               else if (_replies.isEmpty && _repliesLoaded)

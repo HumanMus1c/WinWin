@@ -13,6 +13,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 「点赞详情」入口——展开单条点赞卡片的用户列表。
 void showLikeDetailPage(
@@ -101,7 +102,7 @@ class _LikeDetailPageState extends State<LikeDetailPage> {
       body: Pref.demoMode
           ? const DemoListSkeleton(coverWidth: 40, coverHeight: 40)
           : _loading && _items.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: biliPink))
+          ? const Center(child: AppProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
               ? MsgFeedErrorView(error: _error!, onRetry: () => _load(refresh: true))
               : RefreshIndicator(
@@ -116,7 +117,7 @@ class _LikeDetailPageState extends State<LikeDetailPage> {
                           return const Padding(
                             padding: EdgeInsets.all(Style.md),
                             child: Center(
-                              child: CircularProgressIndicator(
+                              child: AppProgressIndicator(
                                 strokeWidth: 2,
                                 color: biliPink,
                               ),

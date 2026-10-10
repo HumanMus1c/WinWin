@@ -14,6 +14,8 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 弹幕发送面板（移植自 BiliPai `DanmakuSendDialog` + `DanmakuComposerPolicy`）。
 ///
@@ -253,7 +255,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
 
                   onPressed: () => Navigator.of(context).pop(),
 
-                  child: Tooltip(message: '关闭', child: AppIcon(AppIcons.clear(), size: 20)),
+                  child: AppTooltip(message: '关闭', child: AppIcon(AppIcons.clear(), size: 20)),
                 ),
               ],
             ),
@@ -341,7 +343,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
+                            child: AppProgressIndicator(
                               strokeWidth: 2,
                               color: AppColors.white,
                             ),
@@ -438,7 +440,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
 
         onPressed: () => _showInlineSettings(ctx),
 
-        child: Tooltip(message: '弹幕样式', child: AppIcon(AppIcons.palette(), size: 20)),
+        child: AppTooltip(message: '弹幕样式', child: AppIcon(AppIcons.palette(), size: 20)),
       ),
     );
   }
@@ -462,7 +464,7 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(
+                  child: AppProgressIndicator(
                     strokeWidth: 2,
                     color: AppColors.white,
                   ),

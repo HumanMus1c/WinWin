@@ -5,6 +5,7 @@ import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/ui/components/app_progress.dart';
 
 /// 简洁评论输入栏（专栏 / 动态详情页使用）：
 /// 官方表情面板按钮 + 胶囊输入框 + 粉色发送按钮。
@@ -112,7 +113,7 @@ class SimpleCommentInputBar extends StatelessWidget {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(
+                      child: AppProgressIndicator(
                         strokeWidth: 2,
                         color: AppColors.white,
                       ),
