@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 
 /// 形状 Token — 圆角体系（阶段5d-L4-2 单轨化）。
@@ -7,12 +7,12 @@ import 'package:material_ui/material_ui.dart';
 /// 圆角 ×0.9 缩放，Miuix 扁平大圆角 ×1.15 缩放。
 ///
 /// 读取通道：`AppThemeHost.of(context).shapes`（MD3 库级退役 B2 起）；
-/// 过渡期仍作为 [ThemeExtension] 挂载到 [ThemeData]（B7 摘除）。
+/// **B7-a 起为纯 Token 类**（已剥离 `ThemeExtension` 基类与 ThemeData 注册）。
 ///
 /// 同时提供 [Radius] 与 [BorderRadius] / [RoundedRectangleBorder] 三种形式，
 /// 覆盖卡片、按钮、容器、胶囊、输入框等场景。
 @immutable
-class AppShapes extends ThemeExtension<AppShapes> {
+class AppShapes {
   const AppShapes({
     required this.tiny,
     required this.small,
@@ -83,38 +83,4 @@ class AppShapes extends ThemeExtension<AppShapes> {
   RoundedRectangleBorder get floatingShape =>
       RoundedRectangleBorder(borderRadius: floatingBorder);
   StadiumBorder get pillShape => const StadiumBorder();
-
-  @override
-  AppShapes copyWith({
-    Radius? tiny,
-    Radius? small,
-    Radius? medium,
-    Radius? large,
-    Radius? extraLarge,
-    Radius? floating,
-    Radius? pill,
-  }) =>
-      AppShapes(
-        tiny: tiny ?? this.tiny,
-        small: small ?? this.small,
-        medium: medium ?? this.medium,
-        large: large ?? this.large,
-        extraLarge: extraLarge ?? this.extraLarge,
-        floating: floating ?? this.floating,
-        pill: pill ?? this.pill,
-      );
-
-  @override
-  AppShapes lerp(AppShapes? other, double t) {
-    if (other is! AppShapes) return this;
-    return AppShapes(
-      tiny: Radius.lerp(tiny, other.tiny, t) ?? tiny,
-      small: Radius.lerp(small, other.small, t) ?? small,
-      medium: Radius.lerp(medium, other.medium, t) ?? medium,
-      large: Radius.lerp(large, other.large, t) ?? large,
-      extraLarge: Radius.lerp(extraLarge, other.extraLarge, t) ?? extraLarge,
-      floating: Radius.lerp(floating, other.floating, t) ?? floating,
-      pill: Radius.lerp(pill, other.pill, t) ?? pill,
-    );
-  }
 }

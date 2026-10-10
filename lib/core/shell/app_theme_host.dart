@@ -9,9 +9,10 @@ import 'package:winwin/theme/miuix_theme_bridge.dart';
 
 /// 应用文本样式面（取代 Material `textTheme` 读取）。
 ///
-/// 只包含项目实际使用的 10 个槽位；取值由过渡期 `ThemeData.textTheme`
-/// （M3 Typography + 应用字体族注入）派生 → 与迁移前**逐字段一致**（零漂移）。
-/// B7 摘除 material_ui 时改为内联常量（派生入口在 app_theme.dart，随其退役）。
+/// 只包含项目实际使用的 10 个槽位。B7-a（MD3 库级退役）起取值为**内联常量**：
+/// 由过渡期 `ThemeData.textTheme` 派生值逐字段投影而来（实测 M3 基线下这些槽位
+/// 仅携带 color / decoration / decorationColor，字号字重由调用点或
+/// DefaultTextStyle 提供）→ 与摘除依赖前的运行时派生**逐字段一致**（零漂移）。
 @immutable
 class AppTextStyles {
   const AppTextStyles({
@@ -38,8 +39,54 @@ class AppTextStyles {
   final TextStyle? labelSmall;
   final TextStyle? headlineSmall;
 
-  /// 未挂宿主/未注入时的兜底（空样式；正常路径由 AppShell 注入真实值）。
+  /// 浅色墨色（= colors.dart 的 miuixLightOnSurface；取自过渡期派生值实测）。
+  static const TextStyle _inkLight = TextStyle(
+    color: miuixLightOnSurface,
+    decoration: TextDecoration.none,
+    decorationColor: miuixLightOnSurface,
+  );
+
+  /// 深色墨色（= colors.dart 的 miuixDarkOnSurface）。
+  static const TextStyle _inkDark = TextStyle(
+    color: miuixDarkOnSurface,
+    decoration: TextDecoration.none,
+    decorationColor: miuixDarkOnSurface,
+  );
+
+  /// 未指定时的兜底（空样式；正常路径由 [AppTokens] 按明暗取 [light]/[dark]）。
   static const AppTextStyles fallback = AppTextStyles();
+
+  /// 浅色取值（B7-a 冻结：见类注释）。
+  static const AppTextStyles light = AppTextStyles(
+    titleLarge: _inkLight,
+    titleMedium: _inkLight,
+    titleSmall: _inkLight,
+    bodyLarge: _inkLight,
+    bodyMedium: _inkLight,
+    bodySmall: _inkLight,
+    labelLarge: _inkLight,
+    labelMedium: _inkLight,
+    labelSmall: _inkLight,
+    headlineSmall: _inkLight,
+  );
+
+  /// 深色取值（B7-a 冻结：见类注释）。
+  static const AppTextStyles dark = AppTextStyles(
+    titleLarge: _inkDark,
+    titleMedium: _inkDark,
+    titleSmall: _inkDark,
+    bodyLarge: _inkDark,
+    bodyMedium: _inkDark,
+    bodySmall: _inkDark,
+    labelLarge: _inkDark,
+    labelMedium: _inkDark,
+    labelSmall: _inkDark,
+    headlineSmall: _inkDark,
+  );
+
+  /// 按明暗取样式面。
+  static AppTextStyles forBrightness(Brightness brightness) =>
+      brightness == Brightness.dark ? dark : light;
 }
 
 /// 应用调色板（取代 Material `ColorScheme` 的读取面）。
@@ -218,7 +265,7 @@ class AppTokens {
   /// 外壳/层级 Token。
   final AppChrome chrome;
 
-  /// 文本样式面（取代 `textTheme`；由 AppShell 注入过渡期派生值）。
+  /// 文本样式面（取代 `textTheme`；B7-a 起为内联常量，见 [AppTextStyles]）。
   final AppTextStyles text;
 
   /// 是否深色。
@@ -248,12 +295,8 @@ class AppThemeHost extends InheritedWidget {
 
   /// 按明暗构造一套 Token（调色板取项目常量，Token 数据零改动）。
   ///
-  /// [textStyles] 由应用壳注入（过渡期从 ThemeData 派生；未注入时用空兜底）。
-  static AppTokens tokensFor(
-    Brightness brightness, {
-    AppTextStyles textStyles = AppTextStyles.fallback,
-  }) =>
-      AppTokens(
+  /// 文本样式按明暗取 [AppTextStyles.light]/[AppTextStyles.dark]（B7-a 起内联常量）。
+  static AppTokens tokensFor(Brightness brightness) => AppTokens(
         brightness: brightness,
         colors: AppPalette.forBrightness(brightness),
         miuix: brightness == Brightness.dark
@@ -262,7 +305,7 @@ class AppThemeHost extends InheritedWidget {
         shapes: AppShapes.miuix,
         typography: AppTypography.miuix,
         chrome: AppChrome.miuix,
-        text: textStyles,
+        text: AppTextStyles.forBrightness(brightness),
       );
 
   /// 取当前 Token；未挂宿主时按平台亮度回退（防测试/未包裹子树崩溃）。

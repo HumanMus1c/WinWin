@@ -106,9 +106,9 @@ class _LivePageState extends State<LivePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final shapes = theme.extension<AppShapes>() ?? AppShapes.miuix;
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
 
     // 嵌入 HomePage 时需顶部留白以避开浮动顶栏(60) + 一级分类标签行(36)
     return Padding(
@@ -142,7 +142,7 @@ class _LivePageState extends State<LivePage>
     );
   }
 
-  Widget _buildSubTabBar(ColorScheme cs, AppShapes shapes) {
+  Widget _buildSubTabBar(AppPalette cs, AppShapes shapes) {
     return SizedBox(
       height: 40,
       child: ListView.separated(
@@ -414,7 +414,7 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
   }
 
   Widget _buildLoginPrompt(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -701,9 +701,8 @@ class _LiveCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tokens = AppThemeHost.of(context);
-    final cs = theme.colorScheme;
+    final cs = tokens.colors;
     return ClipPath(clipper: ShapeBorderClipper(shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius)), child: MiuixCard(
       child: MiuixPressable(
         feedbackType: MiuixPressFeedbackType.sink,

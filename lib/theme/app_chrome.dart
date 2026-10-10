@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 
 /// Chrome Token — 容器外观（圆角 / 阴影 / 边框策略；阶段5d-L4-2 单轨化）。
@@ -9,9 +9,9 @@ import 'package:material_ui/material_ui.dart';
 /// 单个控件的形状，[AppChrome] 描述承载多个控件的「外壳」。
 ///
 /// 读取通道：`AppThemeHost.of(context).chrome`（MD3 库级退役 B2 起）；
-/// 过渡期仍作为 [ThemeExtension] 挂载（B7 摘除）。
+/// **B7-a 起为纯 Token 类**（已剥离 `ThemeExtension` 基类与 ThemeData 注册）。
 @immutable
-class AppChrome extends ThemeExtension<AppChrome> {
+class AppChrome {
   const AppChrome({
     required this.containerRadius,
     required this.pillRadius,
@@ -61,40 +61,4 @@ class AppChrome extends ThemeExtension<AppChrome> {
 
   /// 胶囊圆角的 BorderRadius 便捷访问。
   BorderRadius get pillBorder => BorderRadius.circular(pillRadius);
-
-  @override
-  AppChrome copyWith({
-    double? containerRadius,
-    double? pillRadius,
-    double? elevation,
-    double? tonalElevation,
-    bool? showDividers,
-    double? scrolledUnderElevation,
-  }) =>
-      AppChrome(
-        containerRadius: containerRadius ?? this.containerRadius,
-        pillRadius: pillRadius ?? this.pillRadius,
-        elevation: elevation ?? this.elevation,
-        tonalElevation: tonalElevation ?? this.tonalElevation,
-        showDividers: showDividers ?? this.showDividers,
-        scrolledUnderElevation:
-            scrolledUnderElevation ?? this.scrolledUnderElevation,
-      );
-
-  @override
-  AppChrome lerp(AppChrome? other, double t) {
-    if (other is! AppChrome) return this;
-    return AppChrome(
-      containerRadius:
-          _lerpDouble(containerRadius, other.containerRadius, t),
-      pillRadius: _lerpDouble(pillRadius, other.pillRadius, t),
-      elevation: _lerpDouble(elevation, other.elevation, t),
-      tonalElevation: _lerpDouble(tonalElevation, other.tonalElevation, t),
-      showDividers: t < 0.5 ? showDividers : other.showDividers,
-      scrolledUnderElevation:
-          _lerpDouble(scrolledUnderElevation, other.scrolledUnderElevation, t),
-    );
-  }
 }
-
-double _lerpDouble(double a, double b, double t) => a + (b - a) * t;

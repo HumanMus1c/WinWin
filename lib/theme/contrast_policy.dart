@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:winwin/theme/app_colors.dart';
 
 /// 主题对比度策略（ThemeContrastPolicy）。
@@ -99,77 +99,4 @@ Color resolveReadableThemeTextColor({
     }
   }
   return candidate;
-}
-
-/// 对标 BiliPai `enforceDynamicLightTextContrast`：校正 ColorScheme 中
-/// 各 on*/容器配对的文字对比度（浅色主题下个别动态色可能不达标）。
-///
-/// 仅使用未弃用的 surface/container 语义槽位。
-ColorScheme enforceDynamicLightTextContrast(ColorScheme scheme) {
-  final accentFallbacks = [
-    scheme.onSurface,
-    scheme.onInverseSurface,
-    scheme.scrim,
-  ];
-  final surfaceFallbacks = [
-    scheme.onSurface,
-    scheme.onInverseSurface,
-    scheme.scrim,
-  ];
-  final surfaceVariantFallbacks = [
-    scheme.onSurface,
-    scheme.onInverseSurface,
-    scheme.scrim,
-  ];
-
-  return scheme.copyWith(
-    onSurface: resolveReadableThemeTextColor(
-      candidate: scheme.onSurface,
-      background: scheme.surface,
-      fallbacks: surfaceFallbacks,
-      minimumContrast: kAccessibleTextMinContrast,
-    ),
-    onSurfaceVariant: resolveReadableThemeTextColor(
-      candidate: scheme.onSurfaceVariant,
-      background: scheme.surfaceContainerHighest,
-      fallbacks: surfaceVariantFallbacks,
-      minimumContrast: kAccessibleTextMinContrast,
-    ),
-    onPrimary: resolveReadableThemeTextColor(
-      candidate: scheme.onPrimary,
-      background: scheme.primary,
-      fallbacks: accentFallbacks,
-      minimumContrast: kAccessibleTextMinContrast,
-    ),
-    onPrimaryContainer: resolveReadableThemeTextColor(
-      candidate: scheme.onPrimaryContainer,
-      background: scheme.primaryContainer,
-      fallbacks: accentFallbacks,
-      minimumContrast: kAccessibleTextMinContrast,
-    ),
-    onSecondaryContainer: resolveReadableThemeTextColor(
-      candidate: scheme.onSecondaryContainer,
-      background: scheme.secondaryContainer,
-      fallbacks: accentFallbacks,
-      minimumContrast: kAccessibleTextMinContrast,
-    ),
-    onTertiaryContainer: resolveReadableThemeTextColor(
-      candidate: scheme.onTertiaryContainer,
-      background: scheme.tertiaryContainer,
-      fallbacks: accentFallbacks,
-      minimumContrast: kAccessibleTextMinContrast,
-    ),
-    onError: resolveReadableThemeTextColor(
-      candidate: scheme.onError,
-      background: scheme.error,
-      fallbacks: accentFallbacks,
-      minimumContrast: kAccessibleTextMinContrast,
-    ),
-    onErrorContainer: resolveReadableThemeTextColor(
-      candidate: scheme.onErrorContainer,
-      background: scheme.errorContainer,
-      fallbacks: accentFallbacks,
-      minimumContrast: kAccessibleTextMinContrast,
-    ),
-  );
 }

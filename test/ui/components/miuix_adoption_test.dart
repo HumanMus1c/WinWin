@@ -15,6 +15,7 @@ import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
+import 'package:winwin/core/shell/miuix_compat.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';

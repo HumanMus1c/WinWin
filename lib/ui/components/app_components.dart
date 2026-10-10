@@ -5,7 +5,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
-import 'package:winwin/theme/miuix_theme_bridge.dart';
+import 'package:winwin/core/shell/miuix_compat.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 

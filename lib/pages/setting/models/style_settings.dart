@@ -12,7 +12,7 @@ import 'package:winwin/pages/setting/widgets/select_dialog.dart';
 import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/theme/app_font_notifier.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:winwin/theme/miuix_theme_bridge.dart';
+import 'package:winwin/core/shell/miuix_compat.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/theme/system_font_scanner.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';

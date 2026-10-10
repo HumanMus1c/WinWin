@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 
 /// 字体排印 Token — 字重 / 字间距体系（阶段5d-L4-2 单轨化）。
@@ -9,11 +9,11 @@ import 'package:material_ui/material_ui.dart';
 /// - **Miuix**：Medium 字重，letterSpacing 0（扁平舒展）。
 ///
 /// 读取通道：`AppThemeHost.of(context).typography`（MD3 库级退役 B2 起）；
-/// 过渡期仍作为 [ThemeExtension] 挂载（B7 摘除）。
+/// **B7-a 起为纯 Token 类**（已剥离 `ThemeExtension` 基类与 ThemeData 注册）。
 /// 仅提供与 M3 默认有差异的补充字段；基础字号仍由
 /// `ThemeData.textTheme` 提供。
 @immutable
-class AppTypography extends ThemeExtension<AppTypography> {
+class AppTypography {
   const AppTypography({
     required this.titleLetterSpacing,
     required this.labelLetterSpacing,
@@ -62,42 +62,4 @@ class AppTypography extends ThemeExtension<AppTypography> {
         fontWeight: titleWeight,
         letterSpacing: titleLetterSpacing,
       );
-
-  @override
-  AppTypography copyWith({
-    double? titleLetterSpacing,
-    double? labelLetterSpacing,
-    double? bodyLetterSpacing,
-    FontWeight? headlineWeight,
-    FontWeight? titleWeight,
-    FontWeight? bodyWeight,
-  }) =>
-      AppTypography(
-        titleLetterSpacing: titleLetterSpacing ?? this.titleLetterSpacing,
-        labelLetterSpacing: labelLetterSpacing ?? this.labelLetterSpacing,
-        bodyLetterSpacing: bodyLetterSpacing ?? this.bodyLetterSpacing,
-        headlineWeight: headlineWeight ?? this.headlineWeight,
-        titleWeight: titleWeight ?? this.titleWeight,
-        bodyWeight: bodyWeight ?? this.bodyWeight,
-      );
-
-  @override
-  AppTypography lerp(AppTypography? other, double t) {
-    if (other is! AppTypography) return this;
-    return AppTypography(
-      titleLetterSpacing:
-          _lerpDouble(titleLetterSpacing, other.titleLetterSpacing, t),
-      labelLetterSpacing:
-          _lerpDouble(labelLetterSpacing, other.labelLetterSpacing, t),
-      bodyLetterSpacing:
-          _lerpDouble(bodyLetterSpacing, other.bodyLetterSpacing, t),
-      headlineWeight: FontWeight.lerp(headlineWeight, other.headlineWeight, t) ??
-          headlineWeight,
-      titleWeight:
-          FontWeight.lerp(titleWeight, other.titleWeight, t) ?? titleWeight,
-      bodyWeight: FontWeight.lerp(bodyWeight, other.bodyWeight, t) ?? bodyWeight,
-    );
-  }
 }
-
-double _lerpDouble(double a, double b, double t) => a + (b - a) * t;

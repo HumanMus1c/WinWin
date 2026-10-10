@@ -14,12 +14,8 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:flutter/material.dart' as legacy;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart';
-
-// ignore: deprecated_member_use
-import 'package:material_ui/material_ui.dart' show MaterialUiCompatibilityBridge;
 
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/theme/colors.dart';
@@ -170,27 +166,5 @@ class _MiuixThemeScopeState extends State<MiuixThemeScope> {
             textStyles: textStyles,
           );
     return MiuixTheme(data: data, child: widget.child);
-  }
-}
-
-/// SDK 材料桥接容器：包住内部使用 SDK `flutter/material` 实现（如
-/// [MiuixTextField] 内的 TextField）的 flutter_miuix 组件——为其提供 SDK
-/// Material 祖先（debug 断言）与 ThemeData / MaterialLocalizations
-/// （release 下缺失会空断言崩溃 → 渲染为大灰块，曾被复测捕获）。
-/// 作用域最小化：仅包住需要的组件子树。
-class MiuixCompat extends StatelessWidget {
-  const MiuixCompat({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    // ignore: deprecated_member_use
-    return MaterialUiCompatibilityBridge(
-      child: legacy.Material(
-        type: legacy.MaterialType.transparency,
-        child: child,
-      ),
-    );
   }
 }

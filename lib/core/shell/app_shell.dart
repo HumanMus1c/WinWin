@@ -8,7 +8,6 @@ import 'package:material_ui/material_ui.dart'
 
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
-import 'package:winwin/theme/app_theme.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
 
@@ -92,11 +91,7 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = isDark ? Brightness.dark : Brightness.light;
-    final tokens = AppThemeHost.tokensFor(
-      brightness,
-      // 过渡期：文本样式从 ThemeData 派生（B2-t 起为唯一读取面；B7 内联常量）。
-      textStyles: AppTheme.textStylesFor(brightness),
-    );
+    final tokens = AppThemeHost.tokensFor(brightness);
     Widget app = WidgetsApp(
       title: title,
       color: tokens.colors.background,

@@ -1,9 +1,5 @@
 import 'package:material_ui/material_ui.dart';
-import '../core/shell/app_theme_host.dart';
-import 'app_chrome.dart';
 import 'app_icons.dart';
-import 'app_shapes.dart';
-import 'app_typography.dart';
 import 'colors.dart';
 import 'system_font_scanner.dart';
 import 'package:winwin/theme/app_colors.dart';
@@ -29,27 +25,6 @@ class AppTheme {
   static ThemeData darkFor({String? fontFamily}) =>
       _applyFont(_miuixDark, fontFamily);
 
-  /// 派生 [AppTextStyles]（MD3 库级退役 B2-t：取代 `ThemeData.textTheme` 读取面）。
-  ///
-  /// 取值直接来自过渡期 ThemeData 的 textTheme（M3 Typography + 字体族注入），
-  /// 与迁移前**逐字段一致**；B7 摘除 material_ui 时改为内联常量。
-  static AppTextStyles textStylesFor(Brightness brightness) {
-    final textTheme =
-        (brightness == Brightness.dark ? _miuixDark : _miuixLight).textTheme;
-    return AppTextStyles(
-      titleLarge: textTheme.titleLarge,
-      titleMedium: textTheme.titleMedium,
-      titleSmall: textTheme.titleSmall,
-      bodyLarge: textTheme.bodyLarge,
-      bodyMedium: textTheme.bodyMedium,
-      bodySmall: textTheme.bodySmall,
-      labelLarge: textTheme.labelLarge,
-      labelMedium: textTheme.labelMedium,
-      labelSmall: textTheme.labelSmall,
-      headlineSmall: textTheme.headlineSmall,
-    );
-  }
-
   /// 将 [fontFamily]（或字体标识键）注入 [ThemeData] 的 textTheme / primaryTextTheme。
   ///
   /// 自动解析底层 DirectWrite 基础族名。
@@ -62,15 +37,6 @@ class AppTheme {
       primaryTextTheme: base.primaryTextTheme.apply(fontFamily: family),
     );
   }
-
-  /// 组装设计 Token（阶段5d-L2 固化：恒为 Miuix 取值），挂载到
-  /// [ThemeData.extensions]，组件通过 `Theme.of(context).extension<AppShapes>()`
-  /// 等读取。
-  static Iterable<ThemeExtension<dynamic>> _extensionsFor() => [
-        AppShapes.miuix,
-        AppTypography.miuix,
-        AppChrome.miuix,
-      ];
 
   /// 全局操作图标主题：注入系统 BackButton 与 CloseButton 图标（Miuix 语义）。
   static ActionIconThemeData _actionIconThemeFor() =>
@@ -156,7 +122,6 @@ class AppTheme {
           ),
         ),
         actionIconTheme: _actionIconThemeFor(),
-        extensions: _extensionsFor(),
       );
 
   static ThemeData get _miuixDark => ThemeData(
@@ -221,7 +186,6 @@ class AppTheme {
           ),
         ),
         actionIconTheme: _actionIconThemeFor(),
-        extensions: _extensionsFor(),
       );
 
   /// 通用：按风格返回圆角半径（阶段5d-L2 固化：恒为 Miuix 取值；[style]
