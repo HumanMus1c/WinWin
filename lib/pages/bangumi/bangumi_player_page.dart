@@ -1995,7 +1995,15 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               ),
             ),
             const SizedBox(width: Style.sm),
-            AppPrimaryButton(onPressed: enabled && !_sendingComment ? _sendComment : null, child: _sendingComment
+            // 紧凑口径：与评论输入条等高（B7-b 实机反馈）。
+            AppPrimaryButton(
+                onPressed: enabled && !_sendingComment ? _sendComment : null,
+                minWidth: 56,
+                minHeight: 34,
+                insideMargin:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                cornerRadius: 10,
+                child: _sendingComment
                   ? const SizedBox(
                       width: 16,
                       height: 16,

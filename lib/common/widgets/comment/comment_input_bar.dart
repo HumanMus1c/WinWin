@@ -92,14 +92,25 @@ class SimpleCommentInputBar extends StatelessWidget {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: tokens.colors.surfaceContainer
-                      .withValues(alpha: 0.5),
+                  fillColor: tokens.colors.surfaceContainer.withValues(
+                    alpha: 0.5,
+                  ),
                 ),
                 onSubmitted: (_) => onSend(),
               ),
             ),
             const SizedBox(width: Style.sm),
-            AppPrimaryButton(onPressed: (enabled && !sending) ? () => onSend() : null, child: sending
+            // 紧凑口径：与输入条等高（B7-b 实机反馈：默认 Miuix 尺寸高于输入条）。
+            AppPrimaryButton(
+              onPressed: (enabled && !sending) ? () => onSend() : null,
+              minWidth: 56,
+              minHeight: 34,
+              insideMargin: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 6,
+              ),
+              cornerRadius: 10,
+              child: sending
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -108,7 +119,8 @@ class SimpleCommentInputBar extends StatelessWidget {
                         color: AppColors.white,
                       ),
                     )
-                  : const Text('发送')),
+                  : const Text('发送'),
+            ),
           ],
         ),
       ),

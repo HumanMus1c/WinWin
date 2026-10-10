@@ -2214,11 +2214,18 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           // 3. 发送按钮（严格 40px 高度，与输入框和表情按钮完全等高且拥有同款 20px 圆角）
           SizedBox(
             height: barItemHeight,
-            child: AppPrimaryButton(onPressed: (_isLiving &&
-                      _danmakuInputCtrl.text.trim().isNotEmpty &&
-                      !_isSendingDanmaku)
-                  ? _sendDanmaku
-                  : null, child: _isSendingDanmaku
+            child: AppPrimaryButton(
+                onPressed: (_isLiving &&
+                        _danmakuInputCtrl.text.trim().isNotEmpty &&
+                        !_isSendingDanmaku)
+                    ? _sendDanmaku
+                    : null,
+                minWidth: 64,
+                minHeight: 40,
+                insideMargin:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                cornerRadius: 20,
+                child: _isSendingDanmaku
                   ? const SizedBox(
                       width: 16,
                       height: 16,

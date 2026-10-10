@@ -330,7 +330,11 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                 return SizedBox(
                   width: double.infinity,
                   height: 48,
-                  child: AppPrimaryButton(onPressed: _canSend ? _onSend : null, child: sending
+                  child: AppPrimaryButton(
+                    onPressed: _canSend ? _onSend : null,
+                    insideMargin:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: sending
                         ? const SizedBox(
                             width: 20,
                             height: 20,
@@ -435,9 +439,15 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
     );
   }
 
-  /// 内联模式发送按钮。
+  /// 内联模式发送按钮（紧凑口径：与内联输入条等高）。
   Widget _buildInlineSendButton(AppTokens tokens) {
-    return AppPrimaryButton(onPressed: _canSend ? _onSend : null, child: ValueListenableBuilder<bool>(
+    return AppPrimaryButton(
+        onPressed: _canSend ? _onSend : null,
+        minWidth: 60,
+        minHeight: 36,
+        insideMargin: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        cornerRadius: 10,
+        child: ValueListenableBuilder<bool>(
         valueListenable: _sending,
         builder: (context, sending, _) {
           return sending

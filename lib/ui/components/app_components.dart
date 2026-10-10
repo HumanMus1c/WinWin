@@ -28,9 +28,9 @@ export 'user_vip_badge.dart';
 /// 从 context 读取两套 Token 的便捷封装。
 class _Tokens {
   _Tokens.of(BuildContext context)
-      : shapes = AppThemeHost.of(context).shapes,
-        chrome = AppThemeHost.of(context).chrome,
-        typo = AppThemeHost.of(context).typography;
+    : shapes = AppThemeHost.of(context).shapes,
+      chrome = AppThemeHost.of(context).chrome,
+      typo = AppThemeHost.of(context).typography;
 
   final AppShapes shapes;
   final AppChrome chrome;
@@ -143,11 +143,22 @@ class AppPrimaryButton extends StatefulWidget {
     required this.onPressed,
     required this.child,
     this.expanded = false,
+    this.minWidth,
+    this.minHeight,
+    this.insideMargin,
+    this.cornerRadius,
   });
 
   final VoidCallback? onPressed;
   final Widget child;
   final bool expanded;
+
+  /// 紧凑尺寸参数（null = Miuix 默认）；用于发送栏等低矮输入条内，
+  /// 避免按钮高于容器导致不和谐/裁切（B7-b 实机反馈）。
+  final double? minWidth;
+  final double? minHeight;
+  final EdgeInsetsGeometry? insideMargin;
+  final double? cornerRadius;
 
   @override
   State<AppPrimaryButton> createState() => _AppPrimaryButtonState();
@@ -156,11 +167,14 @@ class AppPrimaryButton extends StatefulWidget {
 class _AppPrimaryButtonState extends State<AppPrimaryButton> {
   @override
   Widget build(BuildContext context) {
-
     // 阶段5d-L1：M3 分支已移除；原生 MiuixButton（纯色 + squircle + folme 按压）。
     final button = MiuixButton(
       onPressed: widget.onPressed,
       colors: MiuixButtonDefaults.buttonColorsPrimary(context),
+      minWidth: widget.minWidth ?? MiuixButtonDefaults.minWidth,
+      minHeight: widget.minHeight ?? MiuixButtonDefaults.minHeight,
+      insideMargin: widget.insideMargin ?? MiuixButtonDefaults.insideMargin,
+      cornerRadius: widget.cornerRadius ?? MiuixButtonDefaults.cornerRadius,
       child: widget.child,
     );
     return widget.expanded
@@ -398,7 +412,7 @@ class _AppTextFieldState extends State<AppTextField> {
 /// 补偿）：在写入前经官方 formatter 链过滤，行为与 EditableText 内部一致。
 class _FormatterProxyController extends TextEditingController {
   _FormatterProxyController(this._inner, List<TextInputFormatter> formatters)
-      : formatters = List.of(formatters);
+    : formatters = List.of(formatters);
 
   final TextEditingController _inner;
   List<TextInputFormatter> formatters;
@@ -489,9 +503,9 @@ class AppActionTile extends StatelessWidget {
     this.iconTint,
     this.flexible = true,
   }) : assert(
-          icon != null || count != null,
-          'AppActionTile 需传入 icon 或 count 之一',
-        );
+         icon != null || count != null,
+         'AppActionTile 需传入 icon 或 count 之一',
+       );
 
   final IconData? icon;
   final String? count;
@@ -567,11 +581,7 @@ class AppActionTile extends StatelessWidget {
 /// - Miuix：[MiuixLinearProgressIndicator]（tertiary 色，3px 中等高度，
 ///   全圆角；flutter_miuix 阶段1 起替换原 LinearProgressIndicator 近似实现）。
 class AppProgressBar extends StatelessWidget {
-  const AppProgressBar({
-    super.key,
-    required this.value,
-    this.height,
-  });
+  const AppProgressBar({super.key, required this.value, this.height});
 
   /// 进度值 0.0–1.0。null 或非有限值视为 0。
   final double? value;
@@ -582,7 +592,9 @@ class AppProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = AppThemeHost.of(context).colors;
-    final v = (value == null || !value!.isFinite) ? 0.0 : value!.clamp(0.0, 1.0);
+    final v = (value == null || !value!.isFinite)
+        ? 0.0
+        : value!.clamp(0.0, 1.0);
 
     // 阶段5d-L1：M3 分支已移除；原生 Miuix 线性进度条（自带全圆角轨道），
     // 保留替换前的 tertiary 配色与 3px 高度。
@@ -597,4 +609,3 @@ class AppProgressBar extends StatelessWidget {
     );
   }
 }
-
