@@ -1,4 +1,5 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixHorizontalDivider;
+import 'package:flutter_miuix/miuix.dart'
+    show MiuixBasicComponent, MiuixHorizontalDivider;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -101,8 +102,9 @@ class SessionListSectionState extends State<SessionListSection> {
 
   /// 演示模式：初始仅填充当前视口所需的会话行数（+ 滚动追加数）。
   int _demoVisibleRows(BuildContext context) {
-    final rowsFit =
-        ((MediaQuery.sizeOf(context).height - 260) / 76).ceil().clamp(4, 20);
+    final rowsFit = ((MediaQuery.sizeOf(context).height - 260) / 76)
+        .ceil()
+        .clamp(4, 20);
     return rowsFit + _demoExtra;
   }
 
@@ -327,93 +329,92 @@ class SessionListSectionState extends State<SessionListSection> {
         const MiuixHorizontalDivider(),
         Expanded(
           child: CustomScrollView(
-              controller: _scrollCtrl,
-              // AlwaysScrollable：列表不满一屏时仍可下拉刷新。
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                // 会话列表
-                if (Pref.demoMode)
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => _SessionTile(
-                        session: const {
-                          'talker_id': 0,
-                          'session_type': 1,
-                        },
-                        index: index,
-                        onToggleTop: _handleToggleTop,
-                        onToggleDnd: _handleToggleDnd,
-                        onRemove: _handleRemove,
-                      ),
-                      childCount: _demoVisibleRows(context),
-                    ),
-                  )
-                else if (_loading && _sessions.isEmpty)
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.all(Style.xxl),
-                      child: Center(
-                        child: AppProgressIndicator(color: biliPink),
-                      ),
-                    ),
-                  )
-                else if (_error != null && _sessions.isEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(Style.xxl),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _error!,
-                              style: TextStyle(color: tokens.colors.error),
-                            ),
-                            const SizedBox(height: Style.sm),
-                            TextButton(
-                              onPressed: () => _load(refresh: true),
-                              child: const Text('重试'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                else if (_sessions.isEmpty && !_hasMore)
-                  const SliverToBoxAdapter(child: MsgFeedEmptyView())
-                else
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      if (index == _sessions.length) {
-                        // 加载更多指示器 - 使用 addPostFrameCallback 避免在 build 中调用 _load
-                        if (_hasMore && !_isLoadingMore) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted && _hasMore && !_isLoadingMore) {
-                              _load();
-                            }
-                          });
-                        }
-                        return const Padding(
-                          padding: EdgeInsets.all(Style.md),
-                          child: Center(
-                            child: AppProgressIndicator(
-                              strokeWidth: 2,
-                              color: biliPink,
-                            ),
-                          ),
-                        );
-                      }
-                      return _SessionTile(
-                        session: _sessions[index],
-                        index: index,
-                        onToggleTop: _handleToggleTop,
-                        onToggleDnd: _handleToggleDnd,
-                        onRemove: _handleRemove,
-                      );
-                    }, childCount: _sessions.length + (_hasMore ? 1 : 0)),
-                  ),
-              ],
+            controller: _scrollCtrl,
+            // AlwaysScrollable：列表不满一屏时仍可下拉刷新。
+            // Clamping 包裹：MiuixPullToRefresh 靠 OverscrollNotification 驱动
+            // （裸 AlwaysScrollable 无边界条件、不产生过卷通知 → 下拉无响应）。
+            physics: const ClampingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
             ),
+            slivers: [
+              // 会话列表
+              if (Pref.demoMode)
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _SessionTile(
+                      session: const {'talker_id': 0, 'session_type': 1},
+                      index: index,
+                      onToggleTop: _handleToggleTop,
+                      onToggleDnd: _handleToggleDnd,
+                      onRemove: _handleRemove,
+                    ),
+                    childCount: _demoVisibleRows(context),
+                  ),
+                )
+              else if (_loading && _sessions.isEmpty)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(Style.xxl),
+                    child: Center(child: AppProgressIndicator(color: biliPink)),
+                  ),
+                )
+              else if (_error != null && _sessions.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(Style.xxl),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _error!,
+                            style: TextStyle(color: tokens.colors.error),
+                          ),
+                          const SizedBox(height: Style.sm),
+                          TextButton(
+                            onPressed: () => _load(refresh: true),
+                            child: const Text('重试'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else if (_sessions.isEmpty && !_hasMore)
+                const SliverToBoxAdapter(child: MsgFeedEmptyView())
+              else
+                SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    if (index == _sessions.length) {
+                      // 加载更多指示器 - 使用 addPostFrameCallback 避免在 build 中调用 _load
+                      if (_hasMore && !_isLoadingMore) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted && _hasMore && !_isLoadingMore) {
+                            _load();
+                          }
+                        });
+                      }
+                      return const Padding(
+                        padding: EdgeInsets.all(Style.md),
+                        child: Center(
+                          child: AppProgressIndicator(
+                            strokeWidth: 2,
+                            color: biliPink,
+                          ),
+                        ),
+                      );
+                    }
+                    return _SessionTile(
+                      session: _sessions[index],
+                      index: index,
+                      onToggleTop: _handleToggleTop,
+                      onToggleDnd: _handleToggleDnd,
+                      onRemove: _handleRemove,
+                    );
+                  }, childCount: _sessions.length + (_hasMore ? 1 : 0)),
+                ),
+            ],
+          ),
         ),
       ],
     );
@@ -501,8 +502,10 @@ class _SessionTile extends StatelessWidget {
                 top: -4,
                 child: Container(
                   constraints: const BoxConstraints(minWidth: 18),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: tokens.colors.error,
                     border: Border.all(
@@ -513,7 +516,10 @@ class _SessionTile extends StatelessWidget {
                   ),
                   child: Text(
                     unread > 99 ? '99+' : '$unread',
-                    style: const TextStyle(color: AppColors.white, fontSize: 10),
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 10,
+                    ),
                   ),
                 ),
               ),

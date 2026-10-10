@@ -1,7 +1,12 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart'
+    show
+        MiuixHorizontalDivider,
+        MiuixIconButton,
+        MiuixPressFeedbackType,
+        MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -197,9 +202,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                           spacing: 2,
                           children: [
                             Text(
-                              _expanded
-                                  ? '收起 $subCount条回复'
-                                  : '展开 $subCount条回复',
+                              _expanded ? '收起 $subCount条回复' : '展开 $subCount条回复',
                               style: grayStyle.copyWith(
                                 fontSize: 12,
                                 color: tokens.colors.primary,
@@ -280,6 +283,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   final TextEditingController _commentCtrl = TextEditingController();
   final FocusNode _commentFocus = FocusNode();
   bool _sendingComment = false;
+
   /// 回复目标（null=发表一级评论，否则为根评论 rpid + 被回复用户名）。
   int? _replyRoot;
   String? _replyHint;
@@ -314,6 +318,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 页面被新路由覆盖前的播放状态，用于返回时决定是否自动播放。
   bool _wasPlaying = false;
+
   /// 页面被覆盖前记录的播放位置，用于返回时恢复进度。
   Duration _savedPosition = Duration.zero;
 
@@ -363,8 +368,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     SyncTrace.log('DetailPage', 'dispose enter');
     routeObserver.unsubscribe(this);
     // 沉浸标题条：回收本页推送的背景覆写（覆盖 pushReplacement 等未走 didPop 的路径）。
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => clearTitleBarBackdrop(this));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => clearTitleBarBackdrop(this),
+    );
     windowManager.removeListener(this);
     _rightTabCtrl.dispose();
     // 退出时如果处于 PiP 模式，恢复窗口。
@@ -508,10 +514,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     switch (res) {
       case Success(:final response):
         final pages = response.pages ?? const <VideoPage>[];
-        final int? cid =
-            pages.isNotEmpty && pages.first.cid != null
-                ? pages.first.cid
-                : response.cid;
+        final int? cid = pages.isNotEmpty && pages.first.cid != null
+            ? pages.first.cid
+            : response.cid;
         if (cid != null) {
           final aid = response.aid;
           // 稿件总时长（秒），用于判定上次进度是否已接近播完。
@@ -595,11 +600,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         }
       } else if (infoRes case Error(:final errMsg)) {
         ctrl.releaseStartupGate(reason: 'info-error');
-        AppLogger.w('VideoDetailPage', '_applyPlayInfo failed: $errMsg (bvid=${widget.bvid}, cid=$cid)');
+        AppLogger.w(
+          'VideoDetailPage',
+          '_applyPlayInfo failed: $errMsg (bvid=${widget.bvid}, cid=$cid)',
+        );
       }
     } catch (e, s) {
       ctrl.releaseStartupGate(reason: 'info-exception');
-      AppLogger.e('VideoDetailPage', '_applyPlayInfo exception: $e (bvid=${widget.bvid}, cid=$cid)', error: e, stackTrace: s);
+      AppLogger.e(
+        'VideoDetailPage',
+        '_applyPlayInfo exception: $e (bvid=${widget.bvid}, cid=$cid)',
+        error: e,
+        stackTrace: s,
+      );
     }
   }
 
@@ -655,7 +668,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         case Success(:final response):
           final cursor = response.cursor;
           _nextOffset = cursor?.nextOffset;
-          _replyEnd = (cursor?.isEnd == true) ||
+          _replyEnd =
+              (cursor?.isEnd == true) ||
               response.replies.isEmpty ||
               (_nextOffset == null || _nextOffset!.isEmpty);
           _replyFailed = false;
@@ -1009,9 +1023,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (mid == null || mid <= 0) return;
     Navigator.push(
       context,
-      AppRoute(
-        builder: (_) => MemberSpacePage(mid: mid),
-      ),
+      AppRoute(builder: (_) => MemberSpacePage(mid: mid)),
     );
   }
 
@@ -1036,8 +1048,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// Esc 键固定语义：返回上一级。
   /// 优先退出显示器全屏；其次退出网页全屏；默认布局退出详情页。
   void _handleEscape() {
-    SyncTrace.log('DetailPage',
-        'escape pressed, fullscreen=$_fullscreen, inAppFullscreen=$_inAppFullscreen');
+    SyncTrace.log(
+      'DetailPage',
+      'escape pressed, fullscreen=$_fullscreen, inAppFullscreen=$_inAppFullscreen',
+    );
     if (_fullscreen) {
       setState(() => _fullscreen = false);
       _syncTitleBarBackdrop();
@@ -1162,7 +1176,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                 if (index == 0) return _buildInfoSectionDemo();
                                 if (index == 1) return _buildDescSectionDemo();
                                 if (index == 2) return _buildTagsSectionDemo();
-                                return _DemoReplyTile(bvid: widget.bvid, seed: index - 3);
+                                return _DemoReplyTile(
+                                  bvid: widget.bvid,
+                                  seed: index - 3,
+                                );
                               }
                               if (isLoading) {
                                 if (index == 0) {
@@ -1201,8 +1218,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               if (index == replyHeaderIndex) {
                                 return _buildReplyHeader(response!);
                               }
-                              final replyIndex =
-                                  index - replyHeaderIndex - 1;
+                              final replyIndex = index - replyHeaderIndex - 1;
                               if (replyIndex < _replies.length) {
                                 if (replyIndex == _replies.length - 1) {
                                   _maybeLoadMoreReplies();
@@ -1214,12 +1230,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             childCount: Pref.demoMode
                                 ? (appendRelated ? 11 : 3)
                                 : isLoading
-                                    ? (appendRelated ? 6 : 2)
-                                    : (appendRelated
-                                        ? (_tags.isNotEmpty ? 3 : 2) +
+                                ? (appendRelated ? 6 : 2)
+                                : (appendRelated
+                                      ? (_tags.isNotEmpty ? 3 : 2) +
                                             _replies.length +
                                             1
-                                        : (_tags.isNotEmpty ? 3 : 2)),
+                                      : (_tags.isNotEmpty ? 3 : 2)),
                           ),
                         ),
                       ),
@@ -1386,14 +1402,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     return ValueListenableBuilder<double>(
       valueListenable: _scrollRatio,
       builder: (context, scrollRatio, _) {
-    final tokens = AppThemeHost.of(context);
+        final tokens = AppThemeHost.of(context);
         final opacity = forceOpaque ? 1.0 : scrollRatio.clamp(0.0, 1.0);
         final overVideo = opacity < 0.5;
         // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏拍平到页面背景后，
         // 为标题/返回箭头选出达标可读色（覆盖在播放器上时仍用白色）。
         final barContrast = resolveAccessibleContainerColors(
-          containerColor: tokens.colors.background
-              .withValues(alpha: opacity * 0.95),
+          containerColor: tokens.colors.background.withValues(
+            alpha: opacity * 0.95,
+          ),
           contentColor: tokens.colors.onSurface,
           backgroundColor: tokens.colors.background,
           fallbackContentColors: [
@@ -1427,8 +1444,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           overflow: TextOverflow.ellipsis,
                           style: tokens.text.titleMedium?.copyWith(
                             color: barContrast.contentColor,
-                            shadows:
-                                overVideo ? ContrastStyle.glyphShadows : null,
+                            shadows: overVideo
+                                ? ContrastStyle.glyphShadows
+                                : null,
                           ),
                         ),
                       )
@@ -1452,12 +1470,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   child: Container(
                     height: kToolbarHeight,
                     decoration: BoxDecoration(
-                      color: tokens.colors.background
-                          .withValues(alpha: 0.95),
+                      color: tokens.colors.background.withValues(alpha: 0.95),
                       border: Border(
                         bottom: BorderSide(
-                          color: tokens.colors.outlineVariant
-                              .withValues(alpha: 0.3),
+                          color: tokens.colors.outlineVariant.withValues(
+                            alpha: 0.3,
+                          ),
                           width: 0.5,
                         ),
                       ),
@@ -1473,9 +1491,14 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         // 浮动/过渡态（overVideo 或滚动渐变）：朝下的纯渐进式压暗阴影，轻盈通透且零 GPU 滤镜开销
         final topColor = overVideo
             ? AppColors.black.withValues(
-                alpha: (0.45 * (1.0 - opacity) + 0.70 * opacity).clamp(0.0, 1.0))
-            : tokens.colors.background
-                .withValues(alpha: (opacity * 0.95).clamp(0.0, 1.0));
+                alpha: (0.45 * (1.0 - opacity) + 0.70 * opacity).clamp(
+                  0.0,
+                  1.0,
+                ),
+              )
+            : tokens.colors.background.withValues(
+                alpha: (opacity * 0.95).clamp(0.0, 1.0),
+              );
 
         return Positioned(
           top: 0,
@@ -1525,10 +1548,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         borderRadius: BorderRadius.zero,
       );
       if (widget.heroTag != null) {
-        return Hero(
-          tag: widget.heroTag!,
-          child: coverWidget,
-        );
+        return Hero(tag: widget.heroTag!, child: coverWidget);
       }
       return coverWidget;
     }
@@ -1626,8 +1646,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
               // 关注按钮：未登录/未关注/已关注，支持 Hover 状态切换与取关
               if (owner?.mid != null &&
-                  !(Accounts.main.isLogin &&
-                      Accounts.main.mid == owner!.mid))
+                  !(Accounts.main.isLogin && Accounts.main.mid == owner!.mid))
                 _AuthorFollowButton(
                   isFollowed: isFollowed,
                   isLoading: isFollowUpdating,
@@ -1635,7 +1654,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 ),
             ],
           ),
-          const SizedBox(height: Style.xl, child: Center(child: MiuixHorizontalDivider())),
+          const SizedBox(
+            height: Style.xl,
+            child: Center(child: MiuixHorizontalDivider()),
+          ),
           // 互动行：点赞/投币/收藏/点踩/分享/稍后再看
           //（对标 BiliPai ActionButtonsRow）。
           VideoActionRow(
@@ -1691,8 +1713,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () =>
-                    setState(() => _descExpanded = !_descExpanded),
+                onPressed: () => setState(() => _descExpanded = !_descExpanded),
                 child: Text(_descExpanded ? '收起' : '展开'),
               ),
             ),
@@ -1762,9 +1783,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         children: [
           Text(
             count != null ? '评论 ${NumUtils.formatNum(count)}' : '评论',
-            style: AppThemeHost.of(context).text.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppThemeHost.of(
+              context,
+            ).text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const Spacer(),
           // 窄屏内联评论区同样支持 最热/最新排序切换。
@@ -2011,8 +2032,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 vertical: Style.sm,
               ),
               decoration: BoxDecoration(
-                color: tokens.colors.surfaceContainerHighest
-                    .withValues(alpha: 0.45),
+                color: tokens.colors.surfaceContainerHighest.withValues(
+                  alpha: 0.45,
+                ),
                 borderRadius: BorderRadius.circular(Style.radiusMd),
               ),
               child: Column(
@@ -2023,8 +2045,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       const SizedBox(height: Style.xs),
                       MiuixHorizontalDivider(
                         thickness: 0.5,
-                        color: tokens.colors.outlineVariant
-                            .withValues(alpha: 0.2),
+                        color: tokens.colors.outlineVariant.withValues(
+                          alpha: 0.2,
+                        ),
                       ),
                       const SizedBox(height: Style.xs),
                     ],
@@ -2114,8 +2137,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color:
-                                isSubUp ? biliPink : tokens.colors.primary,
+                            color: isSubUp ? biliPink : tokens.colors.primary,
                           ),
                         ),
                       ),
@@ -2251,10 +2273,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     ),
                   ),
                 GestureDetector(
-                  onTap: () => _setReplyTarget(
-                    root,
-                    targetName: subMember?.uname,
-                  ),
+                  onTap: () =>
+                      _setReplyTarget(root, targetName: subMember?.uname),
                   child: Row(
                     spacing: 2,
                     children: [
@@ -2340,15 +2360,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: tokens.colors.surfaceContainer
-                      .withValues(alpha: 0.5),
+                  fillColor: tokens.colors.surfaceContainer.withValues(
+                    alpha: 0.5,
+                  ),
                   suffixIcon: _replyRoot != null
                       ? MiuixIconButton(
-
                           onPressed: _clearReplyTarget,
 
                           child: AppIcon(AppIcons.clear(), size: 16),
-                      )
+                        )
                       : null,
                 ),
                 onSubmitted: (_) => _sendComment(),
@@ -2418,16 +2438,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       );
     }
     if (_replyEnd) {
-    final tokens = AppThemeHost.of(context);
+      final tokens = AppThemeHost.of(context);
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: Style.lg),
         child: Center(
           child: Text(
             '没有更多评论',
-            style: TextStyle(
-              fontSize: 12,
-              color: tokens.colors.outline,
-            ),
+            style: TextStyle(fontSize: 12, color: tokens.colors.outline),
           ),
         ),
       );
@@ -2452,9 +2469,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           unselectedLabelColor: tokens.colors.onSurfaceVariant,
           indicatorColor: tokens.colors.primary,
           indicatorSize: TabBarIndicatorSize.label,
-          dividerColor: tokens.colors.outlineVariant.withValues(
-            alpha: 0.3,
-          ),
+          dividerColor: tokens.colors.outlineVariant.withValues(alpha: 0.3),
           tabs: [
             Tab(
               text: (Pref.demoMode || replyCount == null)
@@ -2483,8 +2498,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         return Column(
           children: [
             Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(Style.sm, Style.xs, Style.sm, 0),
+              padding: const EdgeInsets.fromLTRB(
+                Style.sm,
+                Style.xs,
+                Style.sm,
+                0,
+              ),
               child: _buildCommentSortRow(),
             ),
             Expanded(
@@ -2519,10 +2538,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           ],
         );
       }
-      return const AppEmptyState(
-        title: '评论区不可用',
-        subtitle: '稿件信息加载失败',
-      );
+      return const AppEmptyState(title: '评论区不可用', subtitle: '稿件信息加载失败');
     }
     return Column(
       children: [
@@ -2570,6 +2586,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         ),
       );
     }
+
     return Row(children: [sortBtn('最热', 3), sortBtn('最新', 2)]);
   }
 
@@ -2577,7 +2594,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 尾部统一交给 [_buildReplyTrailer]（spinner/重试/空态/到底）。
   Widget _buildReplyListView() {
     return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
+      // Clamping 包裹：MiuixPullToRefresh 靠 OverscrollNotification 驱动
+      // （裸 AlwaysScrollable 无边界条件、不产生过卷通知 → 下拉无响应）。
+      physics: const ClampingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       padding: const EdgeInsets.fromLTRB(
         Style.cardSpace,
         Style.xs,
@@ -2623,23 +2644,21 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     return switch (_relatedState) {
       Loading() => _buildRightSkeleton(),
       Error(:final errMsg) => _buildError(errMsg, _loadRelated),
-      Success(:final response) => response.isEmpty
-          ? const AppEmptyState(
-              title: '暂无相关推荐',
-              subtitle: '换个视频看看吧',
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                Style.cardSpace,
-                0,
-                Style.safeSpace,
-                Style.xxl * 2,
+      Success(:final response) =>
+        response.isEmpty
+            ? const AppEmptyState(title: '暂无相关推荐', subtitle: '换个视频看看吧')
+            : ListView.separated(
+                padding: const EdgeInsets.fromLTRB(
+                  Style.cardSpace,
+                  0,
+                  Style.safeSpace,
+                  Style.xxl * 2,
+                ),
+                itemCount: response.length,
+                separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
+                itemBuilder: (context, index) =>
+                    _buildRelatedTile(response[index]),
               ),
-              itemCount: response.length,
-              separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
-              itemBuilder: (context, index) =>
-                  _buildRelatedTile(response[index]),
-            ),
     };
   }
 
@@ -2692,36 +2711,36 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       ),
       switch (_relatedState) {
         Loading() => SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
-            sliver: SliverList.separated(
-              itemCount: 6,
-              separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
-              itemBuilder: (context, index) => _buildRelatedSkeletonItem(),
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+          sliver: SliverList.separated(
+            itemCount: 6,
+            separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
+            itemBuilder: (context, index) => _buildRelatedSkeletonItem(),
           ),
+        ),
         Error(:final errMsg) => SliverToBoxAdapter(
-            child: SizedBox(
-              height: 240,
-              child: _buildError(errMsg, _loadRelated),
-            ),
+          child: SizedBox(
+            height: 240,
+            child: _buildError(errMsg, _loadRelated),
           ),
-        Success(:final response) => response.isEmpty
-            ? const SliverToBoxAdapter(
-                child: AppEmptyState(
-                  title: '暂无相关推荐',
-                  subtitle: '换个视频看看吧',
+        ),
+        Success(:final response) =>
+          response.isEmpty
+              ? const SliverToBoxAdapter(
+                  child: AppEmptyState(title: '暂无相关推荐', subtitle: '换个视频看看吧'),
+                )
+              : SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Style.safeSpace,
+                  ),
+                  sliver: SliverList.separated(
+                    itemCount: response.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: Style.sm),
+                    itemBuilder: (context, index) =>
+                        _buildRelatedTile(response[index]),
+                  ),
                 ),
-              )
-            : SliverPadding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: Style.safeSpace),
-                sliver: SliverList.separated(
-                  itemCount: response.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: Style.sm),
-                  itemBuilder: (context, index) =>
-                      _buildRelatedTile(response[index]),
-                ),
-              ),
       },
       // 尾部留白，与左栏原有底部间距对齐。
       const SliverToBoxAdapter(child: SizedBox(height: Style.xxl * 2)),
@@ -2730,10 +2749,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 相关推荐骨架单项（宽栏 [_buildRightSkeleton] 与窄屏 sliver 共用）。
   Widget _buildRelatedSkeletonItem() {
-    return const VideoCardHSkeleton(
-      coverWidth: 150,
-      inCard: true,
-    );
+    return const VideoCardHSkeleton(coverWidth: 150, inCard: true);
   }
 
   // ─────────────────────────── 局部骨架屏 / 错误态 ───────────────────────────
@@ -2742,9 +2758,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   void _openDemoVideo(BuildContext context, int index) {
     Navigator.push(
       context,
-      AppRoute(
-        builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
-      ),
+      AppRoute(builder: (_) => VideoDetailPage(bvid: 'BV1demo$index')),
     );
   }
 
@@ -2805,7 +2819,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
             ],
           ),
-          const SizedBox(height: Style.xl, child: Center(child: MiuixHorizontalDivider())),
+          const SizedBox(
+            height: Style.xl,
+            child: Center(child: MiuixHorizontalDivider()),
+          ),
           VideoActionRow(
             stat: null,
             hasLike:
@@ -2899,9 +2916,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               const Skeleton(child: SkeletonCircle(size: 40)),
               const SizedBox(width: Style.md),
               const Expanded(
-                child: Skeleton(
-                  child: SkeletonLine(width: 100, height: 14),
-                ),
+                child: Skeleton(child: SkeletonLine(width: 100, height: 14)),
               ),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
@@ -2920,7 +2935,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
             ],
           ),
-          const SizedBox(height: Style.xl, child: Center(child: MiuixHorizontalDivider())),
+          const SizedBox(
+            height: Style.xl,
+            child: Center(child: MiuixHorizontalDivider()),
+          ),
           VideoActionRow(
             stat: null,
             hasLike: false,
@@ -2973,9 +2991,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         children: [
           Text(
             '评论',
-            style: AppThemeHost.of(context).text.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppThemeHost.of(
+              context,
+            ).text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const Spacer(),
           _buildCommentSortRow(),
@@ -3048,10 +3066,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             ),
           ),
           const SizedBox(height: Style.xl),
-          FilledButton.tonal(
-            onPressed: onRetry,
-            child: const Text('点击重试'),
-          ),
+          FilledButton.tonal(onPressed: onRetry, child: const Text('点击重试')),
         ],
       ),
     );
@@ -3153,8 +3168,9 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
             style: TextStyle(
               fontSize: 12.5,
               color: color,
-              fontWeight:
-                  widget.isFollowed ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: widget.isFollowed
+                  ? FontWeight.w600
+                  : FontWeight.normal,
             ),
           ),
           style: OutlinedButton.styleFrom(
@@ -3172,4 +3188,3 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
     );
   }
 }
-
