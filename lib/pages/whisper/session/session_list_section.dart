@@ -148,9 +148,9 @@ class SessionListSectionState extends State<SessionListSection> {
     if (refresh) {
       _endTs = 0;
       _hasMore = true;
-      _sessions.clear();
-      _mergedAll.clear();
-      setState(() => _loading = true);
+      // B7 反馈轮#2：刷新期间保留现有列表（不再清空置 _loading —— 消除与
+      // Miuix 下拉指示器同屏的居中加载环）；成功路径（merged.sessions）
+      // 仍整体替换列表内容。
     }
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;

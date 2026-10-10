@@ -259,6 +259,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   String? _nextOffset;
   bool _replyEnd = false;
   bool _loadingReplies = false;
+  bool _refreshingReplies = false;
   bool _replyFailed = false;
 
   /// 评论排序模式（对标 BiliPai CommentSortHeader 最热/最新切换）：
@@ -635,11 +636,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (Pref.demoMode) return;
     if (_loadingReplies) return;
     if (refresh) {
-      _replies.clear();
+      // B7 反馈轮#2：刷新期间保留现有评论（不再清空 —— 消除与 Miuix 下拉
+      // 指示器同屏的居中加载环）；成功路径整体替换列表。
       _nextOffset = null;
       _replyEnd = false;
       _replyFailed = false;
-      _subReplies.clear();
     }
     _loadingReplies = true;
     if (mounted) setState(() {});
@@ -658,6 +659,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               response.replies.isEmpty ||
               (_nextOffset == null || _nextOffset!.isEmpty);
           _replyFailed = false;
+          if (refresh) {
+            _replies.clear();
+            _subReplies.clear();
+          }
           _replies.addAll(response.replies);
         case Error():
           _replyFailed = true;
@@ -2526,11 +2531,16 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           child: _buildCommentSortRow(),
         ),
         Expanded(
-          child: AppRefreshIndicator(
-            // 实机反馈#4：评论区补下拉刷新（重拉首页评论）。
+          // B7 反馈轮#2：改用 Miuix 库下拉刷新（圆环+文案），刷新期间
+          // 评论列表保留现有内容，不再出现居中加载环与下拉指示器叠加。
+          child: AppMiuixRefresh(
+            isRefreshing: _refreshingReplies,
             onRefresh: () async {
               final aid = _detailState.dataOrNull?.aid;
-              if (aid != null) await _loadReplies(oid: aid, refresh: true);
+              if (aid == null) return;
+              setState(() => _refreshingReplies = true);
+              await _loadReplies(oid: aid, refresh: true);
+              if (mounted) setState(() => _refreshingReplies = false);
             },
             child: _buildReplyListView(),
           ),

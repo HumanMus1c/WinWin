@@ -1,4 +1,5 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
+import 'package:flutter_miuix/miuix.dart'
+    show MiuixCard, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -35,9 +36,9 @@ import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 历史记录页面（移植自 PiliPlus `lib/pages/history/`，重构为自适应多列宫格排版）。
 void showHistoryPage(BuildContext context) {
-  Navigator.of(context).push(
-    AppRoute<void>(builder: (_) => const HistoryPage()),
-  );
+  Navigator.of(
+    context,
+  ).push(AppRoute<void>(builder: (_) => const HistoryPage()));
 }
 
 class HistoryPage extends StatefulWidget {
@@ -144,7 +145,10 @@ class _HistoryPageState extends State<HistoryPage> {
     }
 
     if (!Accounts.main.isLogin) {
-      AppLogger.w('HistoryPage', 'Accounts.main is not login: ${Accounts.main.runtimeType}');
+      AppLogger.w(
+        'HistoryPage',
+        'Accounts.main is not login: ${Accounts.main.runtimeType}',
+      );
       setState(() {
         _loading = false;
         _isLoadingMore = false;
@@ -154,10 +158,7 @@ class _HistoryPageState extends State<HistoryPage> {
     }
 
     AppLogger.d('HistoryPage', 'Loading history max: $_max, viewAt: $_viewAt');
-    final res = await HistoryHttp.historyList(
-      max: _max,
-      viewAt: _viewAt,
-    );
+    final res = await HistoryHttp.historyList(max: _max, viewAt: _viewAt);
     if (!mounted) return;
 
     switch (res) {
@@ -238,9 +239,8 @@ class _HistoryPageState extends State<HistoryPage> {
   void _openItem(HistoryItem item) {
     final bvid = item.history.bvid;
     final business = item.history.business;
-    final isArchive = business == 'archive' ||
-        business == null ||
-        business.isEmpty;
+    final isArchive =
+        business == 'archive' || business == null || business.isEmpty;
     if (bvid == null || bvid.isEmpty || !isArchive) {
       showToast(context, '暂不支持打开该类型记录');
       return;
@@ -263,7 +263,10 @@ class _HistoryPageState extends State<HistoryPage> {
         title: const Text('清空历史'),
         content: const Text('确定清空所有观看历史？此操作不可撤销。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.red),
@@ -296,10 +299,12 @@ class _HistoryPageState extends State<HistoryPage> {
       actions: [
         if (_items.isNotEmpty)
           MiuixIconButton(
-
             onPressed: _clearAll,
 
-            child: AppTooltip(message: '清空', child: AppIcon(AppIcons.clearAll())),
+            child: AppTooltip(
+              message: '清空',
+              child: AppIcon(AppIcons.clearAll()),
+            ),
           ),
       ],
       body: Pref.demoMode
@@ -307,84 +312,88 @@ class _HistoryPageState extends State<HistoryPage> {
           : _loading && _items.isEmpty
           ? _buildSkeleton()
           : _error != null && _items.isEmpty
-              ? _buildError()
-              : _items.isEmpty
-                  ? AppEmptyState(
-                      icon: Icon(AppIcons.history(selected: false)),
-                      title: '暂无观看记录',
-                      subtitle: '看过的视频会出现在这里',
-                    )
-                  : NotificationListener<ScrollNotification>(
-                      onNotification: (n) {
-                        if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
-                          _onScroll();
-                        }
-                        return false;
-                      },
-                      child: RefreshIndicator(
-                        color: biliPink,
-                        onRefresh: () => _load(refresh: true),
-                        child: CustomScrollView(
-                          controller: _scrollController,
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          slivers: [
-                            SliverPadding(
-                              padding: const EdgeInsets.all(Style.safeSpace),
-                              sliver: SliverGrid.builder(
-                                gridDelegate: Grid.videoCardHDelegate(
-                                  maxCrossAxisExtent: 440.0,
-                                  mainAxisExtent: 110.0,
-                                ),
-                                itemCount: _items.length,
-                                itemBuilder: (context, index) {
-                                  final item = _items[index];
-                                  return _HistoryCard(
-                                    item: item,
-                                    onDelete: () => _deleteItem(item),
-                                    onTap: () => _openItem(item),
-                                  );
-                                },
-                              ),
-                            ),
-                            if (_isLoadingMore)
-                              const SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: EdgeInsets.all(Style.md),
-                                  child: Center(
-                                    child: AppProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: biliPink,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else if (!_hasMore && _items.isNotEmpty)
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: Style.md),
-                                  child: Center(
-                                    child: Text(
-                                      '没有更多了',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppThemeHost.of(context).colors.outline,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
+          ? _buildError()
+          : _items.isEmpty
+          ? AppEmptyState(
+              icon: Icon(AppIcons.history(selected: false)),
+              title: '暂无观看记录',
+              subtitle: '看过的视频会出现在这里',
+            )
+          : NotificationListener<ScrollNotification>(
+              onNotification: (n) {
+                if (n is ScrollUpdateNotification ||
+                    n is ScrollEndNotification) {
+                  _onScroll();
+                }
+                return false;
+              },
+              child: RefreshIndicator(
+                color: biliPink,
+                onRefresh: () => _load(refresh: true),
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.all(Style.safeSpace),
+                      sliver: SliverGrid.builder(
+                        gridDelegate: Grid.videoCardHDelegate(
+                          maxCrossAxisExtent: 440.0,
+                          mainAxisExtent: 110.0,
                         ),
+                        itemCount: _items.length,
+                        itemBuilder: (context, index) {
+                          final item = _items[index];
+                          return _HistoryCard(
+                            item: item,
+                            onDelete: () => _deleteItem(item),
+                            onTap: () => _openItem(item),
+                          );
+                        },
                       ),
                     ),
+                    if (_isLoadingMore)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.all(Style.md),
+                          child: Center(
+                            child: AppProgressIndicator(
+                              strokeWidth: 2,
+                              color: biliPink,
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (!_hasMore && _items.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: Style.md,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '没有更多了',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppThemeHost.of(context).colors.outline,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
   /// 演示模式：本地列表（初始仅填充视口所需行数；滚动每次仅 +1 行）。
   Widget _buildDemoList() {
     final perRow = (MediaQuery.sizeOf(context).width / 460).floor().clamp(2, 8);
-    final rowsFit =
-        ((MediaQuery.sizeOf(context).height - 160) / 122).ceil().clamp(3, 12);
+    final rowsFit = ((MediaQuery.sizeOf(context).height - 160) / 122)
+        .ceil()
+        .clamp(3, 12);
     return CustomScrollView(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
@@ -411,9 +420,7 @@ class _HistoryPageState extends State<HistoryPage> {
   void _openDemoVideo(BuildContext context, int index) {
     Navigator.push(
       context,
-      AppRoute(
-        builder: (_) => VideoDetailPage(bvid: 'BV1demo$index'),
-      ),
+      AppRoute(builder: (_) => VideoDetailPage(bvid: 'BV1demo$index')),
     );
   }
 
@@ -432,10 +439,8 @@ class _HistoryPageState extends State<HistoryPage> {
                 mainAxisExtent: 110.0,
               ),
               itemCount: 12,
-              itemBuilder: (context, index) => const VideoCardHSkeleton(
-                coverWidth: 140,
-                inCard: true,
-              ),
+              itemBuilder: (context, index) =>
+                  const VideoCardHSkeleton(coverWidth: 140, inCard: true),
             ),
           ),
         ],
@@ -461,11 +466,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
 /// 历史记录多列横向卡片（对齐 PiliPlus 与 BiliPai 历史卡片规范）。
 class _HistoryCard extends StatelessWidget {
-  const _HistoryCard({
-    required this.item,
-    required this.onDelete,
-    this.onTap,
-  });
+  const _HistoryCard({required this.item, required this.onDelete, this.onTap});
 
   final HistoryItem item;
   final VoidCallback onDelete;
@@ -496,143 +497,176 @@ class _HistoryCard extends StatelessWidget {
         sinkAmount: 0.98,
         onPressed: onTap,
         borderRadius: BorderRadius.all(radius),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 封面与进度
-              ClipRRect(
-                borderRadius: BorderRadius.all(radius),
-                child: SizedBox(
-                  width: 140,
-                  height: 140 * 9 / 16,
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: NetworkImgLayer(
-                          src: item.cover,
-                          width: 140,
-                          height: 140 * 9 / 16,
-                          borderRadius: BorderRadius.all(radius),
-                          heroTag: bvid != null && bvid.isNotEmpty ? 'history_$bvid' : null,
-                        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 封面与进度
+                  ClipRRect(
+                    borderRadius: BorderRadius.all(radius),
+                    child: SizedBox(
+                      width: 140,
+                      height: 140 * 9 / 16,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: NetworkImgLayer(
+                              src: item.cover,
+                              width: 140,
+                              height: 140 * 9 / 16,
+                              borderRadius: BorderRadius.all(radius),
+                              heroTag: bvid != null && bvid.isNotEmpty
+                                  ? 'history_$bvid'
+                                  : null,
+                            ),
+                          ),
+                          if (duration > 0 || Pref.demoMode)
+                            Positioned(
+                              right: 4,
+                              bottom: 4,
+                              child: PBadge(
+                                text: DurationUtils.formatDuration(
+                                  Pref.demoMode
+                                      ? DemoOverrides.durationSeconds(
+                                          'demo.hist.${bvid ?? ''}',
+                                        )
+                                      : duration,
+                                ),
+                                type: PBadgeType.duration,
+                              ),
+                            ),
+                          // B7 反馈轮#2：进度条已移出封面（改置于卡片下边框上方）。
+                        ],
                       ),
-                      if (duration > 0 || Pref.demoMode)
-                        Positioned(
-                          right: 4,
-                          bottom: 4,
-                          child: PBadge(
-                            text: DurationUtils.formatDuration(
-                              Pref.demoMode
-                                  ? DemoOverrides.durationSeconds(
-                                      'demo.hist.${bvid ?? ''}',
-                                    )
-                                  : duration,
-                            ),
-                            type: PBadgeType.duration,
-                          ),
-                        ),
-                      if (progressFraction > 0)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: AppLinearProgressIndicator(
-                            value: progressFraction,
-                            minHeight: 2.5,
-                            backgroundColor: AppColors.black38,
-                            color: cs.primary,
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              // 右侧描述
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Pref.demoMode
-                        ? const SkeletonLine(width: double.infinity, height: 13)
-                        : Text(
-                            item.title ?? '',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: tokens.text.bodyMedium?.copyWith(
-                              height: 1.35,
-                            ),
-                          ),
-                    Column(
+                  const SizedBox(width: 10),
+                  // 右侧描述
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        if (authorName.isNotEmpty)
-                          GestureDetector(
-                            onTap: () {
-                              if (authorMid > 0) {
-                                Navigator.push(
-                                  context,
-                                  AppRoute(
-                                    builder: (_) => MemberSpacePage(mid: authorMid),
-                                  ),
-                                );
-                              }
-                            },
-                            child: Row(
+                        Pref.demoMode
+                            ? const SkeletonLine(
+                                width: double.infinity,
+                                height: 13,
+                              )
+                            : Text(
+                                item.title ?? '',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: tokens.text.bodyMedium?.copyWith(
+                                  height: 1.35,
+                                ),
+                              ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (authorName.isNotEmpty)
+                              GestureDetector(
+                                onTap: () {
+                                  if (authorMid > 0) {
+                                    Navigator.push(
+                                      context,
+                                      AppRoute(
+                                        builder: (_) =>
+                                            MemberSpacePage(mid: authorMid),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: Row(
+                                  children: [
+                                    AppIcon(
+                                      AppIcons.profile(),
+                                      size: 12,
+                                      color: cs.outline,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Flexible(
+                                      child: Text(
+                                        Pref.demoMode
+                                            ? kDemoDisplayName
+                                            : authorName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: tokens.text.labelSmall?.copyWith(
+                                          color: cs.outline,
+                                          // B7 反馈轮#2：显式 11 口径（与日期行
+                                          // 一致；避免继承 14 撑破行高预算）。
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            const SizedBox(height: 2),
+                            Row(
                               children: [
-                                AppIcon(AppIcons.profile(), size: 12, color: cs.outline),
-                                const SizedBox(width: 2),
-                                Flexible(
-                                  child: Text(
-                                    Pref.demoMode ? kDemoDisplayName : authorName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: tokens.text.labelSmall
-                                        ?.copyWith(color: cs.outline),
+                                if (!Pref.demoMode &&
+                                    item.viewAt != null &&
+                                    item.viewAt! > 0)
+                                  Text(
+                                    DateFormatUtils.dateFormat(item.viewAt),
+                                    style: tokens.text.labelSmall?.copyWith(
+                                      color: cs.outline,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                const Spacer(),
+                                // B7 反馈轮#2：改紧凑按压原语（24×24 命中盒），
+                                // 与右/下边框保留安全空间，杜绝溢出导致不可点。
+                                MiuixPressable(
+                                  borderRadius: BorderRadius.circular(6),
+                                  onPressed: onDelete,
+                                  child: AppTooltip(
+                                    message: '删除此记录',
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        6,
+                                        5,
+                                        4,
+                                        5,
+                                      ),
+                                      child: AppIcon(
+                                        AppIcons.clear(),
+                                        size: 14,
+                                        color: cs.outline,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
-                            ),
-                          ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            if (!Pref.demoMode &&
-                                item.viewAt != null &&
-                                item.viewAt! > 0)
-                              Text(
-                                DateFormatUtils.dateFormat(item.viewAt),
-                                style: tokens.text.labelSmall?.copyWith(
-                                  color: cs.outline,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            const Spacer(),
-                            MiuixIconButton(
-                              minWidth: 24,
-                              minHeight: 24,
-                              onPressed: onDelete,
-                              child: AppTooltip(
-                                message: '删除此记录',
-                                child: AppIcon(
-                                  AppIcons.clear(),
-                                  size: 14,
-                                  color: cs.outline,
-                                ),
-                              ),
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+            // 进度条：移出封面，置于卡片下边框上方（增强视觉样式）。
+            if (progressFraction > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2.5),
+                  child: AppLinearProgressIndicator(
+                    value: progressFraction,
+                    minHeight: 4,
+                    backgroundColor: cs.primary.withValues(alpha: 0.16),
+                    color: cs.primary,
+                  ),
                 ),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

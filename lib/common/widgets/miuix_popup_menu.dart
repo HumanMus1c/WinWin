@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
@@ -106,13 +107,15 @@ class _MiuixPopupMenuState extends State<MiuixPopupMenu>
     final item = entry?.items.elementAtOrNull(itemIdx);
     if (item == null) return;
     item.onClick?.call();
-    // 单组：点击先产生即时视觉反馈（按压/选中变化），随后延迟收起；
-    // 多组（如音轨）保持展开，与上游行为一致。
-    if (widget.entries.length <= 1) {
-      Future.delayed(const Duration(milliseconds: 130), () {
-        if (_entry != null) _close();
-      });
-    }
+    // B7 反馈轮#2：点击后先呈现即时视觉变化（下一帧 markNeedsBuild 以读取
+    // 父级 setState 后的最新 entries —— 选中态/角标等立即刷新），随后延迟
+    // 收起；共享控件统一口径（此前仅单组菜单收起，多组保持展开）。
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _entry?.markNeedsBuild(),
+    );
+    Future.delayed(const Duration(milliseconds: 130), () {
+      if (_entry != null) _close();
+    });
   }
 
   @override
@@ -158,12 +161,12 @@ class _PopupOverlay extends StatelessWidget {
     // 文本基底：覆写 WidgetsApp 的默认"黄绿双下划线"错误样式
     // （浮层无 Material/DefaultTextStyle 时 Text 合并到该样式）。
     final bodyStyle =
-        (AppThemeHost.of(context).text.bodyMedium ?? const TextStyle()).copyWith(
-      decoration: TextDecoration.none,
-    );
+        (AppThemeHost.of(context).text.bodyMedium ?? const TextStyle())
+            .copyWith(decoration: TextDecoration.none);
     // 条目字号继承触发控件（如播放器控制条 12px），避免弹层与其割裂。
-    final rowTextStyle =
-        itemTextStyle == null ? bodyStyle : bodyStyle.merge(itemTextStyle);
+    final rowTextStyle = itemTextStyle == null
+        ? bodyStyle
+        : bodyStyle.merge(itemTextStyle);
 
     const gap = 6.0;
     const screenInset = 12.0;
@@ -175,8 +178,10 @@ class _PopupOverlay extends StatelessWidget {
     final spaceAbove = triggerRect.top - gap - screenInset;
     final placeAbove = spaceAbove > spaceBelow;
 
-    final curved =
-        CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+    );
     // 对角线展开：以贴近触发器的一角为原点缩放（向下展开→右上角；
     // 向上翻转→右下角）。
     final panel = FadeTransition(
@@ -201,51 +206,56 @@ class _PopupOverlay extends StatelessWidget {
               onTap: () {},
               child: MiuixSurface(
                 cornerRadius: 16,
-                color: muiColors.surfaceContainer
-                    .withValues(alpha: kMiuixSurfaceAlpha),
+                color: muiColors.surfaceContainer.withValues(
+                  alpha: kMiuixSurfaceAlpha,
+                ),
                 shadowElevation: 6,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (title != null) ...[
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-                          child: Text(
-                            title!,
-                            style: (Theme.of(context)
-                                        .textTheme
-                                        .titleSmall ??
-                                    const TextStyle())
-                                .copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: contentColor,
+                  // B7 反馈轮#2：背景模糊对齐表情面板（MiuixOverlayPanel 的
+                  // BackdropFilter blur 16 口径）。
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (title != null) ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                            child: Text(
+                              title!,
+                              style:
+                                  (Theme.of(context).textTheme.titleSmall ??
+                                          const TextStyle())
+                                      .copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: contentColor,
+                                      ),
                             ),
                           ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 14),
-                          child: MiuixHorizontalDivider(thickness: 1.5),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 14),
+                            child: MiuixHorizontalDivider(thickness: 1.5),
+                          ),
+                        ],
+                        Flexible(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: _buildRows(
+                                context,
+                                rowTextStyle: rowTextStyle,
+                                contentColor: contentColor,
+                                selectedContentColor: selectedContentColor,
+                              ),
+                            ),
+                          ),
                         ),
                       ],
-                      Flexible(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: _buildRows(
-                              context,
-                              rowTextStyle: rowTextStyle,
-                              contentColor: contentColor,
-                              selectedContentColor: selectedContentColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -359,10 +369,14 @@ class _PopupMenuLayout extends SingleChildLayoutDelegate {
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
     return BoxConstraints(
-      maxWidth:
-          math.max(0.0, math.min(maxWidth, constraints.maxWidth - inset * 2)),
-      maxHeight:
-          math.max(0.0, math.min(maxHeight, constraints.maxHeight - inset * 2)),
+      maxWidth: math.max(
+        0.0,
+        math.min(maxWidth, constraints.maxWidth - inset * 2),
+      ),
+      maxHeight: math.max(
+        0.0,
+        math.min(maxHeight, constraints.maxHeight - inset * 2),
+      ),
     );
   }
 
@@ -377,7 +391,8 @@ class _PopupMenuLayout extends SingleChildLayoutDelegate {
       (triggerRect.right - childSize.width)
           .clamp(inset, math.max(inset, size.width - childSize.width - inset))
           .toDouble(),
-      y.clamp(inset, math.max(inset, size.height - childSize.height - inset))
+      y
+          .clamp(inset, math.max(inset, size.height - childSize.height - inset))
           .toDouble(),
     );
   }

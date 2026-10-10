@@ -1571,11 +1571,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       ),
                   ],
                 ),
-              const MiuixDropdownEntry(
-                items: [
-                  MiuixDropdownItem(text: '音频响度均衡', enabled: false),
-                ],
-              ),
               MiuixDropdownEntry(
                 items: [
                   MiuixDropdownItem(
