@@ -428,10 +428,12 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   }
 
   /// 内联模式设置按钮：点击展开弹幕样式设置面板。
+  /// 尺寸收敛到 34 与输入框/发送键同高（B7-b 实机反馈：内联条整体协调）。
   Widget _buildInlineSettingsButton(AppTokens tokens) {
     return Builder(
       builder: (ctx) => MiuixIconButton(
-
+        minWidth: 34,
+        minHeight: 34,
         onPressed: () => _showInlineSettings(ctx),
 
         child: AppTooltip(message: '弹幕样式', child: AppIcon(AppIcons.palette(), size: 20)),
@@ -443,9 +445,9 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
   Widget _buildInlineSendButton(AppTokens tokens) {
     return AppPrimaryButton(
         onPressed: _canSend ? _onSend : null,
-        minWidth: 60,
-        minHeight: 36,
-        insideMargin: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        minWidth: 56,
+        minHeight: 34,
+        insideMargin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         cornerRadius: 10,
         child: ValueListenableBuilder<bool>(
         valueListenable: _sending,
