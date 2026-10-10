@@ -678,6 +678,7 @@ class _GalleryItemViewState extends State<_GalleryItemView>
 
   Size? _intrinsicImageSize;
   bool _isZoomed = false;
+  bool _sizeProbeStarted = false;
 
   @override
   void initState() {
@@ -693,22 +694,21 @@ class _GalleryItemViewState extends State<_GalleryItemView>
           _transformController.value = _zoomAnimation!.value;
         }
       });
-
-    _resolveImageDimensions();
   }
 
-  void _resolveImageDimensions() {
-    // 优先从已缓存的缩略图解析比例与尺寸，秒级完成并确保点击图片外退出逻辑精准无误
-    final resolveUrl =
-        (widget.thumbnailUrl != null && widget.thumbnailUrl!.isNotEmpty)
-            ? widget.thumbnailUrl!
-            : widget.rawUrl;
-
-    // 尺寸探测只需比例：限制解码尺寸，避免为解析尺寸而整图解码（等比缩放不影响比例）。
+  /// 尺寸探测（供"点击图片外关闭"的命中判定）。
+  ///
+  /// 使用与主图**完全同键**的 provider（同 URL、同磁盘缩放参数）：两者共享同一
+  /// 个 ImageCache 条目，全程只发生一次下载/解码。旧实现用 256 尺寸独立管线拉取
+  /// 同一 URL，探查器与主图并发下载、先后 rename 同一缓存文件——Windows 上目标
+  /// 被读句柄占用时改名抛 Access denied，导致首次预览偶发"图片加载失败"。
+  void _startSizeProbeIfNeeded(BuildContext context, Size containerSize) {
+    if (_sizeProbeStarted) return;
+    _sizeProbeStarted = true;
     final provider = CachedNetworkImageProvider(
-      resolveUrl,
-      maxWidth: 256,
-      maxHeight: 256,
+      widget.rawUrl,
+      maxWidth: _diskBoundW(context, containerSize),
+      maxHeight: _diskBoundH(context, containerSize),
     );
     final stream = provider.resolve(ImageConfiguration.empty);
     late ImageStreamListener listener;
@@ -730,6 +730,13 @@ class _GalleryItemViewState extends State<_GalleryItemView>
     );
     stream.addListener(listener);
   }
+
+  /// 主图磁盘缓存缩放盒（与主图 CachedNetworkImage 参数保持一致）。
+  int _diskBoundW(BuildContext context, Size containerSize) =>
+      ImageUtils.decodeClamp(containerSize.width, context, max: 2048);
+
+  int _diskBoundH(BuildContext context, Size containerSize) =>
+      ImageUtils.decodeClamp(containerSize.height, context, max: 2048);
 
   @override
   void dispose() {
@@ -805,6 +812,7 @@ class _GalleryItemViewState extends State<_GalleryItemView>
     return LayoutBuilder(
       builder: (context, constraints) {
         final containerSize = Size(constraints.maxWidth, constraints.maxHeight);
+        _startSizeProbeIfNeeded(context, containerSize);
         final renderedRect = _calculateRenderedImageRect(containerSize);
 
         return GestureDetector(
@@ -830,13 +838,13 @@ class _GalleryItemViewState extends State<_GalleryItemView>
               child: CachedNetworkImage(
                 imageUrl: widget.rawUrl,
                 fit: BoxFit.contain,
-                // 全屏大图按屏幕尺寸限制解码（而非原图），并为 6× 放大保留余量。
-                memCacheWidth: ImageUtils.decodeClamp(
-                    containerSize.width, context,
-                    max: 2048),
-                memCacheHeight: ImageUtils.decodeClamp(
-                    containerSize.height, context,
-                    max: 2048),
+                // 全屏大图走磁盘级等比缩放盒（fit within，而非引擎双维 exact）：
+                // memCacheWidth+memCacheHeight 双非空会命中 ResizeImagePolicy.exact，
+                // 引擎按 min(w,原宽)×min(h,原高) 强制解码——源图仅超单边时即被
+                // 拉伸变形（等价 BoxFit.fill，竖图被压扁）；磁盘级缩放按等比缩放
+                // 因子收进 ≤2048 盒内，比例真实且解码内存有界。
+                maxWidthDiskCache: _diskBoundW(context, containerSize),
+                maxHeightDiskCache: _diskBoundH(context, containerSize),
                 fadeInDuration: const Duration(milliseconds: 180),
                 fadeOutDuration: Duration.zero,
                 placeholder: (context, _) {
@@ -846,10 +854,11 @@ class _GalleryItemViewState extends State<_GalleryItemView>
                     return CachedNetworkImage(
                       imageUrl: widget.thumbnailUrl!,
                       fit: BoxFit.contain,
-                      memCacheWidth: ImageUtils.decodeClamp(
+                      // 缩略图同口径（磁盘级等比盒）；小缩略图不触发缩放零成本。
+                      maxWidthDiskCache: ImageUtils.decodeClamp(
                           containerSize.width, context,
                           max: 1080),
-                      memCacheHeight: ImageUtils.decodeClamp(
+                      maxHeightDiskCache: ImageUtils.decodeClamp(
                           containerSize.height, context,
                           max: 1080),
                       fadeInDuration: Duration.zero,
