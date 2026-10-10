@@ -1,6 +1,14 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/gestures.dart'
+    show
+        kDefaultMouseScrollToScaleFactor,
+        PointerDeviceKind,
+        PointerScrollEvent,
+        PointerSignalEvent;
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
@@ -752,7 +760,40 @@ class _GalleryItemViewState extends State<_GalleryItemView>
     if (zoomed != _isZoomed) {
       _isZoomed = zoomed;
       widget.onZoomChanged(zoomed);
+      // 重建 IgnorePointer 门控：缩放态放行 InteractiveViewer 手势。
+      setState(() {});
     }
+  }
+
+  /// 未缩放时接管鼠标滚轮缩放。
+  ///
+  /// InteractiveViewer 未缩放时被 [IgnorePointer] 门控（为其识别器让出竞技场），
+  /// 其滚轮监听随之不可达，故在此复刻其焦点缩放公式；缩放态守卫返回、由 IV
+  /// 原生处理。
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (_isZoomed || event is! PointerScrollEvent) return;
+    if (event.kind == PointerDeviceKind.trackpad) return; // 触控板事件维持原语义
+    final dy = event.scrollDelta.dy;
+    if (dy == 0) return; // 忽略横向滚轮
+    final controller = _transformController;
+    final current = controller.value.getMaxScaleOnAxis();
+    final target =
+        (current * math.exp(-dy / kDefaultMouseScrollToScaleFactor))
+            .clamp(1.0, 6.0);
+    final applied = target / current;
+    if ((applied - 1).abs() < 0.0001) return;
+    final local = event.localPosition;
+    final sceneBefore = controller.toScene(local);
+    controller.value = controller.value.clone()
+      ..scaleByDouble(applied, applied, applied, 1);
+    final sceneAfter = controller.toScene(local);
+    controller.value = controller.value.clone()
+      ..translateByDouble(
+        sceneAfter.dx - sceneBefore.dx,
+        sceneAfter.dy - sceneBefore.dy,
+        0,
+        1,
+      );
   }
 
   void _handleDoubleTap(TapDownDetails details) {
@@ -828,43 +869,65 @@ class _GalleryItemViewState extends State<_GalleryItemView>
             }
           },
           child: Center(
-            child: InteractiveViewer(
-              transformationController: _transformController,
-              minScale: 1.0,
-              maxScale: 6.0,
-              panEnabled: _isZoomed,
-              scaleEnabled: true,
-              clipBehavior: Clip.none,
-              child: CachedNetworkImage(
-                imageUrl: widget.rawUrl,
-                fit: BoxFit.contain,
-                // 全屏大图走磁盘级等比缩放盒（fit within，而非引擎双维 exact）：
-                // memCacheWidth+memCacheHeight 双非空会命中 ResizeImagePolicy.exact，
-                // 引擎按 min(w,原宽)×min(h,原高) 强制解码——源图仅超单边时即被
-                // 拉伸变形（等价 BoxFit.fill，竖图被压扁）；磁盘级缩放按等比缩放
-                // 因子收进 ≤2048 盒内，比例真实且解码内存有界。
-                maxWidthDiskCache: _diskBoundW(context, containerSize),
-                maxHeightDiskCache: _diskBoundH(context, containerSize),
-                fadeInDuration: const Duration(milliseconds: 180),
-                fadeOutDuration: Duration.zero,
-                placeholder: (context, _) {
-                  if (widget.thumbnailUrl != null &&
-                      widget.thumbnailUrl!.isNotEmpty &&
-                      widget.thumbnailUrl != widget.rawUrl) {
-                    return CachedNetworkImage(
-                      imageUrl: widget.thumbnailUrl!,
-                      fit: BoxFit.contain,
-                      // 缩略图同口径（磁盘级等比盒）；小缩略图不触发缩放零成本。
-                      maxWidthDiskCache: ImageUtils.decodeClamp(
-                          containerSize.width, context,
-                          max: 1080),
-                      maxHeightDiskCache: ImageUtils.decodeClamp(
-                          containerSize.height, context,
-                          max: 1080),
-                      fadeInDuration: Duration.zero,
-                      fadeOutDuration: Duration.zero,
-                      placeholder: (context, _) => const SizedBox.shrink(),
-                      errorBuilder: (context, _, _) => const Center(
+            child: Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerSignal: _handlePointerSignal,
+              child: IgnorePointer(
+                // 未缩放时屏蔽 InteractiveViewer 的识别器参与手势竞技场：
+                // 其 Scale 识别器层级最深、逐事件最先裁决，鼠标快拖时会把
+                // PageView 水平翻页与外层垂直关闭的手势捷足抢走（实测 3px
+                // 步长即被截获且无任何响应）；缩放态放行（平移/双指缩放）。
+                // IgnorePointer 仅影响命中测试，渲染不受影响。
+                ignoring: !_isZoomed,
+                child: InteractiveViewer(
+                  transformationController: _transformController,
+                  minScale: 1.0,
+                  maxScale: 6.0,
+                  panEnabled: _isZoomed,
+                  scaleEnabled: true,
+                  clipBehavior: Clip.none,
+                  child: CachedNetworkImage(
+                    imageUrl: widget.rawUrl,
+                    fit: BoxFit.contain,
+                    // 全屏大图走磁盘级等比缩放盒（fit within，而非引擎双维 exact）：
+                    // memCacheWidth+memCacheHeight 双非空会命中 ResizeImagePolicy.exact，
+                    // 引擎按 min(w,原宽)×min(h,原高) 强制解码——源图仅超单边时即被
+                    // 拉伸变形（等价 BoxFit.fill，竖图被压扁）；磁盘级缩放按等比缩放
+                    // 因子收进 ≤2048 盒内，比例真实且解码内存有界。
+                    maxWidthDiskCache: _diskBoundW(context, containerSize),
+                    maxHeightDiskCache: _diskBoundH(context, containerSize),
+                    fadeInDuration: const Duration(milliseconds: 180),
+                    fadeOutDuration: Duration.zero,
+                    placeholder: (context, _) {
+                      if (widget.thumbnailUrl != null &&
+                          widget.thumbnailUrl!.isNotEmpty &&
+                          widget.thumbnailUrl != widget.rawUrl) {
+                        return CachedNetworkImage(
+                          imageUrl: widget.thumbnailUrl!,
+                          fit: BoxFit.contain,
+                          // 缩略图同口径（磁盘级等比盒）；小缩略图不触发缩放零成本。
+                          maxWidthDiskCache: ImageUtils.decodeClamp(
+                              containerSize.width, context,
+                              max: 1080),
+                          maxHeightDiskCache: ImageUtils.decodeClamp(
+                              containerSize.height, context,
+                              max: 1080),
+                          fadeInDuration: Duration.zero,
+                          fadeOutDuration: Duration.zero,
+                          placeholder: (context, _) => const SizedBox.shrink(),
+                          errorBuilder: (context, _, _) => const Center(
+                            child: SizedBox(
+                              width: 32,
+                              height: 32,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.white54,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      return const Center(
                         child: SizedBox(
                           width: 32,
                           height: 32,
@@ -873,34 +936,27 @@ class _GalleryItemViewState extends State<_GalleryItemView>
                             color: AppColors.white54,
                           ),
                         ),
-                      ),
-                    );
-                  }
-                  return const Center(
-                    child: SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.white54,
-                      ),
+                      );
+                    },
+                    errorBuilder: (context, _, _) => Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(
+                          Icons.broken_image_outlined,
+                          size: 56,
+                          color: AppColors.white54,
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          '图片加载失败',
+                          style: TextStyle(
+                            color: AppColors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-                errorBuilder: (context, _, _) => Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(
-                      Icons.broken_image_outlined,
-                      size: 56,
-                      color: AppColors.white54,
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      '图片加载失败',
-                      style: TextStyle(color: AppColors.white70, fontSize: 13),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
