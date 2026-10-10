@@ -195,6 +195,9 @@ class _LivePageState extends State<LivePage>
                     style: TextStyle(
                       color: isSelected ? cs.primary : cs.onSurfaceVariant,
                       fontSize: 12.5,
+                      // 显式行高收紧行盒：消除字体度量（回退字体）导致的下坠，
+                      // Center 后光学居中（实测净空 11.0/8.33 → 10.0/9.33）。
+                      height: 1.2,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
