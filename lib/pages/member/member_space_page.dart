@@ -6,6 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show cupertinoDesktopTextSelectionHandleControls;
+import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
@@ -1356,6 +1359,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           ] else if (card.sign?.isNotEmpty ?? false) ...[
             const SizedBox(height: Style.sm),
             SelectableText(
+              selectionControls: cupertinoDesktopTextSelectionHandleControls,
+              contextMenuBuilder: buildMiuixEditableTextContextMenu,
               card.sign!.trim(),
               style: tokens.text.bodyMedium?.copyWith(
                 color: cs.onSurface.withValues(alpha: 0.85),
@@ -3318,6 +3323,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                           value: widget.mid,
                           title: 'UID',
                           builder: (context, v) => SelectableText(
+                            selectionControls: cupertinoDesktopTextSelectionHandleControls,
+                            contextMenuBuilder: buildMiuixEditableTextContextMenu,
                             '${v?.round() ?? widget.mid}',
                             style: const TextStyle(
                                 fontSize: 13, fontWeight: FontWeight.w500),
@@ -3368,6 +3375,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             child: customValue ??
                 (value != null
                     ? SelectableText(
+                        selectionControls: cupertinoDesktopTextSelectionHandleControls,
+                        contextMenuBuilder: buildMiuixEditableTextContextMenu,
                         value,
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                       )

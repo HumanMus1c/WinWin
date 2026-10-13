@@ -2,6 +2,9 @@ import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIcon
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show cupertinoDesktopTextSelectionHandleControls;
+import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
@@ -319,7 +322,9 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 820),
-        child: SelectionArea(
+        child: SelectableRegion(
+          selectionControls: cupertinoDesktopTextSelectionHandleControls,
+          contextMenuBuilder: buildMiuixTextSelectionContextMenu,
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: Style.lg,
@@ -402,6 +407,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                       padding: const EdgeInsets.only(bottom: Style.md),
                       child: item.richTextNodes.isNotEmpty
                           ? SelectableText.rich(
+                            selectionControls: cupertinoDesktopTextSelectionHandleControls,
+                            contextMenuBuilder: buildMiuixEditableTextContextMenu,
                               TextSpan(
                                 children: _buildRichSpans(
                                   context,
@@ -415,6 +422,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                               ),
                             )
                           : SelectableText(
+                            selectionControls: cupertinoDesktopTextSelectionHandleControls,
+                            contextMenuBuilder: buildMiuixEditableTextContextMenu,
                               item.text!,
                               style: tokens.text.bodyLarge?.copyWith(
                                 height: 1.6,

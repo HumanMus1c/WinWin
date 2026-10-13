@@ -4,6 +4,9 @@ import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIcon
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show cupertinoDesktopTextSelectionHandleControls;
+import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -728,6 +731,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SelectableText(
+                selectionControls: cupertinoDesktopTextSelectionHandleControls,
+                contextMenuBuilder: buildMiuixEditableTextContextMenu,
                 detail.title,
                 style: const TextStyle(
                   fontSize: 19,
@@ -886,6 +891,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         ),
         Expanded(
           child: SelectableText(
+            selectionControls: cupertinoDesktopTextSelectionHandleControls,
+            contextMenuBuilder: buildMiuixEditableTextContextMenu,
             value,
             style: TextStyle(
               fontSize: 11.5,
@@ -911,6 +918,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         ),
         const SizedBox(height: 6),
         SelectableText(
+          selectionControls: cupertinoDesktopTextSelectionHandleControls,
+          contextMenuBuilder: buildMiuixEditableTextContextMenu,
           detail.evaluate,
           maxLines: _descExpanded ? null : 4,
           style: TextStyle(

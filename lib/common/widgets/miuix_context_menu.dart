@@ -258,36 +258,66 @@ class _MiuixContextMenuLayout extends SingleChildLayoutDelegate {
       maxWidth != oldDelegate.maxWidth;
 }
 
-/// 文本选择场景的 Miuix 化右键菜单（供 `SelectableRegion.contextMenuBuilder`
-/// 接入，文章页等可选中文本区共用）。
+/// 选择系统的 Miuix 化右键菜单（可选中文本区统一入口）。
 ///
-/// 与 [showMiuixContextMenu] 复用同一套浮层积木（[MiuixOverlayPanel] +
-/// [MiuixPopupMenuRow]、180ms 对角展开、130ms 按压后回调、Esc 登记），差异：
-/// - 条目来自 `SelectableRegionState.contextMenuButtonItems`（复制/全选等，
-///   动作回调由框架绑定）；
-/// - 定位由官方 [DesktopTextSelectionToolbarLayoutDelegate] 在**右键点击处**
-///   展开（溢出时回推视窗内）；
-/// - 关闭由 SelectableRegion 自身（点外 / Esc DismissIntent）驱动，本层仅
-///   补充 Esc 登记，保证与全 app 右键菜单相同的"Esc 只关菜单、不级联"语义。
+/// 两种接入方式（共用同一浮层部件与交互，与 [showMiuixContextMenu] 同积木、
+/// 180ms 对角展开、130ms 按压后回调、Esc 登记）：
+/// - [buildMiuixTextSelectionContextMenu]：`SelectableRegion.contextMenuBuilder`；
+/// - [buildMiuixEditableTextContextMenu]：`SelectableText.contextMenuBuilder`
+///   （EditableText 体系）。
+///
+/// **注意（框架迁移口径）**：两套选择组件仅在 `selectionControls` 为 Handle
+/// 版（混入 `TextSelectionHandleControls`，如
+/// `cupertinoDesktopTextSelectionHandleControls`）时才会采用
+/// `contextMenuBuilder`；普通控件会被忽略并回退到控件自带的默认工具栏。
+///
+/// 菜单关闭：点外由选择组件自身驱动；本层补充 Esc 登记，保证与全 app
+/// 右键菜单相同的"Esc 只关菜单、不级联"语义。
 Widget buildMiuixTextSelectionContextMenu(
   BuildContext context,
   SelectableRegionState selectableRegionState,
 ) {
-  return _MiuixTextSelectionContextMenu(state: selectableRegionState);
+  return _MiuixSelectionMenu(
+    items: selectableRegionState.contextMenuButtonItems,
+    anchor: selectableRegionState.contextMenuAnchors.primaryAnchor,
+    onHide: selectableRegionState.hideToolbar,
+  );
 }
 
-class _MiuixTextSelectionContextMenu extends StatefulWidget {
-  const _MiuixTextSelectionContextMenu({required this.state});
+/// `SelectableText`（EditableText 体系）的 Miuix 化右键菜单。
+Widget buildMiuixEditableTextContextMenu(
+  BuildContext context,
+  EditableTextState editableTextState,
+) {
+  return _MiuixSelectionMenu(
+    items: editableTextState.contextMenuButtonItems,
+    anchor: editableTextState.contextMenuAnchors.primaryAnchor,
+    onHide: editableTextState.hideToolbar,
+  );
+}
 
-  final SelectableRegionState state;
+class _MiuixSelectionMenu extends StatefulWidget {
+  const _MiuixSelectionMenu({
+    required this.items,
+    required this.anchor,
+    required this.onHide,
+  });
+
+  /// 菜单条目（各选择体系的 contextMenuButtonItems，动作回调已由框架绑定）。
+  final List<ContextMenuButtonItem> items;
+
+  /// 右键点击位置（Overlay 全局坐标；`contextMenuAnchors` 读取即消费，
+  /// 由接入方在显示时取值传入）。
+  final Offset anchor;
+
+  /// 收起回调（各宿主体系的 hideToolbar）。
+  final VoidCallback onHide;
 
   @override
-  State<_MiuixTextSelectionContextMenu> createState() =>
-      _MiuixTextSelectionContextMenuState();
+  State<_MiuixSelectionMenu> createState() => _MiuixSelectionMenuState();
 }
 
-class _MiuixTextSelectionContextMenuState
-    extends State<_MiuixTextSelectionContextMenu>
+class _MiuixSelectionMenuState extends State<_MiuixSelectionMenu>
     with SingleTickerProviderStateMixin {
   VoidCallback? _escUnregister;
   late final AnimationController _anim = AnimationController(
@@ -295,17 +325,11 @@ class _MiuixTextSelectionContextMenuState
     duration: const Duration(milliseconds: 180),
   );
 
-  /// 右键点击位置（Overlay 全局坐标）：显示时捕获一次——
-  /// `contextMenuAnchors` 读取即消费（读取后框架清空点击位置），
-  /// 缓存可避免重建时回退到选区端点导致菜单跳动。
-  late final Offset _anchor;
-
   @override
   void initState() {
     super.initState();
-    _anchor = widget.state.contextMenuAnchors.primaryAnchor;
     _escUnregister = EscapeLayerRegistry.instance.register(() {
-      widget.state.hideToolbar();
+      widget.onHide();
       return true;
     });
     _anim.forward(from: 0);
@@ -359,8 +383,6 @@ class _MiuixTextSelectionContextMenuState
     // 选项图标尺寸 = 行文本尺寸（与右键菜单同口径）。
     final iconSize = rowTextStyle.fontSize ?? 14;
 
-    final items = widget.state.contextMenuButtonItems;
-
     final curved = CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic);
     final panel = FadeTransition(
       opacity: curved,
@@ -377,7 +399,7 @@ class _MiuixTextSelectionContextMenuState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final item in items)
+              for (final item in widget.items)
                 MiuixPopupMenuRow(
                   text: _labelFor(item),
                   leading: IconTheme(
@@ -392,9 +414,8 @@ class _MiuixTextSelectionContextMenuState
                   onTap: () {
                     // 与全 app 右键菜单同节奏：先给行按压反馈，130ms 后执行并收起。
                     Future.delayed(const Duration(milliseconds: 130), () {
-                      if (!widget.state.mounted) return;
                       item.onPressed?.call();
-                      widget.state.hideToolbar();
+                      widget.onHide();
                     });
                   },
                 ),
@@ -405,7 +426,8 @@ class _MiuixTextSelectionContextMenuState
     );
 
     return CustomSingleChildLayout(
-      delegate: DesktopTextSelectionToolbarLayoutDelegate(anchor: _anchor),
+      delegate:
+          DesktopTextSelectionToolbarLayoutDelegate(anchor: widget.anchor),
       child: SizedBox(width: 200, child: panel),
     );
   }

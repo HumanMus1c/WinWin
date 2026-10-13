@@ -6,6 +6,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show cupertinoDesktopTextSelectionHandleControls;
+import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
@@ -2294,6 +2297,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               const Text('声优 / 演员', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               SelectableText(
+                selectionControls: cupertinoDesktopTextSelectionHandleControls,
+                contextMenuBuilder: buildMiuixEditableTextContextMenu,
                 widget.detail.actors,
                 style: TextStyle(fontSize: 12, color: grayColor, height: 1.4),
               ),
@@ -2303,6 +2308,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               const Text('制作人员', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               SelectableText(
+                selectionControls: cupertinoDesktopTextSelectionHandleControls,
+                contextMenuBuilder: buildMiuixEditableTextContextMenu,
                 widget.detail.staff,
                 style: TextStyle(fontSize: 12, color: grayColor, height: 1.4),
               ),

@@ -71,4 +71,47 @@ void main() {
     // tearDown 执行）。
     debugDefaultTargetPlatformOverride = null;
   });
+
+  testWidgets('Windows 右键 SelectableText：显示 Miuix 菜单而非默认工具栏', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+
+    await tester.pumpWidget(
+      host(
+        SizedBox(
+          width: 300,
+          child: SelectableText(
+            'Hello selectable text for context menu test',
+            selectionControls: cupertinoDesktopTextSelectionHandleControls,
+            contextMenuBuilder: buildMiuixEditableTextContextMenu,
+          ),
+        ),
+      ),
+    );
+
+    // 鼠标拖选一段文本（从首行行内起点向右拖）。
+    final textFinder = find.byType(SelectableText).first;
+    final start = tester.getTopLeft(textFinder) + const Offset(4, 8);
+    final drag = await tester.startGesture(start, kind: PointerDeviceKind.mouse);
+    await drag.moveTo(start + const Offset(140, 0));
+    await drag.up();
+    await tester.pumpAndSettle();
+
+    // 右键点在选区内（保留选区 → 菜单应含复制 + 全选）。
+    final rightTap = await tester.startGesture(
+      start + const Offset(70, 0),
+      kind: PointerDeviceKind.mouse,
+      buttons: kSecondaryButton,
+    );
+    await rightTap.up();
+    await tester.pumpAndSettle();
+
+    // 期望：Miuix 菜单（标题 + 中文条目）；默认英文工具栏不出现。
+    expect(find.text('文本操作'), findsOneWidget);
+    expect(find.text('复制'), findsOneWidget);
+    expect(find.text('Copy'), findsNothing);
+    expect(find.text('Select all'), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    debugDefaultTargetPlatformOverride = null;
+  });
 }

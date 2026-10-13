@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixTextButton, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show cupertinoDesktopTextSelectionHandleControls;
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
@@ -353,6 +355,8 @@ void showVideoCoverDialog({
                   children: [
                     if (title.isNotEmpty)
                       SelectableText(
+                        selectionControls: cupertinoDesktopTextSelectionHandleControls,
+                        contextMenuBuilder: buildMiuixEditableTextContextMenu,
                         title,
                         maxLines: 2,
                         style: tokens.text.titleSmall?.copyWith(
