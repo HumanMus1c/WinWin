@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:winwin/plugin/canvas_danmaku/base_danmaku_painter.dart';
 import 'package:winwin/plugin/canvas_danmaku/models/danmaku_item.dart';
 

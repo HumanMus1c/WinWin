@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/dyn/dyn_repost_dialog.dart';
 import 'package:winwin/core/account/login_guard.dart';

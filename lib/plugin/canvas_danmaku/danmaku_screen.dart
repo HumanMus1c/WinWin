@@ -8,7 +8,7 @@ import 'package:winwin/plugin/canvas_danmaku/scroll_danmaku_painter.dart';
 import 'package:winwin/plugin/canvas_danmaku/special_danmaku_painter.dart';
 import 'package:winwin/plugin/canvas_danmaku/static_danmaku_painter.dart';
 import 'package:winwin/plugin/canvas_danmaku/utils/utils.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/scheduler.dart';
 
 class DanmakuScreen<T> extends StatefulWidget {

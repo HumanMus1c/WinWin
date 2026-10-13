@@ -1,6 +1,6 @@
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 /// 通用 hover 视觉容器（对标 BiliPai 所有可交互控件的 hover 效果）。
 ///

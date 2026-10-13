@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/pages/setting/about_page.dart';
 import 'package:winwin/pages/setting/common_setting.dart';

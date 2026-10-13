@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:catcher_2/catcher_2.dart';
 import 'package:catcher_2/model/platform_type.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:winwin/services/logger.dart';
 
 /// 崩溃 Report 落盘 Handler，移植自 PiliPlus。

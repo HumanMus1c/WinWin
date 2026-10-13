@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 /// 触控与鼠标按压下沉物理微动效（Sink 反馈）。
 ///

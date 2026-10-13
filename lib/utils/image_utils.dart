@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 /// Image utilities — Bilibili CDN thumbnail URL handling and cache sizing.
 abstract final class ImageUtils {

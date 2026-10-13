@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixCard;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';

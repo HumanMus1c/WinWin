@@ -1,5 +1,7 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show cupertinoDesktopTextSelectionControls;
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
@@ -236,7 +238,8 @@ class _ArticlePageState extends State<ArticlePage> {
             height: constraints.hasBoundedHeight
                 ? constraints.maxHeight
                 : null,
-            child: SelectionArea(
+            child: SelectableRegion(
+              selectionControls: cupertinoDesktopTextSelectionControls,
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: Style.lg,

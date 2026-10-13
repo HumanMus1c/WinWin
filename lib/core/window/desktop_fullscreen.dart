@@ -1,6 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart' show ValueNotifier;
+import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/core/storage/storage_pref.dart';

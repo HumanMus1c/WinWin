@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/level_icon.dart';
 import 'package:winwin/utils/num_utils.dart';

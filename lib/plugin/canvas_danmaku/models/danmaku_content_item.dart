@@ -1,7 +1,7 @@
 import 'dart:math' show pi;
 
 import 'package:flutter/foundation.dart' show objectRuntimeType;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:winwin/theme/app_colors.dart';
 
 enum DanmakuItemType { scroll, top, bottom, special }
