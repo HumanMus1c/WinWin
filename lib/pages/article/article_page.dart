@@ -9,6 +9,7 @@ import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/image_gallery_viewer.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
@@ -240,6 +241,7 @@ class _ArticlePageState extends State<ArticlePage> {
                 : null,
             child: SelectableRegion(
               selectionControls: cupertinoDesktopTextSelectionControls,
+              contextMenuBuilder: buildMiuixTextSelectionContextMenu,
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: Style.lg,

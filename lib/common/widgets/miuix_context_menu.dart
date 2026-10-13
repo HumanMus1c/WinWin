@@ -257,3 +257,156 @@ class _MiuixContextMenuLayout extends SingleChildLayoutDelegate {
       edge != oldDelegate.edge ||
       maxWidth != oldDelegate.maxWidth;
 }
+
+/// 文本选择场景的 Miuix 化右键菜单（供 `SelectableRegion.contextMenuBuilder`
+/// 接入，文章页等可选中文本区共用）。
+///
+/// 与 [showMiuixContextMenu] 复用同一套浮层积木（[MiuixOverlayPanel] +
+/// [MiuixPopupMenuRow]、180ms 对角展开、130ms 按压后回调、Esc 登记），差异：
+/// - 条目来自 `SelectableRegionState.contextMenuButtonItems`（复制/全选等，
+///   动作回调由框架绑定）；
+/// - 定位由官方 [DesktopTextSelectionToolbarLayoutDelegate] 在**右键点击处**
+///   展开（溢出时回推视窗内）；
+/// - 关闭由 SelectableRegion 自身（点外 / Esc DismissIntent）驱动，本层仅
+///   补充 Esc 登记，保证与全 app 右键菜单相同的"Esc 只关菜单、不级联"语义。
+Widget buildMiuixTextSelectionContextMenu(
+  BuildContext context,
+  SelectableRegionState selectableRegionState,
+) {
+  return _MiuixTextSelectionContextMenu(state: selectableRegionState);
+}
+
+class _MiuixTextSelectionContextMenu extends StatefulWidget {
+  const _MiuixTextSelectionContextMenu({required this.state});
+
+  final SelectableRegionState state;
+
+  @override
+  State<_MiuixTextSelectionContextMenu> createState() =>
+      _MiuixTextSelectionContextMenuState();
+}
+
+class _MiuixTextSelectionContextMenuState
+    extends State<_MiuixTextSelectionContextMenu>
+    with SingleTickerProviderStateMixin {
+  VoidCallback? _escUnregister;
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+  );
+
+  /// 右键点击位置（Overlay 全局坐标）：显示时捕获一次——
+  /// `contextMenuAnchors` 读取即消费（读取后框架清空点击位置），
+  /// 缓存可避免重建时回退到选区端点导致菜单跳动。
+  late final Offset _anchor;
+
+  @override
+  void initState() {
+    super.initState();
+    _anchor = widget.state.contextMenuAnchors.primaryAnchor;
+    _escUnregister = EscapeLayerRegistry.instance.register(() {
+      widget.state.hideToolbar();
+      return true;
+    });
+    _anim.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _escUnregister?.call();
+    _anim.dispose();
+    super.dispose();
+  }
+
+  /// 条目文案：优先框架 label，其余按控件类型映射中文（全 app 口径一致）。
+  static String _labelFor(ContextMenuButtonItem item) {
+    final label = item.label;
+    if (label != null && label.isNotEmpty) return label;
+    return switch (item.type) {
+      ContextMenuButtonType.cut => '剪切',
+      ContextMenuButtonType.copy => '复制',
+      ContextMenuButtonType.paste => '粘贴',
+      ContextMenuButtonType.selectAll => '全选',
+      ContextMenuButtonType.delete => '删除',
+      ContextMenuButtonType.share => '分享',
+      ContextMenuButtonType.lookUp => '查询',
+      ContextMenuButtonType.searchWeb => '搜索',
+      _ => '操作',
+    };
+  }
+
+  /// 条目图标：语义方法映射（未知类型回退 [AppIcons.more]）。
+  static Widget _iconFor(ContextMenuButtonItem item, double size) {
+    return switch (item.type) {
+      ContextMenuButtonType.copy => AppIcon(AppIcons.copy(), size: size),
+      ContextMenuButtonType.selectAll => AppIcon(AppIcons.check(), size: size),
+      ContextMenuButtonType.share => AppIcon(AppIcons.share(), size: size),
+      _ => AppIcon(AppIcons.more(), size: size),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = AppThemeHost.of(context);
+    final baseColors = MiuixDropdownDefaults.dropdownColors(context);
+    final contentColor = baseColors.contentColor;
+    final selectedContentColor = baseColors.selectedContentColor;
+    // 文本基底（覆写黄绿双下划线错误样式）+ 反色行配色（与右键菜单一致）。
+    final rowTextStyle =
+        (tokens.text.bodyMedium ?? const TextStyle()).copyWith(
+      decoration: TextDecoration.none,
+    );
+    // 选项图标尺寸 = 行文本尺寸（与右键菜单同口径）。
+    final iconSize = rowTextStyle.fontSize ?? 14;
+
+    final items = widget.state.contextMenuButtonItems;
+
+    final curved = CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic);
+    final panel = FadeTransition(
+      opacity: curved,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
+        alignment: Alignment.topLeft,
+        child: MiuixOverlayPanel(
+          title: '文本操作',
+          icon: AppIcon(AppIcons.copy(),
+            size: 16,
+            color: tokens.colors.primary,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final item in items)
+                MiuixPopupMenuRow(
+                  text: _labelFor(item),
+                  leading: IconTheme(
+                    data: IconThemeData(color: contentColor, size: iconSize),
+                    child: _iconFor(item, iconSize),
+                  ),
+                  enabled: true,
+                  selected: false,
+                  textStyle: rowTextStyle,
+                  contentColor: contentColor,
+                  selectedContentColor: selectedContentColor,
+                  onTap: () {
+                    // 与全 app 右键菜单同节奏：先给行按压反馈，130ms 后执行并收起。
+                    Future.delayed(const Duration(milliseconds: 130), () {
+                      if (!widget.state.mounted) return;
+                      item.onPressed?.call();
+                      widget.state.hideToolbar();
+                    });
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return CustomSingleChildLayout(
+      delegate: DesktopTextSelectionToolbarLayoutDelegate(anchor: _anchor),
+      child: SizedBox(width: 200, child: panel),
+    );
+  }
+}
