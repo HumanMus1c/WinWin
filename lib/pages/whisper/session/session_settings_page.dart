@@ -167,7 +167,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
             onClick: _report,
           ),
           MiuixBasicComponent(
-            startAction: Icon(AppIcons.delete(), color: tokens.colors.error),
+            startAction: AppIcon(AppIcons.delete(), color: tokens.colors.error),
             title: '删除会话',
             titleColor: MiuixBasicComponentColors(
               color: tokens.colors.error,

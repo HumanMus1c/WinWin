@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:winwin/theme/app_colors.dart';
@@ -101,7 +101,7 @@ class NavDestinationIcon extends StatelessWidget {
                     color: AppColors.grey,
                     child: SizedBox.expand(),
                   ),
-                  errorBuilder: (_, _, _) => Icon(
+                  errorBuilder: (_, _, _) => AppIcon(
                     iconData,
                     color: color,
                     size: size - 4,
@@ -110,7 +110,7 @@ class NavDestinationIcon extends StatelessWidget {
               ),
             );
           }
-          return Icon(
+          return AppIcon(
             iconData,
             color: color,
             size: size,
@@ -119,7 +119,7 @@ class NavDestinationIcon extends StatelessWidget {
       );
     }
 
-    final Widget baseIcon = Icon(
+    final Widget baseIcon = AppIcon(
       iconData,
       color: color,
       size: size,

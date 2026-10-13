@@ -512,6 +512,72 @@ abstract final class AppIcons {
 
   /// 画廊上一张
   static IconData galleryPrev() => Icons.chevron_left;
+
+  // ---------------------------------------------------------------------------
+  // 11. 图标欠账收敛（B7-c2：B7 期间漏网与新场景直参——`Icon(` 部件替换的
+  //    配套语义，字形暂与现状一致，零字形变化）。
+  // ---------------------------------------------------------------------------
+
+  /// 内容加载失败空态（云断开）
+  static IconData loadFailed() => Icons.cloud_off_outlined;
+
+  /// 关注流空态（订阅）
+  static IconData followEmpty() => Icons.subscriptions_outlined;
+
+  /// 表情面板入口
+  static IconData emoteEntry() => Icons.sentiment_satisfied_alt_outlined;
+
+  /// 演示遮罩播放占位（描边圆）
+  static IconData playCircleOutline() => Icons.play_circle_outline;
+
+  /// 演示单选（选中实心圆勾 / 未选中圆框）
+  static IconData singleChoice({required bool selected}) =>
+      selected ? Icons.check_circle : Icons.radio_button_unchecked;
+
+  /// 直播开始播放（大箭头）
+  static IconData livePlay() => Icons.play_arrow_rounded;
+
+  /// 直播发弹幕入口
+  static IconData danmakuInput() => Icons.comment_outlined;
+
+  /// 下拉小箭头
+  static IconData dropdownArrow() => Icons.arrow_drop_down;
+
+  /// 网页全屏（比例框）
+  static IconData aspectRatio() => Icons.aspect_ratio;
+
+  /// 直播离线指示（轮播中 / 已下播）
+  static IconData liveOffline({required bool round}) =>
+      round ? Icons.repeat : Icons.sensors_off_outlined;
+
+  /// 直播热度（火焰）
+  static IconData hotness() => Icons.local_fire_department;
+
+  /// 空间认证入口（闪电）
+  static IconData officialBolt() => Icons.offline_bolt;
+
+  /// 认证标识（盾牌用户）
+  static IconData verifiedUser() => Icons.verified_user_outlined;
+
+  /// 排序方向箭头（倒序向下 / 正序向上）
+  static IconData sortArrow({required bool descending}) =>
+      descending ? Icons.arrow_downward : Icons.arrow_upward;
+
+  /// 取消追番悬停（破心）
+  static IconData heartBroken() => Icons.heart_broken_outlined;
+
+  /// 无视频信号（摄像机划叉）
+  static IconData videoOff() => Icons.videocam_off_outlined;
+
+  /// 直播状态指示（直播中 / 已结束）
+  static IconData liveIndicator({required bool active}) =>
+      active ? Icons.sensors : Icons.sensors_off;
+
+  /// 图片损坏占位
+  static IconData imageBroken() => Icons.broken_image_outlined;
+
+  /// 认证徽章（闪电小字）
+  static IconData badgeBolt() => Icons.bolt;
 }
 
 /// 自适应图标部件：Miuix 风格下将具备 Miuix 矢量对应的字形升级为
@@ -520,12 +586,22 @@ abstract final class AppIcons {
 ///
 /// 调用模式与 [Icon] 兼容：`AppIcon(AppIcons.xxx(), size: 20, color: c)`。
 class AppIcon extends StatelessWidget {
-  const AppIcon(this.icon, {super.key, this.size, this.color, this.shadows});
+  const AppIcon(
+    this.icon, {
+    super.key,
+    this.size,
+    this.color,
+    this.shadows,
+    this.semanticLabel,
+  });
 
   final IconData icon;
   final double? size;
   final Color? color;
   final List<Shadow>? shadows;
+
+  /// 无障碍语义标签（对齐 material [Icon] 同名参数；矢量路径等效包裹 [Semantics]）。
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -543,7 +619,7 @@ class AppIcon extends StatelessWidget {
         // - 但裸 Center 在宽松槽位（如 InputDecoration.prefixIcon：minWidth 48 +
         //   max 全宽）会贪心膨胀到整行宽（挤没输入区）→ 以 widthFactor/heightFactor
         //   = 1 收缩为「图标尺寸（下限受槽位约束）」，与 Icon 的占位行为对齐。
-        return Center(
+        final iconWidget = Center(
           widthFactor: 1,
           heightFactor: 1,
           child: MiuixIcon(
@@ -552,9 +628,18 @@ class AppIcon extends StatelessWidget {
             tint: color ?? iconTheme.color,
           ),
         );
+        return semanticLabel == null
+            ? iconWidget
+            : Semantics(label: semanticLabel, child: iconWidget);
       }
     }
-    return Icon(icon, size: size, color: color, shadows: shadows);
+    return Icon(
+      icon,
+      size: size,
+      color: color,
+      semanticLabel: semanticLabel,
+      shadows: shadows,
+    );
   }
 }
 

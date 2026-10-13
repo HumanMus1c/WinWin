@@ -1767,8 +1767,8 @@ class _DynCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                isLiving ? Icons.sensors : Icons.sensors_off,
+                              AppIcon(
+                                AppIcons.liveIndicator(active: isLiving),
                                 color: AppColors.white,
                                 size: 10,
                               ),
@@ -1828,7 +1828,7 @@ class _DynCard extends StatelessWidget {
                           ),
                         if (live.watchedShow != null && live.watchedShow!.isNotEmpty) ...[
                           const Spacer(),
-                          Icon(AppIcons.eye(), size: 12, color: cs.outline),
+                          AppIcon(AppIcons.eye(), size: 12, color: cs.outline),
                           const SizedBox(width: 3),
                           Text(
                             live.watchedShow!,

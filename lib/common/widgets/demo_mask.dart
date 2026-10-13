@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
@@ -80,8 +80,8 @@ class DemoVideoOverlay extends StatelessWidget {
           ),
         ),
         alignment: Alignment.center,
-        child: Icon(
-          Icons.play_circle_outline,
+        child: AppIcon(
+          AppIcons.playCircleOutline(),
           size: 56,
           color: cs.onSurfaceVariant.withValues(alpha: 0.55),
         ),

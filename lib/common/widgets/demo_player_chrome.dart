@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/demo/demo_player_presets.dart';
@@ -112,7 +112,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
           // 暂停时中央大播放按钮（与正常模式一致：仅暂停时显示）。
           if (!_playing)
             Center(
-              child: Icon(
+              child: AppIcon(
                 AppIcons.play(active: true),
                 size: 56,
                 color: AppColors.white,
@@ -341,7 +341,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
       onTap: onTap ?? () {},
       child: Padding(
         padding: EdgeInsets.only(left: first ? 0 : Style.md),
-        child: Icon(
+        child: AppIcon(
           icon,
           size: first ? 20 : 18,
           color: AppColors.white,

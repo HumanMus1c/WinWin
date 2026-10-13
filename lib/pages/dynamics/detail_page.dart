@@ -644,7 +644,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                         const Spacer(),
                                         if (reply.like != null &&
                                             reply.like! > 0) ...[
-                                          Icon(
+                                          AppIcon(
                                             AppIcons.like(),
                                             size: 12,
                                             color: cs.outline,

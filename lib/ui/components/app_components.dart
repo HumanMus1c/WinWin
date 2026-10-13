@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 
@@ -538,7 +538,7 @@ class AppActionTile extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null)
-              Icon(icon, color: contentColor, size: 22)
+              AppIcon(icon!, color: contentColor, size: 22)
             else
               Text(
                 count ?? '-',

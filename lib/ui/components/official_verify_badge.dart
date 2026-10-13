@@ -1,6 +1,7 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 官方认证色调类型（个人 / 机构）。
 enum OfficialVerifyBadgeTone {
@@ -193,8 +194,8 @@ class OfficialVerifyAvatarBadge extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
-        child: Icon(
-          Icons.bolt,
+        child: AppIcon(
+          AppIcons.badgeBolt(),
           size: size - 1.0,
           color: iconColor,
         ),

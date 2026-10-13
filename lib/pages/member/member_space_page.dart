@@ -924,7 +924,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                           color: AppColors.black.withValues(alpha: 0.35),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
+                        child: AppIcon(
                           AppIcons.more(),
                           color: AppColors.white,
                           size: 20,
@@ -1197,8 +1197,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                           color: cs.surface,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
-                          Icons.offline_bolt,
+                        child: AppIcon(
+                          AppIcons.officialBolt(),
                           size: 20,
                           color: card?.officialVerify?.type == 0
                               ? AppColors.amber600
@@ -1236,7 +1236,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                           child: AppProgressIndicator(strokeWidth: 2),
                         )
                       else ...[
-                        Icon(
+                        AppIcon(
                           _relationStatus != 0 ? AppIcons.check() : AppIcons.add(),
                           size: 16,
                         ),
@@ -1332,8 +1332,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.verified_user_outlined,
+                  AppIcon(
+                    AppIcons.verifiedUser(),
                     size: 14,
                     color: AppColors.amber700,
                   ),

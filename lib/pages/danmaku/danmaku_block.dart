@@ -308,7 +308,7 @@ class _RuleListSection extends StatelessWidget {
               const SizedBox(width: Style.sm),
               MiuixIconButton(
                 backgroundColor: biliPink,
-                child: Icon(AppIcons.add(), color: AppColors.white),
+                child: AppIcon(AppIcons.add(), color: AppColors.white),
                 onPressed: () => onAdd(type),
               ),
             ],

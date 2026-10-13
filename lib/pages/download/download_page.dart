@@ -168,7 +168,7 @@ class _DownloadPageState extends State<DownloadPage> {
                               ),
                             ),
                             const Spacer(),
-                            MiuixButton(onPressed: _clearCache, child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(AppIcons.delete(), size: 16, color: AppColors.red), const SizedBox(width: 6), const Text('清空', style: TextStyle(color: AppColors.red))])),
+                            MiuixButton(onPressed: _clearCache, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.delete(), size: 16, color: AppColors.red), const SizedBox(width: 6), const Text('清空', style: TextStyle(color: AppColors.red))])),
                           ],
                         ),
                         const SizedBox(height: 10),

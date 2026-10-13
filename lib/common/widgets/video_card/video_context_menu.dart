@@ -290,7 +290,7 @@ class VideoPopupMenu extends StatelessWidget {
         minHeight: 26,
         child: AppTooltip(
           message: '更多操作',
-          child: Icon(
+          child: AppIcon(
             AppIcons.more(),
             size: iconSize,
             color: cs.outline.withValues(alpha: 0.8),

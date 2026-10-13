@@ -8,6 +8,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/hot/controller.dart';
 import 'package:winwin/pages/video/detail_page.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/core/shell/app_routes.dart';
@@ -195,8 +196,8 @@ class _HotPageState extends State<HotPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.cloud_off_outlined,
+          AppIcon(
+            AppIcons.loadFailed(),
             size: 48,
             color: colorScheme.onSurfaceVariant,
           ),

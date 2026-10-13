@@ -917,7 +917,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
                 onPressed: () => DesktopPipController.instance.enterPip(),
 
-                child: AppTooltip(message: '画中画', child: Icon(
+                child: AppTooltip(message: '画中画', child: AppIcon(
                   AppIcons.pip(),
                   color: overVideo ? AppColors.white : barContrast.contentColor,
                   shadows: overVideo ? ContrastStyle.glyphShadows : null,
@@ -1214,7 +1214,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               ),
               MiuixButton(onPressed: () {
                   Pref.setBangumiEpisodesDescending(!_episodesDescending);
-                }, child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(
+                }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(
                   _episodesDescending
                       ? AppIcons.chevronDown()
                       : AppIcons.chevronUp(),
@@ -1290,7 +1290,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                   Container(
                                     color: AppColors.black.withValues(alpha: 0.45),
                                     child: Center(
-                                      child: Icon(
+                                      child: AppIcon(
                                         AppIcons.play(active: true),
                                         color: AppColors.white,
                                         size: 24,
@@ -1540,7 +1540,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                           child: Row(
                             spacing: 4,
                             children: [
-                              Icon(
+                              AppIcon(
                                 AppIcons.like(active: reply.isLiked),
                                 size: 15,
                                 color: reply.isLiked
@@ -1561,7 +1561,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                         ),
                         GestureDetector(
                           onTap: () => _toggleDislikeReply(reply),
-                          child: Icon(
+                          child: AppIcon(
                             AppIcons.dislike(active: reply.isDisliked),
                             size: 15,
                             color: reply.isDisliked
@@ -1594,7 +1594,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                           child: Row(
                             spacing: 3,
                             children: [
-                              Icon(
+                              AppIcon(
                                 AppIcons.reply(),
                                 size: 15,
                                 color: tokens.colors.onSurfaceVariant,
@@ -1622,7 +1622,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                Icon(
+                                AppIcon(
                                   subReplies != null
                                       ? AppIcons.chevronUp()
                                       : AppIcons.expandMore(),
@@ -1799,7 +1799,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   child: Row(
                     spacing: 3,
                     children: [
-                      Icon(
+                      AppIcon(
                         AppIcons.like(active: sub.isLiked),
                         size: 13,
                         color: sub.isLiked
@@ -1820,7 +1820,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 ),
                 GestureDetector(
                   onTap: () => _toggleDislikeReply(sub),
-                  child: Icon(
+                  child: AppIcon(
                     AppIcons.dislike(active: sub.isDisliked),
                     size: 13,
                     color: sub.isDisliked
@@ -1856,7 +1856,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   child: Row(
                     spacing: 2,
                     children: [
-                      Icon(
+                      AppIcon(
                         AppIcons.reply(),
                         size: 13,
                         color: tokens.colors.onSurfaceVariant,
@@ -2092,7 +2092,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       child: MiuixButton(onPressed: _toggleFollow, child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            AppIcon(
               AppIcons.favorite(active: _isFollowed),
               size: 16,
               color: _isFollowed ? AppColors.pink : null,

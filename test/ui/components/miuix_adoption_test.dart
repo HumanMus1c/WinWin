@@ -525,16 +525,17 @@ void main() {
       expect(find.byType(MiuixFloatingNavigationBar), findsOneWidget);
       expect(find.byType(BackdropFilter), findsNothing);
 
-      // 逐项彩色图标保留（选中首页 → 显式色标 iosBlue 不受 Miuix 着色影响）。
-      final icon = tester.widget<Icon>(
+      // 逐项彩色图标保留（选中首页 → 显式色标 iosBlue 不受 Miuix 着色影响；
+      // B7-c2 起底栏图标经 AppIcon 渲染，映射命中即 MiuixIcon 矢量路径）。
+      final icon = tester.widget<MiuixIcon>(
         find
             .descendant(
               of: find.byType(MiuixFloatingNavigationBarItem).first,
-              matching: find.byType(Icon),
+              matching: find.byType(MiuixIcon),
             )
             .first,
       );
-      expect(icon.color, iosBlue);
+      expect(icon.tint, iosBlue);
     });
 
     testWidgets('Toast：miuix 经 ToastHost 上浮显示 MiuixSurface 反色卡', (tester) async {

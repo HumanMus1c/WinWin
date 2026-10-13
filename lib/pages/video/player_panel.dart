@@ -931,7 +931,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     _buildSubtitleChip(),
                     const SizedBox(width: Style.sm),
                     _iconButton(
-                      icon: Icon(
+                      icon: AppIcon(
                         AppIcons.sendDanmaku(),
                         shadows: ContrastStyle.glyphShadows,
                       ),
@@ -939,7 +939,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       onPressed: () => showSendDanmakuPanel(context, controller: c),
                     ),
                     _iconButton(
-                      icon: Icon(
+                      icon: AppIcon(
                         AppIcons.danmakuTune(),
                         shadows: ContrastStyle.glyphShadows,
                       ),
@@ -953,7 +953,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     ValueListenableBuilder<double>(
                       valueListenable: c.volume,
                       builder: (context, vol, _) {
-                        final Widget volIcon = Icon(
+                        final Widget volIcon = AppIcon(
                           vol <= 0
                               ? AppIcons.volumeOff()
                               : (vol > 100
@@ -970,7 +970,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       },
                     ),
                     _iconButton(
-                      icon: Icon(
+                      icon: AppIcon(
                         AppIcons.lockOutline(),
                         shadows: ContrastStyle.glyphShadows,
                       ),
@@ -979,7 +979,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     ),
                     if (!widget.fullscreen)
                       _iconButton(
-                        icon: Icon(
+                        icon: AppIcon(
                           AppIcons.pip(),
                           shadows: ContrastStyle.glyphShadows,
                         ),
@@ -988,7 +988,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       ),
                     if (!widget.fullscreen && widget.onToggleInAppFullscreen != null)
                       _iconButton(
-                        icon: Icon(
+                        icon: AppIcon(
                           AppIcons.inAppFullscreen(
                             active: widget.inAppFullscreen,
                           ),
@@ -1000,7 +1000,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       ),
                     if (widget.onToggleFullscreen != null)
                       _iconButton(
-                        icon: Icon(
+                        icon: AppIcon(
                           AppIcons.fullscreen(active: widget.fullscreen),
                           shadows: ContrastStyle.glyphShadows,
                         ),
@@ -1026,7 +1026,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
       builder: (context, _) {
         final isPlaying = c.playing.value;
         final isCompleted = c.completed.value;
-        final icon = Icon(
+        final icon = AppIcon(
           isPlaying
               ? AppIcons.pause(active: true)
               : (isCompleted
@@ -1882,7 +1882,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(
+                                      AppIcon(
                                         AppIcons.chapter(),
                                         color: AppColors.white,
                                         size: 18,
@@ -1906,7 +1906,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                         hoverColor: AppColors.white.withValues(
                                           alpha: 0.12,
                                         ),
-                                        child: Icon(
+                                        child: AppIcon(
                                           AppIcons.clear(),
                                           color: AppColors.white70,
                                           size: 18,
@@ -1982,7 +1982,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                   SizedBox(
                                                     width: 22,
                                                     child: isCurrent
-                                                        ? Icon(
+                                                        ? AppIcon(
                                                             AppIcons.play(
                                                               active: true,
                                                             ),

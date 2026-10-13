@@ -1,7 +1,7 @@
 import 'dart:async' show unawaited;
 
 import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
 import 'package:winwin/core/emote/emote_store.dart';
@@ -9,6 +9,7 @@ import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 
 /// 官方表情面板按钮（评论输入框 / 直播互动条共用）。
@@ -213,8 +214,8 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
     // 半透明底统一走 kMiuixSurfaceAlpha；对角线展开动画在 Overlay 层包裹。
     return MiuixOverlayPanel(
       title: '表情',
-      icon: Icon(
-        Icons.sentiment_satisfied_alt_outlined,
+      icon: AppIcon(
+        AppIcons.emoteEntry(),
         size: 16,
         color: tokens.colors.primary,
       ),
@@ -248,8 +249,8 @@ class _OfficialEmotePickerButtonState extends State<OfficialEmotePickerButton>
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: Icon(
-              Icons.sentiment_satisfied_alt_outlined,
+            child: AppIcon(
+              AppIcons.emoteEntry(),
               color: widget.enabled
                   ? cs.outline
                   : cs.outline.withValues(alpha: 0.4),

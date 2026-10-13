@@ -208,8 +208,8 @@ class _FollowPageState extends State<FollowPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.subscriptions_outlined,
+          AppIcon(
+            AppIcons.followEmpty(),
             size: 48,
             color: colorScheme.onSurfaceVariant,
           ),
@@ -229,8 +229,8 @@ class _FollowPageState extends State<FollowPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.cloud_off_outlined,
+          AppIcon(
+            AppIcons.loadFailed(),
             size: 48,
             color: colorScheme.onSurfaceVariant,
           ),

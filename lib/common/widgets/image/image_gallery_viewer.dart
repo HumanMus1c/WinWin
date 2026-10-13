@@ -609,7 +609,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                               AppColors.black.withValues(alpha: 0.4),
                           child: AppTooltip(
                             message: '复制图片链接',
-                            child: Icon(
+                            child: AppIcon(
                               AppIcons.copy(),
                               size: 20,
                               color: AppColors.white,
@@ -942,13 +942,13 @@ class _GalleryItemViewState extends State<_GalleryItemView>
                     },
                     errorBuilder: (context, _, _) => Column(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(
-                          Icons.broken_image_outlined,
+                      children: [
+                        AppIcon(
+                          AppIcons.imageBroken(),
                           size: 56,
                           color: AppColors.white54,
                         ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 12),
                         Text(
                           '图片加载失败',
                           style: TextStyle(

@@ -152,7 +152,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                       child: Row(
                         spacing: 4,
                         children: [
-                          Icon(
+                          AppIcon(
                             AppIcons.like(active: _liked),
                             size: 15,
                             color: _liked ? biliPink : outline,
@@ -180,7 +180,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                         _disliked = !_disliked;
                         if (_disliked) _liked = false;
                       }),
-                      child: Icon(
+                      child: AppIcon(
                         AppIcons.dislike(active: _disliked),
                         size: 15,
                         color: _disliked ? biliPink : outline,
@@ -191,7 +191,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                       child: Row(
                         spacing: 3,
                         children: [
-                          Icon(AppIcons.reply(), size: 15, color: outline),
+                          AppIcon(AppIcons.reply(), size: 15, color: outline),
                           Text('回复', style: grayStyle.copyWith(fontSize: 12)),
                         ],
                       ),
@@ -210,7 +210,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            Icon(
+                            AppIcon(
                               _expanded
                                   ? AppIcons.chevronUp()
                                   : AppIcons.expandMore(),
@@ -1330,8 +1330,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.videocam_off_outlined,
+            AppIcon(
+              AppIcons.videoOff(),
               size: 44,
               color: AppColors.white54,
             ),
@@ -1588,19 +1588,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           Row(
             spacing: Style.md,
             children: [
-              Icon(
+              AppIcon(
                 AppIcons.viewCount(),
                 size: 15,
                 color: tokens.colors.onSurfaceVariant,
               ),
               Text(NumUtils.formatNum(stat?.view), style: grayStyle),
-              Icon(
+              AppIcon(
                 AppIcons.danmakuCount(),
                 size: 14,
                 color: tokens.colors.onSurfaceVariant,
               ),
               Text(NumUtils.formatNum(stat?.danmaku), style: grayStyle),
-              Icon(
+              AppIcon(
                 AppIcons.duration(),
                 size: 14,
                 color: tokens.colors.onSurfaceVariant,
@@ -1921,7 +1921,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           child: Row(
                             spacing: 4,
                             children: [
-                              Icon(
+                              AppIcon(
                                 AppIcons.like(active: reply.isLiked),
                                 size: 15,
                                 color: reply.isLiked
@@ -1942,7 +1942,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                         ),
                         GestureDetector(
                           onTap: () => _toggleDislikeReply(reply),
-                          child: Icon(
+                          child: AppIcon(
                             AppIcons.dislike(active: reply.isDisliked),
                             size: 15,
                             color: reply.isDisliked
@@ -1975,7 +1975,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           child: Row(
                             spacing: 3,
                             children: [
-                              Icon(
+                              AppIcon(
                                 AppIcons.reply(),
                                 size: 15,
                                 color: tokens.colors.onSurfaceVariant,
@@ -2003,7 +2003,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                Icon(
+                                AppIcon(
                                   subReplies != null
                                       ? AppIcons.chevronUp()
                                       : AppIcons.expandMore(),
@@ -2210,7 +2210,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   child: Row(
                     spacing: 3,
                     children: [
-                      Icon(
+                      AppIcon(
                         AppIcons.like(active: sub.isLiked),
                         size: 13,
                         color: sub.isLiked
@@ -2231,7 +2231,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 ),
                 GestureDetector(
                   onTap: () => _toggleDislikeReply(sub),
-                  child: Icon(
+                  child: AppIcon(
                     AppIcons.dislike(active: sub.isDisliked),
                     size: 13,
                     color: sub.isDisliked
@@ -2265,7 +2265,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   child: Row(
                     spacing: 2,
                     children: [
-                      Icon(
+                      AppIcon(
                         AppIcons.reply(),
                         size: 13,
                         color: tokens.colors.onSurfaceVariant,
@@ -2781,7 +2781,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   ],
                 ),
               ),
-              MiuixButton(onPressed: () {}, child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(AppIcons.add(), size: 16), const SizedBox(width: 6), Text(
+              MiuixButton(onPressed: () {}, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.add(), size: 16), const SizedBox(width: 6), Text(
                   DemoOverrides.count('demo.followbtn.$bvid', min: 0, max: 1) ==
                           1
                       ? '已关注'
@@ -2889,7 +2889,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               const Expanded(
                 child: Skeleton(child: SkeletonLine(width: 100, height: 14)),
               ),
-              MiuixButton(onPressed: null, child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(AppIcons.add(), size: 16), const SizedBox(width: 6), const Text('关注', style: TextStyle(fontSize: 12.5))])),
+              MiuixButton(onPressed: null, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.add(), size: 16), const SizedBox(width: 6), const Text('关注', style: TextStyle(fontSize: 12.5))])),
             ],
           ),
           const SizedBox(
@@ -3008,8 +3008,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.cloud_off_outlined,
+          AppIcon(
+            AppIcons.loadFailed(),
             size: 48,
             color: tokens.colors.onSurfaceVariant,
           ),
@@ -3117,7 +3117,7 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
                     color: color ?? cs.primary,
                   ),
                 )
-              : Icon(icon, size: 16, color: color), const SizedBox(width: 6), Text(
+              : AppIcon(icon, size: 16, color: color), const SizedBox(width: 6), Text(
             label,
             style: TextStyle(
               fontSize: 12.5,

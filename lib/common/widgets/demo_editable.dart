@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
+import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -431,10 +432,8 @@ class _DemoChoiceDialog extends StatelessWidget {
             },
             child: Row(
               children: [
-                Icon(
-                  value == current
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
+                AppIcon(
+                  AppIcons.singleChoice(selected: value == current),
                   size: 18,
                   color: value == current ? cs.primary : cs.outline,
                 ),

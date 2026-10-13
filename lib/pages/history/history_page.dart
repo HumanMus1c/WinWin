@@ -308,7 +308,7 @@ class _HistoryPageState extends State<HistoryPage> {
           ? _buildError()
           : _items.isEmpty
           ? AppEmptyState(
-              icon: Icon(AppIcons.history(selected: false)),
+              icon: AppIcon(AppIcons.history(selected: false)),
               title: '暂无观看记录',
               subtitle: '看过的视频会出现在这里',
             )

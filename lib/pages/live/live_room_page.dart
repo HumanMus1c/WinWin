@@ -1225,8 +1225,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               color: AppColors.black.withValues(alpha: 0.6),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.play_arrow_rounded,
+            child: AppIcon(
+              AppIcons.livePlay(),
               color: AppColors.white,
               size: 44,
             ),
@@ -1322,7 +1322,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _togglePlay,
 
-              child: AppTooltip(message: _isPlaying ? '暂停 (Space)' : '播放 (Space)', child: Icon(
+              child: AppTooltip(message: _isPlaying ? '暂停 (Space)' : '播放 (Space)', child: AppIcon(
                 _isPlaying ? AppIcons.pause(active: true) : AppIcons.play(active: true),
                 color: AppColors.white,
                 size: 24,
@@ -1374,7 +1374,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 setState(() => _danmakuVisible = !_danmakuVisible);
               },
 
-              child: AppTooltip(message: _danmakuVisible ? '关闭弹幕 (D)' : '开启弹幕 (D)', child: Icon(
+              child: AppTooltip(message: _danmakuVisible ? '关闭弹幕 (D)' : '开启弹幕 (D)', child: AppIcon(
                 _danmakuVisible ? AppIcons.subtitle(active: true) : AppIcons.subtitle(active: false),
                 color: _danmakuVisible ? AppColors.white : AppColors.white54,
                 size: 20,
@@ -1386,8 +1386,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _showQuickSendDialog,
 
-              child: AppTooltip(message: '发弹幕', child: const Icon(
-                Icons.comment_outlined,
+              child: AppTooltip(message: '发弹幕', child: AppIcon(
+                AppIcons.danmakuInput(),
                 color: AppColors.white70,
                 size: 20,
               )),
@@ -1431,8 +1431,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                             fontSize: 12,
                           ),
                         ),
-                        const Icon(
-                          Icons.arrow_drop_down,
+                        AppIcon(
+                          AppIcons.dropdownArrow(),
                           color: AppColors.white70,
                           size: 16,
                         ),
@@ -1480,8 +1480,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                               fontSize: 12,
                             ),
                           ),
-                          const Icon(
-                            Icons.arrow_drop_down,
+                          AppIcon(
+                            AppIcons.dropdownArrow(),
                             color: AppColors.white70,
                             size: 16,
                           ),
@@ -1519,8 +1519,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     borderRadius: 4.0,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     hoverColor: AppColors.white.withValues(alpha: 0.18),
-                    child: const Icon(
-                      Icons.aspect_ratio,
+                    child: AppIcon(
+                      AppIcons.aspectRatio(),
                       color: AppColors.white70,
                       size: 20,
                     ),
@@ -1534,7 +1534,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _toggleMute,
 
-              child: AppTooltip(message: _volume > 0 ? '静音 (M)' : '取消静音 (M)', child: Icon(
+              child: AppTooltip(message: _volume > 0 ? '静音 (M)' : '取消静音 (M)', child: AppIcon(
                 _volume > 0 ? AppIcons.volumeUp() : AppIcons.volumeOff(),
                 color: AppColors.white70,
                 size: 20,
@@ -1575,7 +1575,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
                 onPressed: _toggleInAppFullscreen,
 
-                child: AppTooltip(message: _inAppFullscreen ? '退出网页全屏 (W)' : '网页全屏 (W)', child: Icon(
+                child: AppTooltip(message: _inAppFullscreen ? '退出网页全屏 (W)' : '网页全屏 (W)', child: AppIcon(
                   _inAppFullscreen
                       ? AppIcons.inAppFullscreen(active: true)
                       : AppIcons.inAppFullscreen(active: false),
@@ -1589,7 +1589,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
               onPressed: _toggleFullscreen,
 
-              child: AppTooltip(message: _fullscreen ? '退出全屏 (F / Esc)' : '全屏 (F)', child: Icon(
+              child: AppTooltip(message: _fullscreen ? '退出全屏 (F / Esc)' : '全屏 (F)', child: AppIcon(
                 _fullscreen ? AppIcons.fullscreen(active: true) : AppIcons.fullscreen(active: false),
                 color: AppColors.white70,
                 size: 22,
@@ -1636,7 +1636,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 8, color: badgeColor),
+          AppIcon(icon, size: 8, color: badgeColor),
           const SizedBox(width: 4),
           Text(
             badgeText,
@@ -1672,8 +1672,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  isRound ? Icons.repeat : Icons.sensors_off_outlined,
+                AppIcon(
+                  AppIcons.liveOffline(round: isRound),
                   size: 48,
                   color: isRound ? AppColors.orangeAccent : AppColors.white60,
                 ),
@@ -1779,8 +1779,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     ],
                     if (heatText != null && heatText.isNotEmpty) ...[
                       const SizedBox(width: 8),
-                      Icon(
-                        Icons.local_fire_department,
+                      AppIcon(
+                        AppIcons.hotness(),
                         size: 14,
                         color: AppColors.orange700,
                       ),

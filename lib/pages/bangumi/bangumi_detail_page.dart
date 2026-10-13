@@ -375,7 +375,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label),
-          if (selected) Icon(AppIcons.check(), size: 18, color: AppColors.blue),
+          if (selected) AppIcon(AppIcons.check(), size: 18, color: AppColors.blue),
         ],
       ),
     );
@@ -1012,8 +1012,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _scrollToTargetEpisode();
                     });
-                  }, child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(
-                    _episodesDescending ? Icons.arrow_downward : Icons.arrow_upward,
+                  }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(
+                    AppIcons.sortArrow(descending: _episodesDescending),
                     size: 15,
                   ), const SizedBox(width: 6), Text(_episodesDescending ? '倒序' : '正序')])),
                 const SizedBox(width: 4),
@@ -1274,7 +1274,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
+                                AppIcon(
                                   AppIcons.history(selected: false),
                                   size: badgeFontSize * 1.15,
                                   color: AppColors.white,
@@ -1428,7 +1428,7 @@ class _FollowButtonState extends State<_FollowButton> {
     } else {
       if (_isHovered) {
         label = '取消追番';
-        icon = Icons.heart_broken_outlined;
+        icon = AppIcons.heartBroken();
         color = AppColors.red;
       } else {
         label = '正在追番';
@@ -1459,7 +1459,7 @@ class _FollowButtonState extends State<_FollowButton> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 18, color: color),
+                AppIcon(icon, size: 18, color: color),
                 const SizedBox(width: 6),
                 Text(
                   label,

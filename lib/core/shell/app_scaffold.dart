@@ -1,10 +1,11 @@
-import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoIcons;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart'
     show MiuixIconButton, MiuixMotion, MiuixScaffold;
 // 过渡期依赖（B7 摘除 material_ui 时替换为 miuix 表面容器）：
 // 骨架必须提供 Material 祖先，见下方 [_AppScaffoldState] 注释。
 import 'package:material_ui/material_ui.dart' show Material, MaterialType;
+
+import 'package:winwin/theme/app_icons.dart';
 
 import 'app_theme_host.dart';
 
@@ -221,8 +222,8 @@ class FloatingBackButton extends StatelessWidget {
           minHeight: 42,
           backgroundColor:
               tokens.colors.surfaceContainerHighest.withValues(alpha: 0.92),
-          child: Icon(
-            CupertinoIcons.chevron_back,
+          child: AppIcon(
+            AppIcons.back(),
             size: 22,
             color: tokens.colors.onSurfaceVariant,
           ),
