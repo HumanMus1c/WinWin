@@ -1,6 +1,6 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixButton;
 import 'package:cupertino_ui/cupertino_ui.dart'
-    show cupertinoDesktopTextSelectionControls;
+    show cupertinoDesktopTextSelectionHandleControls;
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 
@@ -240,7 +240,10 @@ class _ArticlePageState extends State<ArticlePage> {
                 ? constraints.maxHeight
                 : null,
             child: SelectableRegion(
-              selectionControls: cupertinoDesktopTextSelectionControls,
+              // Handle 版控件（混入 TextSelectionHandleControls）：右键菜单
+              // 走 contextMenuBuilder（Miuix 化）；非 Handle 版会绕过构建器、
+              // 回退到控件自带默认工具栏（迁移机制，见补丁#2 复盘）。
+              selectionControls: cupertinoDesktopTextSelectionHandleControls,
               contextMenuBuilder: buildMiuixTextSelectionContextMenu,
           child: Padding(
             padding: const EdgeInsets.symmetric(
