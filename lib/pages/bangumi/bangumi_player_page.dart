@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/ui/components/app_selectable_text.dart';
+import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
@@ -76,13 +77,13 @@ class BangumiPlayerPage extends StatefulWidget {
 }
 
 class _BangumiPlayerPageState extends State<BangumiPlayerPage>
-    with RouteAware, WindowListener, TickerProviderStateMixin {
+    with RouteAware, WindowListener {
   late BangumiEpisode _currentEpisode;
   late List<BangumiEpisode> _episodes;
   WinWinPlayerController? playerController;
 
-  late final TabController _wideTabCtrl;
-  late final TabController _narrowTabCtrl;
+  late final AppTabController _wideTabCtrl;
+  late final AppTabController _narrowTabCtrl;
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<double> _scrollRatio = ValueNotifier<double>(0.0);
   bool _autoPausedByCollapse = false;
@@ -140,8 +141,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     _followStatus = widget.detail.userStatus?.followStatus ?? (_isFollowed ? 2 : 0);
     _episodesDescending = Pref.bangumiEpisodesDescending.value;
     Pref.bangumiEpisodesDescending.addListener(_onGlobalOrderChanged);
-    _wideTabCtrl = TabController(length: 2, vsync: this);
-    _narrowTabCtrl = TabController(length: 3, vsync: this);
+    _wideTabCtrl = AppTabController(length: 2);
+    _narrowTabCtrl = AppTabController(length: 3);
     windowManager.addListener(this);
     // 演示模式切换时重建（播放器隔离/灰占位即时生效）。
     Pref.demoModeNotifier.addListener(_onDemoChanged);
@@ -1055,15 +1056,15 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           flex: 3,
           child: Column(
             children: [
-              TabBar(
+              AppTabBar(
                 controller: _wideTabCtrl,
                 tabs: [
-                  Tab(text: Pref.demoMode ? '选集' : '选集 (${_episodes.length})'),
-                  Tab(text: Pref.demoMode ? '评论' : '评论 (${_replies.length})'),
+                  Pref.demoMode ? '选集' : '选集 (${_episodes.length})',
+                  Pref.demoMode ? '评论' : '评论 (${_replies.length})',
                 ],
               ),
               Expanded(
-                child: TabBarView(
+                child: AppTabBody(
                   controller: _wideTabCtrl,
                   children: [
                     DemoMask(
@@ -1113,19 +1114,19 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _SliverTabBarDelegate(
-                    TabBar(
+                    AppTabBar(
                       controller: _narrowTabCtrl,
                       tabs: [
-                        Tab(text: Pref.demoMode ? '选集' : '选集 (${_episodes.length})'),
-                        const Tab(text: '简介与互动'),
-                        Tab(text: Pref.demoMode ? '评论' : '评论 (${_replies.length})'),
+                        Pref.demoMode ? '选集' : '选集 (${_episodes.length})',
+                        '简介与互动',
+                        Pref.demoMode ? '评论' : '评论 (${_replies.length})',
                       ],
                     ),
                     color: AppThemeHost.of(context).colors.background,
                   ),
                 ),
               ],
-              body: TabBarView(
+              body: AppTabBody(
                 controller: _narrowTabCtrl,
                 children: [
                   DemoMask(
@@ -2415,15 +2416,15 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 }
 
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
+  final AppTabBar tabBar;
   final Color color;
 
   _SliverTabBarDelegate(this.tabBar, {required this.color});
 
   @override
-  double get minExtent => tabBar.preferredSize.height;
+  double get minExtent => tabBar.preferredHeight;
   @override
-  double get maxExtent => tabBar.preferredSize.height;
+  double get maxExtent => tabBar.preferredHeight;
 
   @override
   Widget build(

@@ -5,6 +5,7 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/models/search/search_type.dart';
 import 'package:winwin/pages/search/search_panel.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_tab_view.dart';
 
 /// 搜索结果页 — TabBar 分类 + TabBarView 结果列表。
 ///
@@ -19,16 +20,15 @@ class SearchResultPage extends StatefulWidget {
   State<SearchResultPage> createState() => _SearchResultPageState();
 }
 
-class _SearchResultPageState extends State<SearchResultPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _SearchResultPageState extends State<SearchResultPage> {
+  late AppTabController _tabController;
 
   static const List<SearchType> _tabs = SearchType.values;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController = AppTabController(length: _tabs.length);
   }
 
   @override
@@ -40,14 +40,12 @@ class _SearchResultPageState extends State<SearchResultPage>
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      // 仅保留分类标签条（无标题栏）。
-      topBar: TabBar(
+      // 仅保留分类标签条（无标题栏）。Tab 头/体改用 Miuix 轨道替身。
+      topBar: AppTabBar(
         controller: _tabController,
-        isScrollable: true,
-        tabAlignment: TabAlignment.start,
-        tabs: _tabs.map((t) => Tab(text: t.label)).toList(),
+        tabs: _tabs.map((t) => t.label).toList(),
       ),
-      body: Pref.demoMode ? const DemoListSkeleton() : TabBarView(
+      body: Pref.demoMode ? const DemoListSkeleton() : AppTabBody(
         controller: _tabController,
         children: _tabs
             .map((t) => SearchPanel(

@@ -10,6 +10,7 @@ import 'package:flutter_miuix/miuix.dart'
 import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
@@ -250,7 +251,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     with
         RouteAware,
         WindowListener,
-        SingleTickerProviderStateMixin,
         VideoInteractionMixin<VideoDetailPage> {
   final ScrollController scrollController = ScrollController();
   WinWinPlayerController? playerController;
@@ -271,7 +271,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 宽屏右栏 Tab 控制器（对标 BiliPai TabletSecondaryContent：
   /// 评论 (N) / 相关推荐 双 Tab）。窄屏单列布局不使用。
-  late final TabController _rightTabCtrl;
+  late final AppTabController _rightTabCtrl;
 
   /// 楼中楼展开状态：key = 根评论 rpid，value = 二级回复列表。
   final Map<int, List<ReplyItemModel>> _subReplies = {};
@@ -328,7 +328,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   @override
   void initState() {
     super.initState();
-    _rightTabCtrl = TabController(length: 2, vsync: this);
+    _rightTabCtrl = AppTabController(length: 2);
     windowManager.addListener(this);
     initInteractionEventBus();
     _loadDetail();
@@ -2368,28 +2368,21 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 评论 Tab 含 最热/最新排序行 + 评论列表 + 底部输入栏；
   /// 稿件信息未就绪（Loading/Error）时评论 Tab 展示占位/不可用提示。
   Widget _buildRightColumn() {
-    final tokens = AppThemeHost.of(context);
     final replyCount = _detailState.dataOrNull?.stat?.reply;
+    // Tab 头/体改用 Miuix 轨道替身（AppTabBar + AppTabBody）。
     return Column(
       children: [
-        TabBar(
+        AppTabBar(
           controller: _rightTabCtrl,
-          labelColor: tokens.colors.onSurface,
-          unselectedLabelColor: tokens.colors.onSurfaceVariant,
-          indicatorColor: tokens.colors.primary,
-          indicatorSize: TabBarIndicatorSize.label,
-          dividerColor: tokens.colors.outlineVariant.withValues(alpha: 0.3),
           tabs: [
-            Tab(
-              text: (Pref.demoMode || replyCount == null)
-                  ? '评论'
-                  : '评论 ${NumUtils.formatNum(replyCount)}',
-            ),
-            const Tab(text: '相关推荐'),
+            (Pref.demoMode || replyCount == null)
+                ? '评论'
+                : '评论 ${NumUtils.formatNum(replyCount)}',
+            '相关推荐',
           ],
         ),
         Expanded(
-          child: TabBarView(
+          child: AppTabBody(
             controller: _rightTabCtrl,
             children: [_buildCommentTab(), _buildRelatedTab()],
           ),

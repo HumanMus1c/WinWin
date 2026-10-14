@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -52,9 +53,8 @@ class _DanmakuBlockDialog extends StatefulWidget {
   State<_DanmakuBlockDialog> createState() => _DanmakuBlockDialogState();
 }
 
-class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog> {
+  late final AppTabController _tabController;
   final List<TextEditingController> _controllers = [
     for (var i = 0; i < 3; i++) TextEditingController(),
   ];
@@ -70,7 +70,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = AppTabController(length: 3);
     _fetchRules();
   }
 
@@ -210,12 +210,9 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
                   ),
                 ],
               ),
-              TabBar(
+              AppTabBar(
                 controller: _tabController,
-                labelColor: biliPink,
-                unselectedLabelColor: tokens.colors.onSurfaceVariant,
-                indicatorColor: biliPink,
-                tabs: [for (final t in _tabs) Tab(text: t.label)],
+                tabs: [for (final t in _tabs) t.label],
               ),
               const SizedBox(height: Style.sm),
               Expanded(
@@ -237,7 +234,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog>
                               ],
                             ),
                           )
-                        : TabBarView(
+                        : AppTabBody(
                             controller: _tabController,
                             children: [
                               for (var i = 0; i < 3; i++)

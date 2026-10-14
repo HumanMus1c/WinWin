@@ -36,6 +36,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tab_view.dart';
 
 /// 推送动态页。
 void showDynamicsPage(BuildContext context) {
@@ -55,9 +56,8 @@ class DynamicsPage extends StatefulWidget {
   State<DynamicsPage> createState() => _DynamicsPageState();
 }
 
-class _DynamicsPageState extends State<DynamicsPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _DynamicsPageState extends State<DynamicsPage> {
+  late final AppTabController _tabController;
   final List<_DynTabData> _tabs = const [
     _DynTabData(label: '全部', type: 'all'),
     _DynTabData(label: '视频', type: 'video'),
@@ -68,7 +68,7 @@ class _DynamicsPageState extends State<DynamicsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController = AppTabController(length: _tabs.length);
   }
 
   @override
@@ -81,15 +81,13 @@ class _DynamicsPageState extends State<DynamicsPage>
   Widget build(BuildContext context) {
     return AppScaffold(
       title: '动态',
-      // 仅保留分类标签条（无标题栏），TabBar 直接作为 topBar 槽位。
-      topBar: TabBar(
+      // 仅保留分类标签条（无标题栏）。Tab 头/体改用 Miuix 轨道替身
+      // （AppTabBar + AppTabBody），头部直接作为 topBar 槽位。
+      topBar: AppTabBar(
         controller: _tabController,
-        tabs: _tabs.map((t) => Tab(text: t.label)).toList(),
-        dividerHeight: 0,
-        indicatorSize: TabBarIndicatorSize.label,
-        labelPadding: const EdgeInsets.symmetric(horizontal: Style.md),
+        tabs: _tabs.map((t) => t.label).toList(),
       ),
-      body: TabBarView(
+      body: AppTabBody(
         controller: _tabController,
         children: _tabs
             .map((t) => _DynTabPage(type: t.type))

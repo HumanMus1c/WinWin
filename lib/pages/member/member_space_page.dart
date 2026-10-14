@@ -7,6 +7,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'package:winwin/ui/components/app_selectable_text.dart';
+import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
@@ -333,11 +334,10 @@ class MemberSpacePage extends StatefulWidget {
   State<MemberSpacePage> createState() => _MemberSpacePageState();
 }
 
-class _MemberSpacePageState extends State<MemberSpacePage>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
+class _MemberSpacePageState extends State<MemberSpacePage> {
+  late AppTabController _tabController;
   final ScrollController _scrollController = ScrollController();
-  final List<TabController> _pendingDisposeControllers = [];
+  final List<AppTabController> _pendingDisposeControllers = [];
   bool _isDisposed = false;
 
   LoadingState<MemberSpaceData> _spaceState = LoadingState.loading();
@@ -438,9 +438,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     if (_tabController.length != tabs.length) {
       final oldController = _tabController;
       final oldIndex = oldController.index;
-      _tabController = TabController(
+      _tabController = AppTabController(
         length: tabs.length,
-        vsync: this,
         initialIndex: oldIndex.clamp(0, tabs.length - 1),
       );
       _pendingDisposeControllers.add(oldController);
@@ -457,7 +456,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _availableTabs.length, vsync: this);
+    _tabController = AppTabController(length: _availableTabs.length);
     _initFollowSubscription();
     _loadAll();
     // 演示模式/自定义覆盖变更时重建（遮罩与替换值即时生效）。
@@ -947,22 +946,16 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             SliverPersistentHeader(
               pinned: true,
               delegate: _SliverAppBarDelegate(
-                TabBar(
+                AppTabBar(
                   controller: _tabController,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  indicatorSize: TabBarIndicatorSize.label,
-                  labelColor: tokens.colors.primary,
-                  unselectedLabelColor: tokens.colors.onSurfaceVariant,
-                  indicatorColor: tokens.colors.primary,
-                  tabs: tabs.map((t) => Tab(text: _tabTitle(t))).toList(),
+                  tabs: tabs.map((t) => _tabTitle(t)).toList(),
                 ),
                 tokens.colors.surface,
               ),
             ),
           ];
         },
-        body: TabBarView(
+        body: AppTabBody(
           controller: _tabController,
           children: tabs.map((t) => KeyedSubtree(
             key: ValueKey(t),
@@ -3407,13 +3400,13 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverAppBarDelegate(this._tabBar, this._bgColor);
 
-  final TabBar _tabBar;
+  final AppTabBar _tabBar;
   final Color _bgColor;
 
   @override
-  double get minExtent => _tabBar.preferredSize.height;
+  double get minExtent => _tabBar.preferredHeight;
   @override
-  double get maxExtent => _tabBar.preferredSize.height;
+  double get maxExtent => _tabBar.preferredHeight;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
