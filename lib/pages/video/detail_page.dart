@@ -13,7 +13,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
-import 'package:winwin/common/widgets/comment/emote_picker.dart';
+import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -61,7 +61,6 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
-import 'package:winwin/ui/components/app_components.dart';
 
 /// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
@@ -2292,77 +2291,26 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 水平内边距与评论区 SliverPadding 一致，宽度对齐评论区容器）。
   /// [enabled]=false 时置灰（稿件信息加载中或失败态，无 aid 不可发评论）。
   Widget _buildCommentInputBar({bool enabled = true, String? disabledHint}) {
-    final tokens = AppThemeHost.of(context);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        Style.safeSpace,
-        Style.xs,
-        Style.cardSpace,
-        Style.xs,
-      ),
-      decoration: BoxDecoration(
-        color: tokens.colors.surface,
-        border: Border(
-          top: BorderSide(
-            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            // 官方表情面板按钮（输入框左侧，直播互动条同款）
-            OfficialEmotePickerButton(
-              controller: _commentCtrl,
-              focusNode: _commentFocus,
-              enabled: enabled,
-            ),
-            const SizedBox(width: Style.sm),
-            Expanded(
-              child: AppCapsuleTextField(
-                controller: _commentCtrl,
-                focusNode: _commentFocus,
-                enabled: enabled,
-                onPressed: () async {
-                  // 点击输入框时检查登录态。
-                  if (!await LoginGuard.requireLogin(context)) return;
-                },
-                hint: enabled
-                    ? (_replyHint ?? '发一条友善的评论吧~')
-                    : (disabledHint ?? '稿件不可用，暂无法评论'),
-                suffix: _replyRoot != null
-                    ? MiuixIconButton(
-                        onPressed: _clearReplyTarget,
-                        child: AppIcon(AppIcons.clear(), size: 16),
-                      )
-                    : null,
-                onSubmitted: (_) => _sendComment(),
-              ),
-            ),
-            const SizedBox(width: Style.sm),
-            // 紧凑口径：与评论输入条等高（B7-b 实机反馈）。
-            AppPrimaryButton(
-                onPressed: enabled && !_sendingComment ? _sendComment : null,
-                minWidth: 56,
-                minHeight: 34,
-                insideMargin:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                cornerRadius: 10,
-                child: _sendingComment
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: AppProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.white,
-                      ),
-                    )
-                  : const Text('发送')),
-          ],
-        ),
-      ),
+    // B7 输入统一批：容器与骨架收敛到共享 CommentInputBar，此处仅做本页参数适配。
+    return CommentInputBar(
+      controller: _commentCtrl,
+      focusNode: _commentFocus,
+      sending: _sendingComment,
+      enabled: enabled,
+      onPressed: () async {
+        // 点击输入框时检查登录态。
+        if (!await LoginGuard.requireLogin(context)) return;
+      },
+      hintText: enabled
+          ? (_replyHint ?? '发一条友善的评论吧~')
+          : (disabledHint ?? '稿件不可用，暂无法评论'),
+      suffix: _replyRoot != null
+          ? MiuixIconButton(
+              onPressed: _clearReplyTarget,
+              child: AppIcon(AppIcons.clear(), size: 16),
+            )
+          : null,
+      onSend: () => _sendComment(),
     );
   }
 

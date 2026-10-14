@@ -208,7 +208,7 @@ class _ArticlePageState extends State<ArticlePage> {
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 860),
-                  child: SimpleCommentInputBar(
+                  child: CommentInputBar(
                     controller: _commentCtrl,
                     focusNode: _commentFocus,
                     sending: _sendingComment,

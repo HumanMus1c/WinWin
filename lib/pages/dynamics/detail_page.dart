@@ -299,7 +299,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 820),
-                  child: SimpleCommentInputBar(
+                  child: CommentInputBar(
                     controller: _commentCtrl,
                     focusNode: _commentFocus,
                     sending: _sendingComment,
