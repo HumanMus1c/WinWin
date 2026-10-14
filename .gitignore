@@ -38,3 +38,27 @@ Thumbs.db
 # Misc
 .sandbox/
 scratch/
+
+# OfficeAce / JiuwenSwarm 工作区与治理引导层（非 WinWin 项目内容，勿提交）
+# —— Agent 工作区：身份/记忆/技能/待办/会话上下文
+/.office-claw/
+/.agent_history/
+/AGENT.md
+/SOUL.md
+/IDENTITY.md
+/USER.md
+/HEARTBEAT.md
+/agents/
+/context/
+/skills/
+/messages/
+/todo/
+/memory/
+/prompt_attachment/
+/coding_memory/
+# —— OfficeAce 治理引导层：通用 JS 工具链模板（Biome/pnpm），非本项目 Dart 规范
+/BACKLOG.md
+/docs/SOP.md
+/docs/features/
+/docs/decisions/
+/docs/discussions/
