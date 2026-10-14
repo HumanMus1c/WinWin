@@ -6,6 +6,7 @@ dist/
 .packages
 .flutter-plugins
 .flutter-plugins-dependencies
+.flutter_tool_state
 *.exe
 *.dll
 *.pdb
