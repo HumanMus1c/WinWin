@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart';
 
@@ -9,11 +10,12 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
-/// 全站统一底部输入条（评论 / 直播互动 / 番剧 / 弹幕内联 / 专栏 / 动态共用）。
+/// 全站统一底部输入条（评论 / 直播互动 / 番剧 / 弹幕内联 / 专栏 / 动态 / 私信共用）。
 ///
-/// 统一口径的承载：官方表情按钮（可关） + 胶囊输入框（可带后缀） + 紧凑发送按钮。
-/// 容器样式：surface 底 + 顶部 0.5 描边 + SafeArea 底适配 + [Style.xs] 上下留白，
-/// 各页只需传入各自的 controller / 回调 / 文案即可，禁止再各自拼装容器。
+/// 统一口径的承载：官方表情按钮（可关） + 胶囊输入框（可带后缀/多行/格式化器）
+/// + 可插拔的附加控件 + 紧凑发送按钮。容器样式：surface 底 + 顶部 0.5 描边
+/// + SafeArea 底适配 + [Style.xs] 上下留白；各页只需传入各自的 controller /
+/// 回调 / 文案即可，禁止再各自拼装容器。
 class CommentInputBar extends StatelessWidget {
   const CommentInputBar({
     super.key,
@@ -29,6 +31,14 @@ class CommentInputBar extends StatelessWidget {
     this.requireText = false,
     this.showEmote = true,
     this.sendLabel = '发送',
+    this.inputFormatters,
+    this.textStyle,
+    this.onChanged,
+    this.minLines = 1,
+    this.maxLines = 1,
+    this.fillColor,
+    this.trailing,
+    this.sendButton,
   });
 
   /// 输入控制器。
@@ -66,6 +76,28 @@ class CommentInputBar extends StatelessWidget {
 
   /// 发送按钮文案。
   final String sendLabel;
+
+  /// 字段输入格式化器（如长度限制）。
+  final List<TextInputFormatter>? inputFormatters;
+
+  /// 字段文本样式。
+  final TextStyle? textStyle;
+
+  /// 字段文本变化回调。
+  final ValueChanged<String>? onChanged;
+
+  /// 字段最小/最大行数（聊天多行输入用）。
+  final int minLines;
+  final int maxLines;
+
+  /// 字段填充色（为空则走 AppCapsuleTextField 自身口径）。
+  final Color? fillColor;
+
+  /// 输入框与发送按钮之间的附加控件（如弹幕样式设置钮）。
+  final Widget? trailing;
+
+  /// 发送按钮整体覆盖（如需图标式发送键）；为空则用标准文本发送键。
+  final Widget? sendButton;
 
   Widget? _buildSuffix() {
     final parts = <Widget>[];
@@ -165,11 +197,20 @@ class CommentInputBar extends StatelessWidget {
                 hint: hintText,
                 suffix: _buildSuffix(),
                 onSubmitted: (_) => onSend(),
+                inputFormatters: inputFormatters,
+                textStyle: textStyle,
+                onChanged: onChanged,
+                minLines: minLines,
+                maxLines: maxLines,
+                fillColor: fillColor,
               ),
             ),
+            if (trailing != null) ...[
+              const SizedBox(width: Style.sm),
+              trailing!,
+            ],
             const SizedBox(width: Style.sm),
-            // 紧凑口径：与输入条等高（B7-b 实机反馈：默认 Miuix 尺寸高于输入条）。
-            _buildSendButton(),
+            sendButton ?? _buildSendButton(),
           ],
         ),
       ),

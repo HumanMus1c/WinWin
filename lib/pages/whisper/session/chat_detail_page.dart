@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -279,48 +280,32 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   Widget _buildInputBar(AppTokens tokens) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: Style.safeSpace, vertical: Style.sm),
-        decoration: BoxDecoration(
-          color: tokens.colors.background,
-          border: Border(
-            top: BorderSide(color: tokens.colors.outlineVariant.withValues(alpha: 0.4)),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: AppCapsuleTextField(
-                controller: _inputCtrl,
-                minLines: 1,
-                maxLines: 4,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _send(),
-                hint: '发送消息',
-                fillColor: tokens.colors.surfaceContainerHighest,
+    // B7-c4 输入条统一批：会话输入条收敛到共享 CommentInputBar
+    // （容器/字段口径一致，仅保留聊天多行 + 图标发送键）。
+    return CommentInputBar(
+      controller: _inputCtrl,
+      sending: _sending,
+      enabled: !_sending,
+      onSend: _send,
+      showEmote: false,
+      minLines: 1,
+      maxLines: 4,
+      hintText: '发送消息',
+      fillColor: tokens.colors.surfaceContainerHighest,
+      sendButton: MiuixIconButton(
+        backgroundColor: tokens.colors.primary,
+        onPressed: _sending ? null : _send,
+        child: _sending
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: AppProgressIndicator(strokeWidth: 2, color: AppColors.white),
+              )
+            : AppIcon(
+                AppIcons.send(),
+                size: 20,
+                color: tokens.colors.onPrimary,
               ),
-            ),
-            const SizedBox(width: Style.sm),
-            MiuixIconButton(
-              backgroundColor: tokens.colors.primary,
-              onPressed: _sending ? null : _send,
-              child: _sending
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: AppProgressIndicator(strokeWidth: 2, color: AppColors.white),
-                    )
-                  : AppIcon(
-                      AppIcons.send(),
-                      size: 20,
-                      color: tokens.colors.onPrimary,
-                    ),
-            ),
-          ],
-        ),
       ),
     );
   }

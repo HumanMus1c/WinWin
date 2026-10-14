@@ -3,6 +3,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixTextButton;
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
+import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -360,48 +361,23 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
 
   // ─────────────────────────── 内联模式 ───────────────────────────
 
-  /// 内联模式：单行输入框 + 设置按钮 + 发送按钮（样式对齐评论发送栏）。
+  /// 内联模式：统一到共享 CommentInputBar（容器/字段口径一致；保留弹幕样式设置钮）。
   /// 设置面板（颜色/位置/大小）通过点击设置按钮展开。
   Widget _buildInline() {
     final tokens = AppThemeHost.of(context);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        Style.safeSpace,
-        Style.xs,
-        Style.cardSpace,
-        Style.xs,
-      ),
-      decoration: BoxDecoration(
-        color: tokens.colors.surface,
-        border: Border(
-          top: BorderSide(
-            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: AppCapsuleTextField(
-                controller: _textController,
-                focusNode: _focusNode,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _onSend(),
-                onChanged: (_) => setState(() {}),
-                textStyle: tokens.text.bodyLarge,
-                hint: _danmakuPlaceholder(Accounts.main.isLogin),
-                inputFormatters: [LengthLimitingTextInputFormatter(100)],
-              ),
-            ),
-            const SizedBox(width: Style.sm),
-            _buildInlineSettingsButton(tokens),
-            const SizedBox(width: Style.xs),
-            _buildInlineSendButton(tokens),
-          ],
-        ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: _sending,
+      builder: (context, sending, _) => CommentInputBar(
+        controller: _textController,
+        focusNode: _focusNode,
+        sending: sending,
+        onSend: _onSend,
+        showEmote: false,
+        requireText: true,
+        hintText: _danmakuPlaceholder(Accounts.main.isLogin),
+        textStyle: tokens.text.bodyLarge,
+        inputFormatters: [LengthLimitingTextInputFormatter(100)],
+        trailing: _buildInlineSettingsButton(tokens),
       ),
     );
   }
@@ -418,31 +394,6 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
         child: AppTooltip(message: '弹幕样式', child: AppIcon(AppIcons.palette(), size: 20)),
       ),
     );
-  }
-
-  /// 内联模式发送按钮（紧凑口径：与内联输入条等高）。
-  Widget _buildInlineSendButton(AppTokens tokens) {
-    return AppPrimaryButton(
-        onPressed: _canSend ? _onSend : null,
-        minWidth: 56,
-        minHeight: 34,
-        insideMargin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        cornerRadius: 10,
-        child: ValueListenableBuilder<bool>(
-        valueListenable: _sending,
-        builder: (context, sending, _) {
-          return sending
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: AppProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.white,
-                  ),
-                )
-              : const Text('发送');
-        },
-      ));
   }
 
   /// 内联模式：点击设置按钮时弹出弹幕样式设置面板（Overlay）。

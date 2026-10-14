@@ -8,7 +8,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_colors.dart';
-import 'package:winwin/common/widgets/comment/emote_picker.dart';
+import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -52,7 +52,6 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
-import 'package:winwin/ui/components/app_components.dart';
 
 /// 番剧播放页面（对标 BiliPai `BangumiPlayerScreen` 与 PiliPlus PGC 播放体系）。
 ///
@@ -1348,7 +1347,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           child: _buildCommentSortRow(cs),
         ),
         Expanded(child: _buildReplyListView(cs)),
-        _buildCommentInputBar(cs),
+        _buildCommentInputBar(),
       ],
     );
   }
@@ -1928,79 +1927,22 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 
   /// 评论输入栏（普通视频稿件同款胶囊输入框与粉色发送按钮）
-  Widget _buildCommentInputBar(AppPalette cs) {
-    final tokens = AppThemeHost.of(context);
+  Widget _buildCommentInputBar() {
+    // B7-c4 输入条统一批：容器与骨架收敛到共享 CommentInputBar，此处仅做本页参数适配。
     final enabled = _currentEpisode.aid != null && _currentEpisode.aid! > 0;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        Style.safeSpace,
-        Style.xs,
-        Style.safeSpace,
-        Style.safeSpace,
-      ),
-      decoration: BoxDecoration(
-        color: tokens.colors.background,
-        border: Border(
-          top: BorderSide(
-            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            // 官方表情面板按钮（输入框左侧，直播互动条同款）
-            OfficialEmotePickerButton(
-              controller: _commentCtrl,
-              focusNode: _commentFocus,
-              enabled: enabled,
-            ),
-            const SizedBox(width: Style.sm),
-            Expanded(
-              child: AppCapsuleTextField(
-                controller: _commentCtrl,
-                focusNode: _commentFocus,
-                enabled: enabled && !_sendingComment,
-                hint: enabled
-                    ? (_replyHint ?? '发一条友善的评论吧~')
-                    : '当前剧集暂不支持评论',
-                insideMargin: const EdgeInsets.symmetric(
-                  horizontal: Style.lg,
-                  vertical: Style.sm,
-                ),
-                suffix: _replyRoot != null
-                    ? MiuixIconButton(
-                        onPressed: _clearReplyTarget,
-                        child: AppIcon(AppIcons.clear(), size: 16),
-                      )
-                    : null,
-                onSubmitted: (_) => _sendComment(),
-              ),
-            ),
-            const SizedBox(width: Style.sm),
-            // 紧凑口径：与评论输入条等高（B7-b 实机反馈）。
-            AppPrimaryButton(
-                onPressed: enabled && !_sendingComment ? _sendComment : null,
-                minWidth: 56,
-                minHeight: 34,
-                insideMargin:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                cornerRadius: 10,
-                child: _sendingComment
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: AppProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.white,
-                      ),
-                    )
-                  : const Text('发送')),
-          ],
-        ),
-      ),
+    return CommentInputBar(
+      controller: _commentCtrl,
+      focusNode: _commentFocus,
+      sending: _sendingComment,
+      enabled: enabled && !_sendingComment,
+      hintText: enabled ? (_replyHint ?? '发一条友善的评论吧~') : '当前剧集暂不支持评论',
+      suffix: _replyRoot != null
+          ? MiuixIconButton(
+              onPressed: _clearReplyTarget,
+              child: AppIcon(AppIcons.clear(), size: 16),
+            )
+          : null,
+      onSend: () => _sendComment(),
     );
   }
 
