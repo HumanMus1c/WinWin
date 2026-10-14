@@ -651,11 +651,11 @@ class AppIcon extends StatelessWidget {
 /// 的字形由 [AppIcon] 直接回退 [Icon]。
 final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
   CupertinoIcons.chevron_back: MiuixIcons.extended.byName('chevronBackward')!,
-  CupertinoIcons.house: MiuixIcons.extended.byName('home')!,
+  // B7-c3 补丁：home/recent/messages 在 Miuix 素材集中仅有实心版（渲染实测
+  // 墨迹占比 27-32%，线条参照 os4 notifications ≈11%）——未选中（线条）字形
+  // 不映射、回退 Cupertino 线条字形；填充字形保留实心矢量映射。
   CupertinoIcons.house_fill: MiuixIcons.extended.byName('home')!,
-  CupertinoIcons.clock: MiuixIcons.extended.byName('recent')!,
   CupertinoIcons.clock_fill: MiuixIcons.extended.byName('recent')!,
-  CupertinoIcons.chat_bubble_2: MiuixIcons.extended.byName('messages')!,
   CupertinoIcons.chat_bubble_2_fill: MiuixIcons.extended.byName('messages')!,
   CupertinoIcons.star: MiuixIcons.extended.byName('favorites')!,
   CupertinoIcons.star_fill: MiuixIcons.extended.byName('favoritesFill')!,
@@ -707,8 +707,8 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
   CupertinoIcons.add: MiuixIcons.extended.byName('add')!,
   CupertinoIcons.eye: MiuixIcons.extended.byName('show')!,
   // ── 阶段5e-L5-4 补齐（OS4 图集）：通知 / 气泡 / 发送 / 重播 ──
+  // 未选中（线条）走 os4 线条版；bell_fill 无实心对应 → 回退实心字形。
   CupertinoIcons.bell: MiuixIcons.os4.byName('notifications')!,
-  CupertinoIcons.bell_fill: MiuixIcons.os4.byName('notifications')!,
   CupertinoIcons.chat_bubble: MiuixIcons.os4.byName('messages')!,
   CupertinoIcons.chat_bubble_fill: MiuixIcons.os4.byName('messages')!,
   CupertinoIcons.bubble_left: MiuixIcons.os4.byName('send')!,

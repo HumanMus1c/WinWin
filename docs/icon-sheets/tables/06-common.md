@@ -14,4 +14,4 @@
 | `block()` | 屏蔽/封禁 | ![曾用](icon-sheets/icons/block-old.png) | ![现用](icon-sheets/icons/block.png) | `slash_circle` | f7da | ✅ |
 | `error()` | 错误/告警 | ![曾用](icon-sheets/icons/error-old.png) | ![现用](icon-sheets/icons/error.png) | `exclamationmark_circle` | 官方矢量（Material Symbols） | ✅ |
 | `notificationsOff()` | 免打扰（关） | ![曾用](icon-sheets/icons/notificationsOff-old.png) | ![现用](icon-sheets/icons/notificationsOff.png) | `bell_slash` | 官方矢量（Material Symbols） | ✅ |
-| `notificationsOff(on)` | 免打扰（开） | ![曾用](icon-sheets/icons/notificationsOff-on-old.png) | ![现用](icon-sheets/icons/notificationsOff-on.png) | `bell_fill` | notifications（OS4） | ✅ |
+| `notificationsOff(on)` | 免打扰（开） | ![曾用](icon-sheets/icons/notificationsOff-on-old.png) | ![现用](icon-sheets/icons/notificationsOff-on.png) | `bell_fill` | — | ⚠️ |

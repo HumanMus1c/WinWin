@@ -281,9 +281,12 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                 onChanged: (_) => setState(() {}),
                 textStyle: tokens.text.bodyLarge,
                 hint: _danmakuPlaceholder(Accounts.main.isLogin),
+                hintStyle: TextStyle(
+                  color: tokens.colors.onSurfaceVariant,
+                  fontSize: 15,
+                ),
                 inputFormatters: [LengthLimitingTextInputFormatter(100)],
                 fillColor: const Color(0x00000000),
-                borderColor: const Color(0x00000000),
                 insideMargin: EdgeInsets.zero,
               ),
             ),

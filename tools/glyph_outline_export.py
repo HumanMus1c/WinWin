@@ -38,6 +38,8 @@ CUPERTINO_WANTED = [
     "bookmark", "bookmark_fill",
     "check_mark_circled_solid", "circle",
     "exclamationmark_circle", "play_circle", "calendar", "bell_slash",
+    # B7-c3 补丁：导航未选中/填充语义回退（Miuix 素材集缺线条对应）。
+    "house", "clock", "chat_bubble_2", "bell_fill",
 ]
 
 # ── 2. Material 历史字形（L3 前双分支 + L5 归一记录，共 84 个） ────────

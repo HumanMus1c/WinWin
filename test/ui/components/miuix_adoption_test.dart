@@ -243,7 +243,9 @@ void main() {
       expect(miuixVectorForGlyph(CupertinoIcons.play_circle), isNotNull);
       expect(miuixVectorForGlyph(CupertinoIcons.calendar), isNotNull);
       // 阶段5e-L5-4：OS4 图集补齐（通知/气泡/发送/重播）。
-      expect(miuixVectorForGlyph(CupertinoIcons.bell_fill), isNotNull);
+      // B7-c3 补丁：bell_fill 无实心素材 → 回退实心字形；未选中 bell 走线条。
+      expect(miuixVectorForGlyph(CupertinoIcons.bell), isNotNull);
+      expect(miuixVectorForGlyph(CupertinoIcons.bell_fill), isNull);
       expect(miuixVectorForGlyph(CupertinoIcons.chat_bubble_fill), isNotNull);
       expect(miuixVectorForGlyph(CupertinoIcons.bubble_left), isNotNull);
       expect(miuixVectorForGlyph(CupertinoIcons.restart), isNotNull);

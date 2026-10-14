@@ -526,6 +526,7 @@ class AppCapsuleTextField extends StatefulWidget {
     this.minLines,
     this.maxLines = 1,
     this.textStyle,
+    this.hintStyle,
     this.fillColor,
     this.insideMargin,
     this.cornerRadius = Style.radiusFull,
@@ -556,6 +557,9 @@ class AppCapsuleTextField extends StatefulWidget {
   /// 输入文本样式（null 取上游默认）。
   final TextStyle? textStyle;
 
+  /// 占位文本样式；默认 13px `onSurfaceVariant`（原 material hint 口径）。
+  final TextStyle? hintStyle;
+
   /// 填充色；默认 `surfaceContainer` α0.5（评论条口径）；传透明即透明档。
   final Color? fillColor;
 
@@ -573,6 +577,18 @@ class AppCapsuleTextField extends StatefulWidget {
 
 class _AppCapsuleTextFieldState extends State<AppCapsuleTextField>
     with _FormatterBridgeMixin<AppCapsuleTextField> {
+  /// 占位/格式化桥接所需的基础控制器（外部未传时自建）。
+  TextEditingController? _fallbackController;
+
+  TextEditingController get _effectiveController =>
+      widget.controller ?? (_fallbackController ??= TextEditingController());
+
+  @override
+  void dispose() {
+    _fallbackController?.dispose();
+    super.dispose();
+  }
+
   @override
   void didUpdateWidget(AppCapsuleTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -587,16 +603,20 @@ class _AppCapsuleTextFieldState extends State<AppCapsuleTextField>
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
+    final controller = _effectiveController;
     final formatters = widget.inputFormatters;
     final hasFormatters = formatters?.isNotEmpty ?? false;
+    final margin = widget.insideMargin ??
+        const EdgeInsets.symmetric(horizontal: Style.md, vertical: Style.sm);
     final field = MiuixTextField(
       controller: hasFormatters
-          ? ensureBridge(widget.controller, formatters!)
-          : widget.controller,
+          ? ensureBridge(controller, formatters!)
+          : controller,
       focusNode: widget.focusNode,
       onChanged: widget.onChanged,
-      label: widget.hint ?? '',
-      useLabelAsPlaceholder: widget.hint != null,
+      // B7-c3 补丁：占位改由下方自绘——上游 label 占位起步 17px 且带过渡
+      // 动画（实机反馈：字号偏大、输入时隐藏滞后）。
+      label: '',
       leadingIcon: widget.prefix,
       trailingIcon: widget.suffix,
       singleLine: (widget.maxLines ?? 1) == 1,
@@ -611,8 +631,7 @@ class _AppCapsuleTextFieldState extends State<AppCapsuleTextField>
       onSubmitted: widget.onSubmitted,
       textStyle: widget.textStyle,
       cornerRadius: widget.cornerRadius,
-      insideMargin: widget.insideMargin ??
-          const EdgeInsets.symmetric(horizontal: Style.md, vertical: Style.sm),
+      insideMargin: margin,
       colors: MiuixTextFieldColors(
         backgroundColor: widget.fillColor ??
             tokens.colors.surfaceContainer.withValues(alpha: 0.5),
@@ -622,7 +641,64 @@ class _AppCapsuleTextFieldState extends State<AppCapsuleTextField>
     );
     // MiuixTextField 内部走 SDK material TextField，须经 MiuixCompat 桥接
     // （SDK Material 祖先 / ThemeData / MaterialLocalizations）。
-    final bridged = MiuixCompat(child: field);
+    Widget bridged = MiuixCompat(child: field);
+    final hint = widget.hint;
+    if (hint != null) {
+      // 自绘占位（与上游文本区同构对齐）：prefix 透明副本占位宽度 +
+      // 首行左对齐文本；controller 文本非空即即时隐藏（无动画）。
+      bridged = Stack(
+        children: [
+          bridged,
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Padding(
+                padding:
+                    EdgeInsets.only(top: margin.top, bottom: margin.bottom),
+                child: Row(
+                  children: [
+                    if (widget.prefix != null)
+                      Visibility(
+                        visible: false,
+                        maintainSize: true,
+                        maintainAnimation: true,
+                        maintainState: true,
+                        child: widget.prefix!,
+                      ),
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          left: widget.prefix != null ? 0 : margin.left,
+                          right: widget.suffix != null ? 0 : margin.right,
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: controller,
+                            builder: (context, value, _) => value.text.isEmpty
+                                ? Text(
+                                    hint,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: widget.hintStyle ??
+                                        TextStyle(
+                                          fontSize: 13,
+                                          color:
+                                              tokens.colors.onSurfaceVariant,
+                                        ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     final onPressed = widget.onPressed;
     if (onPressed == null) return bridged;
     return Listener(onPointerDown: (_) => onPressed(), child: bridged);
