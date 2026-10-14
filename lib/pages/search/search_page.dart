@@ -22,6 +22,7 @@ import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 
 /// 搜索页面 — 搜索框 + 热搜 + 历史 + 联想建议。
@@ -191,33 +192,26 @@ class _SearchPageState extends State<SearchPage> {
     return AppBar(
       leading: const AppBackButton(),
       titleSpacing: 0,
-      title: TextField(
+      title: AppCapsuleTextField(
         controller: _controller,
         focusNode: _focusNode,
         autofocus: true,
         textInputAction: TextInputAction.search,
         onSubmitted: _submitSearch,
-        decoration: InputDecoration(
-          hintText: '搜索视频、UP主...',
-          prefixIcon: AppIcon(AppIcons.search(), size: 20),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(100),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: AppThemeHost.of(context).colors.surfaceContainer.withValues(alpha: 0.5),
-          contentPadding: const EdgeInsets.symmetric(horizontal: Style.md),
-          suffixIcon: _controller.text.isNotEmpty
-              ? MiuixIconButton(
-
-                  onPressed: () {
-                    _controller.clear();
-                    setState(() => _suggests = []);
-                  },
-
-                  child: AppIcon(AppIcons.clear(), size: 18),
-              )
-              : null,
+        hint: '搜索视频、UP主...',
+        prefix: AppIcon(AppIcons.search(), size: 20),
+        suffix: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _controller,
+          builder: (context, value, _) {
+            if (value.text.isEmpty) return const SizedBox.shrink();
+            return MiuixIconButton(
+              onPressed: () {
+                _controller.clear();
+                setState(() => _suggests = []);
+              },
+              child: AppIcon(AppIcons.clear(), size: 18),
+            );
+          },
         ),
       ),
       actions: [

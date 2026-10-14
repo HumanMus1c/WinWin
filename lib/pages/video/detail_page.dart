@@ -2321,43 +2321,23 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             ),
             const SizedBox(width: Style.sm),
             Expanded(
-              child: TextField(
+              child: AppCapsuleTextField(
                 controller: _commentCtrl,
                 focusNode: _commentFocus,
                 enabled: enabled,
-                onTap: () async {
+                onPressed: () async {
                   // 点击输入框时检查登录态。
                   if (!await LoginGuard.requireLogin(context)) return;
                 },
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: Style.md,
-                    vertical: Style.sm,
-                  ),
-                  hintText: enabled
-                      ? (_replyHint ?? '发一条友善的评论吧~')
-                      : (disabledHint ?? '稿件不可用，暂无法评论'),
-                  hintStyle: TextStyle(
-                    fontSize: 13,
-                    color: tokens.colors.onSurfaceVariant,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: tokens.colors.surfaceContainer.withValues(
-                    alpha: 0.5,
-                  ),
-                  suffixIcon: _replyRoot != null
-                      ? MiuixIconButton(
-                          onPressed: _clearReplyTarget,
-
-                          child: AppIcon(AppIcons.clear(), size: 16),
-                        )
-                      : null,
-                ),
+                hint: enabled
+                    ? (_replyHint ?? '发一条友善的评论吧~')
+                    : (disabledHint ?? '稿件不可用，暂无法评论'),
+                suffix: _replyRoot != null
+                    ? MiuixIconButton(
+                        onPressed: _clearReplyTarget,
+                        child: AppIcon(AppIcons.clear(), size: 16),
+                      )
+                    : null,
                 onSubmitted: (_) => _sendComment(),
               ),
             ),

@@ -5,6 +5,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:winwin/theme/app_chrome.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/app_typography.dart';
+import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/miuix_compat.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -318,6 +319,13 @@ class AppTextField extends StatefulWidget {
     this.inputFormatters,
     this.minLines,
     this.maxLines = 1,
+    this.autofocus = false,
+    this.enabled = true,
+    this.readOnly = false,
+    this.textInputAction,
+    this.textStyle,
+    this.cursorColor,
+    this.colors,
   });
 
   final TextEditingController? controller;
@@ -334,60 +342,53 @@ class AppTextField extends StatefulWidget {
   final int? minLines;
   final int? maxLines;
 
+  /// 挂载后自动聚焦（对话框内输入常用）。
+  final bool autofocus;
+
+  /// 是否可交互（false = 禁用态）。
+  final bool enabled;
+
+  /// 只读（可聚焦选中但不可编辑）。
+  final bool readOnly;
+
+  /// 键盘 action 按钮类型（send / search 等）。
+  final TextInputAction? textInputAction;
+
+  /// 输入文本样式（null 取上游默认）。
+  final TextStyle? textStyle;
+
+  /// 光标颜色（null 取上游默认）。
+  final Color? cursorColor;
+
+  /// 上游配色覆盖（深色弹窗等定制场景；null 取 Miuix 主题色）。
+  final MiuixTextFieldColors? colors;
+
   @override
   State<AppTextField> createState() => _AppTextFieldState();
 }
 
-class _AppTextFieldState extends State<AppTextField> {
-  /// 内部自建的基础控制器（外部未传入 controller 且需要格式化桥接时）。
-  TextEditingController? _ownedController;
-
-  /// 格式化桥接控制器（仅 miuix 分支、且有格式化器时启用）。
-  _FormatterProxyController? _proxy;
-
+class _AppTextFieldState extends State<AppTextField>
+    with _FormatterBridgeMixin<AppTextField> {
   @override
   void didUpdateWidget(AppTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldHasFormatters = oldWidget.inputFormatters?.isNotEmpty ?? false;
-    final newHasFormatters = widget.inputFormatters?.isNotEmpty ?? false;
-    if (oldWidget.controller != widget.controller ||
-        oldHasFormatters != newHasFormatters) {
-      _disposeProxy();
-      return;
-    }
-    _proxy?.formatters = widget.inputFormatters ?? const [];
-  }
-
-  @override
-  void dispose() {
-    _disposeProxy();
-    super.dispose();
-  }
-
-  void _disposeProxy() {
-    _proxy?.dispose();
-    _proxy = null;
-    _ownedController?.dispose();
-    _ownedController = null;
-  }
-
-  /// 取得启用格式化桥接的控制器（惰性创建）。
-  TextEditingController _ensureProxy() {
-    final existing = _proxy;
-    if (existing != null) return existing;
-    final base =
-        widget.controller ?? (_ownedController ??= TextEditingController());
-    final proxy = _FormatterProxyController(base, widget.inputFormatters!);
-    _proxy = proxy;
-    return proxy;
+    handleBridgeUpdate(
+      oldWidget.controller,
+      oldWidget.inputFormatters,
+      widget.controller,
+      widget.inputFormatters,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     // 阶段5d-L1：M3 分支已移除；原生 MiuixTextField + 控制器层格式化桥接。
-    final hasFormatters = widget.inputFormatters?.isNotEmpty ?? false;
+    final formatters = widget.inputFormatters;
+    final hasFormatters = formatters?.isNotEmpty ?? false;
     final field = MiuixTextField(
-      controller: hasFormatters ? _ensureProxy() : widget.controller,
+      controller: hasFormatters
+          ? ensureBridge(widget.controller, formatters!)
+          : widget.controller,
       focusNode: widget.focusNode,
       onChanged: widget.onChanged,
       label: widget.label ?? widget.hint ?? '',
@@ -400,11 +401,73 @@ class _AppTextFieldState extends State<AppTextField> {
       keyboardType: widget.keyboardType,
       onSubmitted: widget.onSubmitted,
       obscureText: widget.obscureText,
+      autofocus: widget.autofocus,
+      enabled: widget.enabled,
+      readOnly: widget.readOnly,
+      textInputAction: widget.textInputAction,
+      textStyle: widget.textStyle,
+      cursorColor: widget.cursorColor,
+      colors: widget.colors,
     );
     // MiuixTextField 内部使用 SDK flutter/material 的 TextField：经
     // MiuixCompat 提供 SDK Material 祖先与 ThemeData/MaterialLocalizations
     // 桥接（缺失后者在 release 下会空断言崩溃，见阶段3复盘）。
     return MiuixCompat(child: field);
+  }
+}
+
+/// 格式化桥接状态基类：控制器层 formatter 桥接的生命周期（[AppTextField]
+/// 与 [AppCapsuleTextField] 共用）。
+///
+/// flutter_miuix 1.3.0 的 `MiuixTextField` 暂无 `inputFormatters` 参数，以
+/// [_FormatterProxyController] 在控制器层应用格式化器链——复用 Flutter 官方
+/// [TextInputFormatter.formatEditUpdate]（与 EditableText 内部同一机制），
+/// 上游补齐该参数后可整体移除。
+mixin _FormatterBridgeMixin<T extends StatefulWidget> on State<T> {
+  /// 内部自建的基础控制器（外部未传入 controller 且需要格式化桥接时）。
+  TextEditingController? _ownedController;
+
+  /// 格式化桥接控制器（有格式化器时启用）。
+  _FormatterProxyController? _bridge;
+
+  /// 取得启用格式化桥接的控制器（惰性创建）。
+  TextEditingController ensureBridge(
+    TextEditingController? base,
+    List<TextInputFormatter> formatters,
+  ) {
+    final existing = _bridge;
+    if (existing != null) return existing;
+    final resolved = base ?? (_ownedController ??= TextEditingController());
+    return _bridge = _FormatterProxyController(resolved, formatters);
+  }
+
+  /// 在 [didUpdateWidget] 中调用：控制器或格式化器集合变化时重建桥接。
+  void handleBridgeUpdate(
+    TextEditingController? oldController,
+    List<TextInputFormatter>? oldFormatters,
+    TextEditingController? newController,
+    List<TextInputFormatter>? newFormatters,
+  ) {
+    final oldHas = oldFormatters?.isNotEmpty ?? false;
+    final newHas = newFormatters?.isNotEmpty ?? false;
+    if (oldController != newController || oldHas != newHas) {
+      _disposeBridge();
+      return;
+    }
+    _bridge?.formatters = newFormatters ?? const [];
+  }
+
+  void _disposeBridge() {
+    _bridge?.dispose();
+    _bridge = null;
+    _ownedController?.dispose();
+    _ownedController = null;
+  }
+
+  @override
+  void dispose() {
+    _disposeBridge();
+    super.dispose();
   }
 }
 
@@ -429,6 +492,140 @@ class _FormatterProxyController extends TextEditingController {
     _inner.value = formatted;
     // 同步通知本代理的监听者（EditableText 依赖 read-back 取过滤结果）。
     notifyListeners();
+  }
+}
+
+/// 胶囊输入条替身（评论条 / 弹幕条 / 搜索框 / 聊天输入等"扁平胶囊"形态）。
+///
+/// 以 [MiuixTextField] 的 [cornerRadius]/[insideMargin]/[colors] 复刻 material
+/// `TextField` 的"圆角 100 + 无边框填充"口径：
+/// - 默认档：填充 `surfaceContainer` α0.5 + 紧凑内边距（评论条口径）；
+/// - 透明档（[fillColor] 传透明、[insideMargin] 传 [EdgeInsets.zero]）：
+///   外层容器已提供样式的场景（直播弹幕条 / 发弹幕面板），输入框自身不绘制。
+///
+/// [onPressed] 为"点击守卫"（登录态检查等）：MiuixTextField 无 onTap，经
+/// [Listener] 捕获指针按下（不参与手势竞技，输入框自身手势不受影响）。
+class AppCapsuleTextField extends StatefulWidget {
+  const AppCapsuleTextField({
+    super.key,
+    this.controller,
+    this.focusNode,
+    this.hint,
+    this.prefix,
+    this.suffix,
+    this.enabled = true,
+    this.autofocus = false,
+    this.obscureText = false,
+    this.readOnly = false,
+    this.onChanged,
+    this.onSubmitted,
+    this.onPressed,
+    this.keyboardType,
+    this.textInputAction,
+    this.inputFormatters,
+    this.minLines,
+    this.maxLines = 1,
+    this.textStyle,
+    this.fillColor,
+    this.insideMargin,
+    this.cornerRadius = Style.radiusFull,
+    this.borderColor,
+  });
+
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
+  final String? hint;
+  final Widget? prefix;
+  final Widget? suffix;
+  final bool enabled;
+  final bool autofocus;
+  final bool obscureText;
+  final bool readOnly;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+
+  /// 点击守卫（MiuixTextField 无 onTap，以 [Listener] 指针事件捕获）。
+  final VoidCallback? onPressed;
+
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? minLines;
+  final int? maxLines;
+
+  /// 输入文本样式（null 取上游默认）。
+  final TextStyle? textStyle;
+
+  /// 填充色；默认 `surfaceContainer` α0.5（评论条口径）；传透明即透明档。
+  final Color? fillColor;
+
+  /// 内边距；默认紧凑（水平 [Style.md] / 垂直 [Style.sm]）。
+  final EdgeInsets? insideMargin;
+
+  final double cornerRadius;
+
+  /// 聚焦边框色；默认主题 primary；透明档可传透明关闭。
+  final Color? borderColor;
+
+  @override
+  State<AppCapsuleTextField> createState() => _AppCapsuleTextFieldState();
+}
+
+class _AppCapsuleTextFieldState extends State<AppCapsuleTextField>
+    with _FormatterBridgeMixin<AppCapsuleTextField> {
+  @override
+  void didUpdateWidget(AppCapsuleTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    handleBridgeUpdate(
+      oldWidget.controller,
+      oldWidget.inputFormatters,
+      widget.controller,
+      widget.inputFormatters,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = AppThemeHost.of(context);
+    final formatters = widget.inputFormatters;
+    final hasFormatters = formatters?.isNotEmpty ?? false;
+    final field = MiuixTextField(
+      controller: hasFormatters
+          ? ensureBridge(widget.controller, formatters!)
+          : widget.controller,
+      focusNode: widget.focusNode,
+      onChanged: widget.onChanged,
+      label: widget.hint ?? '',
+      useLabelAsPlaceholder: widget.hint != null,
+      leadingIcon: widget.prefix,
+      trailingIcon: widget.suffix,
+      singleLine: (widget.maxLines ?? 1) == 1,
+      minLines: widget.minLines,
+      maxLines: widget.maxLines,
+      enabled: widget.enabled,
+      readOnly: widget.readOnly,
+      autofocus: widget.autofocus,
+      obscureText: widget.obscureText,
+      keyboardType: widget.keyboardType,
+      textInputAction: widget.textInputAction,
+      onSubmitted: widget.onSubmitted,
+      textStyle: widget.textStyle,
+      cornerRadius: widget.cornerRadius,
+      insideMargin: widget.insideMargin ??
+          const EdgeInsets.symmetric(horizontal: Style.md, vertical: Style.sm),
+      colors: MiuixTextFieldColors(
+        backgroundColor: widget.fillColor ??
+            tokens.colors.surfaceContainer.withValues(alpha: 0.5),
+        labelColor: tokens.colors.onSurfaceVariant,
+        borderColor: widget.borderColor ?? tokens.colors.primary,
+      ),
+    );
+    // MiuixTextField 内部走 SDK material TextField，须经 MiuixCompat 桥接
+    // （SDK Material 祖先 / ThemeData / MaterialLocalizations）。
+    final bridged = MiuixCompat(child: field);
+    final onPressed = widget.onPressed;
+    if (onPressed == null) return bridged;
+    return Listener(onPointerDown: (_) => onPressed(), child: bridged);
   }
 }
 

@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
@@ -72,30 +72,11 @@ class SimpleCommentInputBar extends StatelessWidget {
             ),
             const SizedBox(width: Style.sm),
             Expanded(
-              child: TextField(
+              child: AppCapsuleTextField(
                 controller: controller,
                 focusNode: focusNode,
                 enabled: enabled,
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: Style.md,
-                    vertical: Style.sm,
-                  ),
-                  hintText: hintText,
-                  hintStyle: TextStyle(
-                    fontSize: 13,
-                    color: tokens.colors.onSurfaceVariant,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: tokens.colors.surfaceContainer.withValues(
-                    alpha: 0.5,
-                  ),
-                ),
+                hint: hintText,
                 onSubmitted: (_) => onSend(),
               ),
             ),

@@ -15,6 +15,7 @@ import 'package:winwin/utils/crc32.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 
@@ -289,19 +290,9 @@ class _RuleListSection extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: TextField(
+                child: AppCapsuleTextField(
                   controller: controller,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    hintText: hint,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: Style.md,
-                      vertical: Style.sm,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(Style.radiusSm),
-                    ),
-                  ),
+                  hint: hint,
                   onSubmitted: (_) => onAdd(type),
                 ),
               ),

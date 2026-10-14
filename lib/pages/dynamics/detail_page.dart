@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:cupertino_ui/cupertino_ui.dart'
     show cupertinoDesktopTextSelectionHandleControls;
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
@@ -421,9 +422,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                                 letterSpacing: 0.2,
                               ),
                             )
-                          : SelectableText(
-                            selectionControls: cupertinoDesktopTextSelectionHandleControls,
-                            contextMenuBuilder: buildMiuixEditableTextContextMenu,
+                          : AppSelectableText(
                               item.text!,
                               style: tokens.text.bodyLarge?.copyWith(
                                 height: 1.6,

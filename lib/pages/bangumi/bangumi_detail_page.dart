@@ -4,9 +4,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIcon
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
-import 'package:cupertino_ui/cupertino_ui.dart'
-    show cupertinoDesktopTextSelectionHandleControls;
-import 'package:winwin/common/widgets/miuix_context_menu.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -389,14 +387,11 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('跳转到集数'),
-        content: TextField(
+        content: AppTextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
           autofocus: true,
-          decoration: InputDecoration(
-            hintText: '输入集数 (1 - ${episodes.length})',
-            border: const OutlineInputBorder(),
-          ),
+          hint: '输入集数 (1 - ${episodes.length})',
         ),
         actions: [
           MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx)),
@@ -730,9 +725,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SelectableText(
-                selectionControls: cupertinoDesktopTextSelectionHandleControls,
-                contextMenuBuilder: buildMiuixEditableTextContextMenu,
+              AppSelectableText(
                 detail.title,
                 style: const TextStyle(
                   fontSize: 19,
@@ -890,9 +883,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           ),
         ),
         Expanded(
-          child: SelectableText(
-            selectionControls: cupertinoDesktopTextSelectionHandleControls,
-            contextMenuBuilder: buildMiuixEditableTextContextMenu,
+          child: AppSelectableText(
             value,
             style: TextStyle(
               fontSize: 11.5,
@@ -917,9 +908,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 6),
-        SelectableText(
-          selectionControls: cupertinoDesktopTextSelectionHandleControls,
-          contextMenuBuilder: buildMiuixEditableTextContextMenu,
+        AppSelectableText(
           detail.evaluate,
           maxLines: _descExpanded ? null : 4,
           style: TextStyle(

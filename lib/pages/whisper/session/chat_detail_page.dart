@@ -293,24 +293,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         child: Row(
           children: [
             Expanded(
-              child: TextField(
+              child: AppCapsuleTextField(
                 controller: _inputCtrl,
                 minLines: 1,
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
-                decoration: InputDecoration(
-                  hintText: '发送消息',
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: Style.md, vertical: Style.sm),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(Style.radiusFull),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: tokens.colors.surfaceContainerHighest,
-                ),
+                hint: '发送消息',
+                fillColor: tokens.colors.surfaceContainerHighest,
               ),
             ),
             const SizedBox(width: Style.sm),

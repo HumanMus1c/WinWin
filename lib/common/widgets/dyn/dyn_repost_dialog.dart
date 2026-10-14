@@ -122,22 +122,12 @@ class _DynRepostDialogState extends State<DynRepostDialog> {
               ),
             ),
             const SizedBox(height: Style.md),
-            TextField(
+            AppTextField(
               controller: _ctrl,
               maxLines: 3,
               minLines: 2,
               autofocus: true,
-              decoration: InputDecoration(
-                hintText: '说点什么…（可留空）',
-                hintStyle: TextStyle(fontSize: 13, color: cs.outline),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: Style.md,
-                  vertical: Style.sm,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(Style.radiusSm),
-                ),
-              ),
+              hint: '说点什么…（可留空）',
             ),
           ],
         ),

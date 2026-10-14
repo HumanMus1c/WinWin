@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 
 /// 回归：Windows 平台上 SelectableRegion 的右键菜单必须走
 /// [buildMiuixTextSelectionContextMenu]（Miuix 面板），而非选择控件自带的
@@ -72,24 +73,22 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('Windows 右键 SelectableText：显示 Miuix 菜单而非默认工具栏', (tester) async {
+  testWidgets('Windows 右键 AppSelectableText：显示 Miuix 菜单而非默认工具栏', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
 
     await tester.pumpWidget(
       host(
         SizedBox(
           width: 300,
-          child: SelectableText(
+          child: AppSelectableText(
             'Hello selectable text for context menu test',
-            selectionControls: cupertinoDesktopTextSelectionHandleControls,
-            contextMenuBuilder: buildMiuixEditableTextContextMenu,
           ),
         ),
       ),
     );
 
     // 鼠标拖选一段文本（从首行行内起点向右拖）。
-    final textFinder = find.byType(SelectableText).first;
+    final textFinder = find.byType(Text).first;
     final start = tester.getTopLeft(textFinder) + const Offset(4, 8);
     final drag = await tester.startGesture(start, kind: PointerDeviceKind.mouse);
     await drag.moveTo(start + const Offset(140, 0));

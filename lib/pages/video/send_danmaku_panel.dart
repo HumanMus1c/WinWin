@@ -1,5 +1,6 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
@@ -271,25 +272,19 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
                 borderRadius: BorderRadius.circular(Style.radiusSm),
               ),
               alignment: Alignment.centerLeft,
-              child: TextField(
+              child: AppCapsuleTextField(
                 controller: _textController,
                 focusNode: _focusNode,
                 autofocus: true,
-                maxLength: 100,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _onSend(),
                 onChanged: (_) => setState(() {}),
-                style: tokens.text.bodyLarge,
-                decoration: InputDecoration(
-                  isCollapsed: true,
-                  hintText: _danmakuPlaceholder(Accounts.main.isLogin),
-                  hintStyle: TextStyle(
-                    color: tokens.colors.onSurfaceVariant,
-                    fontSize: 15,
-                  ),
-                  counterText: '',
-                  border: InputBorder.none,
-                ),
+                textStyle: tokens.text.bodyLarge,
+                hint: _danmakuPlaceholder(Accounts.main.isLogin),
+                inputFormatters: [LengthLimitingTextInputFormatter(100)],
+                fillColor: const Color(0x00000000),
+                borderColor: const Color(0x00000000),
+                insideMargin: EdgeInsets.zero,
               ),
             ),
             const SizedBox(height: Style.xs),
@@ -387,34 +382,15 @@ class _SendDanmakuPanelState extends State<SendDanmakuPanel>
         child: Row(
           children: [
             Expanded(
-              child: TextField(
+              child: AppCapsuleTextField(
                 controller: _textController,
                 focusNode: _focusNode,
-                maxLength: 100,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _onSend(),
                 onChanged: (_) => setState(() {}),
-                style: tokens.text.bodyLarge,
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: Style.md,
-                    vertical: Style.sm,
-                  ),
-                  hintText: _danmakuPlaceholder(Accounts.main.isLogin),
-                  hintStyle: TextStyle(
-                    fontSize: 13,
-                    color: tokens.colors.onSurfaceVariant,
-                  ),
-                  counterText: '',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: tokens.colors.surfaceContainer
-                      .withValues(alpha: 0.5),
-                ),
+                textStyle: tokens.text.bodyLarge,
+                hint: _danmakuPlaceholder(Accounts.main.isLogin),
+                inputFormatters: [LengthLimitingTextInputFormatter(100)],
               ),
             ),
             const SizedBox(width: Style.sm),

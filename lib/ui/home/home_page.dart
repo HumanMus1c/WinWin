@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/models/common/home_tab.dart';
 import 'package:winwin/pages/follow/view.dart';
@@ -134,36 +134,42 @@ class _HomeHeader extends StatelessWidget {
               Expanded(
                 child: SizedBox(
                   height: 38,
-                  child: TextField(
-                    readOnly: true,
+                  child: GestureDetector(
                     onTap: () => Navigator.push(
                       context,
                       AppRoute(
                         builder: (_) => const SearchPage(),
                       ),
                     ),
-                    decoration: InputDecoration(
-                      hintText: '搜索视频、UP主...',
-                      hintStyle: TextStyle(
-                        fontSize: 13,
-                        color: searchFg.withValues(alpha: 0.7),
-                      ),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: Style.md,
-                        vertical: 8,
-                      ),
-                      prefixIcon: AppIcon(
-                        AppIcons.search(),
-                        size: 20,
-                        color: searchFg,
-                      ),
-                      border: OutlineInputBorder(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: searchBg,
                         borderRadius: BorderRadius.circular(100),
-                        borderSide: BorderSide.none,
                       ),
-                      filled: true,
-                      fillColor: searchBg,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Style.md,
+                      ),
+                      child: Row(
+                        children: [
+                          AppIcon(
+                            AppIcons.search(),
+                            size: 20,
+                            color: searchFg,
+                          ),
+                          const SizedBox(width: Style.sm),
+                          Expanded(
+                            child: Text(
+                              '搜索视频、UP主...',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: searchFg.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

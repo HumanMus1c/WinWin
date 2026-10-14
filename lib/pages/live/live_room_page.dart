@@ -750,14 +750,15 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             '发送直播弹幕',
             style: TextStyle(color: AppColors.white, fontSize: 16),
           ),
-          content: TextField(
+          content: AppTextField(
             controller: ctrl,
             autofocus: true,
-            style: const TextStyle(color: AppColors.white),
-            decoration: const InputDecoration(
-              hintText: '输入弹幕内容...',
-              hintStyle: TextStyle(color: AppColors.white54),
-              border: OutlineInputBorder(),
+            textStyle: const TextStyle(color: AppColors.white),
+            hint: '输入弹幕内容...',
+            colors: MiuixTextFieldColors(
+              backgroundColor: AppColors.white.withValues(alpha: 0.08),
+              labelColor: AppColors.white54,
+              borderColor: AppColors.white70,
             ),
             onSubmitted: (text) async {
               Navigator.pop(dialogCtx);
@@ -2177,21 +2178,17 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: AppCapsuleTextField(
                       controller: _danmakuInputCtrl,
                       focusNode: _danmakuInputFocusNode,
                       enabled: !_isSendingDanmaku,
                       textInputAction: TextInputAction.send,
-                      textAlignVertical: TextAlignVertical.center,
                       onSubmitted: (_) => _sendDanmaku(),
-                      style: const TextStyle(fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: _isLiving ? '发个弹幕和主播互动吧~' : '未开播，无法发送弹幕',
-                        hintStyle: TextStyle(color: cs.outline, fontSize: 13),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
+                      textStyle: const TextStyle(fontSize: 13),
+                      hint: _isLiving ? '发个弹幕和主播互动吧~' : '未开播，无法发送弹幕',
+                      fillColor: const Color(0x00000000),
+                      borderColor: const Color(0x00000000),
+                      insideMargin: EdgeInsets.zero,
                       onChanged: (_) => setState(() {}),
                     ),
                   ),

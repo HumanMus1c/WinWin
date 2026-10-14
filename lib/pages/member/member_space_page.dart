@@ -6,9 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
-import 'package:cupertino_ui/cupertino_ui.dart'
-    show cupertinoDesktopTextSelectionHandleControls;
-import 'package:winwin/common/widgets/miuix_context_menu.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
@@ -281,17 +279,17 @@ class _DemoMedalDialogState extends State<_DemoMedalDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
+          AppTextField(
             controller: _nameCtrl,
             autofocus: true,
-            decoration: const InputDecoration(labelText: '牌子名'),
+            label: '牌子名',
           ),
           const SizedBox(height: 10),
-          TextField(
+          AppTextField(
             controller: _levelCtrl,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(labelText: '等级'),
+            label: '等级',
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -1358,9 +1356,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             const SkeletonLine(width: 220, height: 14),
           ] else if (card.sign?.isNotEmpty ?? false) ...[
             const SizedBox(height: Style.sm),
-            SelectableText(
-              selectionControls: cupertinoDesktopTextSelectionHandleControls,
-              contextMenuBuilder: buildMiuixEditableTextContextMenu,
+            AppSelectableText(
               card.sign!.trim(),
               style: tokens.text.bodyMedium?.copyWith(
                 color: cs.onSurface.withValues(alpha: 0.85),
@@ -3322,9 +3318,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                           overrideKey: 'space.uid',
                           value: widget.mid,
                           title: 'UID',
-                          builder: (context, v) => SelectableText(
-                            selectionControls: cupertinoDesktopTextSelectionHandleControls,
-                            contextMenuBuilder: buildMiuixEditableTextContextMenu,
+                          builder: (context, v) => AppSelectableText(
                             '${v?.round() ?? widget.mid}',
                             style: const TextStyle(
                                 fontSize: 13, fontWeight: FontWeight.w500),
@@ -3374,9 +3368,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
           Expanded(
             child: customValue ??
                 (value != null
-                    ? SelectableText(
-                        selectionControls: cupertinoDesktopTextSelectionHandleControls,
-                        contextMenuBuilder: buildMiuixEditableTextContextMenu,
+                    ? AppSelectableText(
                         value,
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                       )

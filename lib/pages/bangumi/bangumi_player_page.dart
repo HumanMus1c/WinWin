@@ -6,9 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'package:cupertino_ui/cupertino_ui.dart'
-    show cupertinoDesktopTextSelectionHandleControls;
-import 'package:winwin/common/widgets/miuix_context_menu.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/comment/emote_picker.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
@@ -1961,39 +1959,23 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             ),
             const SizedBox(width: Style.sm),
             Expanded(
-              child: TextField(
+              child: AppCapsuleTextField(
                 controller: _commentCtrl,
                 focusNode: _commentFocus,
                 enabled: enabled && !_sendingComment,
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: Style.lg,
-                    vertical: Style.sm,
-                  ),
-                  hintText: enabled
-                      ? (_replyHint ?? '发一条友善的评论吧~')
-                      : '当前剧集暂不支持评论',
-                  hintStyle: TextStyle(
-                    fontSize: 13,
-                    color: tokens.colors.onSurfaceVariant,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: tokens.colors.surfaceContainer
-                      .withValues(alpha: 0.5),
-                  suffixIcon: _replyRoot != null
-                      ? MiuixIconButton(
-
-                          onPressed: _clearReplyTarget,
-
-                          child: AppIcon(AppIcons.clear(), size: 16),
-                      )
-                      : null,
+                hint: enabled
+                    ? (_replyHint ?? '发一条友善的评论吧~')
+                    : '当前剧集暂不支持评论',
+                insideMargin: const EdgeInsets.symmetric(
+                  horizontal: Style.lg,
+                  vertical: Style.sm,
                 ),
+                suffix: _replyRoot != null
+                    ? MiuixIconButton(
+                        onPressed: _clearReplyTarget,
+                        child: AppIcon(AppIcons.clear(), size: 16),
+                      )
+                    : null,
                 onSubmitted: (_) => _sendComment(),
               ),
             ),
@@ -2296,9 +2278,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             if (hasActors) ...[
               const Text('声优 / 演员', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              SelectableText(
-                selectionControls: cupertinoDesktopTextSelectionHandleControls,
-                contextMenuBuilder: buildMiuixEditableTextContextMenu,
+              AppSelectableText(
                 widget.detail.actors,
                 style: TextStyle(fontSize: 12, color: grayColor, height: 1.4),
               ),
@@ -2307,9 +2287,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             if (hasStaff) ...[
               const Text('制作人员', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              SelectableText(
-                selectionControls: cupertinoDesktopTextSelectionHandleControls,
-                contextMenuBuilder: buildMiuixEditableTextContextMenu,
+              AppSelectableText(
                 widget.detail.staff,
                 style: TextStyle(fontSize: 12, color: grayColor, height: 1.4),
               ),
