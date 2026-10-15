@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -160,9 +161,14 @@ class _PopupOverlay extends StatelessWidget {
     final selectedContentColor = baseColors.selectedContentColor;
     // 文本基底：覆写 WidgetsApp 的默认"黄绿双下划线"错误样式
     // （浮层无 Material/DefaultTextStyle 时 Text 合并到该样式）。
+    final appTokens = AppThemeHost.of(context);
     final bodyStyle =
-        (AppThemeHost.of(context).text.bodyMedium ?? const TextStyle())
+        (appTokens.text.bodyMedium ?? const TextStyle())
             .copyWith(decoration: TextDecoration.none);
+    // 1px 描边：与 MiuixOverlayPanel（毛玻璃面板弹层）同源，消除
+    // 「播放器控制栏弹层缺白边」与首页卡片弹层的观感劈叉。
+    final outlineColor =
+        MiuixFrostedSurface.outlineColor(isDark: appTokens.isDark);
     // 条目字号继承触发控件（如播放器控制条 12px），避免弹层与其割裂。
     final rowTextStyle = itemTextStyle == null
         ? bodyStyle
@@ -209,6 +215,7 @@ class _PopupOverlay extends StatelessWidget {
                 color: muiColors.surfaceContainer.withValues(
                   alpha: kMiuixSurfaceAlpha,
                 ),
+                border: Border.all(color: outlineColor, width: 1),
                 shadowElevation: 6,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),

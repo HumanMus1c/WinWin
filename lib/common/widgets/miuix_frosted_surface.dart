@@ -59,15 +59,21 @@ class MiuixFrostedSurface extends StatelessWidget {
   /// 使渐变整体移出可视裁剪区。分档计算见 [bleedFor]。
   static double bleedFor(double blurSigma) => blurSigma * 3;
 
+  /// 浮层 1px 描边的**单一来源**（毛玻璃面板 [MiuixOverlayPanel] 与弹层菜单
+  /// `MiuixPopupMenu` 共用），保证两处弹层的边线口径一致。
+  ///
+  /// 对比度高于初版（0.12/0.08）：压在已与背景混合的半透明底上，需要更高
+  /// alpha 才能定义一条稳定可见的边线。
+  static Color outlineColor({required bool isDark}) => isDark
+      ? AppColors.white.withValues(alpha: 0.18)
+      : AppColors.black.withValues(alpha: 0.12);
+
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final isDark = tokens.isDark;
     final baseColor = isDark ? const Color(0xFF262626) : const Color(0xFFEAEAEA);
-    // 描边对比度上调（原 0.12/0.08 太弱，不足以定义一条稳定可见的边线）。
-    final outlineColor = isDark
-        ? AppColors.white.withValues(alpha: 0.18)
-        : AppColors.black.withValues(alpha: 0.12);
+    final outlineColor = MiuixFrostedSurface.outlineColor(isDark: isDark);
     final isFullBleed = borderRadius <= 0;
     final radius = BorderRadius.circular(isFullBleed ? 0 : borderRadius);
 
