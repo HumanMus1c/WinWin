@@ -71,8 +71,10 @@ ClipRRect(radius)
 ## 五、验证
 - `flutter analyze`（两文件）：**No issues found**。
 - Debug 构建：**√ Built** `build\windows\x64\runner\Debug\winwin.exe`（54.7s）。
-- Release：Dart/AOT 编译完成（114.7s），仅在拷贝 `WebView2Loader.dll` 时失败——被**正在运行的 winwin(PID 32616)** 锁定其 Release 输出目录（环境占用，非代码问题）；未结束该进程。
+- Release：**√ Built** `build\windows\x64\runner\Release\winwin.exe`（首次因运行中 winwin(PID 32616) 锁定 `WebView2Loader.dll` 失败；用户关闭实例后复跑，**20.7s √ Built**）。
 
 ## 六、提交
 
-- 修复提交：`86a4055`（两源文件 + 本文档；main）
+- `86a4055` `[fix](ui)`: 毛玻璃面板边缘无渐变（2 源文件 + 本文档）
+- `cf368c2` `[docs]`: 提交 hash 回填 + 首次双构建收口
+- 本提交 `[docs]`: 双构建收口（Release 复跑 √ Built）
