@@ -348,14 +348,27 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
   /// 分类标签条带：用来判定"是否已吸附并入顶栏"（其顶部到达顶栏下沿即为已合并）。
   final GlobalKey _tabBandKey = GlobalKey();
 
-  /// 分类标签条是否已**吸附并入顶栏**：其顶部到达顶栏下沿即视为合并。
+  /// 顶栏覆盖层容器（固定 [_topBarHeight] 高）：作为"顶栏下沿"的坐标锚点。
+  final GlobalKey _topBarKey = GlobalKey();
+
+  /// 分类标签条是否已**吸附并入顶栏**：标签条顶沿到达顶栏下沿即视为合并。
   ///
   /// 顶栏常态**不画底**，只有本判定为真时才亮起通栏毛玻璃带（与标签条带拼成
   /// 一条完整顶栏）——即"只有分类 Tab 栏与其吸附合并时才展示模糊背景"。
+  ///
+  /// 判据取**两个 RenderBox 在同一全局坐标系内的相对位置**（顶栏下沿 vs 标签条顶沿）：
+  /// 二者的公共偏移（窗口层 / MaterialApp 层 / 页面内边距）相减抵消，故与窗口尺寸、
+  /// 自绘标题栏高度无关。〔早前用"标签条全局 dy ≤ 56"的**绝对**判据，会因这些公共
+  /// 偏移恒为 false，导致吸附后顶栏始终纯透明。〕
   bool get _tabBandMerged {
-    final box = _tabBandKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null || !box.attached || !box.hasSize) return false;
-    return box.localToGlobal(Offset.zero).dy <= _topBarHeight + 0.5;
+    final bar = _topBarKey.currentContext?.findRenderObject() as RenderBox?;
+    final tab = _tabBandKey.currentContext?.findRenderObject() as RenderBox?;
+    if (bar == null || tab == null) return false;
+    if (!bar.attached || !tab.attached) return false;
+    if (!bar.hasSize || !tab.hasSize) return false;
+    final barBottom = bar.localToGlobal(Offset(0, bar.size.height)).dy;
+    final tabTop = tab.localToGlobal(Offset.zero).dy;
+    return tabTop <= barBottom + 0.5;
   }
   final List<AppTabController> _pendingDisposeControllers = [];
   bool _isDisposed = false;
@@ -843,17 +856,25 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 本页自带顶栏容器（返回/分享/更多，常态透明）+ 独立的封面容器 +
-    // 分类标签条容器；AppScaffold 不再预留顶部安全行与悬浮返回，避免双顶栏
-    // （50px 空白 + 双返回按钮）挤压头图。
+    // AppScaffold 不再预留顶部安全行与悬浮返回，避免双顶栏（50px 空白 +
+    // 双返回按钮）挤压头图。
+    final content = switch (_spaceState) {
+      Loading() => _buildSpaceContent(null),
+      Error(:final errMsg) => _buildError(errMsg, _loadAll),
+      Success(:final response) => _buildSpaceContent(response),
+    };
+    // 顶栏（返回/分享/更多）是**页面级覆盖层**，与封面容器、滚动视图解耦：
+    // 常态透明，仅当分类标签条吸附并入本栏（`_tabBandMerged`）时才亮通栏毛玻璃带。
+    // 用 Stack 叠加而非布局槽，是为让头图能**铺到屏幕最顶端**（不被顶栏下推）。
     return AppScaffold(
       reserveTopStrip: false,
       showBackButton: false,
-      body: switch (_spaceState) {
-        Loading() => _buildSpaceContent(null),
-        Error(:final errMsg) => _buildError(errMsg, _loadAll),
-        Success(:final response) => _buildSpaceContent(response),
-      },
+      body: _spaceState is Success
+          ? Stack(
+              fit: StackFit.expand,
+              children: [content, _buildTopBarOverlay()],
+            )
+          : content,
     );
   }
 
@@ -879,107 +900,21 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
             // 顶栏容器（**与封面容器解耦**）：只承载返回/分享/更多，不再挂头图
             // `flexibleSpace`。常态**不画任何底**（透明），仅当分类标签条吸附并入
             // 本栏时（见 `_tabBandMerged`）才亮起通栏毛玻璃带，与之合成一条顶栏。
+            // 顶栏 sliver：只承载**封面**。头图铺满 [0, _coverHeight)，且从屏幕
+            // **最顶端**开始（不再被顶栏下推 56px，故不会被"裁掉一条"）。
+            // 返回/分享/更多按钮与"按需毛玻璃带"已抽到页面级覆盖层
+            // （`_buildTopBarOverlay`），与本 sliver 解耦。
             SliverAppBar(
               pinned: true,
+              expandedHeight: _coverHeight,
               toolbarHeight: _topBarHeight,
               elevation: 0,
               scrolledUnderElevation: 0,
               backgroundColor: AppColors.transparent,
               surfaceTintColor: AppColors.transparent,
-              leading: MiuixIconButton(
-
-                onPressed: () => Navigator.maybePop(context),
-
-                child: AppTooltip(message: '返回', child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppColors.black.withValues(alpha: 0.35),
-                    shape: BoxShape.circle,
-                  ),
-                  child: AppIcon(AppIcons.back(), color: AppColors.white, size: 20),
-                )),
-              ),
-              actions: [
-                if (!isOwner)
-                  MiuixIconButton(
-
-                    onPressed: () => _copyToClipboard('https://space.bilibili.com/${widget.mid}', '主页链接已复制'),
-
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.black.withValues(alpha: 0.35),
-                        shape: BoxShape.circle,
-                      ),
-                      child: AppIcon(AppIcons.share(), color: AppColors.white, size: 20),
-                    ),
-                  ),
-                // 阶段5d-L1：M3 冻结分支已移除
-                MiuixPopupMenu(
-                    title: '更多选项',
-                    entries: [
-                      MiuixDropdownEntry(
-                        items: [
-                          MiuixDropdownItem(
-                            text: '复制 UID',
-                            onClick: () => _copyToClipboard(
-                              widget.mid.toString(),
-                              'UID 已复制',
-                            ),
-                          ),
-                          MiuixDropdownItem(
-                            text: '复制主页链接',
-                            onClick: () => _copyToClipboard(
-                              'https://space.bilibili.com/${widget.mid}',
-                              '主页链接已复制',
-                            ),
-                          ),
-                          if (!isOwner)
-                            MiuixDropdownItem(
-                              text: '举报该用户',
-                              onClick: () => showToast(context, '已收到举报请求'),
-                            ),
-                        ],
-                      ),
-                    ],
-                    child: AppTooltip(
-                      message: '更多选项',
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.black.withValues(alpha: 0.35),
-                          shape: BoxShape.circle,
-                        ),
-                        child: AppIcon(
-                          AppIcons.more(),
-                          color: AppColors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                const SizedBox(width: Style.sm),
-              ],
-              // 顶栏常态透明；只有标签条吸附并入（合并）时才亮起通栏毛玻璃带，
-              // 与标签条带拼成一条完整顶栏。`outline: false`：本带不画线，分隔线
-              // 只由标签条带底部 1px 承担，贴合时才不会叠出双线。
-              flexibleSpace: ListenableBuilder(
-                listenable: _scrollController,
-                builder: (context, _) {
-                  if (!_tabBandMerged) return const SizedBox.shrink();
-                  return const MiuixFrostedSurface(
-                    borderRadius: 0,
-                    outline: false,
-                    child: SizedBox.expand(),
-                  );
-                },
-              ),
-            ),
-            // 封面容器（**独立**）：头图自成一格，随内容滚动、从顶栏后方经过。
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: _coverHeight,
-                child: _buildHeaderBackground(context, card, images),
+              automaticallyImplyLeading: false,
+              flexibleSpace: FlexibleSpaceBar(
+                background: _buildHeaderBackground(context, card, images),
               ),
             ),
             SliverToBoxAdapter(
@@ -1022,6 +957,135 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
             key: ValueKey(t),
             child: _buildTabContent(t, card),
           )).toList(),
+        ),
+      ),
+    );
+  }
+
+  /// 顶栏覆盖层（页面级、固定 [_topBarHeight] 高、不随内容滚动）。
+  ///
+  /// 层内自下而上：**按需通栏毛玻璃带**（仅当分类标签条吸附并入时，见
+  /// [`_tabBandMerged`]）→ 返回/分享/更多按钮。带子在下、按钮在上，
+  /// 避免半透明带盖住按钮（`flutter` 的 `AppBar` 亦按此序：flexibleSpace 在下、
+  /// 工具栏内容在上）。
+  ///
+  /// 本层与封面 sliver 完全解耦：因此头图可以铺到屏幕最顶端，而按钮与之无关。
+  Widget _buildTopBarOverlay() {
+    final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: _topBarHeight,
+      child: KeyedSubtree(
+        key: _topBarKey,
+        child: ListenableBuilder(
+          listenable: _scrollController,
+          builder: (context, _) {
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // 毛玻璃带：常态不画（顶栏纯透明），只有与标签条带合并时才亮起，
+                // 与之拼成一条完整顶栏。`outline: false`：本带不画线，分隔线只由
+                // 标签条带底部 1px 承担，贴合时不会叠出双线。
+                if (_tabBandMerged)
+                  const MiuixFrostedSurface(
+                    borderRadius: 0,
+                    outline: false,
+                    child: SizedBox.expand(),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+                  child: Row(
+                    children: [
+                      MiuixIconButton(
+                        onPressed: () => Navigator.maybePop(context),
+                        child: AppTooltip(
+                          message: '返回',
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.black.withValues(alpha: 0.35),
+                              shape: BoxShape.circle,
+                            ),
+                            child: AppIcon(
+                              AppIcons.back(),
+                              color: AppColors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      if (!isOwner)
+                        MiuixIconButton(
+                          onPressed: () => _copyToClipboard(
+                            'https://space.bilibili.com/${widget.mid}',
+                            '主页链接已复制',
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.black.withValues(alpha: 0.35),
+                              shape: BoxShape.circle,
+                            ),
+                            child: AppIcon(
+                              AppIcons.share(),
+                              color: AppColors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      // 阶段5d-L1：M3 冻结分支已移除
+                      MiuixPopupMenu(
+                        title: '更多选项',
+                        entries: [
+                          MiuixDropdownEntry(
+                            items: [
+                              MiuixDropdownItem(
+                                text: '复制 UID',
+                                onClick: () => _copyToClipboard(
+                                  widget.mid.toString(),
+                                  'UID 已复制',
+                                ),
+                              ),
+                              MiuixDropdownItem(
+                                text: '复制主页链接',
+                                onClick: () => _copyToClipboard(
+                                  'https://space.bilibili.com/${widget.mid}',
+                                  '主页链接已复制',
+                                ),
+                              ),
+                              if (!isOwner)
+                                MiuixDropdownItem(
+                                  text: '举报该用户',
+                                  onClick: () => showToast(context, '已收到举报请求'),
+                                ),
+                            ],
+                          ),
+                        ],
+                        child: AppTooltip(
+                          message: '更多选项',
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.black.withValues(alpha: 0.35),
+                              shape: BoxShape.circle,
+                            ),
+                            child: AppIcon(
+                              AppIcons.more(),
+                              color: AppColors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
