@@ -107,3 +107,42 @@ class SearchHistoryService extends ChangeNotifier {
     );
   }
 }
+
+/// 搜索关键词历史（Hive `localCache` 的 [storageKey] 键）。
+///
+/// 单点承载关键词历史的存储口径（上限 [maxEntries]、去重前插），
+/// 供搜索入口页与搜索结果页共用，避免两处各写一份存储规则。
+class SearchKeywordHistory {
+  const SearchKeywordHistory._();
+
+  static const String storageKey = 'searchHistory';
+  static const int maxEntries = 20;
+
+  /// 读取历史（无记录或类型不符返回空列表）。
+  static List<String> load() {
+    final list = GStorage.localCache.get(storageKey);
+    return list is List ? list.cast<String>() : <String>[];
+  }
+
+  /// 记录一次搜索（去重后置顶、截断到 [maxEntries]），返回写入后的列表。
+  static List<String> push(List<String> current, String keyword) {
+    final next = List<String>.of(current)..remove(keyword);
+    next.insert(0, keyword);
+    final trimmed =
+        next.length > maxEntries ? next.sublist(0, maxEntries) : next;
+    GStorage.localCache.put(storageKey, trimmed);
+    return trimmed;
+  }
+
+  /// 移除单条记录，返回移除后的列表。
+  static List<String> remove(List<String> current, String keyword) {
+    final next = List<String>.of(current)..remove(keyword);
+    GStorage.localCache.put(storageKey, next);
+    return next;
+  }
+
+  /// 清空全部关键词历史。
+  static void clear() {
+    GStorage.localCache.delete(storageKey);
+  }
+}

@@ -6,7 +6,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
-import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/search.dart';
@@ -83,10 +82,7 @@ class _SearchPageState extends State<SearchPage> {
   // ─────────────────────────── 数据加载 ───────────────────────────
 
   void _loadHistory() {
-    final list = GStorage.localCache.get('searchHistory');
-    if (list is List) {
-      _history = list.cast<String>();
-    }
+    _history = SearchKeywordHistory.load();
   }
 
   Future<void> _loadTrending() async {
@@ -139,18 +135,12 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _saveHistory(String keyword) {
-    _history.remove(keyword);
-    _history.insert(0, keyword);
-    if (_history.length > 20) {
-      _history = _history.sublist(0, 20);
-    }
-    GStorage.localCache.put('searchHistory', _history);
+    _history = SearchKeywordHistory.push(_history, keyword);
     setState(() {});
   }
 
   void _removeHistory(String keyword) {
-    _history.remove(keyword);
-    GStorage.localCache.put('searchHistory', _history);
+    _history = SearchKeywordHistory.remove(_history, keyword);
     setState(() {});
   }
 
@@ -166,7 +156,7 @@ class _SearchPageState extends State<SearchPage> {
           MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx)),
           MiuixTextButton('清空', onPressed: () {
               _history.clear();
-              GStorage.localCache.delete('searchHistory');
+              SearchKeywordHistory.clear();
               SearchHistoryService().clearVisitedUsers();
               Navigator.pop(ctx);
               setState(() {});

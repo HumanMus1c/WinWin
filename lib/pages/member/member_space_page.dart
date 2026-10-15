@@ -16,6 +16,7 @@ import 'package:winwin/common/widgets/dyn/dyn_action_bar.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/common/widgets/medal_widget.dart';
+import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
@@ -823,9 +824,9 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 本页自带 SliverAppBar（含返回/分享/更多操作与 330 高折叠头图）与
-    // pinned Tab 栏，AppScaffold 不再预留顶部安全行与悬浮返回，避免双顶栏
-    //（50px 空白 + 双返回按钮）挤压头图。
+    // 本页自带 SliverAppBar（含返回/分享/更多操作与 330 高折叠头图），分类
+    // 标签条已收进该按钮行；AppScaffold 不再预留顶部安全行与悬浮返回，
+    // 避免双顶栏（50px 空白 + 双返回按钮）挤压头图。
     return AppScaffold(
       reserveTopStrip: false,
       showBackButton: false,
@@ -840,11 +841,16 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
   Widget _buildSpaceContent(MemberSpaceData? data) {
     final card = data?.card;
     final images = data?.images;
-    final tokens = AppThemeHost.of(context);
     final isOwner = Accounts.main.isLogin && Accounts.main.mid == widget.mid;
 
     final tabs = _availableTabs;
     _syncTabController();
+
+    // 按钮行内的标签条宽度：按标签数收缩，最多占窗口一半（窄窗不挤掉操作按钮）。
+    final tabBarWidth = AppTabBar.fittedWidth(tabs.length).clamp(
+      0.0,
+      MediaQuery.sizeOf(context).width * 0.5,
+    );
 
     return AppRefreshIndicator(
       onRefresh: _loadAll,
@@ -871,6 +877,16 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                 )),
               ),
               actions: [
+                // 分类标签条收进本按钮行（首项）：宽度按标签数收缩，并随按钮行
+                // 复用标签条的毛玻璃材质，不再单独占一行 pinned 标签栏。
+                SizedBox(
+                  width: tabBarWidth,
+                  child: AppTabBar(
+                    controller: _tabController,
+                    tabs: tabs.map((t) => _tabTitle(t)).toList(),
+                  ),
+                ),
+                const SizedBox(width: Style.sm),
                 if (!isOwner)
                   MiuixIconButton(
 
@@ -931,8 +947,26 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                   ),
                 const SizedBox(width: Style.sm),
               ],
-              flexibleSpace: FlexibleSpaceBar(
-                background: _buildHeaderBackground(context, card, images),
+              flexibleSpace: Stack(
+                fit: StackFit.expand,
+                children: [
+                  FlexibleSpaceBar(
+                    background: _buildHeaderBackground(context, card, images),
+                  ),
+                  // 按钮行背景复用分类标签条的毛玻璃材质（全宽档：无圆角、
+                  // 仅底部 1px 描边），滚动时头图从行后经过呈模糊。
+                  // 高度 56 = SliverAppBar 默认 toolbarHeight。
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: 56,
+                    child: const MiuixFrostedSurface(
+                      borderRadius: 0,
+                      child: SizedBox.expand(),
+                    ),
+                  ),
+                ],
               ),
             ),
             SliverToBoxAdapter(
@@ -941,16 +975,6 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                 context,
                 (Pref.demoMode && !isOwner) ? null : card,
                 data?.silence,
-              ),
-            ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _SliverAppBarDelegate(
-                AppTabBar(
-                  controller: _tabController,
-                  tabs: tabs.map((t) => _tabTitle(t)).toList(),
-                ),
-                tokens.colors.surface,
               ),
             ),
           ];
@@ -3394,30 +3418,5 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
         ],
       ),
     );
-  }
-}
-
-class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
-  _SliverAppBarDelegate(this._tabBar, this._bgColor);
-
-  final AppTabBar _tabBar;
-  final Color _bgColor;
-
-  @override
-  double get minExtent => _tabBar.preferredHeight;
-  @override
-  double get maxExtent => _tabBar.preferredHeight;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: _bgColor,
-      child: _tabBar,
-    );
-  }
-
-  @override
-  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
-    return oldDelegate._bgColor != _bgColor || oldDelegate._tabBar != _tabBar;
   }
 }

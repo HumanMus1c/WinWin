@@ -1,6 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart'
     show MiuixTabRow, MiuixTabRowColors, MiuixTabRowDefaults;
+
+import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/theme/app_colors.dart';
 
 /// WinWin 通用 Tab 体系（Miuix 轨道），取代 Material 的
 /// [TabBar] + [TabBarView] + [TabController] 三元组。
@@ -51,11 +57,22 @@ class AppTabController extends ChangeNotifier {
   int _normalize(int value) => _length > 1 ? value.clamp(0, _length - 1) : 0;
 }
 
-/// Tab 头部标签栏：flutter_miuix [MiuixTabRow] 的薄封装。
+/// Tab 头部标签栏：[MiuixTabRow] 的封装，并补齐库缺失的交互与材质。
+///
+/// flutter_miuix 1.3.0 的 `MiuixTabRow` 内部只用 `GestureDetector(onTap:)`
+/// 承载标签项，**没有 hover 与按压反馈**；条形底色也是不透明的 `ColoredBox`，
+/// **无法承载模糊**。库为外部依赖不可改，故本组件在外层补齐：
+/// - **hover / 按压反馈**：自算标签项矩形（复刻库内宽度算法）后，在库组件
+///   **下层**绘制圆角高亮（未选标签项自身透明，可透出），按压时高亮加深并按
+///   项目既有 sink 口径（`sinkAmount` 0.98）整体轻微微缩；
+/// - **毛玻璃底**（[blurBackground]）：与 `lib/common/widgets/miuix_overlay_panel.dart`
+///   同口径（blur 16 + 半透明底 × [kMiuixSurfaceAlpha] + 1px 描边 + 圆角 12 +
+///   下投影），同时把库内底色改为透明，使滚动内容从栏后经过时呈模糊效果。
 ///
 /// 与 [AppTabBody] 共享 [controller]；点击项经 [AppTabController.animateTo]
-/// 驱动主体切页。可落在 `AppScaffold.topBar` 或 `SliverPersistentHeader` 中。
-class AppTabBar extends StatelessWidget {
+/// 驱动主体切页。可落在 `AppScaffold.topBar`、`SliverPersistentHeader`
+/// 或任意行内（配固定宽度即可收缩）。
+class AppTabBar extends StatefulWidget {
   const AppTabBar({
     super.key,
     required this.controller,
@@ -65,6 +82,10 @@ class AppTabBar extends StatelessWidget {
     this.maxWidth,
     this.colors,
     this.contentAlignment,
+    this.blurBackground = true,
+    this.blurSigma = 16,
+    this.borderRadius = MiuixTabRowDefaults.tabRowCornerRadius,
+    this.panelPadding = EdgeInsets.zero,
   });
 
   /// 头体共享控制器。
@@ -88,26 +109,255 @@ class AppTabBar extends StatelessWidget {
   /// 覆盖单项内容对齐方式。
   final AlignmentGeometry? contentAlignment;
 
+  /// 是否由本组件自绘毛玻璃底（默认 true）。
+  ///
+  /// 置 false 时保持库内原底色（不透明）且不画模糊层，供调用方自带背景时使用。
+  final bool blurBackground;
+
+  /// 毛玻璃模糊半径（默认 16，对齐 `MiuixOverlayPanel`）。
+  final double blurSigma;
+
+  /// 圆角（同时用于面板与选中指示，默认 12）。
+  final double borderRadius;
+
+  /// 面板内缩（标签条与面板边缘的间距，默认 0）。
+  final EdgeInsets panelPadding;
+
   /// 头部实际高度（含覆盖值），供 Sliver 委托等需要固定 extent 的场景使用。
   double get preferredHeight => height ?? MiuixTabRowDefaults.tabRowHeight;
+
+  /// 标签条"收缩宽度"估算：按单项最大宽 + 间距推算恰好容纳 [count] 项的宽度，
+  /// 结果收敛在 [minTotal]~[maxTotal]（默认 240~420）。
+  ///
+  /// 用于把标签条放进横向受限位置（按钮行 / 工具栏）时给它一个确定宽度；
+  /// 该宽度下库内宽度算法不会溢出（不足单项最大宽时按可用宽均分）。
+  static double fittedWidth(
+    int count, {
+    double minTotal = 240,
+    double maxTotal = 420,
+    double maxWidth = MiuixTabRowDefaults.tabRowMaxWidth,
+  }) {
+    if (count <= 0) return minTotal;
+    final spacing = MiuixTabRowDefaults.tabRowItemSpacing;
+    final wanted = maxWidth * count + (count - 1) * spacing;
+    return wanted.clamp(minTotal, maxTotal);
+  }
+
+  @override
+  State<AppTabBar> createState() => _AppTabBarState();
+}
+
+class _AppTabBarState extends State<AppTabBar> {
+  /// 高亮淡入淡出时长。
+  static const Duration _feedbackDuration = Duration(milliseconds: 120);
+
+  /// 按压微缩时长。
+  static const Duration _sinkDuration = Duration(milliseconds: 90);
+
+  static const double _hoverAlpha = 0.06;
+  static const double _pressAlpha = 0.12;
+  static const double _sinkAmount = 0.98;
+
+  /// 交给库的滚动控制器：既能读回偏移量（高亮层定位需要），
+  /// 也让库不再自建控制器（由本组件负责释放）。
+  final ScrollController _scroll = ScrollController();
+
+  int? _hoverIndex;
+  int? _pressIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_onScrolled);
+  }
+
+  @override
+  void dispose() {
+    _scroll.removeListener(_onScrolled);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  /// 横向滚动会平移高亮层，需重建（仅在标签总宽超出可用宽时才触发）。
+  void _onScrolled() {
+    if (mounted) setState(() {});
+  }
+
+  double get _rowHeight {
+    final inner =
+        (widget.height ?? MiuixTabRowDefaults.tabRowHeight) -
+        widget.panelPadding.vertical;
+    return inner > 0 ? inner : MiuixTabRowDefaults.tabRowHeight;
+  }
+
+  double get _spacing => MiuixTabRowDefaults.tabRowItemSpacing;
+
+  /// 复刻 flutter_miuix 1.3.0 `_calculateTabWidth`（库内私有）。
+  ///
+  /// 库不暴露单项矩形，hover/按压的命中判定必须自算，故此处镜像同一算法；
+  /// 算法随库版本变化时会漂移，升级 flutter_miuix 后需复核本函数。
+  double _tabWidth(double available) {
+    final count = widget.tabs.length;
+    final minWidth = widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth;
+    final maxWidth = widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth;
+    if (count == 0) return minWidth;
+    final totalSpacing = count > 1 ? (count - 1) * _spacing : 0.0;
+    final contentWidth = available - totalSpacing;
+    if (contentWidth <= 0) return minWidth;
+    final ideal = contentWidth / count;
+    if (ideal < minWidth) return minWidth;
+    if (ideal > maxWidth) {
+      final totalMax = maxWidth * count + totalSpacing;
+      return totalMax < available ? ideal : maxWidth;
+    }
+    return ideal;
+  }
+
+  /// 指针坐标 → 标签索引（落在标签间距的缝隙里返回 null）。
+  int? _hitIndex(Offset local, double width) {
+    final count = widget.tabs.length;
+    if (count == 0) return null;
+    final pad = widget.panelPadding;
+    final available = math.max(0.0, width - pad.horizontal);
+    final tabWidth = _tabWidth(available);
+    final pitch = tabWidth + _spacing;
+    final x = local.dx - pad.left + (_scroll.hasClients ? _scroll.offset : 0.0);
+    if (x < 0) return null;
+    final index = (x / pitch).floor();
+    if (index < 0 || index >= count) return null;
+    if (x - index * pitch > tabWidth) return null;
+    return index;
+  }
+
+  void _onHover(Offset local, double width) {
+    final index = _hitIndex(local, width);
+    if (index == _hoverIndex) return;
+    setState(() => _hoverIndex = index);
+  }
+
+  void _onPointerDown(Offset local, double width) {
+    final index = _hitIndex(local, width);
+    setState(() {
+      _pressIndex = index;
+      if (index != null) _hoverIndex = index;
+    });
+  }
+
+  void _clearPress() {
+    if (_pressIndex == null) return;
+    setState(() => _pressIndex = null);
+  }
+
+  void _clearHover() {
+    if (_hoverIndex == null) return;
+    setState(() => _hoverIndex = null);
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: controller,
-      builder: (context, _) {
-        final count = tabs.length;
-        return MiuixTabRow(
-          tabs: tabs,
-          selectedTabIndex: count == 0 ? 0 : controller.index.clamp(0, count - 1),
-          onTabSelected: controller.animateTo,
-          colors: colors,
-          minWidth: minWidth ?? MiuixTabRowDefaults.tabRowMinWidth,
-          maxWidth: maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth,
-          height: height ?? MiuixTabRowDefaults.tabRowHeight,
-          contentAlignment: contentAlignment ?? Alignment.center,
-        );
-      },
+      listenable: widget.controller,
+      builder: (context, _) => LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.hasBoundedWidth ? constraints.maxWidth : 0.0;
+          return Listener(
+            // 仅做视觉反馈，不参与手势竞技：点击仍由库内 onTabSelected 处理。
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (event) => _onPointerDown(event.localPosition, width),
+            onPointerUp: (_) => _clearPress(),
+            onPointerCancel: (_) => _clearPress(),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onHover: (event) => _onHover(event.localPosition, width),
+              onExit: (_) => _clearHover(),
+              child: AnimatedScale(
+                scale: _pressIndex == null ? 1.0 : _sinkAmount,
+                duration: _sinkDuration,
+                curve: Curves.easeOut,
+                child: _buildSurface(context, width),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSurface(BuildContext context, double width) {
+    final tokens = AppThemeHost.of(context);
+    final pad = widget.panelPadding;
+    final rowHeight = _rowHeight;
+    final count = widget.tabs.length;
+    final selected = count == 0 ? 0 : widget.controller.index.clamp(0, count - 1);
+    // 高亮层常驻（透明度切换）以获得淡入淡出；按压优先于 hover。
+    final highlightIndex = _pressIndex ?? _hoverIndex ?? selected;
+    final highlightAlpha = _pressIndex != null
+        ? _pressAlpha
+        : (_hoverIndex != null ? _hoverAlpha : 0.0);
+
+    final available = math.max(0.0, width - pad.horizontal);
+    final tabWidth = _tabWidth(available);
+    final offset = _scroll.hasClients ? _scroll.offset : 0.0;
+
+    final content = Stack(
+      children: [
+        Positioned(
+          left: pad.left + highlightIndex * (tabWidth + _spacing) - offset,
+          top: pad.top,
+          width: tabWidth,
+          height: rowHeight,
+          child: AnimatedContainer(
+            duration: _feedbackDuration,
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(
+              color: tokens.colors.onSurface.withValues(alpha: highlightAlpha),
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+            ),
+          ),
+        ),
+        Padding(padding: pad, child: _buildRow(context, rowHeight)),
+      ],
+    );
+
+    if (!widget.blurBackground) {
+      return SizedBox(height: widget.preferredHeight, child: content);
+    }
+
+    // 毛玻璃面板：复用与 MiuixOverlayPanel 同材质的共享件，面板底由它承担，
+    // 库内底色已在 [_buildRow] 改透明（否则会盖住模糊层）。
+    return SizedBox(
+      height: widget.preferredHeight,
+      child: MiuixFrostedSurface(
+        borderRadius: widget.borderRadius,
+        blurSigma: widget.blurSigma,
+        child: content,
+      ),
+    );
+  }
+
+  Widget _buildRow(BuildContext context, double rowHeight) {
+    final count = widget.tabs.length;
+    final baseColors = widget.colors ?? MiuixTabRowDefaults.defaultColors(context);
+    return MiuixTabRow(
+      tabs: widget.tabs,
+      selectedTabIndex: count == 0 ? 0 : widget.controller.index.clamp(0, count - 1),
+      onTabSelected: widget.controller.animateTo,
+      // 自绘面板时把库内底色改透明，否则库的 `ColoredBox` 会盖住模糊层；
+      // 不自绘面板时保持库原底色（调用方自带背景）。
+      colors: widget.blurBackground
+          ? MiuixTabRowColors(
+              backgroundColor: AppColors.transparent,
+              contentColor: baseColors.contentColor,
+              selectedBackgroundColor: baseColors.selectedBackgroundColor,
+              selectedContentColor: baseColors.selectedContentColor,
+            )
+          : widget.colors,
+      minWidth: widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth,
+      maxWidth: widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth,
+      height: rowHeight,
+      cornerRadius: widget.borderRadius,
+      contentAlignment: widget.contentAlignment ?? Alignment.center,
+      scrollController: _scroll,
     );
   }
 }
