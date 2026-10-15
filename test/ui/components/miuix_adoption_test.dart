@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/services.dart';
@@ -347,6 +348,53 @@ void main() {
       );
       expect(tester.getSize(find.byType(AppIcon)).width, 48);
       expect(tester.getSize(find.byType(MiuixIcon)), const Size(20, 20));
+    });
+  });
+
+  group('B7-c5 反馈轮（两站下拉刷新：换回自绘环）', () {
+    testWidgets('两站同款 physics（Clamping+AlwaysScrollable）下自绘环可触发 onRefresh', (
+      tester,
+    ) async {
+      var called = 0;
+      final completer = Completer<void>();
+      await tester.pumpWidget(
+        wrapMiuix(
+          SizedBox(
+            height: 400,
+            child: AppRefreshIndicator(
+              onRefresh: () {
+                called++;
+                return completer.future;
+              },
+              child: ListView(
+                physics: const ClampingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                children: const [SizedBox(height: 1200, child: Text('长内容'))],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.drag(find.byType(ListView), const Offset(0, 300));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(called, greaterThanOrEqualTo(1));
+
+      completer.complete();
+      await tester.pumpAndSettle();
+    });
+
+    test('源码级：消息中心与视频评论区已换回 AppRefreshIndicator（不再用 Miuix 下拉）', () {
+      for (final path in const [
+        'lib/pages/whisper/view.dart',
+        'lib/pages/video/detail_page.dart',
+      ]) {
+        final src = File(path).readAsStringSync();
+        expect(src.contains('AppMiuixRefresh('), isFalse, reason: path);
+        expect(src.contains('AppRefreshIndicator('), isTrue, reason: path);
+      }
     });
   });
 

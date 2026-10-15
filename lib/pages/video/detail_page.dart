@@ -262,7 +262,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   String? _nextOffset;
   bool _replyEnd = false;
   bool _loadingReplies = false;
-  bool _refreshingReplies = false;
   bool _replyFailed = false;
 
   /// 评论排序模式（对标 BiliPai CommentSortHeader 最热/最新切换）：
@@ -2449,16 +2448,14 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           child: _buildCommentSortRow(),
         ),
         Expanded(
-          // B7 反馈轮#2：改用 Miuix 库下拉刷新（圆环+文案），刷新期间
-          // 评论列表保留现有内容，不再出现居中加载环与下拉指示器叠加。
-          child: AppMiuixRefresh(
-            isRefreshing: _refreshingReplies,
+          // B7-c5 反馈轮：观感统一（与其它页面同款自绘紧凑环）+ 回拉不滚内容，
+          // 换回 AppRefreshIndicator；处理器仍保持「不清列表」，故反馈轮#2
+          // 的「居中加载环与下拉指示器叠加」不会回退。
+          child: AppRefreshIndicator(
             onRefresh: () async {
               final aid = _detailState.dataOrNull?.aid;
               if (aid == null) return;
-              setState(() => _refreshingReplies = true);
               await _loadReplies(oid: aid, refresh: true);
-              if (mounted) setState(() => _refreshingReplies = false);
             },
             child: _buildReplyListView(),
           ),
@@ -2500,8 +2497,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 尾部统一交给 [_buildReplyTrailer]（spinner/重试/空态/到底）。
   Widget _buildReplyListView() {
     return ListView.builder(
-      // Clamping 包裹：MiuixPullToRefresh 靠 OverscrollNotification 驱动
-      // （裸 AlwaysScrollable 无边界条件、不产生过卷通知 → 下拉无响应）。
+      // Clamping + AlwaysScrollable：短内容在顶端也能产生过卷通知，
+      // 驱动 AppRefreshIndicator 的下拉位移（自绘环仍靠过卷/滚动通知驱动）。
       physics: const ClampingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),

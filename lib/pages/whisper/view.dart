@@ -39,8 +39,6 @@ class _WhisperPageState extends State<WhisperPage>
       GlobalKey<SessionListSectionState>();
   LoadingState<Map<String, dynamic>> _unreadState = LoadingState.loading();
   bool _loading = false;
-  bool _refreshing = false;
-
   @override
   bool get wantKeepAlive => true;
 
@@ -124,17 +122,15 @@ class _WhisperPageState extends State<WhisperPage>
           // 阶段5d-L1：M3 分支已移除。
           const MiuixHorizontalDivider(),
           Expanded(
-            // B7 反馈轮#2：改用 Miuix 库下拉刷新（圆环+文案），刷新期间
-            // 会话列表保留现有内容，不再出现居中加载环与下拉指示器叠加。
-            child: AppMiuixRefresh(
-              isRefreshing: _refreshing,
+            // B7-c5 反馈轮：观感统一（与其它页面同款自绘紧凑环）+ 回拉不滚内容，
+            // 换回 AppRefreshIndicator；处理器仍保持「不清列表」，故反馈轮#2
+            // 的「居中加载环与下拉指示器叠加」不会回退。
+            child: AppRefreshIndicator(
               onRefresh: () async {
-                setState(() => _refreshing = true);
                 await Future.wait([
                   _load(),
                   _sessionListKey.currentState?.reload() ?? Future.value(),
                 ]);
-                if (mounted) setState(() => _refreshing = false);
               },
               child: SessionListSection(
                 key: _sessionListKey,
