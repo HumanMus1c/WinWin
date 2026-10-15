@@ -180,7 +180,8 @@ class _SearchPageState extends State<SearchPage> {
 
   PreferredSizeWidget _buildSearchAppBar() {
     return AppBar(
-      leading: const AppBackButton(),
+      // 返回键走顶栏标准槽位（56×56，与 AppBar.leading 同口径）——见 AppLeadingBackButton。
+      leading: const AppLeadingBackButton(),
       titleSpacing: 0,
       title: AppCapsuleTextField(
         controller: _controller,

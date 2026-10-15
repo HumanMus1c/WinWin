@@ -14,6 +14,7 @@ import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/demo_player_chrome.dart';
+import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/sliver/video_header.dart';
 import 'package:winwin/core/account/login_guard.dart';
@@ -1114,15 +1115,21 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _SliverTabBarDelegate(
-                    AppTabBar(
-                      controller: _narrowTabCtrl,
-                      tabs: [
-                        Pref.demoMode ? '选集' : '选集 (${_episodes.length})',
-                        '简介与互动',
-                        Pref.demoMode ? '评论' : '评论 (${_replies.length})',
-                      ],
+                    // 吸顶背景改由通栏毛玻璃带承担（全宽档：无圆角、仅底部 1px
+                    // 描边），滚动内容从栏后经过时可见模糊；标签条自身不再叠面板。
+                    child: MiuixFrostedSurface(
+                      borderRadius: 0,
+                      child: AppTabBar(
+                        controller: _narrowTabCtrl,
+                        tabs: [
+                          Pref.demoMode ? '选集' : '选集 (${_episodes.length})',
+                          '简介与互动',
+                          Pref.demoMode ? '评论' : '评论 (${_replies.length})',
+                        ],
+                        blurBackground: false,
+                      ),
                     ),
-                    color: AppThemeHost.of(context).colors.background,
+                    extent: AppTabBar.defaultHeight,
                   ),
                 ),
               ],
@@ -2415,16 +2422,21 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   }
 }
 
+/// 番剧窄屏分类标签条的吸顶委托：`minExtent == maxExtent == [extent]`。
+///
+/// 背景**不再包实色 `ColoredBox`**——那层实色会把吸顶处的毛玻璃垫死，滚动内容
+/// 从栏后经过时看不到模糊（实机反馈）。改由 [child] 自带的通栏毛玻璃带承担。
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final AppTabBar tabBar;
-  final Color color;
+  _SliverTabBarDelegate({required this.child, required this.extent});
 
-  _SliverTabBarDelegate(this.tabBar, {required this.color});
+  final Widget child;
+  final double extent;
 
   @override
-  double get minExtent => tabBar.preferredHeight;
+  double get minExtent => extent;
+
   @override
-  double get maxExtent => tabBar.preferredHeight;
+  double get maxExtent => extent;
 
   @override
   Widget build(
@@ -2432,15 +2444,12 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return ColoredBox(
-      color: color,
-      child: tabBar,
-    );
+    return child;
   }
 
   @override
   bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
-    return tabBar != oldDelegate.tabBar || color != oldDelegate.color;
+    return child != oldDelegate.child || extent != oldDelegate.extent;
   }
 }
 

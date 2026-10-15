@@ -79,13 +79,10 @@ class _SearchResultPageState extends State<SearchResultPage> {
             padding: const EdgeInsets.fromLTRB(0, Style.sm, Style.sm, Style.sm),
             child: Row(
               children: [
-                // 与上级搜索页 `AppBar(leading: const AppBackButton())` 同位：
-                // leading 槽宽 56、按钮居中（图标中心 x≈28），输入框紧随其后
-                // （上级页 titleSpacing: 0 → 输入框同样起于 x≈56）。
-                const SizedBox(
-                  width: 56,
-                  child: Center(child: AppBackButton()),
-                ),
+                // 与上级搜索页 `AppBar(leading: ...)` 严格同尺寸同位：顶栏标准
+                // 56×56 槽（材质侧 tight 约束），命中区与 hover 高亮口径一致；
+                // 输入框紧随其后（上级页 titleSpacing: 0 → 同样起于 x≈56）。
+                const AppLeadingBackButton(),
                 Expanded(
                   child: AppCapsuleTextField(
                     controller: _controller,

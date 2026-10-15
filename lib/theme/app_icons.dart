@@ -946,3 +946,39 @@ class AppBackButton extends StatelessWidget {
     );
   }
 }
+
+/// 顶栏（`AppBar` / 自绘横条）里返回按钮的**标准槽位**：恒 56×56。
+///
+/// 口径严格对齐 Material `AppBar.leading`：宽 56（`_kLeadingWidth`）、高 = 默认
+/// 工具栏高（`material/app_bar.dart` 对 leading 套 `BoxConstraints.tightFor(width: 56)`，
+/// `NavigationToolbar` 再给 tight 高度）。[AppBackButton] 内的 `MiuixIconButton` 在
+/// tight 约束下会被 `Align` 撑满，故**只有槽位尺寸一致，命中区与 hover 高亮才一致**：
+/// 外层若用 `Center` 等松约束包裹，按钮会缩到 36×36（图标 20 + 内边距 8×2），
+/// hover 高亮随之变小、与顶栏按钮对不上（实机反馈：尺寸与 hover 未对齐）。
+///
+/// 凡在**非 `AppBar`** 的自绘横条里放返回键（如搜索结果页的搜索行），都应使用本
+/// 组件而非裸 [AppBackButton]，以保证与 `AppBar(leading: ...)` 的观感严格一致。
+class AppLeadingBackButton extends StatelessWidget {
+  const AppLeadingBackButton({super.key, this.onPressed, this.onBeforePop});
+
+  /// 透传 [AppBackButton.onPressed]。
+  final VoidCallback? onPressed;
+
+  /// 透传 [AppBackButton.onBeforePop]。
+  final VoidCallback? onBeforePop;
+
+  /// 槽宽（对齐 Material `AppBar` 默认 `leadingWidth`）。
+  static const double slotWidth = 56;
+
+  /// 槽高（对齐默认工具栏高）。
+  static const double slotHeight = 56;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: slotWidth,
+      height: slotHeight,
+      child: AppBackButton(onPressed: onPressed, onBeforePop: onBeforePop),
+    );
+  }
+}

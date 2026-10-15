@@ -132,6 +132,11 @@ class AppTabBar extends StatefulWidget {
   /// 是否画面板 1px 描边（默认 true；置 false 时只保留毛玻璃与投影）。
   final bool outline;
 
+  /// 默认标签行高（= flutter_miuix [MiuixTabRowDefaults.tabRowHeight]）。
+  ///
+  /// 供宿主计算"通栏毛玻璃带"总高或 Sliver 委托的固定 extent 使用，避免各处硬编码 42。
+  static const double defaultHeight = MiuixTabRowDefaults.tabRowHeight;
+
   /// 头部实际高度（含覆盖值），供 Sliver 委托等需要固定 extent 的场景使用。
   double get preferredHeight => height ?? MiuixTabRowDefaults.tabRowHeight;
 

@@ -846,6 +846,11 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
     final tabs = _availableTabs;
     _syncTabController();
 
+    // 分类标签条的**通栏毛玻璃带**：总高 = 标签行高（库默认）+ 上下各 4px 呼吸位，
+    // 与顶栏那条 56px 通栏带同材质，吸顶贴合时形成一条完整顶栏。
+    const bandPad = Style.xs;
+    final tabBandHeight = AppTabBar.defaultHeight + bandPad * 2;
+
     return AppRefreshIndicator(
       onRefresh: _loadAll,
       child: NestedScrollView(
@@ -857,17 +862,6 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
               expandedHeight: 330.0,
               elevation: 0,
               scrolledUnderElevation: 2,
-              // 分类标签条落在本按钮行中段（title 槽）：宽度由框架按"行内剩余宽度"
-              // （总宽 − leading − actions）给出，库内再按标签数均分——每格拿到
-              // 容纳进本行的最大尺寸，分类文本不再被省略（实机反馈：收窄过狠）。
-              titleSpacing: Style.xs,
-              title: AppTabBar(
-                controller: _tabController,
-                tabs: tabs.map((t) => _tabTitle(t)).toList(),
-                // 本行已有通栏毛玻璃带（见下方 flexibleSpace），标签条自身不再叠
-                // 面板，避免两层材质叠加发灰。
-                blurBackground: false,
-              ),
               leading: MiuixIconButton(
 
                 onPressed: () => Navigator.maybePop(context),
@@ -948,9 +942,11 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                   FlexibleSpaceBar(
                     background: _buildHeaderBackground(context, card, images),
                   ),
-                  // 按钮行背景复用分类标签条的毛玻璃材质（全宽档：无圆角、
-                  // 仅底部 1px 描边），滚动时头图从行后经过呈模糊。
+                  // 按钮行背景：与分类标签条带同材质的通栏毛玻璃（全宽档：无圆角），
+                  // 滚动时头图从行后经过呈模糊。
                   // 高度 56 = SliverAppBar 默认 toolbarHeight。
+                  // `outline: false`：本带不画线，分隔线只由下方标签条带的底部 1px
+                  // 承担——两条带吸顶贴合时才不会叠出双线。
                   Positioned(
                     left: 0,
                     right: 0,
@@ -958,10 +954,31 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                     height: 56,
                     child: const MiuixFrostedSurface(
                       borderRadius: 0,
+                      outline: false,
                       child: SizedBox.expand(),
                     ),
                   ),
                 ],
+              ),
+            ),
+            // 分类标签条：默认留在**头图下方的原位**（独立成行），滚到它时 pinned
+            // 吸顶并紧贴顶栏（视觉并入），滚回时回到原位——即 b7-c4 之前的落位。
+            // 材质为通栏毛玻璃带（与顶栏那条 56px 带同材质），故不再有实色底把
+            // 模糊垫死；标签条自身不再叠面板，避免两层材质叠加发灰。
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SliverTabBarDelegate(
+                child: MiuixFrostedSurface(
+                  borderRadius: 0,
+                  child: AppTabBar(
+                    controller: _tabController,
+                    tabs: tabs.map((t) => _tabTitle(t)).toList(),
+                    blurBackground: false,
+                    height: tabBandHeight,
+                    panelPadding: const EdgeInsets.symmetric(vertical: bandPad),
+                  ),
+                ),
+                extent: tabBandHeight,
               ),
             ),
             SliverToBoxAdapter(
@@ -3413,5 +3430,36 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
         ],
       ),
     );
+  }
+}
+
+/// 空间页分类标签条的吸顶委托：`minExtent == maxExtent == [extent]`。
+///
+/// 背景不由本委托承担（旧实现用实色 `Container`，会把吸顶处的毛玻璃垫死、
+/// 滚动内容从栏后经过时看不到模糊）；改由 [child] 自带的通栏毛玻璃带负责。
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverTabBarDelegate({required this.child, required this.extent});
+
+  final Widget child;
+  final double extent;
+
+  @override
+  double get minExtent => extent;
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
+    return child != oldDelegate.child || extent != oldDelegate.extent;
   }
 }
