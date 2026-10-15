@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
@@ -7,7 +6,6 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/theme/app_icons.dart';
-import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 
 /// 自研 Miuix 弹层菜单壳（阶段4h）。
@@ -21,7 +19,8 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 /// 本壳复用官方条目渲染 [MiuixDropdownEntriesPopupContent]（选中态/分组分隔
 /// 均为原生实现），自绘弹层壳以提供：
 /// - **平滑动效**：fade + 轻微上浮（easeOutCubic，180ms 进 / 140ms 出），无回弹；
-/// - **统一半透明材质**：`surfaceContainer × kMiuixSurfaceAlpha`（与 Toast 同源）；
+/// - **统一半透明材质**：复用 [MiuixFrostedSurface]（与 `MiuixOverlayPanel`
+///   / 首页卡片弹层同源；blur 外扩 3σ 消除边缘渐变、1px 描边画在裁剪层之外）；
 /// - 交互契约：点击外部 / 选择（单组）/ Esc 收起；多组时选择后保持展开
 ///   （与上游 `collapseOnSelection = entries.length <= 1` 一致）。
 class MiuixPopupMenu extends StatefulWidget {
@@ -155,7 +154,6 @@ class _PopupOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final muiColors = MiuixTheme.of(context).colors;
     final baseColors = MiuixDropdownDefaults.dropdownColors(context);
     final contentColor = baseColors.contentColor;
     final selectedContentColor = baseColors.selectedContentColor;
@@ -165,10 +163,6 @@ class _PopupOverlay extends StatelessWidget {
     final bodyStyle =
         (appTokens.text.bodyMedium ?? const TextStyle())
             .copyWith(decoration: TextDecoration.none);
-    // 1px 描边：与 MiuixOverlayPanel（毛玻璃面板弹层）同源，消除
-    // 「播放器控制栏弹层缺白边」与首页卡片弹层的观感劈叉。
-    final outlineColor =
-        MiuixFrostedSurface.outlineColor(isDark: appTokens.isDark);
     // 条目字号继承触发控件（如播放器控制条 12px），避免弹层与其割裂。
     final rowTextStyle = itemTextStyle == null
         ? bodyStyle
@@ -210,60 +204,51 @@ class _PopupOverlay extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {},
-              child: MiuixSurface(
-                cornerRadius: 16,
-                color: muiColors.surfaceContainer.withValues(
-                  alpha: kMiuixSurfaceAlpha,
-                ),
-                border: Border.all(color: outlineColor, width: 1),
-                shadowElevation: 6,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  // B7 反馈轮#2：背景模糊对齐表情面板（MiuixOverlayPanel 的
-                  // BackdropFilter blur 16 口径）。
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (title != null) ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-                            child: Text(
-                              title!,
-                              style:
-                                  (Theme.of(context).textTheme.titleSmall ??
-                                          const TextStyle())
-                                      .copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: contentColor,
-                                      ),
-                            ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 14),
-                            child: MiuixHorizontalDivider(thickness: 1.5),
-                          ),
-                        ],
-                        Flexible(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: _buildRows(
-                                context,
-                                rowTextStyle: rowTextStyle,
-                                contentColor: contentColor,
-                                selectedContentColor: selectedContentColor,
-                              ),
-                            ),
+              // 材质单一来源：复用 MiuixOverlayPanel 同款 MiuixFrostedSurface ——
+              // backdrop blur 外扩 3σ（消除边缘渐变）+ 描边画在裁剪层之外
+              // （清晰 1px，不被 blur 涂抹）。此前自绘 MiuixSurface 把
+              // BackdropFilter 叠在面板描边之上 → 描边被 σ16 模糊成软边光晕。
+              child: MiuixFrostedSurface(
+                borderRadius: 12,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (title != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                        child: Text(
+                          title!,
+                          style:
+                              (Theme.of(context).textTheme.titleSmall ??
+                                      const TextStyle())
+                                  .copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: contentColor,
+                                  ),
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 14),
+                        child: MiuixHorizontalDivider(thickness: 1.5),
+                      ),
+                    ],
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: _buildRows(
+                            context,
+                            rowTextStyle: rowTextStyle,
+                            contentColor: contentColor,
+                            selectedContentColor: selectedContentColor,
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
