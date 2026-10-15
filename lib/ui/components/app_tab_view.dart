@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart'
-    show MiuixTabRow, MiuixTabRowColors, MiuixTabRowDefaults;
+    show MiuixTabRow, MiuixTabRowColors, MiuixTabRowDefaults, MiuixTheme;
 
 import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -12,8 +12,8 @@ import 'package:winwin/theme/app_colors.dart';
 /// [TabBar] + [TabBarView] + [TabController] 三元组。
 ///
 /// 拆成两个可独立落位的部件，均由同一 [AppTabController] 驱动：
-/// - [AppTabBar]：头部标签栏（flutter_miuix [MiuixTabRow]，胶囊选中指示 +
-///   squircle 描边，超出宽度自动横向滚动居中选中项）；
+/// - [AppTabBar]：头部标签栏（flutter_miuix [MiuixTabRow]，胶囊选中指示，
+///   超出宽度自动横向滚动居中选中项）；
 /// - [AppTabBody]：主体内容（[PageView]，保留原有左右滑动切换语义）。
 ///
 /// 之所以拆开而非合成单控件：项目内 Tab 头与体常落在不同槽位
@@ -66,8 +66,12 @@ class AppTabController extends ChangeNotifier {
 ///   **下层**绘制圆角高亮（未选标签项自身透明，可透出），按压时高亮加深并按
 ///   项目既有 sink 口径（`sinkAmount` 0.98）整体轻微微缩；
 /// - **毛玻璃底**（[blurBackground]）：与 `lib/common/widgets/miuix_overlay_panel.dart`
-///   同口径（blur 16 + 半透明底 × [kMiuixSurfaceAlpha] + 1px 描边 + 圆角 12 +
-///   下投影），同时把库内底色改为透明，使滚动内容从栏后经过时呈模糊效果。
+///   同口径（blur 16 + 半透明底 × [kMiuixSurfaceAlpha] + 可选 1px 描边（[outline]）
+///   + 圆角 12 + 下投影），同时把库内底色改为透明，使滚动内容从栏后经过时呈模糊；
+/// - **去掉逐格描边**：库的未选中标签项自带 1px insetsquircle 描边
+///   （`_InsetSquircleBorderPainter`，取 `MiuixTheme.colors.outline`，库内无开关），
+///   实机上看着像"每格一个额外容器"并连成整行上下细线；故在局部 [MiuixTheme]
+///   覆盖中把 `outline` 置透明（仅影响本子树，不动全局主题与库）。
 ///
 /// 与 [AppTabBody] 共享 [controller]；点击项经 [AppTabController.animateTo]
 /// 驱动主体切页。可落在 `AppScaffold.topBar`、`SliverPersistentHeader`
@@ -86,6 +90,7 @@ class AppTabBar extends StatefulWidget {
     this.blurSigma = 16,
     this.borderRadius = MiuixTabRowDefaults.tabRowCornerRadius,
     this.panelPadding = EdgeInsets.zero,
+    this.outline = true,
   });
 
   /// 头体共享控制器。
@@ -111,7 +116,8 @@ class AppTabBar extends StatefulWidget {
 
   /// 是否由本组件自绘毛玻璃底（默认 true）。
   ///
-  /// 置 false 时保持库内原底色（不透明）且不画模糊层，供调用方自带背景时使用。
+  /// 置 false 时不画毛玻璃面板（标签条自身透明），供宿主自带背景的场合使用
+  /// （如空间页按钮行：该行已有通栏毛玻璃带，避免两层材质叠加发灰）。
   final bool blurBackground;
 
   /// 毛玻璃模糊半径（默认 16，对齐 `MiuixOverlayPanel`）。
@@ -123,25 +129,11 @@ class AppTabBar extends StatefulWidget {
   /// 面板内缩（标签条与面板边缘的间距，默认 0）。
   final EdgeInsets panelPadding;
 
+  /// 是否画面板 1px 描边（默认 true；置 false 时只保留毛玻璃与投影）。
+  final bool outline;
+
   /// 头部实际高度（含覆盖值），供 Sliver 委托等需要固定 extent 的场景使用。
   double get preferredHeight => height ?? MiuixTabRowDefaults.tabRowHeight;
-
-  /// 标签条"收缩宽度"估算：按单项最大宽 + 间距推算恰好容纳 [count] 项的宽度，
-  /// 结果收敛在 [minTotal]~[maxTotal]（默认 240~420）。
-  ///
-  /// 用于把标签条放进横向受限位置（按钮行 / 工具栏）时给它一个确定宽度；
-  /// 该宽度下库内宽度算法不会溢出（不足单项最大宽时按可用宽均分）。
-  static double fittedWidth(
-    int count, {
-    double minTotal = 240,
-    double maxTotal = 420,
-    double maxWidth = MiuixTabRowDefaults.tabRowMaxWidth,
-  }) {
-    if (count <= 0) return minTotal;
-    final spacing = MiuixTabRowDefaults.tabRowItemSpacing;
-    final wanted = maxWidth * count + (count - 1) * spacing;
-    return wanted.clamp(minTotal, maxTotal);
-  }
 
   @override
   State<AppTabBar> createState() => _AppTabBarState();
@@ -330,6 +322,7 @@ class _AppTabBarState extends State<AppTabBar> {
       child: MiuixFrostedSurface(
         borderRadius: widget.borderRadius,
         blurSigma: widget.blurSigma,
+        outline: widget.outline,
         child: content,
       ),
     );
@@ -338,26 +331,35 @@ class _AppTabBarState extends State<AppTabBar> {
   Widget _buildRow(BuildContext context, double rowHeight) {
     final count = widget.tabs.length;
     final baseColors = widget.colors ?? MiuixTabRowDefaults.defaultColors(context);
-    return MiuixTabRow(
-      tabs: widget.tabs,
-      selectedTabIndex: count == 0 ? 0 : widget.controller.index.clamp(0, count - 1),
-      onTabSelected: widget.controller.animateTo,
-      // 自绘面板时把库内底色改透明，否则库的 `ColoredBox` 会盖住模糊层；
-      // 不自绘面板时保持库原底色（调用方自带背景）。
-      colors: widget.blurBackground
-          ? MiuixTabRowColors(
-              backgroundColor: AppColors.transparent,
-              contentColor: baseColors.contentColor,
-              selectedBackgroundColor: baseColors.selectedBackgroundColor,
-              selectedContentColor: baseColors.selectedContentColor,
-            )
-          : widget.colors,
-      minWidth: widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth,
-      maxWidth: widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth,
-      height: rowHeight,
-      cornerRadius: widget.borderRadius,
-      contentAlignment: widget.contentAlignment ?? Alignment.center,
-      scrollController: _scroll,
+    final theme = MiuixTheme.of(context);
+    return MiuixTheme(
+      // 库未暴露开关：未选中标签项由 `_InsetSquircleBorderPainter` 画 1px
+      // insetsquircle 描边，颜色取 `MiuixTheme.colors.outline`。本项目标签条不要
+      // 逐格方框（实机反馈：像每格一个额外容器，并连成整行上下细线），故在局部
+      // 主题覆盖里把 outline 置透明；只影响本子树，不动全局主题与库。
+      data: theme.copyWith(
+        colors: theme.colors.copy(outline: AppColors.transparent),
+      ),
+      child: MiuixTabRow(
+        tabs: widget.tabs,
+        selectedTabIndex: count == 0 ? 0 : widget.controller.index.clamp(0, count - 1),
+        onTabSelected: widget.controller.animateTo,
+        // 库内条底色恒置透明：自绘面板时由毛玻璃承担材质，不自绘面板时透出宿主
+        // 背景（如空间页按钮行的通栏毛玻璃带）；否则库的 `ColoredBox` 不透明底
+        // 会盖住模糊层。
+        colors: MiuixTabRowColors(
+          backgroundColor: AppColors.transparent,
+          contentColor: baseColors.contentColor,
+          selectedBackgroundColor: baseColors.selectedBackgroundColor,
+          selectedContentColor: baseColors.selectedContentColor,
+        ),
+        minWidth: widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth,
+        maxWidth: widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth,
+        height: rowHeight,
+        cornerRadius: widget.borderRadius,
+        contentAlignment: widget.contentAlignment ?? Alignment.center,
+        scrollController: _scroll,
+      ),
     );
   }
 }

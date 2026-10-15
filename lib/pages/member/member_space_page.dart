@@ -846,12 +846,6 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
     final tabs = _availableTabs;
     _syncTabController();
 
-    // 按钮行内的标签条宽度：按标签数收缩，最多占窗口一半（窄窗不挤掉操作按钮）。
-    final tabBarWidth = AppTabBar.fittedWidth(tabs.length).clamp(
-      0.0,
-      MediaQuery.sizeOf(context).width * 0.5,
-    );
-
     return AppRefreshIndicator(
       onRefresh: _loadAll,
       child: NestedScrollView(
@@ -863,6 +857,17 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
               expandedHeight: 330.0,
               elevation: 0,
               scrolledUnderElevation: 2,
+              // 分类标签条落在本按钮行中段（title 槽）：宽度由框架按"行内剩余宽度"
+              // （总宽 − leading − actions）给出，库内再按标签数均分——每格拿到
+              // 容纳进本行的最大尺寸，分类文本不再被省略（实机反馈：收窄过狠）。
+              titleSpacing: Style.xs,
+              title: AppTabBar(
+                controller: _tabController,
+                tabs: tabs.map((t) => _tabTitle(t)).toList(),
+                // 本行已有通栏毛玻璃带（见下方 flexibleSpace），标签条自身不再叠
+                // 面板，避免两层材质叠加发灰。
+                blurBackground: false,
+              ),
               leading: MiuixIconButton(
 
                 onPressed: () => Navigator.maybePop(context),
@@ -877,16 +882,6 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                 )),
               ),
               actions: [
-                // 分类标签条收进本按钮行（首项）：宽度按标签数收缩，并随按钮行
-                // 复用标签条的毛玻璃材质，不再单独占一行 pinned 标签栏。
-                SizedBox(
-                  width: tabBarWidth,
-                  child: AppTabBar(
-                    controller: _tabController,
-                    tabs: tabs.map((t) => _tabTitle(t)).toList(),
-                  ),
-                ),
-                const SizedBox(width: Style.sm),
                 if (!isOwner)
                   MiuixIconButton(
 

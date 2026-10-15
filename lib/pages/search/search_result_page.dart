@@ -68,19 +68,24 @@ class _SearchResultPageState extends State<SearchResultPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      // 输入条 + 分类标签条（无标题栏）。Tab 头/体使用 Miuix 轨道替身。
+      // 输入条自带返回键（不再用壳层顶部安全行的悬浮返回）：本页无标题栏，
+      // 返回键落在搜索行最左，与上级搜索页 `AppBar(leading: ...)` 同位对齐。
+      reserveTopStrip: false,
+      // 输入条 + 分类标签条。Tab 头/体使用 Miuix 轨道替身。
       topBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Style.md,
-              Style.sm,
-              Style.sm,
-              Style.sm,
-            ),
+            padding: const EdgeInsets.fromLTRB(0, Style.sm, Style.sm, Style.sm),
             child: Row(
               children: [
+                // 与上级搜索页 `AppBar(leading: const AppBackButton())` 同位：
+                // leading 槽宽 56、按钮居中（图标中心 x≈28），输入框紧随其后
+                // （上级页 titleSpacing: 0 → 输入框同样起于 x≈56）。
+                const SizedBox(
+                  width: 56,
+                  child: Center(child: AppBackButton()),
+                ),
                 Expanded(
                   child: AppCapsuleTextField(
                     controller: _controller,

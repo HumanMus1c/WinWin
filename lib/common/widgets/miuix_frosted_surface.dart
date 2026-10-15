@@ -7,23 +7,25 @@ import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart' show kMiuixSurfaceAlpha;
 
 /// Miuix 毛玻璃表面：与 `lib/common/widgets/miuix_overlay_panel.dart` 同材质
-/// 的可复用底（半透明底 × [kMiuixSurfaceAlpha] + backdrop 模糊 16 + 1px 描边 +
-/// 圆角 12 + 4px 下投影）。
+/// 的可复用底（半透明底 × [kMiuixSurfaceAlpha] + backdrop 模糊 16 + 可选 1px
+/// 描边 + 圆角 12 + 4px 下投影）。
 ///
 /// 供**浮于滚动内容之上**的横条类控件复用（分类标签条、按钮行等），使滚动
 /// 内容从其后经过时呈模糊；与 `MiuixOverlayPanel` 的差别是不含标题行与内边距，
 /// 只承担材质，内容由 [child] 决定。
 ///
 /// 两种档位：
-/// - 面板档（默认 `borderRadius = 12`）：四边 1px 描边 + 下投影，用于悬浮条；
-/// - 全宽档（`borderRadius = 0`）：不画圆角与投影，仅底部 1px 描边，用于通栏
-///   行（如页面顶部的按钮行），避免屏幕边缘出现多余圆角。
+/// - 面板档（默认 `borderRadius = 12`）：四边 1px 描边（`outline` 为 true 时）+
+///   下投影，用于悬浮条；
+/// - 全宽档（`borderRadius = 0`）：不画圆角与投影，仅底部 1px 描边（`outline`
+///   为 true 时），用于通栏行（如页面顶部的按钮行），避免屏幕边缘出现多余圆角。
 class MiuixFrostedSurface extends StatelessWidget {
   const MiuixFrostedSurface({
     super.key,
     required this.child,
     this.borderRadius = 12,
     this.blurSigma = 16,
+    this.outline = true,
   });
 
   /// 表面内容（须自带尺寸：面板档由外部定宽高，全宽档建议 `SizedBox.expand`）。
@@ -34,6 +36,12 @@ class MiuixFrostedSurface extends StatelessWidget {
 
   /// backdrop 模糊半径（默认 16，对齐 `MiuixOverlayPanel`）。
   final double blurSigma;
+
+  /// 是否画 1px 描边（默认 true：面板档画四边、全宽档画底边）。
+  ///
+  /// 置 false 时只保留毛玻璃与投影，用于"容器细线多余"的场合（实机反馈：标签
+  /// 条面板的上下细线观感不好）。
+  final bool outline;
 
   @override
   Widget build(BuildContext context) {
@@ -67,9 +75,11 @@ class MiuixFrostedSurface extends StatelessWidget {
             decoration: BoxDecoration(
               color: baseColor.withValues(alpha: kMiuixSurfaceAlpha),
               borderRadius: isFullBleed ? null : radius,
-              border: isFullBleed
-                  ? Border(bottom: BorderSide(color: outlineColor))
-                  : Border.all(color: outlineColor),
+              border: !outline
+                  ? null
+                  : isFullBleed
+                      ? Border(bottom: BorderSide(color: outlineColor))
+                      : Border.all(color: outlineColor),
             ),
             child: child,
           ),
