@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
@@ -364,7 +365,9 @@ class _ToviewPageState extends State<ToviewPage> {
                         }
                         return false;
                       },
-                      child: RefreshIndicator(
+                      child: AppRefreshIndicator(
+                        displacement: 40.0,
+                        strokeWidth: 2.5,
                         color: biliPink,
                         onRefresh: () => _load(refresh: true),
                         child: CustomScrollView(
@@ -471,7 +474,9 @@ class _ToviewPageState extends State<ToviewPage> {
   }
 
   Widget _buildSkeleton() {
-    return RefreshIndicator(
+    return AppRefreshIndicator(
+      displacement: 40.0,
+      strokeWidth: 2.5,
       color: biliPink,
       onRefresh: () => _load(refresh: true),
       child: CustomScrollView(

@@ -1,7 +1,8 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable, MiuixButton, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 
+import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/video_card/video_card_h.dart';
@@ -185,7 +186,9 @@ class _SearchPanelState extends State<SearchPanel>
     if (_firstLoaded && _items.isEmpty) {
       return _buildEmptyView();
     }
-    return RefreshIndicator(
+    return AppRefreshIndicator(
+      displacement: 40.0,
+      strokeWidth: 2.5,
       onRefresh: _onRefresh,
       child: CustomScrollView(
         controller: _scrollController,

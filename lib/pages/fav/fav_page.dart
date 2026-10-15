@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -218,7 +219,9 @@ class _FavPageState extends State<FavPage> {
                         }
                         return false;
                       },
-                      child: RefreshIndicator(
+                      child: AppRefreshIndicator(
+                        displacement: 40.0,
+                        strokeWidth: 2.5,
                         color: biliPink,
                         onRefresh: () => _load(refresh: true),
                         child: CustomScrollView(
@@ -554,7 +557,9 @@ class _FavDetailPageState extends State<FavDetailPage> {
                     }
                     return false;
                   },
-                  child: RefreshIndicator(
+                  child: AppRefreshIndicator(
+                    displacement: 40.0,
+                    strokeWidth: 2.5,
                     color: biliPink,
                     onRefresh: () => _load(refresh: true),
                     child: CustomScrollView(

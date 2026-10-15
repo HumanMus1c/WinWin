@@ -1,6 +1,7 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent;
-import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -105,7 +106,9 @@ class _LikeDetailPageState extends State<LikeDetailPage> {
           ? const Center(child: AppProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
               ? MsgFeedErrorView(error: _error!, onRetry: () => _load(refresh: true))
-              : RefreshIndicator(
+              : AppRefreshIndicator(
+                  displacement: 40.0,
+                  strokeWidth: 2.5,
                   color: biliPink,
                   onRefresh: () => _load(refresh: true),
                   child: ListView.builder(

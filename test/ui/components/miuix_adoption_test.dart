@@ -350,8 +350,8 @@ void main() {
     });
   });
 
-  group('Miuix 刷新（阶段3d）', () {
-    testWidgets('AppRefreshIndicator：miuix 渲染 RefreshIndicator（原视觉回退）', (tester) async {
+  group('Miuix 刷新（阶段3d / b7-c5 自绘紧凑环）', () {
+    testWidgets('AppRefreshIndicator：自绘紧凑环渲染（零 material_ui 刷新指示器）', (tester) async {
       await tester.pumpWidget(
         wrapMiuix(
           SizedBox(
@@ -363,11 +363,13 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(RefreshIndicator), findsOneWidget);
+      expect(find.byType(AppRefreshIndicator), findsOneWidget);
+      // b7-c5：自绘环 —— 树上不应再出现 material_ui 的 RefreshIndicator
+      expect(find.byType(RefreshIndicator), findsNothing);
       expect(find.byType(MiuixPullToRefresh), findsNothing);
     });
 
-    testWidgets('AppRefreshIndicator：下拉可触发 onRefresh（原视觉下功能保持）', (tester) async {
+    testWidgets('AppRefreshIndicator：下拉可触发 onRefresh（自绘环下功能保持）', (tester) async {
       var called = 0;
       final completer = Completer<void>();
       await tester.pumpWidget(

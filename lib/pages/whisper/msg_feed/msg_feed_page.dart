@@ -1,6 +1,7 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
@@ -143,7 +144,9 @@ class _MsgFeedPageState extends State<MsgFeedPage> {
           ? const Center(child: AppProgressIndicator(color: biliPink))
           : _error != null && _items.isEmpty
               ? MsgFeedErrorView(error: _error!, onRetry: () => _load(refresh: true))
-              : RefreshIndicator(
+              : AppRefreshIndicator(
+                  displacement: 40.0,
+                  strokeWidth: 2.5,
                   color: biliPink,
                   onRefresh: () => _load(refresh: true),
                   child: ListView.builder(

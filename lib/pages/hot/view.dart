@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
+import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/video_card/video_card_v.dart';
@@ -81,10 +82,11 @@ class _HotPageState extends State<HotPage>
     final colorScheme = ColorScheme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
-      child: RefreshIndicator(
+      child: AppRefreshIndicator(
         // 实机反馈#5：指示器出现在可见滚动区域顶部（浮动组合控件下方，页内预留 120）。
         displacement: 12,
         edgeOffset: 120,
+        strokeWidth: 2.5,
         onRefresh: controller.onRefresh,
         child: CustomScrollView(
           controller: controller.scrollController,

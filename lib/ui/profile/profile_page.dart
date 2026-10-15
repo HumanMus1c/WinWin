@@ -1,6 +1,7 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
@@ -115,7 +116,9 @@ class _ProfilePageState extends State<ProfilePage> {
       title: '我的',
       body: SafeArea(
         bottom: false,
-        child: RefreshIndicator(
+        child: AppRefreshIndicator(
+          displacement: 40.0,
+          strokeWidth: 2.5,
           color: biliPink,
           onRefresh: _onRefresh,
           child: ListView(
