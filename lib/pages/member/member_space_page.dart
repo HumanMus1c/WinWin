@@ -338,6 +338,25 @@ class MemberSpacePage extends StatefulWidget {
 class _MemberSpacePageState extends State<MemberSpacePage> {
   late AppTabController _tabController;
   final ScrollController _scrollController = ScrollController();
+
+  /// 顶栏（返回/分享/更多）高度，= `SliverAppBar` 默认 `toolbarHeight`。
+  static const double _topBarHeight = 56;
+
+  /// 头图（封面）容器高度。
+  static const double _coverHeight = 330;
+
+  /// 分类标签条带：用来判定"是否已吸附并入顶栏"（其顶部到达顶栏下沿即为已合并）。
+  final GlobalKey _tabBandKey = GlobalKey();
+
+  /// 分类标签条是否已**吸附并入顶栏**：其顶部到达顶栏下沿即视为合并。
+  ///
+  /// 顶栏常态**不画底**，只有本判定为真时才亮起通栏毛玻璃带（与标签条带拼成
+  /// 一条完整顶栏）——即"只有分类 Tab 栏与其吸附合并时才展示模糊背景"。
+  bool get _tabBandMerged {
+    final box = _tabBandKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached || !box.hasSize) return false;
+    return box.localToGlobal(Offset.zero).dy <= _topBarHeight + 0.5;
+  }
   final List<AppTabController> _pendingDisposeControllers = [];
   bool _isDisposed = false;
 
@@ -824,9 +843,9 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 本页自带 SliverAppBar（含返回/分享/更多操作与 330 高折叠头图），分类
-    // 标签条已收进该按钮行；AppScaffold 不再预留顶部安全行与悬浮返回，
-    // 避免双顶栏（50px 空白 + 双返回按钮）挤压头图。
+    // 本页自带顶栏容器（返回/分享/更多，常态透明）+ 独立的封面容器 +
+    // 分类标签条容器；AppScaffold 不再预留顶部安全行与悬浮返回，避免双顶栏
+    // （50px 空白 + 双返回按钮）挤压头图。
     return AppScaffold(
       reserveTopStrip: false,
       showBackButton: false,
@@ -857,11 +876,16 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
         controller: _scrollController,
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
+            // 顶栏容器（**与封面容器解耦**）：只承载返回/分享/更多，不再挂头图
+            // `flexibleSpace`。常态**不画任何底**（透明），仅当分类标签条吸附并入
+            // 本栏时（见 `_tabBandMerged`）才亮起通栏毛玻璃带，与之合成一条顶栏。
             SliverAppBar(
               pinned: true,
-              expandedHeight: 330.0,
+              toolbarHeight: _topBarHeight,
               elevation: 0,
-              scrolledUnderElevation: 2,
+              scrolledUnderElevation: 0,
+              backgroundColor: AppColors.transparent,
+              surfaceTintColor: AppColors.transparent,
               leading: MiuixIconButton(
 
                 onPressed: () => Navigator.maybePop(context),
@@ -936,49 +960,26 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                   ),
                 const SizedBox(width: Style.sm),
               ],
-              flexibleSpace: Stack(
-                fit: StackFit.expand,
-                children: [
-                  FlexibleSpaceBar(
-                    background: _buildHeaderBackground(context, card, images),
-                  ),
-                  // 按钮行背景：与分类标签条带同材质的通栏毛玻璃（全宽档：无圆角），
-                  // 滚动时头图从行后经过呈模糊。
-                  // 高度 56 = SliverAppBar 默认 toolbarHeight。
-                  // `outline: false`：本带不画线，分隔线只由下方标签条带的底部 1px
-                  // 承担——两条带吸顶贴合时才不会叠出双线。
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    height: 56,
-                    child: const MiuixFrostedSurface(
-                      borderRadius: 0,
-                      outline: false,
-                      child: SizedBox.expand(),
-                    ),
-                  ),
-                ],
+              // 顶栏常态透明；只有标签条吸附并入（合并）时才亮起通栏毛玻璃带，
+              // 与标签条带拼成一条完整顶栏。`outline: false`：本带不画线，分隔线
+              // 只由标签条带底部 1px 承担，贴合时才不会叠出双线。
+              flexibleSpace: ListenableBuilder(
+                listenable: _scrollController,
+                builder: (context, _) {
+                  if (!_tabBandMerged) return const SizedBox.shrink();
+                  return const MiuixFrostedSurface(
+                    borderRadius: 0,
+                    outline: false,
+                    child: SizedBox.expand(),
+                  );
+                },
               ),
             ),
-            // 分类标签条：默认留在**头图下方的原位**（独立成行），滚到它时 pinned
-            // 吸顶并紧贴顶栏（视觉并入），滚回时回到原位——即 b7-c4 之前的落位。
-            // 材质为通栏毛玻璃带（与顶栏那条 56px 带同材质），故不再有实色底把
-            // 模糊垫死；标签条自身不再叠面板，避免两层材质叠加发灰。
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _SliverTabBarDelegate(
-                child: MiuixFrostedSurface(
-                  borderRadius: 0,
-                  child: AppTabBar(
-                    controller: _tabController,
-                    tabs: tabs.map((t) => _tabTitle(t)).toList(),
-                    blurBackground: false,
-                    height: tabBandHeight,
-                    panelPadding: const EdgeInsets.symmetric(vertical: bandPad),
-                  ),
-                ),
-                extent: tabBandHeight,
+            // 封面容器（**独立**）：头图自成一格，随内容滚动、从顶栏后方经过。
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: _coverHeight,
+                child: _buildHeaderBackground(context, card, images),
               ),
             ),
             SliverToBoxAdapter(
@@ -987,6 +988,30 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                 context,
                 (Pref.demoMode && !isOwner) ? null : card,
                 data?.silence,
+              ),
+            ),
+            // 分类标签条：默认留在**统计行下方的原位**（详情卡之后、Tab 体之前，
+            // 即「关注/粉丝/获赞」与「共 N 支视频」两行之间），滚到它时 pinned 吸顶
+            // 并紧贴顶栏（视觉并入），滚回时回到原位。
+            // 材质为通栏毛玻璃带（与顶栏带同材质），故不再有实色底把模糊垫死；
+            // 标签条自身不再叠面板，避免两层材质叠加发灰。
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SliverTabBarDelegate(
+                child: KeyedSubtree(
+                  key: _tabBandKey,
+                  child: MiuixFrostedSurface(
+                    borderRadius: 0,
+                    child: AppTabBar(
+                      controller: _tabController,
+                      tabs: tabs.map((t) => _tabTitle(t)).toList(),
+                      blurBackground: false,
+                      height: tabBandHeight,
+                      panelPadding: const EdgeInsets.symmetric(vertical: bandPad),
+                    ),
+                  ),
+                ),
+                extent: tabBandHeight,
               ),
             ),
           ];
