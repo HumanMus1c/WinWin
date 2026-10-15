@@ -39,6 +39,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 桌面原生直播间播放页面。
 ///
@@ -744,7 +745,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     showAppDialog<void>(
       context: context,
       builder: (dialogCtx) {
-        return AlertDialog(
+        return AppAlertDialog(
           backgroundColor: const Color(0xE61E1E1E),
           title: const Text(
             '发送直播弹幕',

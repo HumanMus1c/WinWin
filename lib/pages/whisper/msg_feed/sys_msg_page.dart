@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -16,6 +16,7 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 「系统消息」入口。
 void showSysMsgPage(BuildContext context) {
@@ -191,7 +192,7 @@ class _SysMsgTile extends StatelessWidget {
   Future<void> _confirmDelete(BuildContext context) async {
     final ok = await showAppDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: const Text('删除该通知？'),
         actions: [
           MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx, false)),

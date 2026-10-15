@@ -27,6 +27,7 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 String _errMsg(LoadingState state, [String fallback = '操作失败']) {
   if (state is Error) {
@@ -197,7 +198,7 @@ List<ContextMenuAction> buildVideoCardActions({
           showAppDialog(
             context: context,
             builder: (dialogCtx) {
-              return AlertDialog(
+              return AppAlertDialog(
                 title: const Text('提示'),
                 content: Text(
                   '确定拉黑 UP 主「${ownerName.isNotEmpty ? ownerName : mid}」($mid)？\n\n'

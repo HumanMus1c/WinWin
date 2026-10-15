@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/whisper/msg_feed/like_detail_page.dart';
@@ -8,6 +8,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 「点赞我的」入口。
 void showLikeMePage(BuildContext context) {
@@ -119,7 +120,7 @@ class _LikeTile extends StatelessWidget {
   Future<void> _confirmDelete(BuildContext context) async {
     final ok = await showAppDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: const Text('删除该通知？'),
         actions: [
           MiuixTextButton('取消', onPressed: () => Navigator.pop(ctx, false)),

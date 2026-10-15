@@ -12,6 +12,7 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 会话设置入口（阶段 D）。
 ///
@@ -92,7 +93,7 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
   Future<void> _deleteSession() async {
     final ok = await showAppDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: const Text('删除会话'),
         content: const Text('会话会从列表中移除，聊天记录仍由服务端保留。'),
         actions: [

@@ -26,6 +26,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 番剧 / 影视详情主页（对标 BiliPai `BangumiDetailScreen` 与 PiliPlus）。
 ///
@@ -385,7 +386,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     final ctrl = TextEditingController();
     showAppDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: const Text('跳转到集数'),
         content: AppTextField(
           controller: ctrl,

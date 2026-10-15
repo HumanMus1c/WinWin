@@ -23,6 +23,7 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 搜索页面 — 搜索框 + 热搜 + 历史 + 联想建议。
 ///
@@ -149,7 +150,7 @@ class _SearchPageState extends State<SearchPage> {
     if (Pref.demoMode) return;
     showAppDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: const Text('清空搜索历史'),
         content: const Text('确定要清空所有搜索历史吗？'),
         actions: [

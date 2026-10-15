@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/account/login_guard.dart';
@@ -11,6 +11,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 动态转发弹窗（对标 PiliPlus RepostPanel 的精简桌面版）：
 /// 展示被转发内容预览 + 转发理由输入，提交至 `/x/dynamic/feed/create/dyn`。
@@ -76,7 +77,7 @@ class _DynRepostDialogState extends State<DynRepostDialog> {
     final cs = tokens.colors;
     final target = widget.item.orig ?? widget.item;
 
-    return AlertDialog(
+    return AppAlertDialog(
       title: const Text(
         '转发动态',
         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),

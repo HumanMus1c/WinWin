@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixTextButton, MiuixButton, MiuixButtonColors;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -18,6 +18,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 打开离线缓存页面。
 void showDownloadPage(BuildContext context) {
@@ -100,7 +101,7 @@ class _DownloadPageState extends State<DownloadPage> {
   Future<void> _clearCache() async {
     final confirmed = await showAppDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: const Text('清理离线缓存'),
         content: const Text('确定要清空已下载的离线缓存文件吗？'),
         actions: [

@@ -5,6 +5,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 投币对话框（对标 PiliPlus `pages/video/pay_coins` / BiliPai CoinDialog）。
 ///
@@ -19,7 +20,7 @@ Future<void> showCoinDialog(
   return showAppDialog<void>(
     context: context,
     builder: (context) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
+      builder: (context, setState) => AppAlertDialog(
         title: const Text('投币'),
         content: Column(
           mainAxisSize: MainAxisSize.min,

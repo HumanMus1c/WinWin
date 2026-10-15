@@ -1,6 +1,6 @@
 import 'package:flutter_miuix/miuix.dart'
     show MiuixCard, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -34,6 +34,7 @@ import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 历史记录页面（移植自 PiliPlus `lib/pages/history/`，重构为自适应多列宫格排版）。
 void showHistoryPage(BuildContext context) {
@@ -260,7 +261,7 @@ class _HistoryPageState extends State<HistoryPage> {
   Future<void> _clearAll() async {
     final confirmed = await showAppDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: const Text('清空历史'),
         content: const Text('确定清空所有观看历史？此操作不可撤销。'),
         actions: [

@@ -11,6 +11,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 演示模式下可即时编辑的数字元素。
 ///
@@ -377,7 +378,7 @@ class _DemoNumberDialogState extends State<_DemoNumberDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return AppAlertDialog(
       title: Text(widget.title),
       content: TextField(
         controller: _controller,

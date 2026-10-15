@@ -56,6 +56,7 @@ import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 动态类型筛选枚举。
 enum _DynFilterType {
@@ -275,7 +276,7 @@ class _DemoMedalDialogState extends State<_DemoMedalDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return AppAlertDialog(
       title: const Text('编辑粉丝牌'),
       content: Column(
         mainAxisSize: MainAxisSize.min,

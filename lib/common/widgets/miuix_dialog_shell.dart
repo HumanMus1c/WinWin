@@ -1,6 +1,7 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart';
-import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -33,10 +34,12 @@ class MiuixDialogShell extends StatelessWidget {
     final content = ConstrainedBox(constraints: constraints, child: child);
 
     // 阶段5d-L1：M3 分支已移除，Miuix 材质为唯一实现。
-    return Dialog(
+    // B7-c6-1：路由外壳由 Material `Dialog` 换为零-material 的 `AppDialogShell`
+    // （仅承担"居中 + 内边距 + 约束"布局职责；表面仍由下方 `MiuixSurface` 自绘，
+    // 故外壳底色透明、圆角归零 ⇒ 视觉零变化）。
+    return AppDialogShell(
       backgroundColor: AppColors.transparent,
-      elevation: 0,
-      shape: const RoundedRectangleBorder(),
+      borderRadius: Radius.zero,
       insetPadding: const EdgeInsets.symmetric(
         horizontal: Style.lg,
         vertical: Style.xl,

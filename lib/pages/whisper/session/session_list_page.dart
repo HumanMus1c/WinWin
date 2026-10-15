@@ -25,6 +25,7 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 私信会话列表入口（阶段 C）。
 ///
@@ -480,7 +481,7 @@ class _SessionTile extends StatelessWidget {
   Future<void> _confirmRemove(BuildContext context) async {
     final ok = await showAppDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: const Text('删除会话'),
         content: const Text('会话会从列表中移除，但不会删除聊天记录。'),
         actions: [

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/common/widgets/medal_widget.dart';
+import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -752,7 +753,9 @@ void main() {
 
       expect(find.text('测试菜单'), findsOneWidget);
       expect(find.text('选项甲'), findsOneWidget);
-      expect(find.byType(MiuixSurface), findsOneWidget);
+      // c860698：弹层材质收敛——MiuixPopupMenu 面板已由自绘 MiuixSurface
+      // 换成 MiuixFrostedSurface（与 MiuixOverlayPanel 同源）。断言随代码更新。
+      expect(find.byType(MiuixFrostedSurface), findsOneWidget);
 
       await tester.tap(find.text('选项甲'));
       await tester.pump();

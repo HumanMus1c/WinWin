@@ -24,6 +24,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 可内嵌的会话列表区（用于消息页直接展示）。
 ///
@@ -610,7 +611,7 @@ class _SessionTile extends StatelessWidget {
   Future<void> _confirmRemove(BuildContext context) async {
     final ok = await showAppDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: const Text('删除会话'),
         content: const Text('会话会从列表中移除，但不会删除聊天记录。'),
         actions: [

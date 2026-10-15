@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -170,12 +171,14 @@ void main() {
 
       expect(find.text('M3 原生控件 + 标准 tonal elevation'), findsOneWidget);
 
-      // Dialog 根部铺满全屏（Align），实际卡片是内部受 ConstrainedBox
-      // 约束的 Material；宽度应落在 [320, 420]（minWidth 320 防硬换行）。
+      // 路由外壳铺满全屏（Align），实际卡片是内部受 ConstrainedBox 约束、
+      // 由 [MiuixDialogShell] 自绘的 [MiuixSurface]（B7-c6-1 起 `Dialog` 的
+      // Material 卡片已换为零-material 替身，故锚点改为可见表面）。
+      // 宽度应落在 [320, 420]（minWidth 320 防硬换行）。
       final card = find
           .descendant(
             of: find.byType(SelectDialog<int>),
-            matching: find.byType(Material),
+            matching: find.byType(MiuixSurface),
           )
           .first;
       final width = tester.getSize(card).width;

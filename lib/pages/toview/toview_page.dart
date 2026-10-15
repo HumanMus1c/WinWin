@@ -40,6 +40,7 @@ import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 稍后再看页面（移植自 PiliPlus `lib/pages/later/`，重构为自适应多列宫格排版）。
 void showToviewPage(BuildContext context) {
@@ -298,7 +299,7 @@ class _ToviewPageState extends State<ToviewPage> {
   Future<void> _clearAll() async {
     final confirmed = await showAppDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: const Text('清空稍后再看'),
         content: const Text('确定清空所有稍后再看？此操作不可撤销。'),
         actions: [
