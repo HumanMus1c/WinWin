@@ -284,8 +284,10 @@ mixin VideoInteractionMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
-  /// 投币入口：弹对话框选择数量与是否同时点赞。
-  Future<void> actionCoinVideo() async {
+  /// 投币入口：弹浮层选择数量与是否同时点赞。
+  ///
+  /// [anchorContext] 为投币按钮自身 context，浮层据此锚定到按钮上方。
+  Future<void> actionCoinVideo(BuildContext anchorContext) async {
     final aid = interactionAid;
     if (aid == null) return;
     if (!await requireLoginAndSync()) return;
@@ -294,8 +296,11 @@ mixin VideoInteractionMixin<T extends StatefulWidget> on State<T> {
       showToast('达到投币上限啦~');
       return;
     }
+    // 锚点 context 由调用方（按钮）传入，跨 async gap 后须单独守卫。
+    if (!anchorContext.mounted) return;
     showCoinDialog(
       context,
+      anchorContext: anchorContext,
       onPay: (count, withLike) => doCoinVideo(aid, count, withLike),
     );
   }

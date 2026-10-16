@@ -758,8 +758,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 长按点赞一键三连：点赞 + 投币×2 + 收藏默认收藏夹。
   Future<void> _actionTriple() => actionTripleVideo();
 
-  /// 投币入口：弹对话框选择数量与是否同时点赞。
-  Future<void> _actionCoin() => actionCoinVideo();
+  /// 投币入口：弹出锚定"投币"按钮的浮层选择数量与是否同时点赞。
+  Future<void> _actionCoin(BuildContext anchorContext) =>
+      actionCoinVideo(anchorContext);
 
   /// （取消）点踩；点踩时自动取消点赞（B 站语义二者互斥）。
   Future<void> _actionDislike() => actionDislikeVideo();
@@ -2722,7 +2723,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             inWatchLater: false,
             onLike: () {},
             onTriple: () {},
-            onCoin: () {},
+            onCoin: (_) {},
             onDislike: () {},
             onFav: () {},
             onShare: () {},
@@ -2823,7 +2824,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             inWatchLater: null,
             onLike: () {},
             onTriple: () {},
-            onCoin: () {},
+            onCoin: (_) {},
             onDislike: () {},
             onFav: () {},
             onShare: () {},

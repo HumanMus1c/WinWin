@@ -35,6 +35,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/ui/components/app_anchored_popup.dart';
 
 /// Duration 没有 clamp 方法，手动实现（用于 seek 位置限制）。
 Duration _clampDuration(Duration value, Duration min, Duration max) {
@@ -87,6 +88,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
       ValueNotifier(null);
   bool _volumePopupOpen = false;
   bool _chapterPanelOpen = false;
+
+  /// 音量按钮锚点：音量弹层据此定位到**触发按钮正上方**
+  /// （B7-c6-4 反馈轮：此前弹层写死在左下角，与触发器脱钩）。
+  final GlobalKey _volumeButtonKey = GlobalKey();
 
   /// 二级浮层的 Esc 登记注销回调（章节面板 / 音量弹层）。
   VoidCallback? _chapterEscUnregister;
@@ -961,11 +966,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                     : AppIcons.volumeDown()),
                           shadows: ContrastStyle.glyphShadows,
                         );
-                        return _iconButton(
-                          icon: volIcon,
-                          tooltip: '音量',
-                          color: _volumePopupOpen ? biliBlue : null,
-                          onPressed: _toggleVolumePopup,
+                        return KeyedSubtree(
+                          key: _volumeButtonKey,
+                          child: _iconButton(
+                            icon: volIcon,
+                            tooltip: '音量',
+                            color: _volumePopupOpen ? biliBlue : null,
+                            onPressed: _toggleVolumePopup,
+                          ),
                         );
                       },
                     ),
@@ -2168,12 +2176,24 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
+  /// 取音量按钮在本面板坐标系中的矩形（音量弹层锚点）。
+  Rect? _volumeAnchorRect() {
+    final buttonContext = _volumeButtonKey.currentContext;
+    if (buttonContext == null) return null;
+    return anchorRectOf(buttonContext, ancestorContext: context);
+  }
+
   /// 音量弹出 Slider。
+  ///
+  /// B7-c6-4 反馈轮：由**写死左下角**改为**锚定音量按钮正上方**
+  /// （与画质/音轨/倍速等 MiuixPopupMenu 弹层一致的"贴触发器"行为）。
   Widget _buildVolumePopup() {
     final c = widget.controller;
-    return Positioned(
-      left: Style.lg,
-      bottom: 60,
+    final anchor = _volumeAnchorRect();
+    // 触发按钮尚未布局（极端首帧）时不渲染，避免弹层落到屏幕角落。
+    if (anchor == null) return const SizedBox.shrink();
+    return AppAnchoredPopup(
+      anchor: anchor,
       child: GlassCapsule(
         blur: 16,
         backgroundColor: AppColors.black.withValues(alpha: 0.55),

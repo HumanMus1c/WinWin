@@ -60,7 +60,9 @@ class VideoActionRow extends StatefulWidget {
 
   /// 长按点赞进度环充满后触发（一键三连）。
   final VoidCallback onTriple;
-  final VoidCallback onCoin;
+
+  /// 投币入口；入参为投币按钮自身 context（投币浮层据此锚定到按钮上方）。
+  final void Function(BuildContext anchorContext) onCoin;
   final VoidCallback onDislike;
   final VoidCallback onFav;
   final VoidCallback onShare;
@@ -155,19 +157,23 @@ class _VideoActionRowState extends State<VideoActionRow>
         ),
         // 投币
         Expanded(
-          child: _ActionButton(
-            icon: AppIcon(
-              AppIcons.coin(active: widget.coinNum > 0),
-              size: 24,
-              color: widget.coinNum > 0
-                  ? biliPink
-                  : AppThemeHost.of(context).colors.onSurfaceVariant,
+          // Builder 取投币按钮自身 context，供投币浮层锚定（B7-c6-4 反馈轮）。
+          child: Builder(
+            builder: (anchorContext) => _ActionButton(
+              icon: AppIcon(
+                AppIcons.coin(active: widget.coinNum > 0),
+                size: 24,
+                color: widget.coinNum > 0
+                    ? biliPink
+                    : AppThemeHost.of(context).colors.onSurfaceVariant,
+              ),
+              text: NumUtils.formatNum(stat?.coin),
+              textWidget:
+                  _demoCountWidget('video.coin.count', widget.coinNum > 0),
+              isActive: widget.coinNum > 0,
+              tooltip: '投币',
+              onTap: demo ? () {} : () => widget.onCoin(anchorContext),
             ),
-            text: NumUtils.formatNum(stat?.coin),
-            textWidget: _demoCountWidget('video.coin.count', widget.coinNum > 0),
-            isActive: widget.coinNum > 0,
-            tooltip: '投币',
-            onTap: demo ? () {} : widget.onCoin,
           ),
         ),
         // 收藏

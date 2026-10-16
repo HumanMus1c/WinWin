@@ -161,6 +161,9 @@ class AppNavRail extends StatelessWidget {
                 child: MiuixPressable(
                   feedbackType: MiuixPressFeedbackType.sink,
                   sinkAmount: 0.98,
+                  // 按压/悬停遮罩随导航项圆角，与选中 pill 指示器同口径
+                  // （B7-c6-4 反馈轮：此前未传圆角，遮罩呈纯直角矩形）。
+                  borderRadius: BorderRadius.circular(chrome.pillRadius),
                   onPressed: () => onSelect(i),
                   child: SizedBox(
                     width: 64,

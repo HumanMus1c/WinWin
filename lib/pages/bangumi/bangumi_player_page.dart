@@ -2286,13 +2286,15 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     }
   }
 
-  Future<void> _actionCoin() async {
+  Future<void> _actionCoin(BuildContext anchorContext) async {
     if (!await LoginGuard.requireLogin(context)) return;
     final aid = _currentEpisode.aid;
     if (aid != null && aid > 0) {
       if (!mounted) return;
+      if (!anchorContext.mounted) return;
       await showCoinDialog(
         context,
+        anchorContext: anchorContext,
         onPay: (count, withLike) async {
           final res = await VideoHttp.coinVideo(
             aid: aid,
