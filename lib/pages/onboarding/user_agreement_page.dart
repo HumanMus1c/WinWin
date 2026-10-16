@@ -1,7 +1,7 @@
 import 'dart:io' show exit;
 
-import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable, MiuixButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable, MiuixButton, MiuixCheckbox;
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -236,7 +236,7 @@ class _ClauseTile extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             if (showCheckbox)
-              Checkbox(value: checked, onChanged: (_) => onTap?.call()),
+              MiuixCheckbox(value: checked, onChanged: (_) => onTap?.call()),
           ],
         ),
       ),

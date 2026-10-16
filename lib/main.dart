@@ -3,7 +3,7 @@ import 'dart:io' show Platform, pid;
 
 import 'package:catcher_2/catcher_2.dart';
 import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:fvp/mdk.dart' as mdk;
 import 'package:window_manager/window_manager.dart' hide calcWindowPosition;
 
@@ -16,6 +16,7 @@ import 'core/player/seek_probe.dart';
 import 'core/perf/transition_probe.dart';
 import 'core/shell/app_scaffold.dart';
 import 'core/shell/app_shell.dart';
+import 'core/shell/app_theme_host.dart';
 import 'core/storage/storage_pref.dart';
 import 'core/window/title_bar_controller.dart';
 import 'core/window/window_state_controller.dart';
@@ -286,7 +287,7 @@ class _AgreementGateState extends State<AgreementGate> {
   Widget build(BuildContext context) {
     final bootstrapError = _bootstrapError;
     if (bootstrapError != null) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final isDark = AppThemeHost.of(context).isDark;
       final errStr = bootstrapError.toString();
       final isLockError = errStr.contains('33') ||
           errStr.contains('锁定') ||
@@ -363,7 +364,7 @@ class _AgreementGateState extends State<AgreementGate> {
 
     final acked = _acked;
     if (acked == null) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final isDark = AppThemeHost.of(context).isDark;
       return AppScaffold(
         backgroundColor:
             isDark ? const Color(0xFF18191C) : const Color(0xFFF1F2F5),

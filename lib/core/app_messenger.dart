@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter_miuix/miuix.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';

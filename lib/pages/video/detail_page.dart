@@ -7,7 +7,7 @@ import 'package:flutter_miuix/miuix.dart'
         MiuixIconButton,
         MiuixPressFeedbackType,
         MiuixPressable, MiuixTextButton, MiuixButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/ui/components/app_tab_view.dart';
@@ -1417,7 +1417,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         );
 
         final barContent = SizedBox(
-          height: kToolbarHeight,
+          height: Style.toolbarHeight,
           child: Row(
             children: [
               AppBackButton(
@@ -1465,7 +1465,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                   child: Container(
-                    height: kToolbarHeight,
+                    height: Style.toolbarHeight,
                     decoration: BoxDecoration(
                       color: tokens.colors.background.withValues(alpha: 0.95),
                       border: Border(
@@ -1504,7 +1504,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           child: SafeArea(
             bottom: false,
             child: Container(
-              height: kToolbarHeight,
+              height: Style.toolbarHeight,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,

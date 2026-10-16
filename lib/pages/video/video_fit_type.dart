@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart' show BoxFit;
+import 'package:flutter/widgets.dart' show BoxFit;
 
 /// 视频「画面比例 / 缩放模式」枚举。
 ///

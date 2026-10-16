@@ -1,5 +1,5 @@
 import 'package:winwin/core/shell/app_theme_host.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 /// 桌面级微交互装饰组件（自适应悬停高光与聚焦环）。
 ///

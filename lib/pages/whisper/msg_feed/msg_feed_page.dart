@@ -1,5 +1,5 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -13,6 +13,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_components.dart';
@@ -226,7 +227,7 @@ class MsgFeedAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = AppThemeHost.of(context).colors;
     // 演示模式：头像使用默认占位（不加载云端头像）。
     if (Pref.demoMode) return _fallback(cs);
     // 解码尺寸限制（对齐 NetworkImgLayer 策略）：头像原图可能高达 1000+px，
@@ -249,7 +250,7 @@ class MsgFeedAvatar extends StatelessWidget {
     );
   }
 
-  Widget _fallback(ColorScheme cs) => Container(
+  Widget _fallback(AppPalette cs) => Container(
         width: size,
         height: size,
         color: cs.surfaceContainerHighest,

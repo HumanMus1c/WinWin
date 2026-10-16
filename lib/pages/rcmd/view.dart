@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
@@ -13,6 +13,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:flutter_miuix/miuix.dart';
 
 /// Recommended videos feed — ported from PiliPlus's RcmdPage.
@@ -76,7 +77,7 @@ class _RcmdPageState extends State<RcmdPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final colorScheme = ColorScheme.of(context);
+    final colorScheme = AppThemeHost.of(context).colors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
       child: AppRefreshIndicator(
@@ -112,7 +113,7 @@ class _RcmdPageState extends State<RcmdPage>
   );
 
   Widget _buildBody(
-    ColorScheme colorScheme,
+    AppPalette colorScheme,
     LoadingState<List<dynamic>?> loadingState,
   ) {
     // 演示模式：完全使用本地生成的卡片（滚动追加一行，不拉取云端）。
@@ -193,7 +194,7 @@ class _RcmdPageState extends State<RcmdPage>
   }
 
   /// Empty / error state with a reload button.
-  Widget _buildError(ColorScheme colorScheme, [String? errMsg]) {
+  Widget _buildError(AppPalette colorScheme, [String? errMsg]) {
     return SliverFillRemaining(
       hasScrollBody: false,
       child: Column(

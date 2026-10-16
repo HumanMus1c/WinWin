@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
 import 'package:winwin/core/log/app_logger.dart';
@@ -35,7 +35,7 @@ class SelectDialog<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
-    final titleMedium = TextTheme.of(context).titleMedium;
+    final titleMedium = tokens.text.titleMedium;
     final subtitleStyle = tokens.text.labelSmall?.copyWith(
       color: cs.outline,
     );

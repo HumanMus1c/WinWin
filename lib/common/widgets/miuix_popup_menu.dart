@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -220,7 +220,7 @@ class _PopupOverlay extends StatelessWidget {
                         child: Text(
                           title!,
                           style:
-                              (Theme.of(context).textTheme.titleSmall ??
+                              (AppThemeHost.of(context).text.titleSmall ??
                                       const TextStyle())
                                   .copyWith(
                                     fontWeight: FontWeight.w600,

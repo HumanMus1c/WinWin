@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixHorizontalDivider, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder, MiuixButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -710,7 +710,7 @@ class _DynCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = ColorScheme.of(context).onInverseSurface;
+    final color = AppThemeHost.of(context).colors.onInverseSurface;
     return MiuixCard(
       child: Padding(
         padding: const EdgeInsets.all(Style.md),

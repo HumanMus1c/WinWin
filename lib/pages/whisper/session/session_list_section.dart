@@ -1,6 +1,6 @@
 import 'package:flutter_miuix/miuix.dart'
     show MiuixBasicComponent, MiuixHorizontalDivider, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/theme/app_colors.dart';
