@@ -1394,13 +1394,37 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     };
   }
 
-  /// 渐变顶栏：_scrollRatio=0 透明（覆盖在播放器上），=1 不透明（显示标题）。
+  /// 顶栏滚动吸收行程上下限（px）：随左栏实际可滚范围收敛，保证吸顶可达。
+  static const double _kTopBarAbsorbMin = 24;
+  static const double _kTopBarAbsorbMax = 56;
+
+  /// 顶栏不透明度：由左栏滚动位移驱动。
+  ///
+  /// 根因（2026-10-17 实机反馈「过渡中/吸顶完全没有效果」）：旧实现只由
+  /// `_scrollRatio`（播放器收缩进度 = shrinkOffset / (maxExtent - minExtent)）
+  /// 驱动。宽屏两栏布局下评论区迁到右栏 Tab，左栏只剩 视频+弹幕条+信息/简介/标签，
+  /// 可滚余量远小于播放器收起行程（≈0.44×视频高）→ 该比例封顶在 ~0.3，
+  /// 0.5 翻色点与 0.95 吸顶阈值永不可达，故观感上「没有任何效果」。
+  ///
+  /// 改为按滚动位移吸收：行程 = 一条工具栏高（56），不足时按实际可滚范围收敛
+  /// （下限 24 防抖），任何窗口/布局都能走完「渐变 → 翻色 → 吸顶」。
+  double _topBarScrollOpacity() {
+    if (!scrollController.hasClients) return 0.0;
+    final pos = scrollController.position;
+    final absorb = pos.maxScrollExtent.clamp(
+      _kTopBarAbsorbMin,
+      _kTopBarAbsorbMax,
+    );
+    return (pos.pixels / absorb).clamp(0.0, 1.0);
+  }
+
+  /// 渐变顶栏：滚动位移=0 透明（覆盖在播放器上），到位后不透明（显示标题）。
   Widget _buildGradientTopBar(String? upName, {bool forceOpaque = false}) {
-    return ValueListenableBuilder<double>(
-      valueListenable: _scrollRatio,
-      builder: (context, scrollRatio, _) {
+    return AnimatedBuilder(
+      animation: scrollController,
+      builder: (context, _) {
         final tokens = AppThemeHost.of(context);
-        final opacity = forceOpaque ? 1.0 : scrollRatio.clamp(0.0, 1.0);
+        final opacity = forceOpaque ? 1.0 : _topBarScrollOpacity();
         final overVideo = opacity < 0.5;
         // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏拍平到页面背景后，
         // 为标题/返回箭头选出达标可读色（覆盖在播放器上时仍用白色）。

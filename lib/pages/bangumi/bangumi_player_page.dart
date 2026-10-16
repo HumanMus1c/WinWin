@@ -843,14 +843,34 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     );
   }
 
-  /// 渐变顶栏：_scrollRatio=0 透明（覆盖在播放器上），=1 不透明（显示标题）。
+  /// 顶栏滚动吸收行程上下限（px）：随内容区实际可滚范围收敛，保证吸顶可达。
+  static const double _kTopBarAbsorbMin = 24;
+  static const double _kTopBarAbsorbMax = 56;
+
+  /// 顶栏不透明度：由内容区滚动位移驱动。
+  ///
+  /// 与普通视频稿件（DetailPage）同源根因（2026-10-17 实机反馈）：
+  /// 旧实现只由 `_scrollRatio`（播放器收缩进度）驱动，可滚余量不足时
+  /// 0.5 翻色点与 0.95 吸顶阈值永不可达 → 「过渡中/吸顶」完全没有效果。
+  /// 改为按滚动位移吸收（行程 = 一条工具栏高，不足时按实际可滚范围收敛）。
+  double _topBarScrollOpacity() {
+    if (!_scrollController.hasClients) return 0.0;
+    final pos = _scrollController.position;
+    final absorb = pos.maxScrollExtent.clamp(
+      _kTopBarAbsorbMin,
+      _kTopBarAbsorbMax,
+    );
+    return (pos.pixels / absorb).clamp(0.0, 1.0);
+  }
+
+  /// 渐变顶栏：滚动位移=0 透明（覆盖在播放器上），到位后不透明（显示标题）。
   /// 完全对齐普通视频稿件（DetailPage）规范。
   Widget _buildGradientTopBar(String? title, {bool forceOpaque = false}) {
-    return ValueListenableBuilder<double>(
-      valueListenable: _scrollRatio,
-      builder: (context, scrollRatio, _) {
-    final tokens = AppThemeHost.of(context);
-        final opacity = forceOpaque ? 1.0 : scrollRatio.clamp(0.0, 1.0);
+    return AnimatedBuilder(
+      animation: _scrollController,
+      builder: (context, _) {
+        final tokens = AppThemeHost.of(context);
+        final opacity = forceOpaque ? 1.0 : _topBarScrollOpacity();
         final overVideo = opacity < 0.5;
         // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏拍平到页面背景后，
         // 为标题/返回箭头选出达标可读色（覆盖在播放器上时仍用白色）。
