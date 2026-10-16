@@ -27,6 +27,7 @@ import 'package:winwin/core/window/desktop_fullscreen.dart';
 import 'package:winwin/http/live.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
+import 'package:winwin/pages/video/video_fit_type.dart';
 import 'package:winwin/tcp/live.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
@@ -96,8 +97,9 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   List<String> _streamCandidates = [];
   int _currentStreamIndex = 0;
 
-  // 画面比例模式: 0: 16:9, 1: 4:3, 2: 原始比例 (自适应 contain), 3: 铺满拉伸 (fill)
-  int _aspectRatioMode = 0;
+  // 画面比例 / 缩放模式（移植上游 PiliPlus `VideoFitType`）。默认「原始比例」
+  // （contain），保证竖屏等非 16:9 源在默认档即不变形。
+  VideoFitType _videoFit = VideoFitType.contain;
 
   /// 视频源显示尺寸（fvp `textureSize` 已按 rotation 旋正，竖屏流会得到高>宽）。
   /// 「画面比例」据此按源比例渲染，杜绝 Texture 被拉伸铺满（竖屏被压扁拉宽）。
@@ -1010,19 +1012,6 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     );
   }
 
-  /// 播放器容器宽高比按当前「画面比例」档位决定：
-  /// 16:9 / 铺满拉伸 → 16:9；4:3 → 4:3；原始比例 → 视频源真实比例。
-  ///
-  /// 源尺寸未知时（首帧未到）回退 16:9，尺寸到达后自动收敛。
-  double get _playerBoxAspectRatio {
-    if (_aspectRatioMode == 1) return 4 / 3;
-    final s = _videoSize;
-    if (_aspectRatioMode == 2 && s != null && s.width > 0 && s.height > 0) {
-      return s.width / s.height;
-    }
-    return 16 / 9;
-  }
-
   /// 视频播放器区域（普通窗口模式）
   Widget _buildPlayerBox() {
     // 演示模式：本地演示播放器（灰画面 + 全要素控制栏 + 本地播放状态；不连流）。
@@ -1036,7 +1025,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       );
     }
     return AspectRatio(
-      aspectRatio: _playerBoxAspectRatio,
+      aspectRatio: 16 / 9,
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.black,
@@ -1194,39 +1183,31 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     );
   }
 
-  /// 视频画面渲染（支持不同画面比例模式）。
+  /// 视频画面渲染（移植上游 PiliPlus `pl_player/view/view.dart` 的组合）。
   ///
-  /// 语义（2026-10-16 对齐「方案 A」）：除「铺满拉伸」外一律**等比缩放、不拉伸**
-  /// （contain）——档位只决定容器比例（见 [_playerBoxAspectRatio]）与黑边方向；
-  /// 「原始比例」按视频源真实比例显示。此前实现把 `Texture` 拉伸铺满**写死的
-  /// 16:9 盒子**（原始/铺满两档都用 `SizedBox(1920×1080)`），故竖屏源必被压扁
-  /// 拉宽、且「原始比例」与默认档完全等价（已定因修复）。
+  /// 上游组合：`ClipRect → FittedBox(fit: boxFit) → SizedBox(视频尺寸/按比例
+  /// 归一化的尺寸) → Texture`。要点：视频面用**源尺寸**建盒子，若档位指定
+  /// [VideoFitType.aspectRatio] 则把宽度改为 `高 × aspectRatio`（强制显示比例，
+  /// 视频随盒子拉伸），最后由 `FittedBox` 的 `boxFit` 决定如何装入播放区。
+  /// 这样「16:9 / 4:3 / 原始比例 / 铺满拉伸」四档语义独立、互不等价。
   Widget _buildVideoSurface() {
     if (!_isLiving || _textureId == null || _errorMessage != null) {
       return _buildOfflineCover();
     }
 
-    final textureWidget = Texture(textureId: _textureId!);
     final src = _videoSize;
     final srcW = (src != null && src.width > 0) ? src.width : 1920.0;
     final srcH = (src != null && src.height > 0) ? src.height : 1080.0;
+    final ar = _videoFit.aspectRatio;
 
-    // 铺满拉伸：唯一允许拉伸变形的档位（填满当前容器）。
-    if (_aspectRatioMode == 3) {
-      return SizedBox.expand(
-        child: FittedBox(
-          fit: BoxFit.fill,
-          child: SizedBox(width: srcW, height: srcH, child: textureWidget),
+    return ClipRect(
+      child: FittedBox(
+        fit: _videoFit.boxFit,
+        child: SizedBox(
+          width: ar == null ? srcW : srcH * ar,
+          height: srcH,
+          child: Texture(textureId: _textureId!),
         ),
-      );
-    }
-
-    // 16:9 / 4:3 / 原始比例：一律按**视频源真实比例**等比居中，绝不拉伸；
-    // 容器比例差异（黑边方向）由 [_playerBoxAspectRatio] 承担。
-    return Center(
-      child: AspectRatio(
-        aspectRatio: srcW / srcH,
-        child: textureWidget,
       ),
     );
   }
@@ -1521,16 +1502,16 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                 entries: [
                   MiuixDropdownEntry(
                     items: [
-                      for (final (idx, mode) in const [
-                        '16:9',
-                        '4:3',
-                        '原始比例',
-                        '铺满拉伸',
-                      ].indexed)
+                      for (final (fit, label) in const <(VideoFitType, String)>[
+                        (VideoFitType.ratio_16x9, '16:9'),
+                        (VideoFitType.ratio_4x3, '4:3'),
+                        (VideoFitType.contain, '原始比例'),
+                        (VideoFitType.fill, '铺满拉伸'),
+                      ])
                         MiuixDropdownItem(
-                          text: mode,
-                          selected: _aspectRatioMode == idx,
-                          onClick: () => setState(() => _aspectRatioMode = idx),
+                          text: label,
+                          selected: _videoFit == fit,
+                          onClick: () => setState(() => _videoFit = fit),
                         ),
                     ],
                   ),
