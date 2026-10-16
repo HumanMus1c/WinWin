@@ -27,6 +27,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/event/event_bus.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/fav.dart';
@@ -552,6 +553,16 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
     ]);
   }
 
+  /// 诊断日志：记录一次加载失败（来源 + mid + 错误文案）。用于「进入某用户
+  /// 空间数据无法加载」类偶发问题在实机复跑时留痕取证（2026-10-16 用户未能
+  /// 再次复现，先打诊断）。
+  void _logLoad(String scope, String? msg) {
+    AppLogger.w(
+      'MemberSpace',
+      '$scope 加载失败 mid=${widget.mid} err=${msg ?? 'unknown'}',
+    );
+  }
+
   Future<void> _loadSpace() async {
     setState(() => _spaceState = LoadingState.loading());
     final res = await MemberHttp.space(mid: widget.mid);
@@ -561,6 +572,8 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
       if (card != null) {
         _relationStatus = card.relation ?? 0;
       }
+    } else if (res case Error(:final errMsg)) {
+      _logLoad('space', errMsg);
     }
     _syncTabController();
     setState(() => _spaceState = res);
@@ -571,6 +584,8 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
     if (!mounted) return;
     if (res case Success(:final response)) {
       setState(() => _cardInfo = response);
+    } else if (res case Error(:final errMsg)) {
+      _logLoad('cardInfo', errMsg);
     }
   }
 
@@ -581,6 +596,8 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
       _navNum = response;
       _syncTabController();
       setState(() {});
+    } else if (res case Error(:final errMsg)) {
+      _logLoad('navNum', errMsg);
     }
   }
 
@@ -589,6 +606,8 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
     if (!mounted) return;
     if (res case Success(:final response)) {
       setState(() => _extraTopPhoto = response);
+    } else if (res case Error(:final errMsg)) {
+      _logLoad('topPhoto', errMsg);
     }
   }
 
@@ -618,7 +637,8 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
         _videoFailed = false;
         _syncTabController();
         setState(() {});
-      case Error():
+      case Error(:final errMsg):
+        _logLoad('videos', errMsg);
         _videoFailed = true;
         _syncTabController();
         setState(() {});
@@ -654,6 +674,7 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
         _syncTabController();
         setState(() {});
       case Error(:final errMsg):
+        _logLoad('fav', errMsg);
         _favFailed = true;
         _favError = errMsg;
         _syncTabController();
@@ -692,6 +713,7 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
         _syncTabController();
         setState(() {});
       case Error(:final errMsg):
+        _logLoad('bangumi', errMsg);
         _bangumiFailed = true;
         _bangumiError = errMsg;
         _syncTabController();
@@ -728,6 +750,7 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
         _syncTabController();
         setState(() {});
       case Error(:final errMsg):
+        _logLoad('liked', errMsg);
         _likedFailed = true;
         _likedError = errMsg;
         _syncTabController();
@@ -764,7 +787,8 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
         _seasonFailed = false;
         _syncTabController();
         setState(() {});
-      case Error():
+      case Error(:final errMsg):
+        _logLoad('seasons', errMsg);
         _seasonFailed = true;
         _syncTabController();
         setState(() {});
@@ -797,7 +821,8 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
         _dynamicEnd = !response.hasMore;
         _dynamicFailed = false;
         setState(() {});
-      case Error():
+      case Error(:final errMsg):
+        _logLoad('dynamics', errMsg);
         _dynamicFailed = true;
         setState(() {});
       case Loading():

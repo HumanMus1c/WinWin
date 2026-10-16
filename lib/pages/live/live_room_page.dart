@@ -99,6 +99,10 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   // 画面比例模式: 0: 16:9, 1: 4:3, 2: 原始比例 (自适应 contain), 3: 铺满拉伸 (fill)
   int _aspectRatioMode = 0;
 
+  /// 视频源显示尺寸（fvp `textureSize` 已按 rotation 旋正，竖屏流会得到高>宽）。
+  /// 「画面比例」据此按源比例渲染，杜绝 Texture 被拉伸铺满（竖屏被压扁拉宽）。
+  Size? _videoSize;
+
   // 全屏与网页全屏
   bool _fullscreen = false;
   bool _inAppFullscreen = false;
@@ -216,6 +220,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     setState(() {
       _loading = true;
       _errorMessage = null;
+      _videoSize = null;
     });
 
     await ensureBootstrap();
@@ -487,6 +492,16 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       if (mounted) {
         setState(() => _loading = false);
       }
+      // 读取视频源显示尺寸（fvp textureSize 已按 rotation 旋正，竖屏流得到
+      // 高>宽），供「画面比例」按源比例渲染；避免 Texture 被拉伸铺满。
+      unawaited(
+        player.textureSize.then((size) {
+          if (!mounted || _player != player) return;
+          if (size != null && size.width > 0 && size.height > 0) {
+            setState(() => _videoSize = size);
+          }
+        }),
+      );
     } catch (e) {
       if (!mounted) return;
       if (_currentStreamIndex + 1 < _streamCandidates.length) {
@@ -995,6 +1010,19 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     );
   }
 
+  /// 播放器容器宽高比按当前「画面比例」档位决定：
+  /// 16:9 / 铺满拉伸 → 16:9；4:3 → 4:3；原始比例 → 视频源真实比例。
+  ///
+  /// 源尺寸未知时（首帧未到）回退 16:9，尺寸到达后自动收敛。
+  double get _playerBoxAspectRatio {
+    if (_aspectRatioMode == 1) return 4 / 3;
+    final s = _videoSize;
+    if (_aspectRatioMode == 2 && s != null && s.width > 0 && s.height > 0) {
+      return s.width / s.height;
+    }
+    return 16 / 9;
+  }
+
   /// 视频播放器区域（普通窗口模式）
   Widget _buildPlayerBox() {
     // 演示模式：本地演示播放器（灰画面 + 全要素控制栏 + 本地播放状态；不连流）。
@@ -1008,7 +1036,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
       );
     }
     return AspectRatio(
-      aspectRatio: 16 / 9,
+      aspectRatio: _playerBoxAspectRatio,
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.black,
@@ -1166,53 +1194,41 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     );
   }
 
-  /// 视频画面渲染（支持不同画面比例模式）
+  /// 视频画面渲染（支持不同画面比例模式）。
+  ///
+  /// 语义（2026-10-16 对齐「方案 A」）：除「铺满拉伸」外一律**等比缩放、不拉伸**
+  /// （contain）——档位只决定容器比例（见 [_playerBoxAspectRatio]）与黑边方向；
+  /// 「原始比例」按视频源真实比例显示。此前实现把 `Texture` 拉伸铺满**写死的
+  /// 16:9 盒子**（原始/铺满两档都用 `SizedBox(1920×1080)`），故竖屏源必被压扁
+  /// 拉宽、且「原始比例」与默认档完全等价（已定因修复）。
   Widget _buildVideoSurface() {
     if (!_isLiving || _textureId == null || _errorMessage != null) {
       return _buildOfflineCover();
     }
 
     final textureWidget = Texture(textureId: _textureId!);
+    final src = _videoSize;
+    final srcW = (src != null && src.width > 0) ? src.width : 1920.0;
+    final srcH = (src != null && src.height > 0) ? src.height : 1080.0;
 
-    switch (_aspectRatioMode) {
-      case 1: // 4:3
-        return Center(
-          child: AspectRatio(
-            aspectRatio: 4 / 3,
-            child: textureWidget,
-          ),
-        );
-      case 2: // 原始比例自适应 (contain)
-        return Center(
-          child: FittedBox(
-            fit: BoxFit.contain,
-            child: SizedBox(
-              width: 1920,
-              height: 1080,
-              child: textureWidget,
-            ),
-          ),
-        );
-      case 3: // 铺满拉伸 (fill)
-        return SizedBox.expand(
-          child: FittedBox(
-            fit: BoxFit.fill,
-            child: SizedBox(
-              width: 1920,
-              height: 1080,
-              child: textureWidget,
-            ),
-          ),
-        );
-      case 0: // 16:9
-      default:
-        return Center(
-          child: AspectRatio(
-            aspectRatio: 16 / 9,
-            child: textureWidget,
-          ),
-        );
+    // 铺满拉伸：唯一允许拉伸变形的档位（填满当前容器）。
+    if (_aspectRatioMode == 3) {
+      return SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.fill,
+          child: SizedBox(width: srcW, height: srcH, child: textureWidget),
+        ),
+      );
     }
+
+    // 16:9 / 4:3 / 原始比例：一律按**视频源真实比例**等比居中，绝不拉伸；
+    // 容器比例差异（黑边方向）由 [_playerBoxAspectRatio] 承担。
+    return Center(
+      child: AspectRatio(
+        aspectRatio: srcW / srcH,
+        child: textureWidget,
+      ),
+    );
   }
 
   /// 居中半透明大播放按钮

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/constants.dart';
 import 'package:winwin/core/account/accounts.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -55,8 +56,14 @@ abstract final class MemberHttp {
           MemberSpaceData.fromJson(data['data'] as Map<String, dynamic>),
         );
       }
-    } catch (_) {
+      AppLogger.w(
+        'MemberHttp.space',
+        'APP /x/v2/space 未成功 mid=$mid code=${data['code']} '
+        'msg=${data['message']}',
+      );
+    } catch (e) {
       // APP 端超时或异常时无缝降级到 Web 端卡片接口
+      AppLogger.w('MemberHttp.space', 'APP /x/v2/space 异常 mid=$mid: $e');
     }
 
     // 2. Web 端卡片接口兜底（高可用、极速）
@@ -75,11 +82,25 @@ abstract final class MemberHttp {
           MemberSpaceData.fromWebCard(data['data'] as Map<String, dynamic>),
         );
       } else {
+        AppLogger.w(
+          'MemberHttp.space',
+          'Web /x/web-interface/card 未成功 mid=$mid code=${data['code']} '
+          'msg=${data['message']}',
+        );
         return Error(data['message']?.toString() ?? '获取空间信息失败');
       }
     } on DioException catch (e) {
+      AppLogger.w(
+        'MemberHttp.space',
+        'Web /x/web-interface/card 网络异常 mid=$mid '
+        'type=${e.type.name} msg=${e.message}',
+      );
       return Error('网络请求异常：${e.message ?? e.type.name}');
     } catch (e) {
+      AppLogger.w(
+        'MemberHttp.space',
+        'Web /x/web-interface/card 异常 mid=$mid: $e',
+      );
       return Error('获取空间信息失败：$e');
     }
   }
