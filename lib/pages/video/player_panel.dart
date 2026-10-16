@@ -2232,6 +2232,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     value: vol.clamp(0.0, Pref.maxVolume).toDouble(),
                     min: 0,
                     max: Pref.maxVolume,
+                    // 100% 处增加一个吸附关键点：拖动/点击时磁吸到 100%（常态
+                    // 音量基准，100% 以上为增益），并在轨道上画出标记点，便于
+                    // 快速定位。magnetThreshold 放宽到 3%（≈±6）更易吸附。
+                    keyPoints: Pref.maxVolume > 100 ? const [100.0] : null,
+                    showKeyPoints: Pref.maxVolume > 100,
+                    magnetThreshold: 0.03,
                     colors: MiuixSliderColors(
                       foregroundColor: activeColor,
                       disabledForegroundColor: activeColor,

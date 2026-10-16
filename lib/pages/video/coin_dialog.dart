@@ -72,7 +72,7 @@ class _CoinPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final panel = MiuixOverlayPanel(
+    final content = MiuixOverlayPanel(
       title: '投币',
       icon: AppIcon(AppIcons.coin(active: true), size: 16, color: biliPink),
       child: SizedBox(
@@ -107,6 +107,11 @@ class _CoinPopup extends StatelessWidget {
         ),
       ),
     );
+    // 反馈修复（宽度异常）：[MiuixOverlayPanel] 的标题行 `Row` 为默认
+    // `MainAxisSize.max`，会撑满可用宽度；而锚定浮层给的是整页 loose 约束，
+    // 面板遂被拉成整页宽。必须由外层限定宽度，使面板收缩为内容宽：
+    // 264 = 内容 232 + 左右内边距 16×2。
+    final panel = SizedBox(width: 264, child: content);
     final a = anchor;
     return Stack(
       children: [
