@@ -339,14 +339,14 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   void _showFollowStatusDialog(BangumiDetail detail) {
     showAppDialog(
       context: context,
-      builder: (ctx) => SimpleDialog(
+      builder: (ctx) => AppSimpleDialog(
         title: const Text('追番状态设置'),
         children: [
           _buildDialogStatusOption(ctx, detail, 1, '想看'),
           _buildDialogStatusOption(ctx, detail, 2, '在看'),
           _buildDialogStatusOption(ctx, detail, 3, '看过'),
           const SizedBox(height: 16, child: Center(child: MiuixHorizontalDivider())),
-          SimpleDialogOption(
+          AppSimpleDialogOption(
             onPressed: () {
               Navigator.pop(ctx);
               _unfollowBangumi();
@@ -365,7 +365,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     String label,
   ) {
     final selected = _isFollowed && _followStatus == status;
-    return SimpleDialogOption(
+    return AppSimpleDialogOption(
       onPressed: () {
         Navigator.pop(ctx);
         _updateFollowStatus(status);

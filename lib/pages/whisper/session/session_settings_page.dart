@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixBasicComponentColors, MiuixHorizontalDivider, MiuixSwitchPreference, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -117,10 +117,10 @@ class _SessionSettingsPageState extends State<SessionSettingsPage> {
     final reasons = ['垃圾广告', '骚扰谩骂', '色情低俗', '违法信息', '其他'];
     final reason = await showAppDialog<String>(
       context: context,
-      builder: (ctx) => SimpleDialog(
+      builder: (ctx) => AppSimpleDialog(
         title: const Text('举报原因'),
         children: reasons
-            .map((r) => SimpleDialogOption(
+            .map((r) => AppSimpleDialogOption(
                   child: Text(r),
                   onPressed: () => Navigator.pop(ctx, r),
                 ))

@@ -24,6 +24,10 @@ class Style {
   // Top bar height
   static const double topBarHeight = 52;
 
+  /// Material `kToolbarHeight` 的对等常量（= 56.0，逐位一致）。
+  /// B7-c6-1b 起以此取代 `material_ui` 的 `kToolbarHeight`，供播放器 / 详情页顶栏复用。
+  static const double toolbarHeight = 56;
+
   // Bottom bar
   static const double bottomBarHeight = 60;
   static const double bottomBarRadius = 28;

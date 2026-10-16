@@ -2,10 +2,11 @@ import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixVerticalDivider, MiuixTextButton, MiuixButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/theme/app_colors.dart';
@@ -865,7 +866,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         );
 
         final barContent = SizedBox(
-          height: kToolbarHeight,
+          height: Style.toolbarHeight,
           child: Row(
             children: [
               AppBackButton(
@@ -939,7 +940,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                   child: Container(
-                    height: kToolbarHeight,
+                    height: Style.toolbarHeight,
                     decoration: BoxDecoration(
                       color: tokens.colors.background
                           .withValues(alpha: 0.95),
@@ -973,7 +974,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           child: SafeArea(
             bottom: false,
             child: Container(
-              height: kToolbarHeight,
+              height: Style.toolbarHeight,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -2356,10 +2357,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   void _showFollowStatusDialog() {
     showAppDialog(
       context: context,
-      builder: (ctx) => SimpleDialog(
+      builder: (ctx) => AppSimpleDialog(
         title: const Text('追番状态设置'),
         children: [
-          SimpleDialogOption(
+          AppSimpleDialogOption(
             onPressed: () async {
               Navigator.pop(ctx);
               await PgcHttp.updateFollowStatus(seasonId: widget.detail.seasonId, status: 1);
@@ -2373,7 +2374,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             },
             child: const Text('想看'),
           ),
-          SimpleDialogOption(
+          AppSimpleDialogOption(
             onPressed: () async {
               Navigator.pop(ctx);
               await PgcHttp.updateFollowStatus(seasonId: widget.detail.seasonId, status: 2);
@@ -2387,7 +2388,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             },
             child: const Text('在看'),
           ),
-          SimpleDialogOption(
+          AppSimpleDialogOption(
             onPressed: () async {
               Navigator.pop(ctx);
               await PgcHttp.updateFollowStatus(seasonId: widget.detail.seasonId, status: 3);
@@ -2402,7 +2403,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
             child: const Text('看过'),
           ),
           const SizedBox(height: 16, child: Center(child: MiuixHorizontalDivider())),
-          SimpleDialogOption(
+          AppSimpleDialogOption(
             onPressed: () async {
               Navigator.pop(ctx);
               await PgcHttp.unfollowBangumi(seasonId: widget.detail.seasonId);

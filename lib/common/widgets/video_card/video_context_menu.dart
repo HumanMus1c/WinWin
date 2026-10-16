@@ -467,7 +467,7 @@ void _showDislikeReasonsDialog({
         );
       }
 
-      return SimpleDialog(
+      return AppSimpleDialog(
         title: const Text('不感兴趣理由', style: TextStyle(fontSize: 16)),
         contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         children: [

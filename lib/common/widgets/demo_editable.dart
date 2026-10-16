@@ -422,11 +422,11 @@ class _DemoChoiceDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = AppThemeHost.of(context).colors;
-    return SimpleDialog(
+    return AppSimpleDialog(
       title: Text(title),
       children: [
         for (final (value, label) in options)
-          SimpleDialogOption(
+          AppSimpleDialogOption(
             onPressed: () {
               onPick(value);
               Navigator.pop(context);

@@ -25,6 +25,8 @@
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_miuix/miuix.dart'
+    show MiuixPressable, MiuixPressFeedbackType;
 
 import 'package:winwin/core/shell/app_theme_host.dart';
 
@@ -249,5 +251,152 @@ WrapAlignment _wrapAlignment(MainAxisAlignment alignment) {
       return WrapAlignment.spaceAround;
     case MainAxisAlignment.spaceEvenly:
       return WrapAlignment.spaceEvenly;
+  }
+}
+
+/// 简易选项对话框（替代 Material `SimpleDialog`）。B7-c6-1b。
+///
+/// 复刻依据：`material_ui` 1.5.0 `lib/src/dialog.dart` `SimpleDialog.build`（L1310-1419）：
+///   `IntrinsicWidth(stepWidth: 56)` → `Column(min, stretch)` = [title?, `Flexible(content)`]；
+///   · title padding 默认 `fromLTRB(24, 24, 24, 0)`；`children != null` 时 bottom **不**参与文本缩放；
+///   · content = `Flexible(SingleChildScrollView(padding: contentPadding 默认 fromLTRB(0,12,0,16),
+///     child: DefaultTextStyle(ListBody(children))))`；`title == null` 时 top 参与缩放；
+///   · 标题样式 = `titleTextStyle ?? dialogTheme.titleTextStyle ?? theme.textTheme.titleLarge`
+///     （项目 `dialogTheme` 未覆写 titleTextStyle ⇒ 取 `textTheme.titleLarge`）；
+///   · 内容样式 M3 默认 = `textTheme.bodyMedium`；
+///   · 外层仍是 `Dialog`（本项目最终态：elevation 0 / radius 16 / `surfaceContainerHigh`）。
+/// 与 [AppAlertDialog] 共用 [AppDialogShell]，零视觉变化（机械替换口径）。
+class AppSimpleDialog extends StatelessWidget {
+  const AppSimpleDialog({
+    super.key,
+    this.title,
+    this.titlePadding = const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 0.0),
+    this.children,
+    this.contentPadding = const EdgeInsets.fromLTRB(0.0, 12.0, 0.0, 16.0),
+    this.backgroundColor,
+    this.insetPadding,
+    this.constraints,
+  });
+
+  final Widget? title;
+
+  /// 标题内边距（默认 24/24/24/0，对齐 Material）。
+  final EdgeInsetsGeometry titlePadding;
+
+  /// 选项列表（通常为 [AppSimpleDialogOption]）。
+  final List<Widget>? children;
+
+  /// 选项区内边距（默认 0/12/0/16，对齐 Material）。
+  final EdgeInsetsGeometry contentPadding;
+
+  final Color? backgroundColor;
+
+  final EdgeInsets? insetPadding;
+
+  final BoxConstraints? constraints;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = AppThemeHost.of(context);
+    final TextDirection? textDirection = Directionality.maybeOf(context);
+    final double paddingScaleFactor =
+        _scalePadding(MediaQuery.textScalerOf(context).scale(1.0));
+
+    Widget? titleWidget;
+    if (title != null) {
+      final EdgeInsets effectiveTitlePadding =
+          titlePadding.resolve(textDirection);
+      titleWidget = Padding(
+        padding: EdgeInsets.only(
+          left: effectiveTitlePadding.left * paddingScaleFactor,
+          right: effectiveTitlePadding.right * paddingScaleFactor,
+          top: effectiveTitlePadding.top * paddingScaleFactor,
+          // 有 children 时标题下间距不参与缩放（对齐 Material）。
+          bottom: children == null
+              ? effectiveTitlePadding.bottom * paddingScaleFactor
+              : effectiveTitlePadding.bottom,
+        ),
+        child: DefaultTextStyle(
+          style: tokens.text.titleLarge ?? const TextStyle(),
+          textAlign: TextAlign.start,
+          child: Semantics(container: true, child: title),
+        ),
+      );
+    }
+
+    Widget? contentWidget;
+    if (children != null) {
+      final EdgeInsets effectiveContentPadding =
+          contentPadding.resolve(textDirection);
+      contentWidget = Flexible(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: effectiveContentPadding.left * paddingScaleFactor,
+            right: effectiveContentPadding.right * paddingScaleFactor,
+            // 无标题时内容上间距参与缩放（对齐 Material）。
+            top: title == null
+                ? effectiveContentPadding.top * paddingScaleFactor
+                : effectiveContentPadding.top,
+            bottom: effectiveContentPadding.bottom * paddingScaleFactor,
+          ),
+          child: DefaultTextStyle(
+            style: tokens.text.bodyMedium ?? const TextStyle(),
+            child: ListBody(children: children!),
+          ),
+        ),
+      );
+    }
+
+    return AppDialogShell(
+      insetPadding:
+          insetPadding ?? const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      constraints: constraints ?? const BoxConstraints(minWidth: 280),
+      backgroundColor: backgroundColor,
+      child: IntrinsicWidth(
+        stepWidth: 56.0,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[?titleWidget, ?contentWidget],
+        ),
+      ),
+    );
+  }
+}
+
+/// 简易对话框选项（替代 Material `SimpleDialogOption`）。B7-c6-1b。
+///
+/// 语义与内边距与 Material 一致（默认 `EdgeInsets.symmetric(vertical: 8, horizontal: 24)`）。
+/// 按压反馈由 Material `InkWell` 水波统一为全站 Miuix 扁平按压（2% 内缩，与 `lib/` 内
+/// 73 处已迁移按压件同规格）——这是全站 Miuix 化的既定目标态，非本批新引入的差异。
+class AppSimpleDialogOption extends StatelessWidget {
+  const AppSimpleDialogOption({
+    super.key,
+    this.onPressed,
+    this.child,
+    this.padding,
+  });
+
+  /// 选中回调；为 null 时不可点击。
+  final VoidCallback? onPressed;
+
+  /// 选项内容（通常为 `Text`）。
+  final Widget? child;
+
+  /// 内容内边距（默认 `symmetric(vertical: 8, horizontal: 24)`，对齐 Material）。
+  final EdgeInsets? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return MiuixPressable(
+      onPressed: onPressed,
+      feedbackType: MiuixPressFeedbackType.sink,
+      sinkAmount: 0.98,
+      child: Padding(
+        padding: padding ??
+            const EdgeInsets.symmetric(vertical: 8.0, horizontal: 24.0),
+        child: child,
+      ),
+    );
   }
 }
