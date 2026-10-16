@@ -4,6 +4,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIcon
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -960,7 +961,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
+                child: AppFilterChip(
                   label: Text(label),
                   selected: isCurrent,
                   onSelected: (selected) {
@@ -1034,7 +1035,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
                 }
                 return Padding(
                   padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
+                  child: AppChoiceChip(
                     label: Text(chipLabel),
                     selected: isSelected,
                     onSelected: (val) {

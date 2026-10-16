@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixTextButton, MiuixButton;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
@@ -441,7 +442,7 @@ void _showDislikeReasonsDialog({
       final cs = tokens.colors;
 
       Widget makeChip(Reason reason, {required bool isFeedback}) {
-        return ActionChip(
+        return AppActionChip(
           label: Text(reason.name ?? '未知'),
           labelStyle: const TextStyle(fontSize: 12),
           padding: const EdgeInsets.symmetric(horizontal: 4),

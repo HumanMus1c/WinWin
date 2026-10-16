@@ -2,6 +2,7 @@ import 'package:flutter_miuix/miuix.dart'
     show MiuixBasicComponent, MiuixHorizontalDivider, MiuixTextButton;
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
@@ -318,7 +319,7 @@ class SessionListSectionState extends State<SessionListSection> {
               for (final c in _categories)
                 Padding(
                   padding: const EdgeInsets.only(right: 6, top: 6),
-                  child: ChoiceChip(
+                  child: AppChoiceChip(
                     label: Text(c.label),
                     selected: c.type == _selectedType,
                     onSelected: (_) => _selectCategory(c.type),

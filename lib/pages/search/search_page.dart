@@ -4,6 +4,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconBut
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
+import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -280,12 +281,11 @@ class _SearchPageState extends State<SearchPage> {
       spacing: Style.sm,
       runSpacing: Style.sm,
       children: _history.map((word) {
-        return InputChip(
+        return AppInputChip(
           label: Text(word),
           onSelected: (_) => _submitSearch(word),
           deleteIcon: AppIcon(AppIcons.clear(), size: 14),
           onDeleted: () => _removeHistory(word),
-          visualDensity: VisualDensity.compact,
         );
       }).toList(),
     );

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/theme/app_colors.dart';
@@ -300,7 +301,7 @@ class _DemoMedalDialogState extends State<_DemoMedalDialog> {
             runSpacing: 6,
             children: [
               for (final (idx, label) in _kMedalColorOptions)
-                ChoiceChip(
+                AppChoiceChip(
                   label: Text(label, style: const TextStyle(fontSize: 12)),
                   selected: _colorIndex == idx,
                   onSelected: (_) => setState(() => _colorIndex = idx),
@@ -1764,7 +1765,7 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                 for (final order in ArchiveOrderType.values)
                   Padding(
                     padding: const EdgeInsets.only(left: Style.xs),
-                    child: ChoiceChip(
+                    child: AppChoiceChip(
                       label: Text(order.label),
                       selected: _videoOrder == order,
                       onSelected: (selected) {
@@ -1772,7 +1773,6 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                           _switchVideoOrder(order);
                         }
                       },
-                      visualDensity: VisualDensity.compact,
                     ),
                   ),
               ],
@@ -2140,7 +2140,7 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                   final isSelected = _selectedDynFilter == filter;
                   return Padding(
                     padding: const EdgeInsets.only(right: Style.sm),
-                    child: FilterChip(
+                    child: AppFilterChip(
                       label: Text(filter.label),
                       selected: isSelected,
                       onSelected: (selected) {
@@ -2148,7 +2148,6 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
                           setState(() => _selectedDynFilter = filter);
                         }
                       },
-                      visualDensity: VisualDensity.compact,
                     ),
                   );
                 }).toList(),
@@ -3136,22 +3135,20 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
             padding: const EdgeInsets.fromLTRB(Style.safeSpace, Style.sm, Style.safeSpace, 0),
             child: Row(
               children: [
-                ChoiceChip(
+                AppChoiceChip(
                   label: Text('追番 (${_navNum?.bangumi ?? (_bangumiType == 1 ? _bangumiList.length : '')})'),
                   selected: _bangumiType == 1,
                   onSelected: (val) {
                     if (val) _switchBangumiType(1);
                   },
-                  visualDensity: VisualDensity.compact,
                 ),
                 const SizedBox(width: Style.sm),
-                ChoiceChip(
+                AppChoiceChip(
                   label: Text('追剧 (${_navNum?.cinema ?? (_bangumiType == 2 ? _bangumiList.length : '')})'),
                   selected: _bangumiType == 2,
                   onSelected: (val) {
                     if (val) _switchBangumiType(2);
                   },
-                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),

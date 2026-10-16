@@ -1,6 +1,7 @@
 import 'package:flutter_miuix/miuix.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
@@ -358,7 +359,7 @@ class _DanmakuSettingsDialogState extends State<_DanmakuSettingsDialog> {
             runSpacing: Style.sm,
             children: [
               for (final b in blockTypesList)
-                FilterChip(
+                AppFilterChip(
                   label: Text(b.label),
                   selected: _blockType.contains(b.value),
                   selectedColor: biliPink.withValues(alpha: 0.25),
