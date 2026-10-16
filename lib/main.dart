@@ -14,6 +14,7 @@ import 'core/log/app_logger.dart';
 import 'core/log/sync_trace.dart';
 import 'core/player/seek_probe.dart';
 import 'core/perf/transition_probe.dart';
+import 'core/shell/app_scaffold.dart';
 import 'core/shell/app_shell.dart';
 import 'core/storage/storage_pref.dart';
 import 'core/window/title_bar_controller.dart';
@@ -293,9 +294,11 @@ class _AgreementGateState extends State<AgreementGate> {
       final tip = isLockError
           ? '数据文件被锁定，可能由于另一个 WinWin 实例正在运行或上次未完全退出。\n请在任务管理器中结束残留的 winwin.exe 进程后重试。'
           : '资源载入失败：$errStr';
-      return Scaffold(
+      return AppScaffold(
         backgroundColor:
             isDark ? const Color(0xFF18191C) : const Color(0xFFF1F2F5),
+        // 启动门禁面板（异常 / 加载）：无顶部安全行、无返回按钮，纯居中内容。
+        reserveTopStrip: false,
         body: Center(
           child: Container(
             constraints: const BoxConstraints(maxWidth: 440),
@@ -361,9 +364,11 @@ class _AgreementGateState extends State<AgreementGate> {
     final acked = _acked;
     if (acked == null) {
       final isDark = Theme.of(context).brightness == Brightness.dark;
-      return Scaffold(
+      return AppScaffold(
         backgroundColor:
             isDark ? const Color(0xFF18191C) : const Color(0xFFF1F2F5),
+        // 启动门禁面板（异常 / 加载）：无顶部安全行、无返回按钮，纯居中内容。
+        reserveTopStrip: false,
         body: Center(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 30),

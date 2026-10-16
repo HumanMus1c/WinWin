@@ -1,12 +1,13 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
@@ -111,15 +112,9 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          Pref.demoMode ? (widget.isSeason ? '合集' : '系列') : widget.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ),
+    // 2026-10-08 起二级页去除页面标题栏（标题已在正文头部卡片以 PBadge + 文本展示）；
+    // 顶部安全行由 AppScaffold 提供悬浮返回按钮。
+    return AppScaffold(
       body: Pref.demoMode
           ? const DemoListSkeleton()
           : AppRefreshIndicator(

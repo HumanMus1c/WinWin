@@ -14,6 +14,7 @@ import 'package:winwin/common/widgets/demo_player_chrome.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/login_guard.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -849,16 +850,19 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           ),
 
           // 2. 主页面骨架
-          Scaffold(
+          AppScaffold(
             backgroundColor: AppColors.transparent,
-            appBar: isFillWindow
+            // 顶栏自绘（替 Material `AppBar`）：保留状态徽标 / 标题 / 刷新·复制动作；
+            // 高度对齐默认工具栏高，`isFillWindow` 时随顶栏一并隐藏、不留安全行。
+            reserveTopStrip: false,
+            topBar: isFillWindow
                 ? null
-                : AppBar(
-                    leading: const AppBackButton(),
-                    backgroundColor: AppColors.transparent,
-                    elevation: 0,
-                    title: Row(
+                : SizedBox(
+                    height: Style.toolbarHeight,
+                    child: Row(
                       children: [
+                        const AppLeadingBackButton(),
+                        const SizedBox(width: 16),
                         _buildStatusBadge(),
                         const SizedBox(width: 10),
                         Expanded(
@@ -869,34 +873,34 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                             style: const TextStyle(fontSize: 16),
                           ),
                         ),
+                        MiuixIconButton(
+                          onPressed: _initLive,
+                          child: AppTooltip(
+                            message: '刷新直播流',
+                            child: AppIcon(AppIcons.refresh()),
+                          ),
+                        ),
+                        MiuixIconButton(
+                          onPressed: () {
+                            Clipboard.setData(
+                              ClipboardData(
+                                text: 'https://live.bilibili.com/$_realRoomId',
+                              ),
+                            );
+                            showToast(
+                              context,
+                              '已复制直播间链接',
+                              duration: const Duration(seconds: 1),
+                            );
+                          },
+                          child: AppTooltip(
+                            message: '复制直播间链接',
+                            child: AppIcon(AppIcons.copy()),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                       ],
                     ),
-                    actions: [
-                      MiuixIconButton(
-
-                        onPressed: _initLive,
-
-                        child: AppTooltip(message: '刷新直播流', child: AppIcon(AppIcons.refresh())),
-                      ),
-                      MiuixIconButton(
-
-                        onPressed: () {
-                          Clipboard.setData(
-                            ClipboardData(
-                              text: 'https://live.bilibili.com/$_realRoomId',
-                            ),
-                          );
-                          showToast(
-                            context,
-                            '已复制直播间链接',
-                            duration: const Duration(seconds: 1),
-                          );
-                        },
-
-                        child: AppTooltip(message: '复制直播间链接', child: AppIcon(AppIcons.copy())),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
                   ),
             body: isFillWindow
                 ? _buildFullscreenPlayer()

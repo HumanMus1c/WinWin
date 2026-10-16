@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/core/window/title_bar_controller.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/pages/dynamics/view.dart';
 import 'package:winwin/pages/history/history_page.dart';
@@ -59,7 +60,9 @@ class _AppRootState extends State<AppRoot> {
     // Esc 全局分层语义（返回上一级 / 取消输入聚焦 / 关闭对话框与二级浮层）
     // 由 main.dart 的 MaterialApp.builder 内 AppEscapeScope 统一处理，
     // 对任意路由（含压栈页面与对话框）生效。
-    return Scaffold(
+    return AppScaffold(
+      // 根壳：MainLayout 自带导航；不预留顶部安全行（根页面无返回按钮 / 标题）。
+      reserveTopStrip: false,
       body: MainLayout(
         currentIndex: _currentIndex,
         onSelect: _onSelect,

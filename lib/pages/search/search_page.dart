@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
@@ -172,44 +174,53 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildSearchAppBar(),
+    return AppScaffold(
+      // 输入条自带返回键（不再用壳层顶部安全行的悬浮返回）：与已迁移的
+      // `SearchResultPage` 严格同构（reserveTopStrip: false + 自绘 topBar）。
+      reserveTopStrip: false,
+      topBar: _buildSearchTopBar(),
       body: (_showSuggests && !Pref.demoMode)
           ? _buildSuggestsList()
           : _buildMainContent(),
     );
   }
 
-  PreferredSizeWidget _buildSearchAppBar() {
-    return AppBar(
-      // 返回键走顶栏标准槽位（56×56，与 AppBar.leading 同口径）——见 AppLeadingBackButton。
-      leading: const AppLeadingBackButton(),
-      titleSpacing: 0,
-      title: AppCapsuleTextField(
-        controller: _controller,
-        focusNode: _focusNode,
-        autofocus: true,
-        textInputAction: TextInputAction.search,
-        onSubmitted: _submitSearch,
-        hint: '搜索视频、UP主...',
-        prefix: AppIcon(AppIcons.search(), size: 20),
-        suffix: ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _controller,
-          builder: (context, value, _) {
-            if (value.text.isEmpty) return const SizedBox.shrink();
-            return MiuixIconButton(
-              onPressed: () {
-                _controller.clear();
-                setState(() => _suggests = []);
-              },
-              child: AppIcon(AppIcons.clear(), size: 18),
-            );
-          },
-        ),
+  /// 搜索顶栏（自绘行，替 Material `AppBar`）：返回键走顶栏标准槽位（56×56）——
+  /// 见 `AppLeadingBackButton`；与 `SearchResultPage` 的 topBar 同尺寸同位。
+  Widget _buildSearchTopBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, Style.sm, Style.sm, Style.sm),
+      child: Row(
+        children: [
+          const AppLeadingBackButton(),
+          Expanded(
+            child: AppCapsuleTextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              autofocus: true,
+              textInputAction: TextInputAction.search,
+              onSubmitted: _submitSearch,
+              hint: '搜索视频、UP主...',
+              prefix: AppIcon(AppIcons.search(), size: 20),
+              suffix: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _controller,
+                builder: (context, value, _) {
+                  if (value.text.isEmpty) return const SizedBox.shrink();
+                  return MiuixIconButton(
+                    onPressed: () {
+                      _controller.clear();
+                      setState(() => _suggests = []);
+                    },
+                    child: AppIcon(AppIcons.clear(), size: 18),
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: Style.sm),
+          MiuixTextButton('搜索', onPressed: () => _submitSearch(_controller.text)),
+        ],
       ),
-      actions: [
-        MiuixTextButton('搜索', onPressed: () => _submitSearch(_controller.text)),
-      ],
     );
   }
 
