@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 
 import 'package:cupertino_ui/cupertino_ui.dart'
@@ -407,9 +407,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: Style.md),
                       child: item.richTextNodes.isNotEmpty
-                          ? SelectableText.rich(
-                            selectionControls: cupertinoDesktopTextSelectionHandleControls,
-                            contextMenuBuilder: buildMiuixEditableTextContextMenu,
+                          ? AppSelectableText.rich(
                               TextSpan(
                                 children: _buildRichSpans(
                                   context,

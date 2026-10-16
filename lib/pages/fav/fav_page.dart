@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/theme/app_colors.dart';
@@ -29,7 +29,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCheckboxPreference, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixSmallTopAppBar, MiuixButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCheckboxPreference, MiuixFloatingActionButton, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixSmallTopAppBar, MiuixButton;
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_components.dart';
@@ -533,12 +533,27 @@ class _FavDetailPageState extends State<FavDetailPage> {
   Widget build(BuildContext context) {
     return AppScaffold(
       floatingActionButton: _items.isNotEmpty
-          ? FloatingActionButton.extended(
+          ? MiuixFloatingActionButton(
               onPressed: _playAll,
-              backgroundColor: biliPink,
-              foregroundColor: AppColors.white,
-              icon: AppIcon(AppIcons.playAll()),
-              label: const Text('播放全部'),
+              containerColor: biliPink,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Style.md),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppIcon(AppIcons.playAll(), color: AppColors.white),
+                    const SizedBox(width: Style.sm),
+                    Text(
+                      '播放全部',
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             )
           : null,
       body: Pref.demoMode

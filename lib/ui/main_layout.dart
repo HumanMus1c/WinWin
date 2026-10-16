@@ -1,4 +1,6 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_miuix/miuix.dart'
+    show MiuixPressable, MiuixPressFeedbackType;
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_chrome.dart';
@@ -156,9 +158,10 @@ class AppNavRail extends StatelessWidget {
               final color = selected ? d.color : cs.onSurfaceVariant;
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                child: InkResponse(
-                  onTap: () => onSelect(i),
-                  radius: 28,
+                child: MiuixPressable(
+                  feedbackType: MiuixPressFeedbackType.sink,
+                  sinkAmount: 0.98,
+                  onPressed: () => onSelect(i),
                   child: SizedBox(
                     width: 64,
                     height: 56,

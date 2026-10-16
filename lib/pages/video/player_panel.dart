@@ -2206,13 +2206,23 @@ class _PlayerPanelState extends State<PlayerPanel> {
               child: ValueListenableBuilder<double>(
                 valueListenable: c.volume,
                 builder: (context, vol, _) {
-                  return Slider(
+                  final activeColor =
+                      vol > 100 ? AppColors.amberAccent : biliPink;
+                  return MiuixSlider(
                     value: vol.clamp(0.0, Pref.maxVolume).toDouble(),
                     min: 0,
                     max: Pref.maxVolume,
-                    activeColor: vol > 100 ? AppColors.amberAccent : biliPink,
-                    inactiveColor: AppColors.white24,
-                    onChanged: c.setVolume,
+                    colors: MiuixSliderColors(
+                      foregroundColor: activeColor,
+                      disabledForegroundColor: activeColor,
+                      backgroundColor: AppColors.white24,
+                      disabledBackgroundColor: AppColors.white24,
+                      thumbColor: activeColor,
+                      disabledThumbColor: activeColor,
+                      keyPointColor: activeColor,
+                      keyPointForegroundColor: activeColor,
+                    ),
+                    onValueChanged: c.setVolume,
                   );
                 },
               ),

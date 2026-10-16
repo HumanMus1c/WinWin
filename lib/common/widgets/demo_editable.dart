@@ -380,12 +380,12 @@ class _DemoNumberDialogState extends State<_DemoNumberDialog> {
   Widget build(BuildContext context) {
     return AppAlertDialog(
       title: Text(widget.title),
-      content: TextField(
+      content: AppTextField(
         controller: _controller,
         autofocus: true,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: const InputDecoration(hintText: '非负整数'),
+        hint: '非负整数',
         onSubmitted: (_) => _submit(),
       ),
       actions: [

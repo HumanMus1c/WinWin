@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixFloatingActionButton, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/theme/app_colors.dart';
@@ -339,12 +339,27 @@ class _ToviewPageState extends State<ToviewPage> {
           ),
       ],
       floatingActionButton: _items.isNotEmpty
-          ? FloatingActionButton.extended(
+          ? MiuixFloatingActionButton(
               onPressed: _playAll,
-              backgroundColor: biliPink,
-              foregroundColor: AppColors.white,
-              icon: AppIcon(AppIcons.playAll()),
-              label: const Text('播放全部'),
+              containerColor: biliPink,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Style.md),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppIcon(AppIcons.playAll(), color: AppColors.white),
+                    const SizedBox(width: Style.sm),
+                    Text(
+                      '播放全部',
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             )
           : null,
       body: Pref.demoMode

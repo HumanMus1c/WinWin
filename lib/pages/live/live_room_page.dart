@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:fvp/mdk.dart' as mdk;
@@ -1215,24 +1215,21 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   /// 居中半透明大播放按钮
   Widget _buildCenterPlayButton() {
     return Center(
-      child: Material(
-        color: AppColors.transparent,
-        child: MiuixPressable(
-          feedbackType: MiuixPressFeedbackType.sink,
-          sinkAmount: 0.98,
-          onPressed: _togglePlay,
-          borderRadius: BorderRadius.circular(36),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.black.withValues(alpha: 0.6),
-              shape: BoxShape.circle,
-            ),
-            child: AppIcon(
-              AppIcons.livePlay(),
-              color: AppColors.white,
-              size: 44,
-            ),
+      child: MiuixPressable(
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
+        onPressed: _togglePlay,
+        borderRadius: BorderRadius.circular(36),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.black.withValues(alpha: 0.6),
+            shape: BoxShape.circle,
+          ),
+          child: AppIcon(
+            AppIcons.livePlay(),
+            color: AppColors.white,
+            size: 44,
           ),
         ),
       ),
@@ -1545,21 +1542,21 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             ),
             SizedBox(
               width: 80,
-              child: SliderTheme(
-                data: SliderThemeData(
-                  trackHeight: 2.5,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                  overlayShape: SliderComponentShape.noOverlay,
-                  activeTrackColor: AppColors.white,
-                  inactiveTrackColor: AppColors.white30,
+              child: MiuixSlider(
+                value: _volume,
+                min: 0.0,
+                max: 1.0,
+                colors: const MiuixSliderColors(
+                  foregroundColor: AppColors.white,
+                  disabledForegroundColor: AppColors.white,
+                  backgroundColor: AppColors.white30,
+                  disabledBackgroundColor: AppColors.white30,
                   thumbColor: AppColors.white,
+                  disabledThumbColor: AppColors.white,
+                  keyPointColor: AppColors.white,
+                  keyPointForegroundColor: AppColors.white,
                 ),
-                child: Slider(
-                  value: _volume,
-                  min: 0.0,
-                  max: 1.0,
-                  onChanged: _setVolume,
-                ),
+                onValueChanged: _setVolume,
               ),
             ),
             const SizedBox(width: 4),

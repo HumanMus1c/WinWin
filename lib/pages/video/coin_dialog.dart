@@ -1,6 +1,5 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
-import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:flutter_miuix/miuix.dart';
@@ -25,31 +24,22 @@ Future<void> showCoinDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            RadioGroup<int>(
-              groupValue: coinCount,
-              onChanged: (v) => setState(() => coinCount = v ?? 1),
-              child: Column(
-                children: [
-                  RadioListTile<int>(
-                    value: 1,
-                    activeColor: biliPink,
-                    title: const Text('投 1 枚硬币'),
-                  ),
-                  RadioListTile<int>(
-                    value: 2,
-                    activeColor: biliPink,
-                    title: const Text('投 2 枚硬币'),
-                  ),
-                ],
-              ),
+            // B7-c6-4：Material RadioListTile/CheckboxListTile → Miuix 偏好行。
+            MiuixRadioButtonPreference(
+              title: '投 1 枚硬币',
+              selected: coinCount == 1,
+              onClick: () => setState(() => coinCount = 1),
+            ),
+            MiuixRadioButtonPreference(
+              title: '投 2 枚硬币',
+              selected: coinCount == 2,
+              onClick: () => setState(() => coinCount = 2),
             ),
             const SizedBox(height: Style.xs),
-            CheckboxListTile(
+            MiuixCheckboxPreference(
+              title: '同时点赞',
               value: coinWithLike,
-              activeColor: biliPink,
-              controlAffinity: ListTileControlAffinity.leading,
-              title: const Text('同时点赞'),
-              onChanged: (v) => setState(() => coinWithLike = v ?? false),
+              onChanged: (v) => setState(() => coinWithLike = v),
             ),
           ],
         ),
