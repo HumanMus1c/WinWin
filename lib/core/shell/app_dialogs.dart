@@ -1,11 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixMotion;
-// 过渡期依赖（B7 摘除 material_ui 时替换为 miuix 表面容器）：
-// 路由内容需要一个 Material 祖先，Material 原版 DialogRoute 同样会提供该层。
-import 'package:material_ui/material_ui.dart' show Material, MaterialType;
 import 'package:winwin/core/shell/app_theme_host.dart';
 
 import 'app_transition.dart';
+import 'app_transparent_host.dart';
 
 /// 对话框路由替身（取代 Material `showDialog` / `DialogRoute`）。
 ///
@@ -49,15 +47,13 @@ class AppDialogRoute<T> extends PopupRoute<T> {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
   ) {
-    // 2026-10-09 收口-3：对话框内容统一包一层透明 Material（对齐 AppSheetRoute
-    // 134 行做法与 Material 原版 DialogRoute 契约）。此前无此祖先时，对话框内
-    // 的 Material 控件（TextButton/TextField 等，约 40 个 showAppDialog 调用点）
-    // 在 debug 下红屏、release 下 hover 空崩（当日崩溃日志实锤，含 2 起
-    // _TextFieldState.build）。透明层视觉零变化；内容自带 Dialog 时嵌套无害。
-    return Material(
-      type: MaterialType.transparency,
-      child: builder(context),
-    );
+    // 2026-10-09 收口-3：对话框内容统一包一层透明祖先（对齐 AppSheetRoute 做法与
+    // Material 原版 DialogRoute 契约）。此前无此祖先时，对话框内的 Material 控件
+    // （TextButton/TextField 等，约 40 个 showAppDialog 调用点）在 debug 下红屏、
+    // release 下 hover 空崩（当日崩溃日志实锤，含 2 起 _TextFieldState.build）。
+    // B7-c7 第二批：material_ui 的透明 Material 层退役，替换为 [AppTransparentHost]
+    // （等价"Material 祖先 + 默认文本样式"，见该文件复刻依据）；视觉零变化。
+    return AppTransparentHost(child: builder(context));
   }
 
   @override
@@ -136,18 +132,19 @@ class AppSheetRoute<T> extends PopupRoute<T> {
       alignment: Alignment.bottomCenter,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight, maxWidth: 640),
-        // Material 的面板会给内容套一层 Material（底色 + 裁剪 + **Material 祖先**）；
+        // Material 的面板会给内容套一层表面（底色 + 裁剪 + **Material 祖先**）；
         // 缺这层祖先时，面板内的 Material 控件（如 CheckboxListTile）会构建失败，
         // release 下渲染为大灰块（见 2026-10-08 收藏面板回归）。
-        // 过渡期使用 material_ui 的 Material，B7 摘除依赖时替换为 miuix 表面容器。
-        child: Material(
-          color: backgroundColor ??
-              AppThemeHost.of(context).colors.surfaceContainerLow,
-          clipBehavior: Clip.antiAlias,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        // B7-c7 第二批：material_ui 的 Material 表面退役 → `ClipRRect`（圆角 28 +
+        // antiAlias 裁剪，逐项对齐 M3 BottomSheet 口径）+ `ColoredBox`（面板底色）
+        // + [AppTransparentHost]（补"祖先 + 默认文本样式"），视觉零变化。
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: ColoredBox(
+            color: backgroundColor ??
+                AppThemeHost.of(context).colors.surfaceContainerLow,
+            child: AppTransparentHost(child: builder(context)),
           ),
-          child: builder(context),
         ),
       ),
     );

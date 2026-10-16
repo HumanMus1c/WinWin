@@ -1,7 +1,7 @@
 import 'dart:convert' show jsonDecode, jsonEncode;
 
 import 'package:dio/dio.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -10,6 +10,7 @@ import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_transparent_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_components.dart';
@@ -128,8 +129,7 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
     // - 已按需求移除左上角关闭按钮：出口 = Esc（AppEscapeScope layer1）
     //   或极验页自身关闭回调（onClose → Navigator.pop）。
     return SizedBox.expand(
-      child: Material(
-        color: AppColors.transparent,
+      child: AppTransparentHost(
         child: Stack(
           fit: StackFit.expand,
           children: [

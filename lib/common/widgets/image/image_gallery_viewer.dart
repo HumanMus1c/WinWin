@@ -10,12 +10,13 @@ import 'package:flutter/gestures.dart'
         PointerScrollEvent,
         PointerSignalEvent;
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton;
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_transparent_host.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -334,12 +335,13 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
           ),
           child: SafeArea(
             // ListTile 的背景与水波绘制在最近的 Material 祖先上；外层
-            // AppSheetRoute 的 Material 会被中间 Container(DecoratedBox 底色)
-            // 遮挡（见 session_list_section.dart 同类注释），在此补一层
-            // 视口内透明 Material 并硬裁剪，保证三行操作样式正常显示。
-            child: Material(
-              type: MaterialType.transparency,
-              clipBehavior: Clip.hardEdge,
+            // AppSheetRoute 的表面会被中间 Container(DecoratedBox 底色) 遮挡
+            //（见 session_list_section.dart 同类注释），在此补一层视口内透明宿主
+            // 并硬裁剪，保证操作行样式正常显示。
+            // B7-c7 第二批：material_ui 透明 Material → [AppTransparentHost]
+            //（水波随 ListTile→MiuixBasicComponent 退役；硬裁剪保留以维持零视觉变化）。
+            child: AppTransparentHost(
+              hardClip: true,
               child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

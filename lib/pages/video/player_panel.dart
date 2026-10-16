@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter_miuix/miuix.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -32,6 +32,7 @@ import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
@@ -2004,7 +2005,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                                   '0',
                                                                 ),
                                                             style: TextStyle(
-                                                              color: Colors
+                                                              color: AppColors
                                                                   .white
                                                                   .withValues(
                                                                     alpha: 0.35,
@@ -2392,7 +2393,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
+    return AppDialogShell(
       insetPadding: const EdgeInsets.symmetric(
         horizontal: Style.lg,
         vertical: Style.xl,

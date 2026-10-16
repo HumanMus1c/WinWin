@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixBasicComponent, MiuixIconButton, MiuixTextButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/theme/app_colors.dart';
@@ -15,6 +15,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/crc32.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/app_progress.dart';
@@ -177,7 +178,7 @@ class _DanmakuBlockDialogState extends State<_DanmakuBlockDialog> {
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
-    return Dialog(
+    return AppDialogShell(
       insetPadding: const EdgeInsets.symmetric(
         horizontal: Style.lg,
         vertical: Style.xl,

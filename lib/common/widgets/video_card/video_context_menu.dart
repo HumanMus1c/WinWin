@@ -3,7 +3,7 @@ import 'dart:typed_data' show Uint8List;
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixTextButton, MiuixButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -330,22 +330,29 @@ void showVideoCoverDialog({
       final tokens = AppThemeHost.of(dialogCtx);
       final dialogWidth = (MediaQuery.sizeOf(dialogCtx).width * 0.5).clamp(360.0, 560.0);
 
-      return Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        clipBehavior: Clip.antiAlias,
+      return AppDialogShell(
+        // B7-c7 第二批：material_ui `Dialog` → [AppDialogShell]（表面/圆角/内边距归其承担）。
+        // 原 `shape`(圆角 16) 与 `clipBehavior`(antiAlias) 由封面图外的 ClipRRect 复刻——
+        // 只有封面图触及圆角边界（下方 14px 内边距，无内容触边），视觉逐项一致。
+        borderRadius: const Radius.circular(16),
         child: SizedBox(
           width: dialogWidth,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 封面图
-              AspectRatio(
-                aspectRatio: 16 / 10,
-                child: NetworkImgLayer(
-                  src: cover,
-                  width: dialogWidth,
-                  height: dialogWidth * 10 / 16,
+              // 封面图（外圆角裁剪复刻原 `Dialog.clipBehavior: Clip.antiAlias`）
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                child: AspectRatio(
+                  aspectRatio: 16 / 10,
+                  child: NetworkImgLayer(
+                    src: cover,
+                    width: dialogWidth,
+                    height: dialogWidth * 10 / 16,
+                  ),
                 ),
               ),
               // 标题与操作栏

@@ -1,8 +1,9 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_transparent_host.dart';
 
 /// 共用毛玻璃浮层面板（弹幕样式 / 表情面板等二级浮层共用，样式单一来源）。
 ///
@@ -43,8 +44,7 @@ class MiuixOverlayPanel extends StatelessWidget {
         ? AppColors.white.withValues(alpha: 0.10)
         : AppColors.black.withValues(alpha: 0.08);
 
-    return Material(
-      type: MaterialType.transparency,
+    return AppTransparentHost(
       child: MiuixFrostedSurface(
         borderRadius: 12,
         child: Padding(

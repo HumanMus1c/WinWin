@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCardDefaults, MiuixPressFeedbackType, MiuixPressable, MiuixSquircleBorder, MiuixButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -20,6 +20,7 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_transparent_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_components.dart';
@@ -86,8 +87,7 @@ class _PgcPageState extends State<PgcPage>
                 final isSelected = tab == _selectedSubTab;
                 return Padding(
                   padding: const EdgeInsets.only(right: Style.sm),
-                  child: Material(
-                    color: AppColors.transparent,
+                  child: AppTransparentHost(
                     child: MiuixPressable(
                       feedbackType: MiuixPressFeedbackType.sink,
                       sinkAmount: 0.98,

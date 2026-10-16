@@ -8,6 +8,7 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/core/shell/app_shell.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_transparent_host.dart';
 import 'package:winwin/core/shell/app_transition.dart';
 import 'package:material_ui/material_ui.dart' as modern;
 import 'package:winwin/core/shell/miuix_compat.dart';
@@ -205,7 +206,7 @@ void main() {
     expect(await result, '已确认');
   });
 
-  testWidgets('AppSheetRoute：有界高度 + Material 祖先 + M3 宽度上限（收藏面板回归）',
+  testWidgets('AppSheetRoute：有界高度 + 零 material 表面（透明宿主）+ M3 宽度上限（收藏面板回归）',
       (tester) async {
     final navKey = GlobalKey<NavigatorState>();
     late BuildContext hostContext;
@@ -229,21 +230,23 @@ void main() {
       ),
     );
 
-    // 复刻收藏夹面板结构：标题 + Expanded(ListView[material 控件]) + 底栏。
+    // 复刻收藏夹面板结构：标题 + Expanded(ListView[零 material 行]) + 底栏。
+    //（B7-c7 第二批起面板表面为 ClipRRect + ColoredBox + AppTransparentHost，
+    //  不再提供 material_ui 的 Material 祖先；内容侧亦无 material_ui 控件。）
     showAppSheet<void>(
       context: hostContext,
       isScrollControlled: true,
       builder: (_) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text('面板标题'),
           Expanded(
             child: ListView(
               children: [
                 for (var i = 0; i < 40; i++)
-                  modern.CheckboxListTile(
-                    value: false,
-                    onChanged: (_) {},
-                    title: Text('条目$i'),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text('条目$i'),
                   ),
               ],
             ),
@@ -257,12 +260,13 @@ void main() {
 
     // 回归点 1：无界高度会让 Column+Expanded 塌陷并抛布局异常。
     expect(tester.takeException(), isNull);
-    // 回归点 2：面板内容缺 Material 祖先时，CheckboxListTile 构建失败（release 灰块）。
+    // 回归点 2：面板内容渲染，且整棵面板子树不含 material_ui 的 Material（零 material 契约）。
     expect(find.text('面板标题'), findsOneWidget);
     expect(find.text('完成的按钮'), findsOneWidget);
     expect(find.text('条目0'), findsOneWidget);
+    expect(find.byType(modern.Material), findsNothing);
     // 回归点 3：M3 默认面板宽度上限 640（宽窗口下不占满整屏）。
-    final sheetWidth = tester.getSize(find.byType(modern.Material).last).width;
+    final sheetWidth = tester.getSize(find.byType(AppTransparentHost)).width;
     expect(sheetWidth, lessThanOrEqualTo(640));
   });
 

@@ -1,5 +1,7 @@
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show cupertinoDesktopTextSelectionHandleControls;
 import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -9,6 +11,7 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
@@ -254,24 +257,10 @@ class _DemoInlineEditNumberState extends State<DemoInlineEditNumber> {
       final style = AppThemeHost.of(context).text.labelMedium;
       return SizedBox(
         width: 72,
-        child: TextField(
+        child: _InlineEditField(
           controller: _ctrl,
           focusNode: _focus,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           style: style,
-          textAlign: TextAlign.center,
-          decoration: InputDecoration(
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 4,
-              vertical: 4,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
           onSubmitted: (_) => _commit(),
           onTapOutside: (_) => _focus.unfocus(),
         ),
@@ -455,6 +444,93 @@ class _DemoChoiceDialog extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// 演示模式内联数字输入框（零 material，取代 material_ui `TextField`）。B7-c7 第二批。
+///
+/// 复刻原调用口径（`TextField`）：
+/// - `isDense: true` + `contentPadding: (h4, v4)` → 4/4 内边距；
+/// - `border: OutlineInputBorder(borderRadius: 6)` → 6 圆角 1px 描边
+///   （聚焦时 2px `primary`，M3 `OutlineInputBorder` 聚焦口径）；
+/// - `textAlign: center` / `keyboardType: number` / `digitsOnly` / `autofocus`
+///   / `onSubmitted` / `onTapOutside` → 原样透传。
+///
+/// 编辑内核改用 **widgets 层** [EditableText]（material `TextField` 的底层实现）：
+/// 不需要 material 祖先/`Material`，右键菜单走项目既有 Miuix 口径
+/// （与 `AppSelectableText` 同构）——桌面 Handle 版 `selectionControls`
+/// （混入 `TextSelectionHandleControls` 后 `contextMenuBuilder` 才会被采用，
+/// 见 B7-c1 补丁#2 复盘）+ [buildMiuixEditableTextContextMenu]。
+class _InlineEditField extends StatefulWidget {
+  const _InlineEditField({
+    required this.controller,
+    required this.focusNode,
+    required this.style,
+    required this.onSubmitted,
+    required this.onTapOutside,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final TextStyle? style;
+  final ValueChanged<String> onSubmitted;
+  final ValueChanged<PointerDownEvent> onTapOutside;
+
+  @override
+  State<_InlineEditField> createState() => _InlineEditFieldState();
+}
+
+class _InlineEditFieldState extends State<_InlineEditField> {
+  @override
+  void initState() {
+    super.initState();
+    widget.focusNode.addListener(_onFocusChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.focusNode.removeListener(_onFocusChanged);
+    super.dispose();
+  }
+
+  void _onFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = AppThemeHost.of(context).colors;
+    final focused = widget.focusNode.hasFocus;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: focused ? cs.primary : cs.outline,
+          width: focused ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: EditableText(
+          controller: widget.controller,
+          focusNode: widget.focusNode,
+          autofocus: true,
+          style: widget.style ?? const TextStyle(),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          keyboardType: TextInputType.number,
+          inputFormatters: <TextInputFormatter>[
+            FilteringTextInputFormatter.digitsOnly,
+          ],
+          cursorColor: cs.primary,
+          backgroundCursorColor: cs.primary,
+          selectionControls: cupertinoDesktopTextSelectionHandleControls,
+          contextMenuBuilder: buildMiuixEditableTextContextMenu,
+          onSubmitted: widget.onSubmitted,
+          onTapOutside: widget.onTapOutside,
+        ),
+      ),
     );
   }
 }

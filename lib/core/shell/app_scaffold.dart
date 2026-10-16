@@ -3,11 +3,10 @@ import 'package:flutter_miuix/miuix.dart'
     show MiuixIconButton, MiuixMotion, MiuixScaffold;
 // 过渡期依赖（B7 摘除 material_ui 时替换为 miuix 表面容器）：
 // 骨架必须提供 Material 祖先，见下方 [_AppScaffoldState] 注释。
-import 'package:material_ui/material_ui.dart' show Material, MaterialType;
-
 import 'package:winwin/theme/app_icons.dart';
 
 import 'app_theme_host.dart';
+import 'app_transparent_host.dart';
 
 /// 页面骨架替身（取代 Material `Scaffold`）。
 ///
@@ -135,9 +134,10 @@ class _AppScaffoldState extends State<AppScaffold> {
         // 当日崩溃日志实锤 41 起 No-Material + 16 起 release-hover 空崩
         //（history 清空按钮等，见 docs/B6-2d 后续 Material 祖先复盘）。透明层
         // 视觉零变化，仅补祖先。
+        // B7-c7 第二批：material_ui 退役，透明 Material → [AppTransparentHost]
+        //（等价"Material 祖先 + 默认文本样式"，见 app_transparent_host.dart 复刻依据）。
         final body = widget.body;
-        Material materialOf(Widget child) =>
-            Material(type: MaterialType.transparency, child: child);
+        Widget materialOf(Widget child) => AppTransparentHost(child: child);
         if (!widget.reserveTopStrip) {
           return Padding(padding: padding, child: materialOf(body));
         }

@@ -1,11 +1,12 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/pages/onboarding/user_agreement_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
@@ -102,7 +103,7 @@ class AboutPage extends StatelessWidget {
       context: context,
       builder: (dialogCtx) {
         final tokens = AppThemeHost.of(dialogCtx);
-        return Dialog(
+        return AppDialogShell(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560, maxHeight: 560),
             child: Column(

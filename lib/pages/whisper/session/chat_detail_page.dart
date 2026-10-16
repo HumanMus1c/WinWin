@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixPressFeedbackType, MiuixPressable;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
@@ -26,6 +26,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
@@ -511,7 +512,7 @@ class _ChatBubble extends StatelessWidget {
       context: context,
       builder: (ctx) {
         final size = MediaQuery.sizeOf(ctx);
-        return Dialog(
+        return AppDialogShell(
           backgroundColor: AppColors.transparent,
           child: InteractiveViewer(
             child: Image.network(
