@@ -2254,22 +2254,51 @@ class _PlayerPanelState extends State<PlayerPanel> {
               ),
             ),
             const SizedBox(width: Style.sm),
-            ValueListenableBuilder<double>(
-              valueListenable: c.volume,
-              builder: (context, vol, _) {
-                final rounded = vol.round();
-                return ContrastText(
-                  rounded > 100 ? '$rounded% (增益)' : '$rounded%',
-                  style: TextStyle(
-                    color: rounded > 100 ? AppColors.amberAccent : AppColors.white,
-                    fontWeight: rounded > 100
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    fontSize: 12,
+            // 标签槽位宽度恒定（B7-c6-4 反馈轮 3）：`(增益)` 后缀只在音量越过
+            // 100% 时出现，若标签按文字自适应宽度，整个弹层会随之变宽，而弹层
+            // 是锚定居中的 —— 变宽瞬间滑条连同拇指会横向瞬移数十像素，正在拖动
+            // 时极易误操作。这里用一枚"不可见但保留尺寸"的最宽标签（粗体、最大
+            // 三位数 + 增益后缀）把槽位撑住，可见标签左对齐贴在槽位左边，弹层
+            // 宽度在 0 ~ 音量上限全程恒定。
+            Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                if (Pref.maxVolume > 100)
+                  Visibility(
+                    visible: false,
+                    maintainSize: true,
+                    maintainAnimation: true,
+                    maintainState: true,
+                    child: ContrastText(
+                      '${Pref.maxVolume.round()}% (增益)',
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      shadows: ContrastStyle.glyphShadows,
+                    ),
                   ),
-                  shadows: ContrastStyle.glyphShadows,
-                );
-              },
+                ValueListenableBuilder<double>(
+                  valueListenable: c.volume,
+                  builder: (context, vol, _) {
+                    final rounded = vol.round();
+                    return ContrastText(
+                      rounded > 100 ? '$rounded% (增益)' : '$rounded%',
+                      style: TextStyle(
+                        color: rounded > 100
+                            ? AppColors.amberAccent
+                            : AppColors.white,
+                        fontWeight: rounded > 100
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                      shadows: ContrastStyle.glyphShadows,
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),
