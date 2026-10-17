@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 
@@ -21,6 +23,36 @@ enum ArchiveOrderType {
 
 /// 用户空间相关 HTTP（移植与对齐 PiliPlus `lib/http/member.dart` 与 BiliPai）。
 abstract final class MemberHttp {
+  /// 安全解析响应体为 JSON Map。
+  ///
+  /// B站接口在风控 / 限流 / 接口异常时可能返回**非 JSON** 响应体（HTML 错误页、空体、
+  /// `text/plain` 字符串）；此时裸 `res.data as Map<String, dynamic>` 会抛
+  /// `type 'String' is not a subtype of type 'Map<String, dynamic>' in type cast`
+  /// （2026-10-16/17 `MemberSpace: topPhoto` 实测）。本方法统一降级：
+  /// - `Map` → 直接返回；
+  /// - `String` → 尝试 `jsonDecode`（兼容 content-type 未标 JSON 的 JSON 文本）；
+  /// - 其余（含解析失败）→ 返回**空 Map**，交由各调用点既有的 `code != 0` 分支
+  ///   给出友好错误，避免裸 cast 崩溃。
+  @visibleForTesting
+  static Map<String, dynamic> asJsonMap(dynamic body) {
+    if (body is Map<String, dynamic>) return body;
+    if (body is Map) return Map<String, dynamic>.from(body);
+    if (body is String && body.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(body);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {
+        // 非 JSON 文本（如风控 HTML），走下方降级。
+      }
+    }
+    AppLogger.w(
+      'MemberHttp',
+      '响应体非 JSON Map（runtimeType=${body.runtimeType}），按接口失败处理',
+    );
+    return const <String, dynamic>{};
+  }
+
   /// 用户空间信息（APP 端 `/x/v2/space` 与 Web 端 `/x/web-interface/card` 双通道容灾）。
   ///
   /// 返回 [MemberSpaceData]，包含用户完整卡片（头像/名字/签名/粉丝牌/关注TA的人/等级/背景等）。
@@ -50,7 +82,7 @@ abstract final class MemberHttp {
           receiveTimeout: const Duration(seconds: 4),
         ),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
         return Success(
           MemberSpaceData.fromJson(data['data'] as Map<String, dynamic>),
@@ -76,7 +108,7 @@ abstract final class MemberHttp {
           receiveTimeout: const Duration(seconds: 5),
         ),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
         return Success(
           MemberSpaceData.fromWebCard(data['data'] as Map<String, dynamic>),
@@ -144,7 +176,7 @@ abstract final class MemberHttp {
           receiveTimeout: const Duration(seconds: 4),
         ),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
         return Success(
           MemberArchiveData.fromJson(data['data'] as Map<String, dynamic>),
@@ -173,7 +205,7 @@ abstract final class MemberHttp {
           receiveTimeout: const Duration(seconds: 5),
         ),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
         final d = data['data'] as Map<String, dynamic>;
         final vlist = (d['list'] as Map?)?['vlist'] as List? ?? [];
@@ -219,7 +251,7 @@ abstract final class MemberHttp {
           'page_size': ps,
         },
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final itemsLists = data['data']?['items_lists'] as Map<String, dynamic>? ?? {};
         return Success(SpaceSsData.fromJson(itemsLists));
@@ -250,7 +282,7 @@ abstract final class MemberHttp {
           'page_size': pageSize,
         },
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final archives = data['data']?['archives'] as List? ?? [];
         final page = data['data']?['page'] as Map<String, dynamic>? ?? {};
@@ -287,7 +319,7 @@ abstract final class MemberHttp {
           'ps': ps,
         },
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final archives = data['data']?['archives'] as List? ?? [];
         final page = data['data']?['page'] as Map<String, dynamic>? ?? {};
@@ -319,7 +351,7 @@ abstract final class MemberHttp {
           'photo': true,
         },
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         return Success(
           MemberCardInfoData.fromJson(data['data'] as Map<String, dynamic>? ?? {}),
@@ -341,7 +373,7 @@ abstract final class MemberHttp {
         '/x/space/top/photo',
         queryParameters: {'mid': mid},
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
         return Success(MemberImages.fromJson(data['data'] as Map<String, dynamic>));
       } else {
@@ -361,7 +393,7 @@ abstract final class MemberHttp {
         '/x/space/navnum',
         queryParameters: {'mid': mid},
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
         return Success(SpaceNavNumData.fromJson(data['data'] as Map<String, dynamic>));
       } else {
@@ -385,7 +417,7 @@ abstract final class MemberHttp {
         Api.getRecentLikeVideoApi,
         queryParameters: {'vmid': mid},
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       final code = data['code'];
       if (code == 0) {
         final list = (data['data']?['list'] as List?) ?? [];
@@ -424,7 +456,7 @@ abstract final class MemberHttp {
           'ps': ps,
         },
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       final code = data['code'];
       if (code == 0) {
         final d = data['data'] as Map<String, dynamic>? ?? {};
@@ -461,7 +493,7 @@ abstract final class MemberHttp {
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         return const Success(null);
       } else {
