@@ -1,10 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixVerticalDivider, MiuixTextButton, MiuixButton;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 
 import 'package:winwin/common/widgets/app_chip.dart';
+import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -556,7 +557,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         // 左栏：海报、数据、行动按钮、元信息、简介（40%）
         Expanded(
           flex: 4,
-          child: Scrollbar(
+          child: AppScrollBar(
             controller: _leftScrollController,
             child: SingleChildScrollView(
               controller: _leftScrollController,
@@ -584,7 +585,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         // 右栏：多季切换、选集网格、花絮特典（60%）- 采用 CustomScrollView 虚拟化高性能渲染
         Expanded(
           flex: 6,
-          child: Scrollbar(
+          child: AppScrollBar(
             controller: _rightScrollController,
             child: CustomScrollView(
               controller: _rightScrollController,
@@ -628,7 +629,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   // ─────────────────────────── 窄屏单列布局 ───────────────────────────
 
   Widget _buildNarrowLayout(BangumiDetail detail, AppPalette cs) {
-    return Scrollbar(
+    return AppScrollBar(
       controller: _narrowScrollController,
       child: CustomScrollView(
         controller: _narrowScrollController,
