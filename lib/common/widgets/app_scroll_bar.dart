@@ -183,8 +183,20 @@ class _AppScrollBarState extends State<AppScrollBar>
     return false;
   }
 
-  ScrollPosition? get _position =>
-      widget.controller.hasClients ? widget.controller.position : null;
+  /// 当前可用位置；**内容尺寸未就绪时返回 null**。
+  ///
+  /// `hasClients` 仅表示滚动视图已 attach —— 滚动视图一被构建即 attach，但
+  /// `_maxScrollExtent` / `_viewportDimension` / `_pixels` 要到其**完成布局**
+  /// （`applyContentDimensions`）后才写值。若在「已挂载、未布局」窗口内读取
+  /// `maxScrollExtent`（`scroll_position.dart` 的 `_maxScrollExtent!`）即触发
+  /// release 空断言崩溃（`Null check operator used on a null value`）。
+  /// 故此处以 `hasContentDimensions` + `hasPixels` 双重守卫，未就绪一律视为不可用。
+  ScrollPosition? get _position {
+    if (!widget.controller.hasClients) return null;
+    final position = widget.controller.position;
+    if (!position.hasContentDimensions || !position.hasPixels) return null;
+    return position;
+  }
 
   double _thumbLength(double trackExtent, ScrollPosition p) {
     final content = p.maxScrollExtent + p.viewportDimension;
