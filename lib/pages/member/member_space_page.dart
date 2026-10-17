@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
+import 'package:flutter/gestures.dart' show GestureBinding, PointerScrollEvent, PointerSignalEvent;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
@@ -338,15 +339,32 @@ class MemberSpacePage extends StatefulWidget {
   State<MemberSpacePage> createState() => _MemberSpacePageState();
 }
 
-class _MemberSpacePageState extends State<MemberSpacePage> {
+class _MemberSpacePageState extends State<MemberSpacePage>
+    with SingleTickerProviderStateMixin {
   late AppTabController _tabController;
   final ScrollController _scrollController = ScrollController();
 
   /// 顶栏（返回/分享/更多）高度，= `SliverAppBar` 默认 `toolbarHeight`。
   static const double _topBarHeight = 56;
 
-  /// 头图（封面）容器高度。
+  /// 头图（封面）初始容器高度。
   static const double _coverHeight = 330;
+
+  /// 阶梯展开档数：每档 = `1 / _expandStepCount`（阶梯步进的最小步长）。
+  static const int _expandStepCount = 6;
+
+  /// 头图阶梯展开进度：`0` = 初始尺寸，`1` = 全尺寸。仅由滚轮分档驱动。
+  double _expandTarget = 0;
+
+  /// 头图阶梯展开动画（档位间补间，形成"阶梯步进"手感）。
+  late final AnimationController _expandCtrl;
+
+  /// 指针是否悬停在头图上——**只有悬停时滚轮才用于展开**，避免误触（防误触口径）。
+  bool _headerHovered = false;
+
+  /// 背景图自然宽高比（宽/高），用于把"全尺寸"折算为当前窗口宽下的高度。
+  double? _bannerAspect;
+  String? _bannerAspectUrl;
 
   /// 分类标签条带：用来判定"是否已吸附并入顶栏"（其顶部到达顶栏下沿即为已合并）。
   final GlobalKey _tabBandKey = GlobalKey();
@@ -492,6 +510,11 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
   @override
   void initState() {
     super.initState();
+    _expandCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      value: 0,
+    );
     _tabController = AppTabController(length: _availableTabs.length);
     _initFollowSubscription();
     _loadAll();
@@ -533,6 +556,7 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
       c.dispose();
     }
     _pendingDisposeControllers.clear();
+    _expandCtrl.dispose();
     _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -931,18 +955,27 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
             // **最顶端**开始（不再被顶栏下推 56px，故不会被"裁掉一条"）。
             // 返回/分享/更多按钮与"按需毛玻璃带"已抽到页面级覆盖层
             // （`_buildTopBarOverlay`），与本 sliver 解耦。
-            SliverAppBar(
-              pinned: true,
-              expandedHeight: _coverHeight,
-              toolbarHeight: _topBarHeight,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              backgroundColor: AppColors.transparent,
-              surfaceTintColor: AppColors.transparent,
-              automaticallyImplyLeading: false,
-              flexibleSpace: FlexibleSpaceBar(
-                background: _buildHeaderBackground(context, card, images),
-              ),
+            AnimatedBuilder(
+              animation: _expandCtrl,
+              builder: (context, _) {
+                // 阶梯展开：把 [0,1] 档位进度映射到 [初始, 全尺寸] 高度。
+                final maxCover = _expandedCoverHeight(context);
+                final liveCover = _coverHeight +
+                    _expandCtrl.value * (maxCover - _coverHeight);
+                return SliverAppBar(
+                  pinned: true,
+                  expandedHeight: liveCover,
+                  toolbarHeight: _topBarHeight,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  backgroundColor: AppColors.transparent,
+                  surfaceTintColor: AppColors.transparent,
+                  automaticallyImplyLeading: false,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: _buildExpandableHeader(context, card, images),
+                  ),
+                );
+              },
             ),
             SliverToBoxAdapter(
               // 演示模式：他人空间整块头部用加载态骨架替代（含头像/昵称/签名等）。
@@ -1191,7 +1224,87 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
     );
   }
 
+  /// 头图外层：**仅当指针悬停在头图上时**，滚轮才用于阶梯展开/收回（防误触）。
+  ///
+  /// 悬停时用 `Listener.onPointerSignal` + `pointerSignalResolver` 抢占滚轮信号，
+  /// 使 `NestedScrollView` 不再同时滚动（展开时页面内容不跟着动）。
+  Widget _buildExpandableHeader(
+    BuildContext context,
+    MemberCard? card,
+    MemberImages? images,
+  ) {
+    return MouseRegion(
+      onEnter: (_) => _headerHovered = true,
+      onExit: (_) => _headerHovered = false,
+      child: Listener(
+        onPointerSignal: _onHeaderPointerSignal,
+        child: _buildHeaderBackground(context, card, images),
+      ),
+    );
+  }
+
+  /// 滚轮信号：悬停于头图时按方向"上一档/下一档"，并抢占信号阻止页面滚动。
+  void _onHeaderPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent || !_headerHovered) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (e) {
+      final dy = (e as PointerScrollEvent).scrollDelta.dy;
+      if (dy == 0) return;
+      _stepExpand(dy > 0 ? 1 : -1);
+    });
+  }
+
+  /// 阶梯步进：`dir>0` 展开一档，`dir<0` 收回一档（离散档位，不连续跟随滚动）。
+  void _stepExpand(int dir) {
+    final step = 1 / _expandStepCount;
+    final next = (_expandTarget + dir * step).clamp(0.0, 1.0);
+    if ((next - _expandTarget).abs() < 1e-6) return;
+    setState(() => _expandTarget = next);
+    _expandCtrl.animateTo(
+      _expandTarget,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  /// 头图"全尺寸"目标高度：按背景图自然宽高比折算到当前窗口宽，夹到合理区间。
+  double _expandedCoverHeight(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final natural = (_bannerAspect != null && _bannerAspect! > 0)
+        ? size.width / _bannerAspect!
+        : size.width / 4.0; // 4:1 兜底
+    final lower = _coverHeight + 80;
+    final upper = size.height * 0.92;
+    return natural.clamp(lower, upper < lower ? lower : upper);
+  }
+
+  /// 解析背景图自然尺寸（异步）；拿到后回填宽高比，用于"全尺寸"折算。
+  void _resolveBannerAspect(String url) {
+    if (url == _bannerAspectUrl) return;
+    _bannerAspectUrl = url;
+    final stream =
+        CachedNetworkImageProvider(url).resolve(ImageConfiguration.empty);
+    late ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (info, _) {
+        final w = info.image.width;
+        final h = info.image.height;
+        if (mounted && w > 0 && h > 0) {
+          setState(() => _bannerAspect = w / h);
+        }
+        stream.removeListener(listener);
+      },
+      onError: (_, _) => stream.removeListener(listener),
+    );
+    stream.addListener(listener);
+  }
+
   /// 顶部横幅与头像背景
+  ///
+  /// 结构对齐 PiliPlus `_buildHeader`：**单张 `CachedNetworkImage`**（显式尺寸 +
+  /// `gaplessPlayback` + 短淡入），并整体 `ClipRect` 收边。原实现用
+  /// `Stack[图片, 遮罩 Container]` 两层，在 DPR 非整数（如 1.25）时头图底边落在
+  /// 半物理像素（330×1.25=412.5），两图层各自取整不一致 → 底缘露出 1px 原图
+  /// （"下边缘异常像素"）。收敛为单层并显式收边后消除该缝。
   Widget _buildHeaderBackground(
     BuildContext context,
     MemberCard? card,
@@ -1214,38 +1327,56 @@ class _MemberSpacePageState extends State<MemberSpacePage> {
         topPhoto = topPhoto.replaceFirst('http://', 'https://');
       }
     }
+    final hasPhoto = topPhoto != null && topPhoto.isNotEmpty;
+    final width = MediaQuery.sizeOf(context).width;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (topPhoto != null && topPhoto.isNotEmpty)
-          CachedNetworkImage(
-            imageUrl: ImageUtils.thumbnailUrl(topPhoto, type: 'background'),
-            fit: BoxFit.cover,
-            memCacheWidth: ImageUtils.decodeClamp(
-                MediaQuery.sizeOf(context).width, context,
-                max: 2048),
-            errorBuilder: (_, _, _) => _defaultHeaderGradient(tokens),
-          )
-        else
-          _defaultHeaderGradient(tokens),
-        // 阴影遮罩
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.black.withValues(alpha: 0.4),
-                AppColors.transparent,
-                tokens.colors.background.withValues(alpha: 0.8),
-                tokens.colors.background,
-              ],
-              stops: const [0.0, 0.4, 0.85, 1.0],
+    if (hasPhoto) {
+      final url = ImageUtils.thumbnailUrl(topPhoto, type: 'background');
+      if (url != _bannerAspectUrl) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _resolveBannerAspect(url);
+        });
+      }
+    }
+
+    return ClipRect(
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
+        fit: StackFit.expand,
+        children: [
+          if (hasPhoto)
+            CachedNetworkImage(
+              imageUrl: ImageUtils.thumbnailUrl(topPhoto, type: 'background'),
+              fit: BoxFit.cover,
+              width: width,
+              memCacheWidth: ImageUtils.decodeClamp(width, context, max: 2048),
+              fadeInDuration: const Duration(milliseconds: 120),
+              fadeOutDuration: const Duration(milliseconds: 120),
+              placeholder: (_, _) => _defaultHeaderGradient(tokens),
+              errorBuilder: (_, _, _) => _defaultHeaderGradient(tokens),
+            )
+          else
+            _defaultHeaderGradient(tokens),
+          // 底部渐隐遮罩：`Positioned.fill` 与头图严格同框，避免层间子像素缝。
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.black.withValues(alpha: 0.4),
+                    AppColors.transparent,
+                    tokens.colors.background.withValues(alpha: 0.8),
+                    tokens.colors.background,
+                  ],
+                  stops: const [0.0, 0.4, 0.85, 1.0],
+                ),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
