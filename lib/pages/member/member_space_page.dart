@@ -360,9 +360,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   /// 指针是否悬停在头图上——**只有悬停时滚轮才用于展开**，避免误触（防误触口径）。
   bool _headerHovered = false;
 
-  /// 背景图自然宽高比（宽/高），用于把"全尺寸"折算为当前窗口宽下的高度。
-  double? _bannerAspect;
-  String? _bannerAspectUrl;
+  /// 头图来源诊断日志去重签名（来源 + URL）；仅在选用结果变化时落一次日志。
+  String? _headerSourceSignature;
 
   /// 数字藏品头图（多张时）横向轮播当前页；用于页码条与标题角标。
   int _collectionPage = 0;
@@ -1282,36 +1281,54 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     );
   }
 
-  /// 头图"全尺寸"目标高度：按背景图自然宽高比折算到当前窗口宽，夹到合理区间。
+  /// 头图"全尺寸"目标高度。
+  ///
+  /// 口径（2026-10-18 修正）：**沉浸式满屏 = 视口高 × 0.92**。
+  ///
+  /// 早前按"背景图自然宽高比"折算，而 B站空间头图天然是**超宽横幅**（实测 `l_img`
+  /// 为 1280×200，约 6.4:1），满宽折算出的高度比初始 [_coverHeight] 还矮，被下限抬到
+  /// 410 —— 一次展开只涨 80px，实机反馈"无法一步完全展开"。改为与图片比例无关的
+  /// 满屏目标后，任何用户的"一步展开"幅度都一致且显著。
   double _expandedCoverHeight(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final natural = (_bannerAspect != null && _bannerAspect! > 0)
-        ? size.width / _bannerAspect!
-        : size.width / 4.0; // 4:1 兜底
+    final target = MediaQuery.sizeOf(context).height * 0.92;
     final lower = _coverHeight + 80;
-    final upper = size.height * 0.92;
-    return natural.clamp(lower, upper < lower ? lower : upper);
+    return target < lower ? lower : target;
   }
 
-  /// 解析背景图自然尺寸（异步）；拿到后回填宽高比，用于"全尺寸"折算。
-  void _resolveBannerAspect(String url) {
-    if (url == _bannerAspectUrl) return;
-    _bannerAspectUrl = url;
-    final stream =
-        CachedNetworkImageProvider(url).resolve(ImageConfiguration.empty);
-    late ImageStreamListener listener;
-    listener = ImageStreamListener(
-      (info, _) {
-        final w = info.image.width;
-        final h = info.image.height;
-        if (mounted && w > 0 && h > 0) {
-          setState(() => _bannerAspect = w / h);
-        }
-        stream.removeListener(listener);
-      },
-      onError: (_, _) => stream.removeListener(listener),
+  /// 按来源优先级挑选"普通单张背景图"，返回 `(来源名, URL)`；全部为空则返回 `null`。
+  ///
+  /// 取**首个非空**而非首个非 null：早期实现用 `??` 串联，任一环节返回**空串**即截断
+  /// 后续兜底（`hasPhoto` 为 false → 直接落到默认渐变），是 2026-10-18 实机反馈
+  /// "高级头图加载失败、自动降级到默认"的一条可能路径。
+  ///
+  /// 抽成列表是为了诊断日志能如实记录"最终选用了哪一级来源"。
+  (String, String?)? _pickHeaderPhoto(MemberImages? images) {
+    final candidates = <(String, String?)>[
+      ('images.topPhoto', images?.topPhoto),
+      ('images.imgUrl', images?.imgUrl),
+      ('topPhotoApi.topPhoto', _extraTopPhoto?.topPhoto),
+      ('topPhotoApi.imgUrl', _extraTopPhoto?.imgUrl),
+      ('cardInfo.spaceLImg', _cardInfo?.spaceLImg),
+      ('cardInfo.spaceSImg', _cardInfo?.spaceSImg),
+    ];
+    for (final c in candidates) {
+      final v = c.$2;
+      if (v != null && v.isNotEmpty) return c;
+    }
+    return null;
+  }
+
+  /// 诊断日志：记录头图**最终选用来源 + 解析后 URL**（同一结果只落一次，避免刷屏）。
+  ///
+  /// 用 [AppLogger.i] 而非 `w`：这是取证信息，不是失败。
+  void _logHeaderSource(String source, String? url) {
+    final signature = '$source|${url ?? 'null'}';
+    if (signature == _headerSourceSignature) return;
+    _headerSourceSignature = signature;
+    AppLogger.i(
+      'MemberSpace',
+      '头图选用 mid=${widget.mid} source=$source url=${url ?? 'null'}',
     );
-    stream.addListener(listener);
   }
 
   /// 顶部横幅与头像背景
@@ -1339,13 +1356,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     // 1) 数字藏品头图（最高优先级）。避免藏品用户被空间接口兜底的默认背景图覆盖。
     final collection = images?.collectionTopSimple?.images;
     if (collection != null && collection.isNotEmpty) {
-      final primaryUrl =
-          ImageUtils.thumbnailUrl(collection.first.headerUrl, type: 'background');
-      if (primaryUrl.isNotEmpty && primaryUrl != _bannerAspectUrl) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _resolveBannerAspect(primaryUrl);
-        });
-      }
+      _logHeaderSource(
+        'collection_top_simple',
+        ImageUtils.thumbnailUrl(collection.first.headerUrl, type: 'background'),
+      );
       return ClipRect(
         child: Stack(
           clipBehavior: Clip.hardEdge,
@@ -1360,13 +1374,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       );
     }
 
-    // 2) 普通单张背景图（原口径）。
-    String? topPhoto = images?.topPhoto ??
-        images?.imgUrl ??
-        _extraTopPhoto?.topPhoto ??
-        _extraTopPhoto?.imgUrl ??
-        _cardInfo?.spaceLImg ??
-        _cardInfo?.spaceSImg;
+    // 2) 普通单张背景图（原口径）：按来源逐级回落取**首个非空**值。
+    final picked = _pickHeaderPhoto(images);
+    String? topPhoto = picked?.$2;
+    if (picked != null && topPhoto != null) {
+      _logHeaderSource(picked.$1, topPhoto);
+    }
 
     if (topPhoto != null && topPhoto.isNotEmpty) {
       if (topPhoto.startsWith('//')) {
@@ -1376,15 +1389,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       }
     }
     final hasPhoto = topPhoto != null && topPhoto.isNotEmpty;
-
-    if (hasPhoto) {
-      final url = ImageUtils.thumbnailUrl(topPhoto, type: 'background');
-      if (url != _bannerAspectUrl) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _resolveBannerAspect(url);
-        });
-      }
-    }
 
     return ClipRect(
       child: Stack(

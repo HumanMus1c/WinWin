@@ -10,6 +10,8 @@ import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/response_map.dart';
 import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/utils/utils.dart';
+import 'package:winwin/utils/wbi_sign.dart';
 
 /// 投稿视频排序类型。
 enum ArchiveOrderType {
@@ -335,23 +337,45 @@ abstract final class MemberHttp {
     }
   }
 
-  /// 获取用户空间顶部背景图（Web 端 `/x/space/top/photo`）。
+  /// 获取用户空间「高级头图」（`/x/space/wbi/acc/info` 的 `data.top_photo`）。
+  ///
+  /// 原实现走 `/x/space/top/photo`，该端点已于线上下线：实测 `api.bilibili.com` 与
+  /// `app.bilibili.com` 均返回 **404 + HTML 错误页**，应用内每次进空间都会留下
+  /// `Http: 响应体非 JSON Map（runtimeType=String）` + `MemberSpace: topPhoto 加载失败`
+  /// 两条日志（2026-10-18 实机取证）。故改由空间信息接口取 `top_photo`
+  /// （对齐上游 PiliPlus `MemberInfoModel.topPhoto = json['top_photo']`）。
+  ///
+  /// 取不到 `top_photo` 时返回**空 [MemberImages] 的 Success**（该用户本就没有高级头图，
+  /// 属正常态），交由页面按普通背景图回落，不再产生失败日志。
   static Future<LoadingState<MemberImages>> topPhoto({required int mid}) async {
     try {
       final res = await Request().get<dynamic>(
-        '/x/space/top/photo',
-        queryParameters: {'mid': mid},
+        Api.memberInfo,
+        queryParameters: await WbiSign.makSign({
+          'mid': mid,
+          'token': '',
+          'platform': 'web',
+          'web_location': 1550101,
+          'dm_img_list': '[]',
+          'dm_img_str': Utils.base64EncodeRandomString(16, 64),
+          'dm_cover_img_str': Utils.base64EncodeRandomString(32, 128),
+          'dm_img_inter': '{"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
+        }),
       );
       final data = asJsonMap(res.data);
       if (data['code'] == 0 && data['data'] is Map<String, dynamic>) {
-        return Success(MemberImages.fromJson(data['data'] as Map<String, dynamic>));
-      } else {
-        return Error(data['message']?.toString() ?? '获取背景图失败');
+        final inner = data['data'] as Map<String, dynamic>;
+        final top = (inner['top_photo'] ?? inner['topPhoto'])?.toString();
+        if (top != null && top.isNotEmpty) {
+          return Success(MemberImages(topPhoto: top, imgUrl: top));
+        }
+        return Success(MemberImages());
       }
+      return Error(data['message']?.toString() ?? '获取高级头图失败');
     } on DioException catch (e) {
       return Error('网络请求异常：${e.message ?? e.type.name}');
     } catch (e) {
-      return Error('获取背景图失败：$e');
+      return Error('获取高级头图失败：$e');
     }
   }
 
