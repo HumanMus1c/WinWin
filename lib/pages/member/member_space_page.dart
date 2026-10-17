@@ -350,13 +350,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   /// 头图（封面）初始容器高度。
   static const double _coverHeight = 330;
 
-  /// 阶梯展开档数：每档 = `1 / _expandStepCount`（阶梯步进的最小步长）。
-  static const int _expandStepCount = 6;
-
-  /// 头图阶梯展开进度：`0` = 初始尺寸，`1` = 全尺寸。仅由滚轮分档驱动。
+  /// 头图展开进度：`0` = 初始尺寸，`1` = 全尺寸。仅由"页面最顶端 + 悬停头图"
+  /// 时的一次性滚轮展开 / 收回驱动（**不分档**）。
   double _expandTarget = 0;
 
-  /// 头图阶梯展开动画（档位间补间，形成"阶梯步进"手感）。
+  /// 头图展开 / 收回动画（一次性到位）。
   late final AnimationController _expandCtrl;
 
   /// 指针是否悬停在头图上——**只有悬停时滚轮才用于展开**，避免误触（防误触口径）。
@@ -512,7 +510,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     super.initState();
     _expandCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 220),
+      duration: const Duration(milliseconds: 260),
       value: 0,
     );
     _tabController = AppTabController(length: _availableTabs.length);
@@ -958,7 +956,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             AnimatedBuilder(
               animation: _expandCtrl,
               builder: (context, _) {
-                // 阶梯展开：把 [0,1] 档位进度映射到 [初始, 全尺寸] 高度。
+                // 展开进度：把 [0,1] 映射到 [初始, 全尺寸] 高度。
                 final maxCover = _expandedCoverHeight(context);
                 final liveCover = _coverHeight +
                     _expandCtrl.value * (maxCover - _coverHeight);
@@ -1224,7 +1222,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     );
   }
 
-  /// 头图外层：**仅当指针悬停在头图上时**，滚轮才用于阶梯展开/收回（防误触）。
+  /// 头图外层：**仅当指针悬停在头图上**时，滚轮才用于展开/收回（防误触）。
   ///
   /// 悬停时用 `Listener.onPointerSignal` + `pointerSignalResolver` 抢占滚轮信号，
   /// 使 `NestedScrollView` 不再同时滚动（展开时页面内容不跟着动）。
@@ -1243,25 +1241,36 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     );
   }
 
-  /// 滚轮信号：悬停于头图时按方向"上一档/下一档"，并抢占信号阻止页面滚动。
+  /// 滚轮信号：**仅在"页面处于最顶端 + 指针悬停头图"时**接管滚轮。
+  ///
+  /// 方向口径（修正后）：滚轮**向上**（`dy < 0`）→ 头图**一次性展开**；
+  /// 滚轮**向下**（`dy > 0`）→ **一次性收回**。不满足条件时**不注册**信号，
+  /// 交还给页面正常滚动，避免误触。
   void _onHeaderPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent || !_headerHovered) return;
-    GestureBinding.instance.pointerSignalResolver.register(event, (e) {
-      final dy = (e as PointerScrollEvent).scrollDelta.dy;
-      if (dy == 0) return;
-      _stepExpand(dy > 0 ? 1 : -1);
-    });
+    final dy = event.scrollDelta.dy;
+    if (dy == 0) return;
+    // 只在页面最顶端接管：滚到内容区后头图已收成细条，不再响应滚轮。
+    if (!_scrollController.hasClients || _scrollController.offset > 0.5) return;
+    if (dy < 0 && _expandTarget < 1) {
+      // 向上滚动 → 一次性展开。
+      GestureBinding.instance.pointerSignalResolver
+          .register(event, (_) => _setExpand(true));
+    } else if (dy > 0 && _expandTarget > 0) {
+      // 向下滚动 → 一次性收回。
+      GestureBinding.instance.pointerSignalResolver
+          .register(event, (_) => _setExpand(false));
+    }
   }
 
-  /// 阶梯步进：`dir>0` 展开一档，`dir<0` 收回一档（离散档位，不连续跟随滚动）。
-  void _stepExpand(int dir) {
-    final step = 1 / _expandStepCount;
-    final next = (_expandTarget + dir * step).clamp(0.0, 1.0);
+  /// 一次性展开 / 收回：目标直接取 `1` / `0`（不分档、不跟随滚动连续变化）。
+  void _setExpand(bool expand) {
+    final next = expand ? 1.0 : 0.0;
     if ((next - _expandTarget).abs() < 1e-6) return;
     setState(() => _expandTarget = next);
     _expandCtrl.animateTo(
       _expandTarget,
-      duration: const Duration(milliseconds: 220),
+      duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
     );
   }
