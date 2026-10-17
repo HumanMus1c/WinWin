@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -104,8 +105,8 @@ class _FollowPageState extends State<FollowPage>
       );
     }
     final colorScheme = AppThemeHost.of(context).colors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+    return AppScrollBar(
+      controller: controller.scrollController,
       child: AppRefreshIndicator(
         // 实机反馈#5：指示器出现在可见滚动区域顶部（浮动组合控件下方，页内预留 120）。
         displacement: 12,
@@ -118,7 +119,7 @@ class _FollowPageState extends State<FollowPage>
         slivers: [
           SliverPadding(
             // 顶部留白避开浮动顶栏(52) + 分类标签行(36)
-            padding: const EdgeInsets.only(top: 120, bottom: 100),
+            padding: const EdgeInsets.fromLTRB(Style.safeSpace, 120, Style.safeSpace, 100),
             sliver: Obx(
               () => _buildBody(colorScheme, controller.loadingState.value),
             ),
