@@ -79,6 +79,12 @@ class AppScrollBar extends StatefulWidget {
   /// 滚动结束后回落空闲态的防抖时长。
   static const int idleDelayMs = 700;
 
+  /// 「页面级」滚动视图判定：主轴向尺寸 ≥ 窗口主轴向 × 该比例，才预留通道。
+  ///
+  /// 弹层 / 面板 / 局部小列表等滚动视图的主轴向尺寸远小于窗口，为其预留
+  /// [_laneThickness] 通道会抢走布局（用户实测：视频卡片「更多操作」弹层布局被破坏）。
+  static const double pageLevelExtentRatio = 0.5;
+
   /// 全局接入点（**单一来源**）：由 [AppScrollBehavior.buildScrollbar] 为桌面平台
   /// 每个**竖向** `Scrollable` 挂本滚动条，取代 SDK 默认的 `RawScrollbar`。
   ///
@@ -234,17 +240,41 @@ class _AppScrollBarState extends State<AppScrollBar>
         final bounded = vertical
             ? constraints.hasBoundedWidth
             : constraints.hasBoundedHeight;
-        // 约束不定（例如本滚动视图嵌在横向滚动列表中）⇒ 不预留通道，直接返回
-        // 内容：否则 `Expanded` 会在无界约束下断言失败（全局挂载后此类场景可达）。
-        if (!bounded) return widget.child;
+        // 约束不定（例如本滚动视图嵌在横向滚动列表中）⇒ 不预留通道，原样返回：
+        // 否则 `Expanded` 会在无界约束下断言失败（全局挂载后此类场景可达）。
+        if (!bounded) return _suppressFrameworkBar(widget.child);
+
+        // 仅「页面级」滚动视图预留通道。弹层 / 面板 / 局部小列表的主轴向尺寸远小于
+        // 窗口，预留通道会抢布局（用户实测：视频卡片「更多操作」弹层布局被破坏）。
+        final mainExtent =
+            vertical ? constraints.maxHeight : constraints.maxWidth;
+        final windowMain = vertical
+            ? MediaQuery.sizeOf(context).height
+            : MediaQuery.sizeOf(context).width;
+        if (!mainExtent.isFinite ||
+            mainExtent < windowMain * AppScrollBar.pageLevelExtentRatio) {
+          return _suppressFrameworkBar(widget.child);
+        }
         return _buildLane(context, vertical);
       },
     );
   }
 
+  /// 不预留通道、仅关闭框架方角硬条（`RawScrollbar` 的 `radius`/`trackRadius`
+  /// 默认 null ⇒ `drawRect`，即用户多轮反馈的「直角硬矩形条」）。
+  Widget _suppressFrameworkBar(Widget child) => ScrollConfiguration(
+        behavior: const _NoFrameworkScrollBar(),
+        child: child,
+      );
+
   /// 通道布局：内容经 `Expanded` 让位，滚动条独占最外侧 [laneThickness] 通道。
   Widget _buildLane(BuildContext context, bool vertical) {
-    final onSurface = AppThemeHost.of(context).colors.onSurface;
+    final colors = AppThemeHost.of(context).colors;
+    final onSurface = colors.onSurface;
+    // 通道是「内容区与窗口边缘之间」的留白，必须按**页面背景**着色：通道自身若透明
+    // 会透出父级容器（非页面背景）的灰色表面，在整窗高度上表现为一条 12px 通高的
+    // 「直角硬矩形条」——与滚动状态无关，即用户多轮反馈的现象。
+    final background = colors.background;
 
     final lane = MouseRegion(
       opaque: false,
@@ -349,9 +379,12 @@ class _AppScrollBarState extends State<AppScrollBar>
         ),
     );
 
-    final laneBox = vertical
-        ? SizedBox(width: AppScrollBar.laneThickness, child: lane)
-        : SizedBox(height: AppScrollBar.laneThickness, child: lane);
+    final laneBox = ColoredBox(
+      color: background,
+      child: vertical
+          ? SizedBox(width: AppScrollBar.laneThickness, child: lane)
+          : SizedBox(height: AppScrollBar.laneThickness, child: lane),
+    );
 
     // 通道 + 内容；整个子树关闭框架自动滚动条（SDK 桌面默认给每个 Scrollable 挂
     // RawScrollbar，与本滚动条叠加会成为「双滚动条」）。
