@@ -4,6 +4,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/response_map.dart';
 import 'package:winwin/models/user/user_info.dart';
 
 /// 用户信息 HTTP（移植自 PiliPlus `lib/http/user.dart` 的 userInfo 部分）。
@@ -72,7 +73,7 @@ abstract final class UserHttp {
         Api.userStatOwner,
         queryParameters: mid == null ? null : {'mid': mid},
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final d = data['data'] as Map<String, dynamic>;
         // bilibili 对大数字（粉丝/关注数）可能返回 String，统一安全转换。

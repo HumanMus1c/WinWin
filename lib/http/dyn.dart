@@ -9,6 +9,7 @@ import 'package:winwin/http/api.dart';
 import 'package:winwin/http/constants.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/response_map.dart';
 import 'package:winwin/models/dynamics/dyn_type.dart';
 import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/id_utils.dart';
@@ -38,7 +39,7 @@ abstract final class DynHttp {
           'features': Constants.dynFeatures,
         },
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         return Success(
           DynFeedData.fromJson(data['data'] as Map<String, dynamic>? ?? {}),
@@ -63,7 +64,7 @@ abstract final class DynHttp {
         Api.dynamicDetail,
         queryParameters: {'dynamic_id': dynamicId},
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final item = data['data']?['item'];
         if (item is Map<String, dynamic>) {
@@ -97,7 +98,7 @@ abstract final class DynHttp {
           'features': Constants.dynFeatures,
         },
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         return Success(
           DynFeedData.fromJson(data['data'] as Map<String, dynamic>? ?? {}),
@@ -134,7 +135,7 @@ abstract final class DynHttp {
           extra: {'account': Accounts.main},
         ),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         return const Success(null);
       }
@@ -187,7 +188,7 @@ abstract final class DynHttp {
           extra: {'account': Accounts.main},
         ),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         return const Success(null);
       }

@@ -4,6 +4,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/response_map.dart';
 import 'package:winwin/models/common/video_type.dart';
 import 'package:winwin/models/history/history_models.dart';
 
@@ -28,7 +29,7 @@ abstract final class HistoryHttp {
           'view_at': viewAt ?? 0,
         },
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         return Success(HistoryData.fromJson(data['data'] as Map<String, dynamic>));
       }
@@ -50,7 +51,7 @@ abstract final class HistoryHttp {
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) return const Success(null);
       return Error(data['message']?.toString() ?? '删除失败');
     } catch (e) {
@@ -66,7 +67,7 @@ abstract final class HistoryHttp {
         data: {'jsonp': 'jsonp', 'csrf': Accounts.history.csrf},
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) return const Success(null);
       return Error(data['message']?.toString() ?? '清空失败');
     } catch (e) {
@@ -86,7 +87,7 @@ abstract final class HistoryHttp {
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) return const Success(null);
       return Error(data['message']?.toString() ?? '操作失败');
     } catch (e) {

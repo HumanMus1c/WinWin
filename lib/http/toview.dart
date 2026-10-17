@@ -4,6 +4,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/response_map.dart';
 import 'package:winwin/models/toview/toview_models.dart';
 import 'package:winwin/utils/wbi_sign.dart';
 
@@ -58,7 +59,7 @@ abstract final class ToviewHttp {
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) return const Success(null);
       return Error(data['message']?.toString() ?? '添加失败');
     } catch (e) {
@@ -74,7 +75,7 @@ abstract final class ToviewHttp {
         data: {'csrf': Accounts.main.csrf, 'resources': aids},
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) return const Success(null);
       return Error(data['message']?.toString() ?? '移除失败');
     } catch (e) {
@@ -93,7 +94,7 @@ abstract final class ToviewHttp {
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) return const Success(null);
       return Error(data['message']?.toString() ?? '清空失败');
     } catch (e) {

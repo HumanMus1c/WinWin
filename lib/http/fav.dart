@@ -4,6 +4,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/response_map.dart';
 import 'package:winwin/models/fav/fav_models.dart';
 
 /// 收藏夹 HTTP（移植自 PiliPlus `lib/http/fav.dart`，精简为 WinWin 所需接口）。
@@ -136,7 +137,7 @@ abstract final class FavHttp {
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         return const Success(null);
       }
@@ -161,7 +162,7 @@ abstract final class FavHttp {
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) return const Success(null);
       return Error(data['message']?.toString() ?? '取消收藏失败');
     } catch (e) {
@@ -191,7 +192,7 @@ abstract final class FavHttp {
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         return Success(FavFolderInfo.fromJson(data['data'] as Map<String, dynamic>));
       }
@@ -213,7 +214,7 @@ abstract final class FavHttp {
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) return const Success(null);
       return Error(data['message']?.toString() ?? '删除失败');
     } catch (e) {

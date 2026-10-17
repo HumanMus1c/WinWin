@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/response_map.dart';
 import 'package:winwin/utils/wbi_sign.dart';
 
 /// 专栏 HTTP 请求接口。
@@ -20,7 +21,7 @@ abstract final class ArticleHttp {
           'web_location': '333.976',
         }),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0 && data['data'] != null) {
         return Success(
           ArticleDetailModel.fromJson(data['data'] as Map<String, dynamic>),

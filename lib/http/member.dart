@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 
@@ -10,6 +8,7 @@ import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/response_map.dart';
 import 'package:winwin/utils/duration_utils.dart';
 
 /// 投稿视频排序类型。
@@ -23,36 +22,6 @@ enum ArchiveOrderType {
 
 /// 用户空间相关 HTTP（移植与对齐 PiliPlus `lib/http/member.dart` 与 BiliPai）。
 abstract final class MemberHttp {
-  /// 安全解析响应体为 JSON Map。
-  ///
-  /// B站接口在风控 / 限流 / 接口异常时可能返回**非 JSON** 响应体（HTML 错误页、空体、
-  /// `text/plain` 字符串）；此时裸 `res.data as Map<String, dynamic>` 会抛
-  /// `type 'String' is not a subtype of type 'Map<String, dynamic>' in type cast`
-  /// （2026-10-16/17 `MemberSpace: topPhoto` 实测）。本方法统一降级：
-  /// - `Map` → 直接返回；
-  /// - `String` → 尝试 `jsonDecode`（兼容 content-type 未标 JSON 的 JSON 文本）；
-  /// - 其余（含解析失败）→ 返回**空 Map**，交由各调用点既有的 `code != 0` 分支
-  ///   给出友好错误，避免裸 cast 崩溃。
-  @visibleForTesting
-  static Map<String, dynamic> asJsonMap(dynamic body) {
-    if (body is Map<String, dynamic>) return body;
-    if (body is Map) return Map<String, dynamic>.from(body);
-    if (body is String && body.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(body);
-        if (decoded is Map<String, dynamic>) return decoded;
-        if (decoded is Map) return Map<String, dynamic>.from(decoded);
-      } catch (_) {
-        // 非 JSON 文本（如风控 HTML），走下方降级。
-      }
-    }
-    AppLogger.w(
-      'MemberHttp',
-      '响应体非 JSON Map（runtimeType=${body.runtimeType}），按接口失败处理',
-    );
-    return const <String, dynamic>{};
-  }
-
   /// 用户空间信息（APP 端 `/x/v2/space` 与 Web 端 `/x/web-interface/card` 双通道容灾）。
   ///
   /// 返回 [MemberSpaceData]，包含用户完整卡片（头像/名字/签名/粉丝牌/关注TA的人/等级/背景等）。

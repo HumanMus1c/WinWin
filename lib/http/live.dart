@@ -4,6 +4,7 @@ import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
+import 'package:winwin/http/response_map.dart';
 import 'package:winwin/tcp/live.dart';
 import 'package:winwin/utils/wbi_sign.dart';
 
@@ -32,7 +33,7 @@ abstract final class LiveHttp {
           'sort_type': 'online',
         },
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final rawData = data['data'];
         final List<dynamic> rawList = rawData is List
@@ -56,7 +57,7 @@ abstract final class LiveHttp {
   static Future<LoadingState<List<LiveAreaItem>>> liveAreaList() async {
     try {
       final res = await Request().get<dynamic>(Api.liveRoomAreaList);
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final rawList = data['data'] as List<dynamic>? ?? const [];
         final areas = rawList
@@ -88,7 +89,7 @@ abstract final class LiveHttp {
           'hit_ab': true,
         },
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final rawData = data['data'] as Map<String, dynamic>? ?? {};
         return Success(LiveFollowData.fromJson(rawData));
@@ -110,7 +111,7 @@ abstract final class LiveHttp {
         Api.liveRoomInit,
         queryParameters: {'id': roomId},
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final rawData = data['data'] as Map<String, dynamic>? ?? {};
         return Success(LiveRoomInitData.fromJson(rawData));
@@ -132,7 +133,7 @@ abstract final class LiveHttp {
         Api.liveRoomInfoH5,
         queryParameters: {'room_id': roomId},
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final rawData = data['data'] as Map<String, dynamic>? ?? {};
         return Success(LiveRoomInfo.fromJson(rawData));
@@ -161,7 +162,7 @@ abstract final class LiveHttp {
           },
         ),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final rawRoom = data['data']?['room'] as List<dynamic>? ?? const [];
         final messages = rawRoom
@@ -201,7 +202,7 @@ abstract final class LiveHttp {
           'web_location': 444.8,
         }),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final rawData = data['data'] as Map<String, dynamic>? ?? {};
         return Success(LivePlayUrlData.fromJson(rawData));
@@ -227,7 +228,7 @@ abstract final class LiveHttp {
           'web_location': 444.8,
         }),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         final rawData = data['data'] as Map<String, dynamic>? ?? {};
         return Success(LiveDanmakuTokenData.fromJson(rawData));
@@ -286,7 +287,7 @@ abstract final class LiveHttp {
           'csrf_token': csrf,
         }),
       );
-      final data = res.data as Map<String, dynamic>;
+      final data = asJsonMap(res.data);
       if (data['code'] == 0) {
         return const Success(null);
       }
