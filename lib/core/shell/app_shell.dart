@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart'
     show AnimatedTheme, DefaultMaterialLocalizations, ThemeData // 过渡期（B2 迁移消费者、B7 摘除）
     ;
 
+import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
@@ -30,6 +31,26 @@ class AppScrollBehavior extends ScrollBehavior {
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) =>
       const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+
+  /// 全局滚动条口径（**单一来源**，2026-10-17 反馈轮 5）。
+  ///
+  /// 基类实现（`scroll_configuration.dart`）在 windows/macos/linux 返回
+  /// `RawScrollbar(controller: details.controller, child: child)`：其 `radius` 与
+  /// `trackRadius` 默认均为 null ⇒ `ScrollbarPainter` 走 `canvas.drawRect` 分支
+  /// （**方角硬矩形条**）、颜色 `0x66BCBCBC`、粗细 6.0。这与项目口径（圆角 pill、
+  /// hover/拖动三态补间、hover 触发带语义）不一致，也是用户实机反馈「番剧详情页
+  /// 两侧内容区域滚动条初始默认态是硬矩形条」的根因。
+  ///
+  /// 现统一改为项目自有 [AppScrollBar]：一处收口，全应用竖向滚动视图自动获得
+  /// 一致样式；[AppScrollBar] 内部的 `_NoFrameworkScrollBar` 会抑制嵌套滚动视图的
+  /// 重复挂载，已手动包裹的页面（番剧详情/热门/关注/推荐）不会出现双条。
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) =>
+      AppScrollBar.attach(child: child, details: details);
 }
 
 /// 应用外壳替身（取代 MaterialApp 组装）。

@@ -79,6 +79,36 @@ class AppScrollBar extends StatefulWidget {
   /// 滚动结束后回落空闲态的防抖时长。
   static const int idleDelayMs = 700;
 
+  /// 全局接入点（**单一来源**）：由 [AppScrollBehavior.buildScrollbar] 为桌面平台
+  /// 每个**竖向** `Scrollable` 挂本滚动条，取代 SDK 默认的 `RawScrollbar`。
+  ///
+  /// 基类实现对桌面平台返回 `RawScrollbar(controller: details.controller,
+  /// child: child)`，其 `radius`/`trackRadius` 默认均为 null ⇒ `ScrollbarPainter`
+  /// 走 `canvas.drawRect` 分支（**方角硬矩形条**）、颜色 `0x66BCBCBC`、粗细 6.0，
+  /// 与项目口径（圆角 pill + 三态补间 + hover 触发带）不一致。
+  ///
+  /// 行为：
+  /// - 横向 `Scrollable` 返回 `child`（与框架一致，不预留通道，避免列表页面
+  ///   底部凭空多出 12px 空白）；
+  /// - `details.controller` 为空（理论上不会，框架有非空断言）时返回 `child`，保守降级；
+  /// - 竖向则套 [AppScrollBar]；其内部 [AppScrollBar._NoFrameworkScrollBar] 会抑制
+  ///   嵌套 `Scrollable` 的重复挂载 ⇒ 每个滚动视图只保留**一条**项目滚动条。
+  static Widget attach({
+    required Widget child,
+    required ScrollableDetails details,
+  }) {
+    final controller = details.controller;
+    if (controller == null) return child;
+    final vertical = details.direction == AxisDirection.down ||
+        details.direction == AxisDirection.up;
+    if (!vertical) return child;
+    return AppScrollBar(
+      controller: controller,
+      axis: Axis.vertical,
+      child: child,
+    );
+  }
+
   @override
   State<AppScrollBar> createState() => _AppScrollBarState();
 }
@@ -198,8 +228,23 @@ class _AppScrollBarState extends State<AppScrollBar>
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = AppThemeHost.of(context).colors.onSurface;
     final vertical = widget.axis == Axis.vertical;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bounded = vertical
+            ? constraints.hasBoundedWidth
+            : constraints.hasBoundedHeight;
+        // 约束不定（例如本滚动视图嵌在横向滚动列表中）⇒ 不预留通道，直接返回
+        // 内容：否则 `Expanded` 会在无界约束下断言失败（全局挂载后此类场景可达）。
+        if (!bounded) return widget.child;
+        return _buildLane(context, vertical);
+      },
+    );
+  }
+
+  /// 通道布局：内容经 `Expanded` 让位，滚动条独占最外侧 [laneThickness] 通道。
+  Widget _buildLane(BuildContext context, bool vertical) {
+    final onSurface = AppThemeHost.of(context).colors.onSurface;
 
     final lane = MouseRegion(
       opaque: false,
