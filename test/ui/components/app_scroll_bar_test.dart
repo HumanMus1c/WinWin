@@ -115,4 +115,83 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('reverse 列表渲染不抛异常（会话列表场景冒烟）', (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        SizedBox(
+          width: 800,
+          height: 600,
+          child: AppScrollBar(
+            controller: controller,
+            child: ListView.builder(
+              controller: controller,
+              reverse: true,
+              itemCount: 100,
+              itemBuilder: (_, i) => SizedBox(height: 60, child: Text('row $i')),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(controller.hasClients, isTrue);
+    expect(controller.offset, 0); // reverse 起点在视觉底部
+    expect(controller.position.maxScrollExtent, greaterThan(0));
+    expect(tester.takeException(), isNull);
+  });
+
+  group('方向映射（reverse 会话列表回归）', () {
+    test('非 reverse：pixels=0 → 通道上端(0)，pixels=max → 下端(1)', () {
+      expect(
+        AppScrollBar.thumbTravelFraction(
+            pixels: 0, maxScrollExtent: 100, axisDirection: AxisDirection.down),
+        0.0,
+      );
+      expect(
+        AppScrollBar.thumbTravelFraction(
+            pixels: 100, maxScrollExtent: 100, axisDirection: AxisDirection.down),
+        1.0,
+      );
+    });
+
+    test('reverse：pixels=0 在视觉底部 → 占比 1；pixels=max → 占比 0', () {
+      expect(
+        AppScrollBar.thumbTravelFraction(
+            pixels: 0, maxScrollExtent: 100, axisDirection: AxisDirection.up),
+        1.0,
+      );
+      expect(
+        AppScrollBar.thumbTravelFraction(
+            pixels: 100, maxScrollExtent: 100, axisDirection: AxisDirection.up),
+        0.0,
+      );
+      // 横向 reverse 同理（向左）。
+      expect(
+        AppScrollBar.thumbTravelFraction(
+            pixels: 0, maxScrollExtent: 100, axisDirection: AxisDirection.left),
+        1.0,
+      );
+    });
+
+    test('正/逆映射互逆（拖拽跳转与回读一致）', () {
+      for (final dir in <AxisDirection>[
+        AxisDirection.down,
+        AxisDirection.right,
+        AxisDirection.up,
+        AxisDirection.left,
+      ]) {
+        for (final f in <double>[0.0, 0.25, 0.5, 0.75, 1.0]) {
+          final pixelsRatio = AppScrollBar.pixelsFractionForTravel(
+              travelFraction: f, axisDirection: dir);
+          final back = AppScrollBar.thumbTravelFraction(
+              pixels: pixelsRatio, maxScrollExtent: 1, axisDirection: dir);
+          expect(back, closeTo(f, 1e-9), reason: 'dir=$dir f=$f');
+        }
+      }
+    });
+  });
 }

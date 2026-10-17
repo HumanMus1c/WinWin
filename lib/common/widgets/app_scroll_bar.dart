@@ -85,6 +85,38 @@ class AppScrollBar extends StatefulWidget {
   /// [_laneThickness] 通道会抢走布局（用户实测：视频卡片「更多操作」弹层布局被破坏）。
   static const double pageLevelExtentRatio = 0.5;
 
+  /// reverse 列表（`axisDirection` 为 `up`/`left`）判定。
+  ///
+  /// reverse 滚动视图（如会话列表 `ListView(reverse: true)`）中 `pixels == 0` 对应
+  /// 视觉**底部/右侧**，`pixels` 增大对应滑块向视觉**上方/左方**移动；若沿用非 reverse
+  /// 的正向映射，滑块会「跟着内容方向走」（2026-10-17 消息中心会话列表实机反馈）。
+  static bool _isReversed(AxisDirection direction) =>
+      direction == AxisDirection.up || direction == AxisDirection.left;
+
+  /// 滚动像素位置 → 滑块沿通道的**视觉占比**（0 = 通道起点/上或左，1 = 末端/下或右）。
+  ///
+  /// 抽为纯函数以便单测方向映射；reverse 列表取反。
+  @visibleForTesting
+  static double thumbTravelFraction({
+    required double pixels,
+    required double maxScrollExtent,
+    required AxisDirection axisDirection,
+  }) {
+    if (maxScrollExtent <= 0) return 0;
+    final ratio = (pixels / maxScrollExtent).clamp(0.0, 1.0);
+    return _isReversed(axisDirection) ? 1.0 - ratio : ratio;
+  }
+
+  /// 滑块视觉占比 → 滚动像素比例（[thumbTravelFraction] 的逆映射）。
+  @visibleForTesting
+  static double pixelsFractionForTravel({
+    required double travelFraction,
+    required AxisDirection axisDirection,
+  }) {
+    final fraction = travelFraction.clamp(0.0, 1.0);
+    return _isReversed(axisDirection) ? 1.0 - fraction : fraction;
+  }
+
   /// 全局接入点（**单一来源**）：由 [AppScrollBehavior.buildScrollbar] 为桌面平台
   /// 每个**竖向** `Scrollable` 挂本滚动条，取代 SDK 默认的 `RawScrollbar`。
   ///
@@ -208,7 +240,12 @@ class _AppScrollBarState extends State<AppScrollBar>
   double _thumbOffset(double trackExtent, ScrollPosition p, double thumbLength) {
     final maxThumbTravel = trackExtent - thumbLength;
     if (maxThumbTravel <= 0 || p.maxScrollExtent <= 0) return 0;
-    return (p.pixels / p.maxScrollExtent).clamp(0.0, 1.0) * maxThumbTravel;
+    return AppScrollBar.thumbTravelFraction(
+          pixels: p.pixels,
+          maxScrollExtent: p.maxScrollExtent,
+          axisDirection: p.axisDirection,
+        ) *
+        maxThumbTravel;
   }
 
   void _jumpToThumbOffset(
@@ -216,8 +253,11 @@ class _AppScrollBarState extends State<AppScrollBar>
     final thumbLength = _thumbLength(trackExtent, p);
     final maxThumbTravel = trackExtent - thumbLength;
     if (maxThumbTravel <= 0) return;
-    final ratio = (thumbOffset / maxThumbTravel).clamp(0.0, 1.0);
-    p.jumpTo(ratio * p.maxScrollExtent);
+    final pixelsFraction = AppScrollBar.pixelsFractionForTravel(
+      travelFraction: thumbOffset / maxThumbTravel,
+      axisDirection: p.axisDirection,
+    );
+    p.jumpTo(pixelsFraction * p.maxScrollExtent);
   }
 
   void _dragStart(double localOffset, double trackExtent, ScrollPosition p) {
