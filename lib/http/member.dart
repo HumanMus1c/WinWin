@@ -677,7 +677,16 @@ class MemberImages {
   final String? nightImgurl;
   final String? topPhoto;
 
-  MemberImages({this.imgUrl, this.nightImgurl, this.topPhoto});
+  /// 空间「数字藏品」头图（`collection_top_simple`）。非空且列表非空时，应**优先**
+  /// 作为用户空间顶部头图渲染（对齐上游 PiliPlus），而不是回落普通背景图。
+  final MemberCollectionTop? collectionTopSimple;
+
+  MemberImages({
+    this.imgUrl,
+    this.nightImgurl,
+    this.topPhoto,
+    this.collectionTopSimple,
+  });
 
   factory MemberImages.fromJson(Map<String, dynamic> json) {
     final imgUrl = (json['imgUrl'] ??
@@ -699,11 +708,97 @@ class MemberImages {
             json['imgUrl'] ??
             json['img_url'])
         ?.toString();
+    final collectionRaw = json['collection_top_simple'];
     return MemberImages(
       imgUrl: imgUrl,
       nightImgurl: nightImgurl,
       topPhoto: topPhoto,
+      collectionTopSimple: collectionRaw is Map<String, dynamic>
+          ? MemberCollectionTop.fromJson(collectionRaw)
+          : null,
     );
+  }
+}
+
+/// 空间「数字藏品」头图集合（`collection_top_simple`）。
+///
+/// 结构对齐上游 PiliPlus `CollectionTopSimple -> Top -> TopImage`：藏品头图列表位于
+/// `collection_top_simple.top.result[]`。含封面图、静态帧、垂直取景对齐与标题角标。
+class MemberCollectionTop {
+  final List<MemberCollectionImage> images;
+
+  MemberCollectionTop({this.images = const []});
+
+  factory MemberCollectionTop.fromJson(Map<String, dynamic> json) {
+    final top = json['top'];
+    final result = top is Map ? top['result'] : null;
+    return MemberCollectionTop(
+      images: result is List
+          ? result
+              .whereType<Map>()
+              .map((e) => MemberCollectionImage.fromJson(e.cast<String, dynamic>()))
+              .toList()
+          : const [],
+    );
+  }
+}
+
+/// 单张数字藏品头图。
+///
+/// - [cover]：全图（`cover`）；
+/// - [defaultImage]：静态帧（`item.image.default_image`）；
+/// - [dy]：由 `item.image.location`（`"x-start-end"`）+ `height` 折算的**垂直取景
+///   对齐偏移**（`(start + end) / height - 1`），对齐 PiliPlus `TopImage.dy`；
+/// - [title] / [subTitle]：藏品标题角标文案。
+class MemberCollectionImage {
+  final String? cover;
+  final String? defaultImage;
+  final double dy;
+  final String? title;
+  final String? subTitle;
+
+  MemberCollectionImage({
+    this.cover,
+    this.defaultImage,
+    this.dy = 0,
+    this.title,
+    this.subTitle,
+  });
+
+  /// 展示用头图 URL：优先静态帧，回落全图（对齐 PiliPlus `header => default_image ?? fullCover`）。
+  String get headerUrl =>
+      (defaultImage != null && defaultImage!.isNotEmpty) ? defaultImage! : (cover ?? '');
+
+  factory MemberCollectionImage.fromJson(Map<String, dynamic> json) {
+    final item = json['item'];
+    final image = item is Map ? item['image'] : null;
+    final fallbackAnim = item is Map ? item['animation'] : null;
+    final titleJson = json['title'];
+    final subTitleColor = titleJson is Map ? titleJson['sub_title'] : null;
+    return MemberCollectionImage(
+      cover: json['cover']?.toString(),
+      defaultImage: image is Map ? (image['default_image'] ?? image['defaultImage'])?.toString() : null,
+      dy: _collectionDy(image is Map ? image : (fallbackAnim is Map ? fallbackAnim : null)),
+      title: titleJson is Map ? titleJson['title']?.toString() : null,
+      subTitle: subTitleColor?.toString(),
+    );
+  }
+
+  /// 由 `location`（`"x-start-end"`，取后两段）+ `height` 折算垂直对齐偏移。
+  static double _collectionDy(Map? image) {
+    try {
+      final loc = image?['location'];
+      if (loc is String && loc.isNotEmpty) {
+        final parts = loc.split('-').skip(1).take(2).map(num.parse).toList();
+        final height = (image!['height'] as num).toDouble();
+        if (parts.length == 2 && height > 0) {
+          return (parts[0] + parts[1]) / height - 1;
+        }
+      }
+    } catch (_) {
+      // 字段缺失/格式异常时按居中处理。
+    }
+    return 0;
   }
 }
 

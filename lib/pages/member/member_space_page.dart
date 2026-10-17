@@ -364,6 +364,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   double? _bannerAspect;
   String? _bannerAspectUrl;
 
+  /// 数字藏品头图（多张时）横向轮播当前页；用于页码条与标题角标。
+  int _collectionPage = 0;
+
+  /// 数字藏品头图横向轮播控制器（懒创建，仅多张藏品时使用）。
+  PageController? _collectionPageCtrl;
+
   /// 分类标签条带：用来判定"是否已吸附并入顶栏"（其顶部到达顶栏下沿即为已合并）。
   final GlobalKey _tabBandKey = GlobalKey();
 
@@ -555,6 +561,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     }
     _pendingDisposeControllers.clear();
     _expandCtrl.dispose();
+    _collectionPageCtrl?.dispose();
     _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -1309,11 +1316,16 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
   /// 顶部横幅与头像背景
   ///
-  /// 结构对齐 PiliPlus `_buildHeader`：**单张 `CachedNetworkImage`**（显式尺寸 +
-  /// `gaplessPlayback` + 短淡入），并整体 `ClipRect` 收边。原实现用
-  /// `Stack[图片, 遮罩 Container]` 两层，在 DPR 非整数（如 1.25）时头图底边落在
-  /// 半物理像素（330×1.25=412.5），两图层各自取整不一致 → 底缘露出 1px 原图
-  /// （"下边缘异常像素"）。收敛为单层并显式收边后消除该缝。
+  /// 取图优先级（对齐上游 PiliPlus）：
+  /// 1. **数字藏品头图**（`collection_top_simple`）——非空即优先渲染（1 张对齐 / 多张轮播）；
+  /// 2. 普通**单张背景图**（`topPhoto` 等，原口径）。
+  ///
+  /// 单张图统一启用 `useOldImageOnUrlChange`（本仓 `cached_network_image_ce` 中等价于
+  /// `gaplessPlayback`）：切换 URL 时**保留旧图**直到新图加载完成，避免"先显示真实头图、
+  /// 后被空间接口兜底默认图覆盖"时**闪一帧默认渐变**（即"进入瞬间跳变为默认头图"）。
+  ///
+  /// 结构对齐 PiliPlus `_buildHeader`：**单层 `CachedNetworkImage`** + `ClipRect` 收边，
+  /// 规避 DPR 非整数（1.25）下 330×1.25=412.5 半像素边界两层取整不一致产生的底缘亮线。
   Widget _buildHeaderBackground(
     BuildContext context,
     MemberCard? card,
@@ -1322,6 +1334,33 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final tokens = AppThemeHost.of(context);
     // 演示模式：横幅图片（云端内容）替换为默认渐变占位。
     if (Pref.demoMode) return _defaultHeaderGradient(tokens);
+    final width = MediaQuery.sizeOf(context).width;
+
+    // 1) 数字藏品头图（最高优先级）。避免藏品用户被空间接口兜底的默认背景图覆盖。
+    final collection = images?.collectionTopSimple?.images;
+    if (collection != null && collection.isNotEmpty) {
+      final primaryUrl =
+          ImageUtils.thumbnailUrl(collection.first.headerUrl, type: 'background');
+      if (primaryUrl.isNotEmpty && primaryUrl != _bannerAspectUrl) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _resolveBannerAspect(primaryUrl);
+        });
+      }
+      return ClipRect(
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
+          fit: StackFit.expand,
+          children: [
+            collection.length == 1
+                ? _buildCollectionImage(context, tokens, collection.first, width)
+                : _buildCollectionCarousel(context, tokens, collection, width),
+            _headerScrim(tokens),
+          ],
+        ),
+      );
+    }
+
+    // 2) 普通单张背景图（原口径）。
     String? topPhoto = images?.topPhoto ??
         images?.imgUrl ??
         _extraTopPhoto?.topPhoto ??
@@ -1337,7 +1376,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       }
     }
     final hasPhoto = topPhoto != null && topPhoto.isNotEmpty;
-    final width = MediaQuery.sizeOf(context).width;
 
     if (hasPhoto) {
       final url = ImageUtils.thumbnailUrl(topPhoto, type: 'background');
@@ -1361,30 +1399,159 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               memCacheWidth: ImageUtils.decodeClamp(width, context, max: 2048),
               fadeInDuration: const Duration(milliseconds: 120),
               fadeOutDuration: const Duration(milliseconds: 120),
+              // 等价于 gaplessPlayback：URL 切换时保留旧图，避免闪默认渐变。
+              useOldImageOnUrlChange: true,
               placeholder: (_, _) => _defaultHeaderGradient(tokens),
               errorBuilder: (_, _, _) => _defaultHeaderGradient(tokens),
             )
           else
             _defaultHeaderGradient(tokens),
-          // 底部渐隐遮罩：`Positioned.fill` 与头图严格同框，避免层间子像素缝。
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.black.withValues(alpha: 0.4),
-                    AppColors.transparent,
-                    tokens.colors.background.withValues(alpha: 0.8),
-                    tokens.colors.background,
-                  ],
-                  stops: const [0.0, 0.4, 0.85, 1.0],
-                ),
-              ),
+          _headerScrim(tokens),
+        ],
+      ),
+    );
+  }
+
+  /// 底部渐隐遮罩：`Positioned.fill` 与头图严格同框，避免层间子像素缝。
+  Widget _headerScrim(AppTokens tokens) {
+    return Positioned.fill(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.black.withValues(alpha: 0.4),
+              AppColors.transparent,
+              tokens.colors.background.withValues(alpha: 0.8),
+              tokens.colors.background,
+            ],
+            stops: const [0.0, 0.4, 0.85, 1.0],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 单张数字藏品头图：按 `dy` 垂直取景对齐（对齐 PiliPlus `Alignment(0.0, dy)`），
+  /// `useOldImageOnUrlChange` 防切换闪跳。
+  Widget _buildCollectionImage(
+    BuildContext context,
+    AppTokens tokens,
+    MemberCollectionImage item,
+    double width,
+  ) {
+    final url = ImageUtils.thumbnailUrl(item.headerUrl, type: 'background');
+    if (url.isEmpty) return _defaultHeaderGradient(tokens);
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      alignment: Alignment(0.0, item.dy.clamp(-1.0, 1.0)),
+      width: width,
+      memCacheWidth: ImageUtils.decodeClamp(width, context, max: 2048),
+      fadeInDuration: const Duration(milliseconds: 120),
+      fadeOutDuration: const Duration(milliseconds: 120),
+      useOldImageOnUrlChange: true,
+      placeholder: (_, _) => _defaultHeaderGradient(tokens),
+      errorBuilder: (_, _, _) => _defaultHeaderGradient(tokens),
+    );
+  }
+
+  /// 多张数字藏品头图：横向轮播 + 底部页码条 + 标题角标（对齐 PiliPlus `_buildCollectionHeader`）。
+  Widget _buildCollectionCarousel(
+    BuildContext context,
+    AppTokens tokens,
+    List<MemberCollectionImage> items,
+    double width,
+  ) {
+    final ctrl = _collectionPageCtrl ??= PageController();
+    final current = _collectionPage.clamp(0, items.length - 1);
+    final title = items[current].title;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          controller: ctrl,
+          itemCount: items.length,
+          onPageChanged: (i) => setState(() => _collectionPage = i),
+          itemBuilder: (context, i) =>
+              _buildCollectionImage(context, tokens, items[i], width),
+        ),
+        if (title != null && title.isNotEmpty)
+          Positioned(
+            right: 0,
+            bottom: 3.5,
+            child: _collectionTitleBadge(items[current]),
+          ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: _collectionIndicator(tokens, items.length, current),
+        ),
+      ],
+    );
+  }
+
+  /// 藏品页码条：右侧为主色已读进度、左侧为灰底（自定义实现，替代 Material `LinearProgressIndicator`）。
+  Widget _collectionIndicator(AppTokens tokens, int length, int current) {
+    final progress = length <= 1 ? 1.0 : (current + 1) / length;
+    final filled = (progress * 1000).round().clamp(0, 1000);
+    final rest = 1000 - filled;
+    return SizedBox(
+      height: 3.5,
+      child: Row(
+        children: [
+          if (filled > 0)
+            Expanded(flex: filled, child: ColoredBox(color: tokens.colors.primary)),
+          if (rest > 0)
+            Expanded(flex: rest, child: const ColoredBox(color: Color(0xA09E9E9E))),
+        ],
+      ),
+    );
+  }
+
+  /// 藏品标题角标：右侧渐隐底 + 标题/副标题（对齐 PiliPlus `_headerWrapper` / `_headerTitle`）。
+  Widget _collectionTitleBadge(MemberCollectionImage item) {
+    return IgnorePointer(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 125),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                AppColors.transparent,
+                AppColors.black12,
+                AppColors.black38,
+                AppColors.black45,
+              ],
             ),
           ),
-        ],
+          child: Padding(
+            padding: const EdgeInsets.only(left: 15, right: 5, bottom: 2),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  item.title ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: AppColors.white),
+                ),
+                if (item.subTitle != null && item.subTitle!.isNotEmpty)
+                  Text(
+                    item.subTitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: AppColors.white),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
