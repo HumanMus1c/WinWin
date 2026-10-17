@@ -269,12 +269,7 @@ class _AppScrollBarState extends State<AppScrollBar>
 
   /// 通道布局：内容经 `Expanded` 让位，滚动条独占最外侧 [laneThickness] 通道。
   Widget _buildLane(BuildContext context, bool vertical) {
-    final colors = AppThemeHost.of(context).colors;
-    final onSurface = colors.onSurface;
-    // 通道是「内容区与窗口边缘之间」的留白，必须按**页面背景**着色：通道自身若透明
-    // 会透出父级容器（非页面背景）的灰色表面，在整窗高度上表现为一条 12px 通高的
-    // 「直角硬矩形条」——与滚动状态无关，即用户多轮反馈的现象。
-    final background = colors.background;
+    final onSurface = AppThemeHost.of(context).colors.onSurface;
 
     final lane = MouseRegion(
       opaque: false,
@@ -368,7 +363,6 @@ class _AppScrollBarState extends State<AppScrollBar>
                         thickness: thickness,
                         alpha: alpha,
                         deepen: e > 1.2,
-                        showTrack: e > 0.15,
                       ),
                     );
                   },
@@ -379,28 +373,37 @@ class _AppScrollBarState extends State<AppScrollBar>
         ),
     );
 
-    final laneBox = ColoredBox(
-      color: background,
-      child: vertical
-          ? SizedBox(width: AppScrollBar.laneThickness, child: lane)
-          : SizedBox(height: AppScrollBar.laneThickness, child: lane),
-    );
-
-    // 通道 + 内容；整个子树关闭框架自动滚动条（SDK 桌面默认给每个 Scrollable 挂
-    // RawScrollbar，与本滚动条叠加会成为「双滚动条」）。
+    // 滚动条**不预留占位**，改为覆盖层贴在内容最外侧 [laneThickness] 条带上：
+    // ① 内容尺寸完全不变 ⇒ 弹层 / 面板的高度与宽度既不会被撑开也不会被挤压
+    //    （历史问题：预留通道 + `CrossAxisAlignment.stretch` 会把受高度上限约束的
+    //    容器撑满 ⇒ 用户实测「弹层容器高度被撑高」）；
+    // ② 不存在独立通道 ⇒ 也不会再有「轨道默认占位显示为灰色直角矩形」。
+    // 页面普遍已有等宽内边距，覆盖带落在留白上，观感等同「内容区与窗口边缘之间」。
     return ScrollConfiguration(
       behavior: const _NoFrameworkScrollBar(),
       child: NotificationListener<ScrollNotification>(
         onNotification: _onScrollNotification,
-        child: vertical
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [Expanded(child: widget.child), laneBox],
+        child: Stack(
+          children: [
+            widget.child,
+            if (vertical)
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: AppScrollBar.laneThickness,
+                child: lane,
               )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [Expanded(child: widget.child), laneBox],
+            else
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: AppScrollBar.laneThickness,
+                child: lane,
               ),
+          ],
+        ),
       ),
     );
   }
@@ -417,7 +420,6 @@ class _ScrollBarPainter extends CustomPainter {
     required this.thickness,
     required this.alpha,
     required this.deepen,
-    required this.showTrack,
   });
 
   final bool vertical;
@@ -428,7 +430,6 @@ class _ScrollBarPainter extends CustomPainter {
   final double thickness;
   final double alpha;
   final bool deepen;
-  final bool showTrack;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -440,16 +441,9 @@ class _ScrollBarPainter extends CustomPainter {
     final pad = AppScrollBar.edgePadding;
     final radius = Radius.circular(thickness / 2);
 
+    // 只画圆角滑块，**不画轨道**：轨道是通高的近似直角带，在默认态即呈现为
+    // 「灰色直角矩形」占位（用户多轮反馈的核心观感问题）。
     if (vertical) {
-      if (showTrack) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(size.width - thickness - pad, 0, thickness, size.height),
-            radius,
-          ),
-          Paint()..color = onSurface.withValues(alpha: 0.10),
-        );
-      }
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(
@@ -459,15 +453,6 @@ class _ScrollBarPainter extends CustomPainter {
         Paint()..color = thumbColor,
       );
     } else {
-      if (showTrack) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(0, size.height - thickness - pad, size.width, thickness),
-            radius,
-          ),
-          Paint()..color = onSurface.withValues(alpha: 0.10),
-        );
-      }
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(
@@ -486,7 +471,6 @@ class _ScrollBarPainter extends CustomPainter {
       old.thickness != thickness ||
       old.alpha != alpha ||
       old.deepen != deepen ||
-      old.showTrack != showTrack ||
       old.canScroll != canScroll ||
       old.onSurface != onSurface;
 }
