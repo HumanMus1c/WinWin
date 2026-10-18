@@ -5,28 +5,33 @@ import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/common/widgets/medal_widget.dart';
 import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/app_messenger.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/core/shell/miuix_compat.dart';
 import 'package:winwin/pages/onboarding/user_agreement_page.dart';
 import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
+import 'package:winwin/theme/app_glyphs.g.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/core/shell/miuix_compat.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/frosted_bottom_bar.dart';
 
-Widget wrapMiuix(Widget child, {bool dark = false}) => MaterialApp(
-      home: MiuixThemeScope(
-        isDark: dark,
-        child: Scaffold(body: Center(child: child)),
-      ),
+import '../../support/app_test_host.dart';
+
+/// B1b：测试内 Material 字形载体（widgets 层 `IconData`），不依赖 material_ui。
+const _materialSettings = IconData(0xe57f, fontFamily: 'MaterialIcons');
+const _materialSearch = IconData(0xe567, fontFamily: 'MaterialIcons');
+
+Widget wrapMiuix(Widget child, {bool dark = false}) => AppTestApp(
+      dark: dark,
+      home: AppTestScaffold(body: Center(child: child)),
     );
 
 void main() {
@@ -113,8 +118,8 @@ void main() {
 
     testWidgets('L1/L4-2 后组件恒由 flutter_miuix 驱动（单轨）', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-            home: Scaffold(
+        AppTestApp(
+            home: AppTestScaffold(
               body: Column(
                 children: [
                   AppSwitch(value: false, onChanged: (_) {}),
@@ -130,7 +135,11 @@ void main() {
       // 阶段5d-L1：M3 冻结分支已移除——material3 风格下同样由 flutter_miuix
       // 驱动（渐进退役的预期行为）。
       expect(find.byType(MiuixSwitch), findsOneWidget);
-      expect(find.byType(Switch), findsNothing);
+      // 按 runtimeType 判定，避免直接依赖 material_ui。
+      expect(
+        find.byWidgetPredicate((w) => w.runtimeType.toString() == 'Switch'),
+        findsNothing,
+      );
       expect(find.byType(MiuixButton), findsOneWidget);
       expect(find.byType(MiuixCard), findsOneWidget);
       expect(find.byType(MiuixLinearProgressIndicator), findsOneWidget);
@@ -200,11 +209,11 @@ void main() {
           AppGroup(
             children: [
               const AppListItem(
-                icon: Icon(Icons.code),
+                icon: Icon(AppGlyphs.code),
                 title: '项目说明',
                 subtitle: 'GPL-3.0',
               ),
-              NormalItem(leading: const Icon(Icons.settings), title: '设置'),
+              NormalItem(leading: const Icon(_materialSettings), title: '设置'),
             ],
           ),
         ),
@@ -271,8 +280,8 @@ void main() {
 
       // 阶段5d-L3/L4-2：映射恒启用（单轨）。
       await tester.pumpWidget(
-        MaterialApp(
-            home: Scaffold(
+        AppTestApp(
+            home: AppTestScaffold(
               body: const AppIcon(CupertinoIcons.settings, size: 20),
             ),
         ),
@@ -304,7 +313,7 @@ void main() {
                 width: 52,
                 height: 52,
                 child: IconTheme(
-                  data: const IconThemeData(color: Colors.blue, size: 24),
+                  data: const IconThemeData(color: Color(0xFF2196F3), size: 24),
                   child: AppIcon(AppIcons.reply()),
                 ),
               ),
@@ -312,7 +321,7 @@ void main() {
                 width: 52,
                 height: 52,
                 child: IconTheme(
-                  data: const IconThemeData(color: Colors.pink, size: 24),
+                  data: const IconThemeData(color: Color(0xFFE91E63), size: 24),
                   child: AppIcon(AppIcons.favorite(active: false)),
                 ),
               ),
@@ -414,7 +423,11 @@ void main() {
       );
       expect(find.byType(AppRefreshIndicator), findsOneWidget);
       // b7-c5：自绘环 —— 树上不应再出现 material_ui 的 RefreshIndicator
-      expect(find.byType(RefreshIndicator), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == 'RefreshIndicator'),
+        findsNothing,
+      );
       expect(find.byType(MiuixPullToRefresh), findsNothing);
     });
 
@@ -484,33 +497,33 @@ void main() {
 
     testWidgets('AppSliderDialog：miuix 渲染 MiuixSlider 且确定返回当前值', (tester) async {
       double? result;
-      // 宿主复刻 main.dart：MaterialApp + MiuixThemeScope。
+      // B1b：统一宿主 AppTestApp（自建 MiuixThemeScope/ToastHost 链路，零 material）。
       await tester.pumpWidget(
-        MaterialApp(
-            home: MiuixThemeScope(
-              isDark: false,
-              child: Builder(
-                builder: (context) => Center(
-                  child: TextButton(
-                    onPressed: () async {
-                      result = await showDialog<double>(
-                        context: context,
-                        builder: (_) => const AppSliderDialog(
-                          title: '字体大小',
-                          value: 1.0,
-                          min: 0.8,
-                          max: 1.4,
-                          divisions: 12,
-                          suffix: 'x',
-                          decimals: 2,
-                        ),
-                      );
-                    },
-                    child: const Text('open'),
-                  ),
+        AppTestApp(
+          home: Builder(
+            builder: (context) => Center(
+              child: GestureDetector(
+                onTap: () async {
+                  result = await showAppDialog<double>(
+                    context: context,
+                    builder: (_) => const AppSliderDialog(
+                      title: '字体大小',
+                      value: 1.0,
+                      min: 0.8,
+                      max: 1.4,
+                      divisions: 12,
+                      suffix: 'x',
+                      decimals: 2,
+                    ),
+                  );
+                },
+                child: const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text('open'),
                 ),
               ),
             ),
+          ),
         ),
       );
 
@@ -542,7 +555,7 @@ void main() {
                       label: '搜索字体…',
                       useLabelAsPlaceholder: true,
                       singleLine: true,
-                      leadingIcon: const Icon(Icons.search, size: 20),
+                      leadingIcon: const Icon(_materialSearch, size: 20),
                       onChanged: (_) {},
                     ),
                   ),
@@ -594,11 +607,12 @@ void main() {
     testWidgets('Toast：miuix 经 ToastHost 上浮显示 MiuixSurface 反色卡', (tester) async {
       await tester.pumpWidget(
         wrapMiuix(
-          MiuixToastHost(
-            child: Builder(
-              builder: (context) => TextButton(
-                onPressed: () => showToast(context, '操作成功'),
-                child: const Text('toast'),
+          Builder(
+            builder: (context) => GestureDetector(
+              onTap: () => showToast(context, '操作成功'),
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('toast'),
               ),
             ),
           ),
@@ -610,7 +624,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       // 不再使用 SnackBar（横向分展过渡）；改为宿主内条目卡。
-      expect(find.byType(SnackBar), findsNothing);
+      expect(
+        find.byWidgetPredicate((w) => w.runtimeType.toString() == 'SnackBar'),
+        findsNothing,
+      );
       expect(
         find.descendant(
           of: find.byType(MiuixToastHost),
@@ -636,14 +653,17 @@ void main() {
       });
 
       await tester.pumpWidget(
-        wrapMiuix(MiuixToastHost(child: const SizedBox.shrink())),
+        wrapMiuix(const SizedBox.shrink()),
       );
 
       showAppSnackBar('网络异常，请稍后重试');
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byType(SnackBar), findsNothing);
+      expect(
+        find.byWidgetPredicate((w) => w.runtimeType.toString() == 'SnackBar'),
+        findsNothing,
+      );
       expect(
         find.descendant(
           of: find.byType(MiuixToastHost),
@@ -687,7 +707,7 @@ void main() {
           MedalWidget(
             medalName: '粉丝牌',
             level: 21,
-            backgroundColor: Colors.pink,
+            backgroundColor: const Color(0xFFE91E63),
             onTap: () {},
           ),
         ),
@@ -720,7 +740,8 @@ void main() {
       expect(find.text('开源且免费'), findsOneWidget);
       expect(find.text('免责与版权'), findsOneWidget);
       expect(find.text('反馈与日志'), findsOneWidget);
-      expect(find.byIcon(Icons.volunteer_activism_outlined), findsOneWidget);
+      expect(find.byIcon(AppGlyphs.volunteer_activism_outlined),
+          findsOneWidget);
     });
 
     testWidgets('MiuixPopupMenu：点开显示条目、单组选择后收起并回调', (tester) async {

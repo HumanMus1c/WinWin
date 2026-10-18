@@ -1,7 +1,10 @@
 import 'dart:ui';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/app_test_host.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -46,46 +49,35 @@ void main() {
       expect(clampedBefore, Duration.zero);
     });
 
-    testWidgets('Slider interacts and dispatches seek with subsecond accuracy', (tester) async {
+    testWidgets('MiuixSlider 交互按毫秒精度派发 seek（载体现为 flutter_miuix）',
+        (tester) async {
       Duration? dispatchedSeek;
-      bool dragging = false;
       double dragSeconds = 0;
       final position = ValueNotifier(const Duration(seconds: 10));
       final duration = ValueNotifier(const Duration(seconds: 100));
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: StatefulBuilder(
               builder: (context, setState) {
                 final durMs = duration.value.inMilliseconds;
                 final maxSec = durMs > 0 ? durMs / 1000.0 : 1.0;
-                final posSec = dragging
-                    ? dragSeconds
-                    : (position.value.inMilliseconds / 1000.0);
+                final posSec = position.value.inMilliseconds / 1000.0;
                 final value = posSec.clamp(0.0, maxSec);
 
                 return SizedBox(
                   width: 400,
-                  child: Slider(
+                  child: MiuixSlider(
                     value: value,
                     min: 0,
                     max: maxSec,
-                    onChangeStart: (v) {
-                      setState(() {
-                        dragging = true;
-                        dragSeconds = v;
-                      });
-                    },
-                    onChanged: (v) {
-                      setState(() => dragSeconds = v);
-                    },
-                    onChangeEnd: (v) {
-                      setState(() {
-                        dragging = false;
-                        dragSeconds = v;
-                      });
-                      final target = Duration(milliseconds: (v * 1000).round());
+                    onValueChanged: (v) => setState(() => dragSeconds = v),
+                    // MiuixSlider 无「带去参的 onChangeEnd」：以最后值按毫秒
+                    // 换算派发 seek（保持「无整秒跳变」精度契约）。
+                    onValueChangeFinished: () {
+                      final target =
+                          Duration(milliseconds: (dragSeconds * 1000).round());
                       position.value = target;
                       dispatchedSeek = target;
                     },
@@ -97,17 +89,24 @@ void main() {
         ),
       );
 
-      // Tap at the center (50% -> 50.0s)
-      final sliderFinder = find.byType(Slider);
+      final sliderFinder = find.byType(MiuixSlider);
       expect(sliderFinder, findsOneWidget);
 
-      await tester.tap(sliderFinder);
+      // 从中心向右拖动一小段后释放（覆盖 起手 → 更新 → 结束 全路径）。
+      final center = tester.getCenter(sliderFinder);
+      final gesture = await tester.startGesture(center);
+      await tester.pump();
+      await gesture.moveBy(const Offset(60, 0));
+      await tester.pump();
+      await gesture.up();
       await tester.pumpAndSettle();
 
       expect(dispatchedSeek, isNotNull);
-      // Position must have updated to around 50s and not jumped back to 10s
-      expect((dispatchedSeek!.inMilliseconds - 50000).abs() < 2000, isTrue);
-      expect((position.value.inMilliseconds - 50000).abs() < 2000, isTrue);
+      // 终点位于中心（50s）右侧；且按毫秒精确换算（无整秒截断跳变）。
+      expect(dispatchedSeek!.inMilliseconds, greaterThan(50000));
+      expect(dispatchedSeek, equals(position.value));
+      expect(
+          dispatchedSeek!.inMilliseconds, equals((dragSeconds * 1000).round()));
     });
 
     test('Buffered progress preserves highest floor when seeking backwards', () {
@@ -154,8 +153,8 @@ void main() {
       const sliderWidth = 400.0;
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: StatefulBuilder(
               builder: (context, setState) {
                 parentBuildCount++;

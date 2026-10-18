@@ -1,10 +1,19 @@
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_miuix/miuix.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/pages/whisper/session/session_more_menu_button.dart';
+import 'package:winwin/theme/app_glyphs.g.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+
+import '../support/app_test_host.dart';
+
+/// 零-material 的「曾用 Material 字形」载体（`AppGlyphs` 未收录；仅供
+/// `findsNothing` 断言「树上不得出现 material 字形」时按同一 codePoint 引用）。
+const IconData _materialArrowBack =
+    IconData(0xe092, fontFamily: 'MaterialIcons');
+const IconData _materialMoreVert =
+    IconData(0xe404, fontFamily: 'MaterialIcons');
 
 void main() {
   group('AppIcons 静态方法双风格分发测试', () {
@@ -227,7 +236,7 @@ void main() {
 
       expect(AppIcons.viewCount(), equals(CupertinoIcons.play_circle));
       // 阶段5e-L5-8：弹幕数改用载体字形（渲染为 B 站官网"弹幕数"矢量）。
-      expect(AppIcons.danmakuCount(), equals(Icons.subtitles_outlined));
+      expect(AppIcons.danmakuCount(), equals(AppGlyphs.subtitles_outlined));
       expect(AppIcons.duration(), equals(CupertinoIcons.clock));
       expect(AppIcons.calendar(), equals(CupertinoIcons.calendar));
     });
@@ -239,15 +248,15 @@ void main() {
       expect(miuixBdcIconFor(CupertinoIcons.checkmark), isNotNull);
       // Material 的 subtitles_outlined 与 checkmark 同码点但字体族不同：
       // BDC 层应放行，落到 Web 层「弹幕数」图形。
-      expect(miuixBdcIconFor(Icons.subtitles_outlined), isNull);
-      final vector = miuixVectorForGlyph(Icons.subtitles_outlined);
+      expect(miuixBdcIconFor(AppGlyphs.subtitles_outlined), isNull);
+      final vector = miuixVectorForGlyph(AppGlyphs.subtitles_outlined);
       expect(vector, isNotNull);
       expect(vector!.name, startsWith('webSite.f3fd'));
     });
 
     test('BDC 层 material 白名单字形不受复合键改造影响', () {
-      expect(miuixBdcIconFor(Icons.alternate_email_rounded), isNotNull);
-      expect(miuixBdcIconFor(Icons.campaign_outlined), isNotNull);
+      expect(miuixBdcIconFor(AppGlyphs.alternate_email_rounded), isNotNull);
+      expect(miuixBdcIconFor(AppGlyphs.campaign_outlined), isNotNull);
     });
 
     test('稍后再看载体字形仍命中 BDC（完整图形由生成器保证）', () {
@@ -260,8 +269,8 @@ void main() {
   group('AppBackButton 组件测试', () {
     testWidgets('渲染 Miuix 矢量返回图标（阶段5d-L4-2 单轨）', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: const Scaffold(
+        AppTestApp(
+          home: const AppTestScaffold(
             body: AppBackButton(),
           ),
         ),
@@ -269,15 +278,15 @@ void main() {
 
       expect(find.byType(MiuixIcon), findsOneWidget);
       expect(find.byIcon(CupertinoIcons.chevron_back), findsNothing);
-      expect(find.byIcon(Icons.arrow_back), findsNothing);
+      expect(find.byIcon(_materialArrowBack), findsNothing);
     });
   });
 
   group('SessionMoreMenuButton 组件测试', () {
     testWidgets('渲染 Miuix 矢量更多图标并弹出弹层壳（阶段5d-L4-2 单轨）', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: SessionMoreMenuButton(
               isPinned: true,
               isDnd: true,
@@ -291,7 +300,7 @@ void main() {
 
       expect(find.byType(MiuixIcon), findsOneWidget);
       expect(find.byIcon(CupertinoIcons.ellipsis), findsNothing);
-      expect(find.byIcon(Icons.more_vert), findsNothing);
+      expect(find.byIcon(_materialMoreVert), findsNothing);
 
       // 点击打开菜单（Tooltip 命中层保持可用）
       await tester.tap(find.byWidgetPredicate(
