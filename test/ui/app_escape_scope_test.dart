@@ -1,42 +1,50 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/ui/components/app_components.dart';
+
+import '../support/app_test_host.dart';
 
 /// 全局 Esc 路由器（[AppEscapeScope]）分层语义测试。
 ///
 /// 覆盖：返回上一级 / 输入框取消聚焦 / 对话框关闭 / 二级浮层 LIFO 关闭 /
 /// 失效登记自愈 / 根页面无操作。
+///
+/// 宿主：统一测试宿主（[AppTestApp]）的 builder 链已含 `AppEscapeScope`
+/// （与 `main.dart` 同构）；对话框走零-material 的 [showAppDialog] /
+/// [AppAlertDialog]，输入框走 [AppTextField]。
 void main() {
   Widget host({
     required GlobalKey<NavigatorState> navigatorKey,
     required AppEscapeNavigatorObserver observer,
     required Widget home,
   }) {
-    return MaterialApp(
+    return AppTestApp(
       navigatorKey: navigatorKey,
       navigatorObservers: [observer],
-      builder: (context, child) => AppEscapeScope(
-        navigatorKey: navigatorKey,
-        observer: observer,
-        child: child ?? const SizedBox.shrink(),
-      ),
+      escapeObserver: observer,
       home: home,
     );
   }
 
   Widget pushButtonPage({required String label, required Widget target}) {
     return Builder(
-      builder: (context) => Scaffold(
+      builder: (context) => AppTestScaffold(
         body: Center(
-          child: TextButton(
-            onPressed: () => Navigator.of(context).push(
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).push(
               AppRoute<void>(builder: (_) => target),
             ),
-            child: Text(label),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(label),
+            ),
           ),
         ),
       ),
@@ -52,7 +60,7 @@ void main() {
         observer: observer,
         home: pushButtonPage(
           label: 'go',
-          target: const Scaffold(body: Center(child: Text('second'))),
+          target: const AppTestScaffold(body: Center(child: Text('second'))),
         ),
       ),
     );
@@ -76,8 +84,8 @@ void main() {
         observer: observer,
         home: pushButtonPage(
           label: 'go',
-          target: Scaffold(
-            body: Center(child: TextField(autofocus: true)),
+          target: AppTestScaffold(
+            body: Center(child: AppTextField(autofocus: true)),
           ),
         ),
       ),
@@ -93,7 +101,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 仅取消聚焦，页面保留。
-    expect(find.byType(TextField), findsOneWidget);
+    expect(find.byType(AppTextField), findsOneWidget);
     expect(
       tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
       isFalse,
@@ -109,15 +117,18 @@ void main() {
         observer: observer,
         home: pushButtonPage(
           label: 'go',
-          target: Scaffold(
+          target: AppTestScaffold(
             body: Center(
               child: Builder(
-                builder: (context) => TextButton(
-                  onPressed: () => showDialog<void>(
+                builder: (context) => GestureDetector(
+                  onTap: () => showAppDialog<void>(
                     context: context,
-                    builder: (_) => const AlertDialog(title: Text('dlg')),
+                    builder: (_) => const AppAlertDialog(title: Text('dlg')),
                   ),
-                  child: const Text('open-dialog'),
+                  child: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text('open-dialog'),
+                  ),
                 ),
               ),
             ),
@@ -149,7 +160,7 @@ void main() {
         observer: observer,
         home: pushButtonPage(
           label: 'go',
-          target: const Scaffold(body: Center(child: Text('second'))),
+          target: const AppTestScaffold(body: Center(child: Text('second'))),
         ),
       ),
     );
@@ -206,7 +217,7 @@ void main() {
         observer: observer,
         home: pushButtonPage(
           label: 'go',
-          target: const Scaffold(body: Center(child: Text('second'))),
+          target: const AppTestScaffold(body: Center(child: Text('second'))),
         ),
       ),
     );
@@ -232,7 +243,7 @@ void main() {
       host(
         navigatorKey: navigatorKey,
         observer: observer,
-        home: const Scaffold(body: Center(child: Text('root'))),
+        home: const AppTestScaffold(body: Center(child: Text('root'))),
       ),
     );
 

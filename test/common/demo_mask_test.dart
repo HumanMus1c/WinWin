@@ -1,8 +1,10 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+
+import '../support/app_test_host.dart';
 
 void main() {
   tearDown(() {
@@ -11,7 +13,7 @@ void main() {
 
   group('DemoMask Tests', () {
     testWidgets('演示开启显示骨架，关闭恢复真实内容', (tester) async {
-      Widget build() => MaterialApp(
+      Widget build() => AppTestApp(
             home: DemoMask(
               skeleton: () => const Text('skeleton'),
               child: () => const Text('content'),
@@ -35,8 +37,8 @@ void main() {
 
     testWidgets('DemoListSkeleton 渲染为列表骨架', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: DemoListSkeleton(itemCount: 3),
           ),
         ),

@@ -1,8 +1,14 @@
 import 'dart:ui';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+
+import '../../support/app_test_host.dart';
+
+/// 测试用图标载体（widgets 层 `IconData`）；B1b 去 material_ui 后不再依赖 `Icons` 表。
+const IconData _star = IconData(0xe838, fontFamily: 'MaterialIcons');
+const IconData _playArrow = IconData(0xe037, fontFamily: 'MaterialIcons');
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +23,7 @@ void main() {
 
     test('labelStyle includes glyphShadows', () {
       expect(ContrastStyle.labelStyle.shadows, ContrastStyle.glyphShadows);
-      expect(ContrastStyle.labelStyle.color, Colors.white);
+      expect(ContrastStyle.labelStyle.color, const Color(0xFFFFFFFF));
     });
   });
 
@@ -25,8 +31,8 @@ void main() {
     testWidgets('Renders with BackdropFilter and ClipRRect for rectangle shape',
         (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: GlassCapsule(
               blur: 14.0,
               borderRadius: 10.0,
@@ -49,12 +55,12 @@ void main() {
 
     testWidgets('Renders with ClipOval when shape is circle', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: GlassCapsule(
               shape: BoxShape.circle,
               blur: 16.0,
-              child: Icon(Icons.play_arrow),
+              child: Icon(_playArrow),
             ),
           ),
         ),
@@ -66,8 +72,8 @@ void main() {
 
     testWidgets('Omits BackdropFilter when blur is 0', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: GlassCapsule(
               blur: 0,
               child: Text('No Blur'),
@@ -84,11 +90,11 @@ void main() {
   group('ContrastIcon & ContrastText Tests', () {
     testWidgets('ContrastIcon applies shadows correctly', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: ContrastIcon(
-              Icons.star,
-              color: Colors.white,
+              _star,
+              color: Color(0xFFFFFFFF),
               size: 24,
             ),
           ),
@@ -99,14 +105,14 @@ void main() {
       expect(iconFinder, findsOneWidget);
 
       final icon = tester.widget<Icon>(iconFinder);
-      expect(icon.icon, Icons.star);
+      expect(icon.icon, _star);
       expect(icon.shadows, ContrastStyle.glyphShadows);
     });
 
     testWidgets('ContrastText retains shadows', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: ContrastText('High Contrast Text'),
           ),
         ),
@@ -125,10 +131,10 @@ void main() {
     testWidgets('Tap triggers onPressed and displays tooltip', (tester) async {
       bool tapped = false;
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: GlassControlButton(
-              icon: const Icon(Icons.play_arrow),
+              icon: const Icon(_playArrow),
               tooltip: '播放',
               useGlass: true,
               onPressed: () => tapped = true,
@@ -151,8 +157,8 @@ void main() {
     testWidgets('Renders with multiple sliced BackdropFilter layers',
         (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: ProgressiveGlass(
               blur: 16.0,
               slices: 8,
@@ -172,8 +178,8 @@ void main() {
     testWidgets('Omits BackdropFilter when blur is 0',
         (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: ProgressiveGlass(
               blur: 0,
               child: Text('Zero Blur Progressive'),
@@ -188,8 +194,8 @@ void main() {
 
     testWidgets('Uses ClipRRect when borderRadius is specified', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: ProgressiveGlass(
               blur: 12.0,
               slices: 6,

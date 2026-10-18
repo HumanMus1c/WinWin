@@ -1,13 +1,17 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:winwin/core/app_messenger.dart';
-import 'package:winwin/theme/miuix_theme_bridge.dart';
+
+import 'support/app_test_host.dart';
 
 /// Toast 宽度自适应探针（阶段5d-L1 后：Miuix 宿主为唯一实现）。
 ///
 /// 断言口径与旧 M3（SnackBar）探针一致：短消息自适应、长消息封顶 400、
 /// 窄屏遵守两侧留白——现测量 [MiuixSurface] 卡片宽度。
+///
+/// 宿主：统一测试宿主（[AppTestApp]）的 builder 链已含 `MiuixThemeScope` +
+/// `MiuixToastHost`，故无需再手工包裹。
 Future<void> _pumpAndShow(
   WidgetTester tester,
   String message, {
@@ -20,22 +24,20 @@ Future<void> _pumpAndShow(
     tester.view.resetDevicePixelRatio();
   });
   await tester.pumpWidget(
-    MaterialApp(
-      home: MiuixThemeScope(
-        isDark: false,
-        child: Scaffold(
-            body: MiuixToastHost(
-              child: Builder(
-                builder: (context) => Center(
-                  child: TextButton(
-                    onPressed: () => showToast(context, message),
-                    child: const Text('show'),
-                  ),
-                ),
+    AppTestApp(
+      home: AppTestScaffold(
+        body: Builder(
+          builder: (context) => Center(
+            child: GestureDetector(
+              onTap: () => showToast(context, message),
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('show'),
               ),
             ),
           ),
         ),
+      ),
     ),
   );
   await tester.tap(find.text('show'));
@@ -74,7 +76,7 @@ void main() {
       '请求错误：Connection failed\nhttps://api.bilibili.com/very/long/path?with=query&and=more',
       surface: const Size(360, 640),
     );
-    final scaffoldCtx = tester.element(find.byType(Scaffold));
+    final scaffoldCtx = tester.element(find.byType(AppTestScaffold));
     debugPrint(
       'PROBE_NARROW_ENV mq=${MediaQuery.sizeOf(scaffoldCtx)} '
       'dpr=${tester.view.devicePixelRatio} view=${tester.view.physicalSize}',

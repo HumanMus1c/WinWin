@@ -1,16 +1,18 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixCard;
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
 
+import '../support/app_test_host.dart';
+
 void main() {
   group('Skeleton Primitives Tests', () {
     testWidgets('SkeletonBox renders with correct dimensions and shape', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: SkeletonBox(
               width: 100,
               height: 50,
@@ -28,8 +30,8 @@ void main() {
 
     testWidgets('SkeletonLine renders with specified or default height', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: SkeletonLine(
               width: 120,
               height: 16,
@@ -44,8 +46,8 @@ void main() {
 
     testWidgets('SkeletonCircle renders circular box with radius/size', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: SkeletonCircle(radius: 20),
           ),
         ),
@@ -62,8 +64,8 @@ void main() {
   group('Video Card Skeleton Tests', () {
     testWidgets('VideoCardVSkeleton renders properly with Card shell', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: VideoCardVSkeleton(),
           ),
         ),
@@ -76,8 +78,8 @@ void main() {
 
     testWidgets('VideoCardHSkeleton renders with inCard true and false', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: Column(
               children: [
                 VideoCardHSkeleton(inCard: true),

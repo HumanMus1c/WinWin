@@ -1,10 +1,13 @@
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/common/widgets/medal_widget.dart';
+import 'package:winwin/theme/app_glyphs.g.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/ui/components/app_components.dart';
+
+import '../../support/app_test_host.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -22,10 +25,10 @@ void main() {
       final accessible = resolveVipBadgeColors(
         containerColor: const Color(0xFFFFD8E4), // 浅粉色
         preferredContentColor: const Color(0xFF31111D), // 深暗色
-        surfaceColor: Colors.white,
-        onSurface: Colors.black,
-        onBackground: Colors.black,
-        inverseOnSurface: Colors.white,
+        surfaceColor: const Color(0xFFFFFFFF),
+        onSurface: const Color(0xFF000000),
+        onBackground: const Color(0xFF000000),
+        inverseOnSurface: const Color(0xFFFFFFFF),
       );
 
       expect(accessible.containerColor, isNotNull);
@@ -40,8 +43,8 @@ void main() {
     testWidgets('UserVipBadge renders properly in regular and compact modes',
         (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: Column(
               children: [
                 UserVipBadge(vipType: 2),
@@ -92,8 +95,8 @@ void main() {
       final orgSpec = resolveOfficialVerifyBadge(1, title: '官方机构')!;
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: Column(
               children: [
                 OfficialVerifyBadge(badge: personalSpec),
@@ -105,7 +108,7 @@ void main() {
       );
 
       expect(find.text('bilibili 知名UP主'), findsOneWidget);
-      expect(find.byIcon(Icons.bolt), findsOneWidget);
+      expect(find.byIcon(AppGlyphs.bolt), findsOneWidget);
     });
   });
 
@@ -114,8 +117,8 @@ void main() {
         (tester) async {
       var tapped = false;
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: AppDesktopInteraction(
               onTap: () => tapped = true,
               child: const Text('Desktop Target'),
@@ -135,8 +138,8 @@ void main() {
         (tester) async {
       var tapped = false;
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: AppPressFeedback(
               onTap: () => tapped = true,
               child: const SizedBox(
@@ -159,8 +162,8 @@ void main() {
   group('LevelBadge & MedalWidget 单轨渲染测试（阶段5d-L4-2）', () {
     testWidgets('renders LevelBadge without crash', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: LevelBadge(level: 6),
           ),
         ),
@@ -171,8 +174,8 @@ void main() {
 
     testWidgets('renders MedalWidget without crash', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        const AppTestApp(
+          home: AppTestScaffold(
             body: MedalWidget(
               medalName: '牌子A',
               level: 16,
@@ -189,8 +192,8 @@ void main() {
     testWidgets('renders AppSwitch and AppSegmentedControl via flutter_miuix',
         (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: Column(
               children: [
                 const AppSwitch(value: true, onChanged: null),
@@ -208,7 +211,11 @@ void main() {
       expect(find.text('TabA'), findsOneWidget);
       // 阶段5d-L1/L4-2：M3 冻结分支与双风格宿主均已移除——恒渲染 flutter_miuix 组件。
       expect(find.byType(MiuixSwitch), findsOneWidget);
-      expect(find.byType(Switch), findsNothing);
+      // 不得出现 Material 的 Switch（按 runtimeType 判定，避免直接依赖 material_ui）。
+      expect(
+        find.byWidgetPredicate((w) => w.runtimeType.toString() == 'Switch'),
+        findsNothing,
+      );
       expect(find.byType(MiuixTabRow), findsOneWidget);
     });
   });

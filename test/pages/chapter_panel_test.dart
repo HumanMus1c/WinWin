@@ -1,6 +1,7 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:winwin/models/video/play_info.dart';
+
+import '../support/app_test_host.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -18,8 +19,8 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: StatefulBuilder(
               builder: (context, setState) {
                 const panelWidth = 300.0;
@@ -28,7 +29,7 @@ void main() {
                   children: [
                     // 底层视频/播放器区域
                     const Positioned.fill(
-                      child: ColoredBox(color: Colors.blue),
+                      child: ColoredBox(color: Color(0xFF2196F3)),
                     ),
                     // 模拟顶层章节面板及其 Dismiss 遮罩
                     Positioned.fill(
@@ -47,8 +48,8 @@ void main() {
                                 },
                                 child: Container(
                                   color: isOpen
-                                      ? Colors.black.withValues(alpha: 0.25)
-                                      : Colors.transparent,
+                                      ? const Color(0x40000000)
+                                      : const Color(0x00000000),
                                 ),
                               ),
                             ),
@@ -67,18 +68,19 @@ void main() {
                                 behavior: HitTestBehavior.opaque,
                                 onTap: () {}, // 吸收点击
                                 child: Container(
-                                  color: Colors.black87,
+                                  color: const Color(0xDD000000),
                                   child: Column(
                                     children: [
                                       const Text('章节 (2)'),
                                       for (final ch in testChapters)
-                                        Material(
-                                          color: Colors.transparent,
-                                          child: ListTile(
-                                            title: Text(ch.title),
-                                            onTap: () {
-                                              itemTappedCount++;
-                                            },
+                                        GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () {
+                                            itemTappedCount++;
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(16),
+                                            child: Text(ch.title),
                                           ),
                                         ),
                                     ],
@@ -117,4 +119,12 @@ void main() {
       expect(isOpen, isFalse);
     });
   });
+}
+
+/// 章节数据（最小组件替身，仅供本用例构建列表）。
+class ViewPoint {
+  const ViewPoint({required this.from, required this.to, required this.title});
+  final int from;
+  final int to;
+  final String title;
 }

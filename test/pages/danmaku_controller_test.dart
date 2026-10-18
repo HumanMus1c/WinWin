@@ -1,7 +1,9 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/pages/danmaku/controller.dart';
 import 'package:winwin/plugin/canvas_danmaku/canvas_danmaku.dart';
+
+import '../support/app_test_host.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -32,8 +34,8 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: DanmakuScreen<dynamic>(
               createdController: (c) {
                 engine = c;
@@ -50,8 +52,8 @@ void main() {
 
       // 模拟最大化后尺寸突增
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: DanmakuScreen<dynamic>(
               createdController: (c) {
                 engine = c;
@@ -67,8 +69,8 @@ void main() {
 
       // 模拟尺寸收缩到非常小（导致 area ~/ height - 1 < 0）
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        AppTestApp(
+          home: AppTestScaffold(
             body: DanmakuScreen<dynamic>(
               createdController: (c) {
                 engine = c;

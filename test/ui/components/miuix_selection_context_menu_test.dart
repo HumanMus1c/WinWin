@@ -3,11 +3,13 @@ import 'package:cupertino_ui/cupertino_ui.dart'
 import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
 import 'package:flutter/gestures.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
+
+import '../../support/app_test_host.dart';
 
 /// 回归：Windows 平台上 SelectableRegion 的右键菜单必须走
 /// [buildMiuixTextSelectionContextMenu]（Miuix 面板），而非选择控件自带的
@@ -20,10 +22,10 @@ import 'package:winwin/ui/components/app_selectable_text.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Widget host(Widget child) => MaterialApp(
+  Widget host(Widget child) => AppTestApp(
         home: AppThemeHost(
           tokens: AppThemeHost.tokensFor(Brightness.dark),
-          child: Scaffold(body: Center(child: child)),
+          child: AppTestScaffold(body: Center(child: child)),
         ),
       );
 

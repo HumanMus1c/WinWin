@@ -1,15 +1,14 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter_miuix/miuix.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 
-/// 宿主复刻 main.dart 结构：MiuixTheme 经 MaterialApp.builder 包裹
-/// Navigator（浮层挂载于其 Overlay 之上）。
-Widget _host(Widget child) => MaterialApp(
-      builder: (context, navigator) =>
-          MiuixTheme(data: MiuixThemeData.dark(), child: navigator!),
-      home: Scaffold(body: Center(child: child)),
+import '../../support/app_test_host.dart';
+
+/// 宿主：统一测试宿主（`AppTestApp`）的 builder 链已含 `MiuixThemeScope`
+/// → `MiuixTheme`，浮层挂载于 Navigator 的 Overlay 之上，与 main.dart 同构。
+Widget _host(Widget child) => AppTestApp(
+      home: AppTestScaffold(body: Center(child: child)),
     );
 
 Future<TestGesture> _hoverIn(WidgetTester tester, Finder target) async {

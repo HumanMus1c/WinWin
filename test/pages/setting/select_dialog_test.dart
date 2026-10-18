@@ -1,11 +1,13 @@
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+
+import '../../support/app_test_host.dart';
 
 /// [SelectDialog] / [showSelectDialog] 契约测试。
 ///
@@ -14,23 +16,19 @@ import 'package:winwin/ui/components/app_tooltip.dart';
 /// - Esc 取消不写入：Esc 关闭弹窗并返回 null，宿主不落盘。
 /// 另覆盖关闭按钮取消与副标题渲染（minWidth 320 防说明文案硬换行）。
 ///
-/// 宿主复刻真实链路：UiStyleScope + MaterialApp + AppEscapeScope
-/// （与 `main.dart` 同构，去除本用例无关的兼容桥接）。
+/// 宿主复刻真实链路：统一测试宿主（[AppTestApp]）的 builder 链已含
+/// `AppEscapeScope`（与 `main.dart` 同构，去除本用例无关的兼容桥接）。
 void main() {
   Widget host({
     required GlobalKey<NavigatorState> navigatorKey,
     required AppEscapeNavigatorObserver observer,
     required Widget home,
   }) {
-    return MaterialApp(
-        navigatorKey: navigatorKey,
-        navigatorObservers: [observer],
-        builder: (context, child) => AppEscapeScope(
-          navigatorKey: navigatorKey,
-          observer: observer,
-          child: child ?? const SizedBox.shrink(),
-        ),
-        home: home,
+    return AppTestApp(
+      navigatorKey: navigatorKey,
+      navigatorObservers: [observer],
+      escapeObserver: observer,
+      home: home,
     );
   }
 
@@ -48,11 +46,11 @@ void main() {
     return host(
       navigatorKey: navigatorKey,
       observer: observer,
-      home: Scaffold(
+      home: AppTestScaffold(
         body: StatefulBuilder(
           builder: (context, setState) => Center(
-            child: TextButton(
-              onPressed: () async {
+            child: GestureDetector(
+              onTap: () async {
                 final res = await showSelectDialog<int>(
                   context,
                   title: title,
@@ -64,7 +62,10 @@ void main() {
                   setState(() => onWritten(res));
                 }
               },
-              child: const Text('open'),
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('open'),
+              ),
             ),
           ),
         ),
