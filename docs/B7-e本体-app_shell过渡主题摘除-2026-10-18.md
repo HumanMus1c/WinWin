@@ -70,7 +70,7 @@
 ## 5. 提交与回滚
 
 - 快照：`git update-ref refs/snapshots/latest HEAD`（= `291a0fb…`）。
-- 提交：`<hash>`（代码 + 测试 + 本复盘 + 进度表回填，同批）。回滚：`git reset --hard 291a0fb`。
+- 提交：`42993fa`（代码 + 测试 + 本复盘 + 进度表回填，同批）。回滚：`git reset --hard 291a0fb`。
 
 ## 6. 遗留与踩坑
 
