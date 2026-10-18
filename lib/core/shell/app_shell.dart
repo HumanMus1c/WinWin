@@ -2,9 +2,6 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:cupertino_ui/cupertino_ui.dart' show DefaultCupertinoLocalizations;
 import 'package:flutter/widgets.dart';
-import 'package:material_ui/material_ui.dart'
-    show AnimatedTheme, DefaultMaterialLocalizations, ThemeData // 过渡期（B2 迁移消费者、B7 摘除）
-    ;
 
 import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -59,11 +56,13 @@ class AppScrollBehavior extends ScrollBehavior {
 /// 显式接管：
 /// - 路由：`pageRouteBuilder` → [AppRoute]（Miuix 转场，替代 MaterialApp 的
 ///   `MaterialPageRoute` + `pageTransitionsTheme` 体系）；
-/// - 主题：`AppThemeHost`（[AppTokens] 通道，B2 起成为消费者唯一通道）；
-///   过渡期仍提供 Material `ThemeData`（[theme]，经 `AnimatedTheme` 与
-///   `DefaultSelectionStyle`）——待 B2 迁移完 `Theme.of` 消费者、B7 摘除；
-/// - 本地化：显式装配 Global 三件套（与 MaterialApp 默认一致，保证 Material
-///   控件的 `MaterialLocalizations` 不缺失）；
+/// - 主题：`AppThemeHost`（[AppTokens] 通道，**唯一**主题来源）。B7 起不再提供
+///   过渡期 Material `ThemeData`（MD3 库级退役完成：应用侧已无 material_ui
+///   消费者；flutter_miuix 内部 SDK TextField 所需的 SDK material 环境由
+///   `MiuixCompat` 在需要处局部提供）；
+/// - 本地化：仅装配 Cupertino 委托（widgets 层由 `WidgetsApp` 自带
+///   `DefaultWidgetsLocalizations`）；material_ui 侧的 `DefaultMaterialLocalizations`
+///   随 B7 一并摘除，SDK material 本地化由 `MiuixCompat` 局部注入；
 /// - 文本基底：显式设置 `DefaultTextStyle`——WidgetsApp 默认基底是"黄绿双下划线"
 ///   错误样式（项目在标题条/Toast 上已两次踩坑）；
 /// - 保留既有 builder 链（`MiuixThemeScope → MiuixToastHost →
@@ -82,7 +81,6 @@ class AppShell extends StatelessWidget {
     required this.escapeObserver,
     this.navigatorObservers = const <NavigatorObserver>[],
     this.fontFamily,
-    this.theme,
   });
 
   /// 应用标题（任务栏/路由名）。
@@ -106,25 +104,21 @@ class AppShell extends StatelessWidget {
   /// 应用字体族（AppFontNotifier）。
   final String? fontFamily;
 
-  /// 过渡期 Material 主题（B2/B7 后删除；null = 不提供 Material 主题）。
-  final ThemeData? theme;
-
   @override
   Widget build(BuildContext context) {
     final brightness = isDark ? Brightness.dark : Brightness.light;
     final tokens = AppThemeHost.tokensFor(brightness);
-    Widget app = WidgetsApp(
+    final Widget app = WidgetsApp(
       title: title,
       color: tokens.colors.background,
       navigatorKey: navigatorKey,
       navigatorObservers: navigatorObservers,
       pageRouteBuilder: appPageRouteBuilder,
-      // 本地化：与 material_ui 的 MaterialApp 默认**逐项一致**——应用侧 material 控件
-      // 读的是 material_ui 自己的 MaterialLocalizations（SDK 的 Global* 实现的是 SDK
-      // 类型，二者不可互换，曾导致"No MaterialLocalizations found"→ 灰块不可点）；
-      // widgets 层由 WidgetsApp 自带。SDK MaterialLocalizations 仅在 MiuixCompat 内提供。
+      // 本地化：widgets 层由 WidgetsApp 自带；此处仅保留 Cupertino 委托。
+      // material_ui 的 DefaultMaterialLocalizations 随 B7 退役摘除——应用侧已无
+      // material_ui 控件；flutter_miuix 内部 SDK TextField 读的是 **SDK 类型**的
+      // MaterialLocalizations（与 material_ui 类型不可互换），由 MiuixCompat 提供。
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-        DefaultMaterialLocalizations.delegate,
         DefaultCupertinoLocalizations.delegate,
       ],
       home: home,
@@ -154,18 +148,6 @@ class AppShell extends StatelessWidget {
         );
       },
     );
-    final ThemeData? theme = this.theme;
-    if (theme != null) {
-      // 过渡期：等价 MaterialApp 的主题宿主（AnimatedTheme + 选择色默认值）。
-      app = AnimatedTheme(
-        data: theme,
-        child: DefaultSelectionStyle(
-          selectionColor: theme.textSelectionTheme.selectionColor,
-          cursorColor: theme.textSelectionTheme.cursorColor,
-          child: app,
-        ),
-      );
-    }
     return AppThemeHost(
       tokens: tokens,
       child: ScrollConfiguration(

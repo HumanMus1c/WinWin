@@ -1,27 +1,35 @@
 import 'dart:ui' as ui;
 
-import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_shell.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_transition.dart';
-import 'package:winwin/theme/app_theme.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
+
+import 'support/app_test_host.dart';
 
 /// 沉浸标题条布局与页面转场回归测试。
 ///
 /// 防回归点：
 /// 1. 标题条高度（Win11 标准 32 逻辑像素）、右上三键尺寸与排列（46×32）、
 ///    拖动区占满其余宽度；
-/// 2. 页面转场主题注册：windows/linux/android/fuchsia → Miuix 转场，
-///    iOS/macOS → Cupertino（保留侧滑返回手势语义）；
+/// 2. 页面转场主题注册：B3 起页面路由为 [AppRoute]（Miuix 转场核）；B7 起应用壳
+///    已**不再提供 Material 主题**（`pageTransitionsTheme` 覆写随 material_ui 退役
+///    一并删除，该防回归点由"路由替身"用例的时长断言承接）；
 /// 3. **进出页面（push/pop）全程，路由内容与转场缩放溢出不得覆盖标题条**——
 ///    该用例在"内容区无裁剪 + 溢出型转场"组合下精确失败
-///    （2026-10-07 实证：无裁剪 + Zoom 转场时标题条下半部被旧页覆盖）。
+///    （2026-10-07 实证：无裁剪 + Zoom 转场时标题条下半部被旧页覆盖）；
+///    兜底防线用例改用自建"上溢型"缩放转场复现该溢出场景（不再依赖 material_ui）。
+///
+/// B1b/B7 起宿主为零-material：布局用例走 [appTestHost]，转场用例走生产同构的
+/// [AppShell]（WidgetsApp + ImmersiveTitleBarShell 壳），测试面不再 import
+/// `package:material_ui`。
 void main() {
   testWidgets('沉浸标题条：32px 占位 + 右上三键（Win11 标准尺寸）',
       (tester) async {
@@ -30,9 +38,9 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ImmersiveTitleBarShell(
-          child: const ColoredBox(
+      appTestHost(
+        const ImmersiveTitleBarShell(
+          child: ColoredBox(
             color: Color(0xFF00AA00),
             child: SizedBox.expand(),
           ),
@@ -60,33 +68,40 @@ void main() {
     final route = AppRoute<void>(builder: (_) => const SizedBox.shrink());
     expect(route.transitionDuration, kMiuixTransitionDuration);
     expect(route.reverseTransitionDuration, kMiuixTransitionDuration);
-    // Material 侧转场主题已退役：过渡期主题不再注册 pageTransitionsTheme 覆写。
-    for (final theme in [AppTheme.lightFor(), AppTheme.darkFor()]) {
-      expect(
-        theme.pageTransitionsTheme.builders[TargetPlatform.windows],
-        isNot(isA<CupertinoPageTransitionsBuilder>()),
-      );
-    }
   });
 
   testWidgets('Miuix 转场：进出页面全程标题条零覆盖', (tester) async {
     await _runTransitionCoverageScenario(
       tester,
       label: 'Miuix 转场',
-      transitions: AppTheme.lightFor().pageTransitionsTheme,
+      // 生产路径：AppShell 的 pageRouteBuilder 与手动 push 均产出 [AppRoute]。
+      buildRoute: () => AppRoute<void>(
+        builder: (_) =>
+            const ColoredBox(color: _pushedColor, child: SizedBox.expand()),
+      ),
     );
   });
 
-  testWidgets('兜底防线：即使换回会溢出的 Zoom 转场，标题条仍零覆盖', (tester) async {
+  testWidgets('兜底防线：即使换成会上溢的缩放型转场，标题条仍零覆盖', (tester) async {
     await _runTransitionCoverageScenario(
       tester,
-      label: 'Zoom 转场（兜底防线）',
-      // 模拟"回退到 material_ui 默认转场"或未来引入溢出型转场的场景：
-      // 内容区裁剪（ClipRect）必须让标题条保持不被覆盖。
-      transitions: const PageTransitionsTheme(
-        builders: <TargetPlatform, PageTransitionsBuilder>{
-          TargetPlatform.windows: ZoomPageTransitionsBuilder(),
-        },
+      label: '缩放型转场（兜底防线）',
+      // 复现"溢出型转场"（曾为 material_ui 平台默认 Zoom）：
+      // 新页自 115% 缩放归位，且对齐 bottomCenter ⇒ 转场期间新页**上边缘越过内容区
+      // 顶边**（若无裁剪即覆盖标题条）；ImmersiveTitleBarShell 内容区的 ClipRect
+      // 必须让其恒不越界。此用例零 material 依赖（纯 widgets 层原语自建）。
+      buildRoute: () => PageRouteBuilder<void>(
+        transitionDuration: kMiuixTransitionDuration,
+        reverseTransitionDuration: kMiuixTransitionDuration,
+        pageBuilder: (_, _, _) =>
+            const ColoredBox(color: _pushedColor, child: SizedBox.expand()),
+        transitionsBuilder: (_, animation, _, child) => ScaleTransition(
+          alignment: Alignment.bottomCenter,
+          scale: Tween<double>(begin: 1.15, end: 1.0).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          ),
+          child: child,
+        ),
       ),
     );
   });
@@ -107,10 +122,13 @@ const Color _homeColor = Color(0xFFFF0000);
 const Color _pushedColor = Color(0xFF0000FF);
 
 /// 执行一次"push → 等待 → pop"转场，并逐帧断言标题条未被页面内容覆盖。
+///
+/// 宿主为生产同构的 [AppShell]（含 `ImmersiveTitleBarShell` 壳 + Miuix 转场
+/// `pageRouteBuilder`），故断言覆盖的是**真实应用层级**而非测试替身。
 Future<void> _runTransitionCoverageScenario(
   WidgetTester tester, {
   required String label,
-  required PageTransitionsTheme transitions,
+  required Route<void> Function() buildRoute,
 }) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.windows;
   tester.view.physicalSize = const Size(1200, 800);
@@ -123,14 +141,11 @@ Future<void> _runTransitionCoverageScenario(
   await tester.pumpWidget(
     RepaintBoundary(
       key: boundaryKey,
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightFor().copyWith(
-          pageTransitionsTheme: transitions,
-        ),
+      child: AppShell(
+        title: 'WinWin',
+        isDark: false,
         navigatorKey: navKey,
-        builder: (context, child) =>
-            ImmersiveTitleBarShell(child: child ?? const SizedBox.shrink()),
+        escapeObserver: AppEscapeNavigatorObserver(),
         home: const ColoredBox(color: _homeColor, child: SizedBox.expand()),
       ),
     ),
@@ -138,12 +153,7 @@ Future<void> _runTransitionCoverageScenario(
   await tester.pump(const Duration(milliseconds: 400));
   await _expectStripIntact(tester, boundaryKey, '$label 初始态');
 
-  navKey.currentState!.push(
-        AppRoute<void>(
-      builder: (_) =>
-          const ColoredBox(color: _pushedColor, child: SizedBox.expand()),
-    ),
-  );
+  navKey.currentState!.push(buildRoute());
   await tester.pump();
   for (var i = 0; i < 8; i++) {
     await tester.pump(const Duration(milliseconds: 40));

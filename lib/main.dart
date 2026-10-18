@@ -24,7 +24,6 @@ import 'pages/onboarding/user_agreement_page.dart';
 import 'pages/setting/theme_notifier.dart';
 import 'pages/video/desktop_pip.dart';
 import 'theme/app_font_notifier.dart';
-import 'theme/app_theme.dart';
 import 'theme/colors.dart';
 import 'ui/app.dart';
 import 'utils/calc_window_position.dart';
@@ -187,9 +186,9 @@ class WinWinApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 两层 ValueListenableBuilder — 主题模式 × 应用字体，任一变化重建应用壳。
-    // （B1：应用壳由 MaterialApp 换为 AppShell（WidgetsApp + AppThemeHost +
-    //  过渡期 Material 主题）；主题模式为项目枚举 ThemeModeType，不再依赖
-    //  Material 的 ThemeMode。）
+    // （B1：应用壳由 MaterialApp 换为 AppShell（WidgetsApp + AppThemeHost）；
+    //  主题模式为项目枚举 ThemeModeType，不再依赖 Material 的 ThemeMode。
+    //  B7：过渡期 Material 主题通道已随 material_ui 库级退役一并摘除。）
     return ValueListenableBuilder<ThemeModeType>(
       valueListenable: ThemeNotifier.instance,
       builder: (context, themeMode, _) {
@@ -203,9 +202,6 @@ class WinWinApp extends StatelessWidget {
               title: 'WinWin — BiliPai Desktop Port',
               isDark: isDark,
               fontFamily: fontFamily,
-              theme: isDark
-                  ? AppTheme.darkFor(fontFamily: fontFamily)
-                  : AppTheme.lightFor(fontFamily: fontFamily),
               navigatorKey: appNavigatorKey,
               escapeObserver: appEscapeObserver,
               navigatorObservers: [routeObserver, appEscapeObserver],
