@@ -1,8 +1,8 @@
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_miuix/miuix.dart';
-import 'package:material_ui/material_ui.dart';
 
+import 'app_glyphs.g.dart';
 import 'app_icons_art.dart';
 import 'app_icons_bdc.g.dart';
 import 'app_icons_bili.g.dart';
@@ -258,7 +258,7 @@ abstract final class AppIcons {
   static IconData viewCount() => CupertinoIcons.play_circle;
 
   /// 视频弹幕数（载体字形 → B 站官网"弹幕数"矢量，L5-8）
-  static IconData danmakuCount() => Icons.subtitles_outlined;
+  static IconData danmakuCount() => AppGlyphs.subtitles_outlined;
 
   /// 视频时长
 
@@ -321,111 +321,111 @@ abstract final class AppIcons {
   static IconData eye() => CupertinoIcons.eye;
 
   // ---------------------------------------------------------------------------
-  // 9. 设置面语义（B6-2e：直参收敛——原 `AppIcon(Icons.xxx)` 的 1:1 语义封装，
+  // 9. 设置面语义（B6-2e：直参收敛——原 `AppIcon(AppGlyphs.xxx)` 的 1:1 语义封装，
   //    字形暂与 M3 一致（零视觉变化），后续美术替换只改此处一处）。
   // ---------------------------------------------------------------------------
 
   /// 外观设置入口（主题/字重/缩放）
-  static IconData appearance() => Icons.style_outlined;
+  static IconData appearance() => AppGlyphs.style_outlined;
 
   /// 播放交互手势（双击/触摸操作）
-  static IconData touchAction() => Icons.touch_app_outlined;
+  static IconData touchAction() => AppGlyphs.touch_app_outlined;
 
   /// 音视频设置入口（画质/音质/硬解/缓冲）
-  static IconData videoSetting() => Icons.video_settings_outlined;
+  static IconData videoSetting() => AppGlyphs.video_settings_outlined;
 
   /// 其它设置入口（网络/代理/日志）
-  static IconData extraSetting() => Icons.extension_outlined;
+  static IconData extraSetting() => AppGlyphs.extension_outlined;
 
   /// 关于页 — 项目说明
-  static IconData aboutCode() => Icons.code;
+  static IconData aboutCode() => AppGlyphs.code;
 
   /// 关于页 — 开源协议
-  static IconData openSource() => Icons.source_outlined;
+  static IconData openSource() => AppGlyphs.source_outlined;
 
   /// 应用字体选择
-  static IconData appFont() => Icons.font_download_outlined;
+  static IconData appFont() => AppGlyphs.font_download_outlined;
 
   /// 主题模式（跟随系统/浅色/深色）
-  static IconData themeMode() => Icons.brightness_6_outlined;
+  static IconData themeMode() => AppGlyphs.brightness_6_outlined;
 
   /// 纯黑主题（OLED 省电）
-  static IconData pureBlack() => Icons.contrast;
+  static IconData pureBlack() => AppGlyphs.contrast;
 
   /// 字体大小缩放
-  static IconData fontSize() => Icons.text_fields;
+  static IconData fontSize() => AppGlyphs.text_fields;
 
   /// 界面缩放
-  static IconData uiScale() => Icons.zoom_in_outlined;
+  static IconData uiScale() => AppGlyphs.zoom_in_outlined;
 
   /// 系统原生标题栏开关
-  static IconData nativeTitleBar() => Icons.window;
+  static IconData nativeTitleBar() => AppGlyphs.window;
 
   /// 托盘图标显隐
-  static IconData trayIcon() => Icons.donut_large_rounded;
+  static IconData trayIcon() => AppGlyphs.donut_large_rounded;
 
   /// 退出时最小化到托盘
-  static IconData minimizeToTray() => Icons.minimize;
+  static IconData minimizeToTray() => AppGlyphs.minimize;
 
   /// 字体文件导入
-  static IconData fontImport() => Icons.file_upload_outlined;
+  static IconData fontImport() => AppGlyphs.file_upload_outlined;
 
   /// 恢复默认字体
-  static IconData fontRestore() => Icons.restore;
+  static IconData fontRestore() => AppGlyphs.restore;
 
   /// 开启硬解
-  static IconData hardwareAccel() => Icons.flash_on_outlined;
+  static IconData hardwareAccel() => AppGlyphs.flash_on_outlined;
 
   /// 免登录 1080P
-  static IconData p1080() => Icons.hd_outlined;
+  static IconData p1080() => AppGlyphs.hd_outlined;
 
   /// 默认音质
-  static IconData defaultAudioQuality() => Icons.music_video_outlined;
+  static IconData defaultAudioQuality() => AppGlyphs.music_video_outlined;
 
   /// 音频响度均衡
-  static IconData loudnessEqualizer() => Icons.equalizer_outlined;
+  static IconData loudnessEqualizer() => AppGlyphs.equalizer_outlined;
 
   /// CDN 服务节点
-  static IconData cdnNode() => Icons.cloud_outlined;
+  static IconData cdnNode() => AppGlyphs.cloud_outlined;
 
   /// 硬件解码模式
-  static IconData decodeMode() => Icons.memory;
+  static IconData decodeMode() => AppGlyphs.memory;
 
   /// 播放缓冲大小
-  static IconData bufferSize() => Icons.storage;
+  static IconData bufferSize() => AppGlyphs.storage;
 
   /// 进入详情页自动播放
-  static IconData autoplay() => Icons.motion_photos_auto_outlined;
+  static IconData autoplay() => AppGlyphs.motion_photos_auto_outlined;
 
   /// 全屏截图按钮显隐
-  static IconData screenshotButton() => Icons.photo_camera_outlined;
+  static IconData screenshotButton() => AppGlyphs.photo_camera_outlined;
 
   /// 键盘控制（空格/方向键）
-  static IconData keyboardControl() => Icons.keyboard_outlined;
+  static IconData keyboardControl() => AppGlyphs.keyboard_outlined;
 
   /// 启用 HTTP/2
-  static IconData http2() => Icons.http;
+  static IconData http2() => AppGlyphs.http;
 
   /// 系统代理开关
-  static IconData systemProxy() => Icons.vpn_key;
+  static IconData systemProxy() => AppGlyphs.vpn_key;
 
   /// 禁用 SSL 证书验证
-  static IconData sslBypass() => Icons.security;
+  static IconData sslBypass() => AppGlyphs.security;
 
   /// APP 端推荐流
-  static IconData appRecommend() => Icons.explore_outlined;
+  static IconData appRecommend() => AppGlyphs.explore_outlined;
 
   /// 合并相同弹幕
-  static IconData mergeDanmaku() => Icons.merge;
+  static IconData mergeDanmaku() => AppGlyphs.merge;
 
   /// 运行日志开关
-  static IconData runLog() => Icons.article_outlined;
+  static IconData runLog() => AppGlyphs.article_outlined;
 
   /// 暂停观看历史
-  static IconData pauseHistory() => Icons.history_toggle_off;
+  static IconData pauseHistory() => AppGlyphs.history_toggle_off;
 
   /// 演示模式
-  static IconData demoMode() => Icons.slideshow;
+  static IconData demoMode() => AppGlyphs.slideshow;
 
   // ---------------------------------------------------------------------------
   // 10. 通用语义收敛（B6-2f：login/profile/whisper/空态等 35 处直参，
@@ -433,85 +433,85 @@ abstract final class AppIcons {
   // ---------------------------------------------------------------------------
 
   /// 登录提交按钮（各未登录态 FilledButton.icon 共用）
-  static IconData loginSubmit() => Icons.login;
+  static IconData loginSubmit() => AppGlyphs.login;
 
   /// 账号输入框前缀
-  static IconData accountField() => Icons.account_box;
+  static IconData accountField() => AppGlyphs.account_box;
 
   /// 密码输入框前缀
-  static IconData passwordField() => Icons.password;
+  static IconData passwordField() => AppGlyphs.password;
 
   /// 短信验证码输入框前缀
-  static IconData smsCodeField() => Icons.sms_outlined;
+  static IconData smsCodeField() => AppGlyphs.sms_outlined;
 
   /// 扫码失败占位图
-  static IconData qrPlaceholder() => Icons.qr_code_2;
+  static IconData qrPlaceholder() => AppGlyphs.qr_code_2;
 
   /// Cookie 输入框前缀
-  static IconData cookieField() => Icons.cookie_outlined;
+  static IconData cookieField() => AppGlyphs.cookie_outlined;
 
   /// 区号下拉小箭头
-  static IconData countryArrow() => Icons.arrow_drop_down;
+  static IconData countryArrow() => AppGlyphs.arrow_drop_down;
 
   /// 切换账号
-  static IconData switchAccount() => Icons.swap_horiz;
+  static IconData switchAccount() => AppGlyphs.swap_horiz;
 
   /// 退出登录
-  static IconData logout() => Icons.logout;
+  static IconData logout() => AppGlyphs.logout;
 
   /// 离线缓存空态
-  static IconData offlineEmpty() => Icons.download_for_offline_outlined;
+  static IconData offlineEmpty() => AppGlyphs.download_for_offline_outlined;
 
   /// 历史空态
-  static IconData historyEmpty() => Icons.history_toggle_off;
+  static IconData historyEmpty() => AppGlyphs.history_toggle_off;
 
   /// 协议条款 — 开源免费
-  static IconData clauseOpenSource() => Icons.volunteer_activism_outlined;
+  static IconData clauseOpenSource() => AppGlyphs.volunteer_activism_outlined;
 
   /// 协议条款 — 免责声明
-  static IconData clauseDisclaimer() => Icons.balance_outlined;
+  static IconData clauseDisclaimer() => AppGlyphs.balance_outlined;
 
   /// 协议条款 — 问题反馈
-  static IconData clauseFeedback() => Icons.bug_report_outlined;
+  static IconData clauseFeedback() => AppGlyphs.bug_report_outlined;
 
   /// 消息中心 — @我的
-  static IconData atMe() => Icons.alternate_email_rounded;
+  static IconData atMe() => AppGlyphs.alternate_email_rounded;
 
   /// 消息中心 — 系统通知
-  static IconData sysNotice() => Icons.campaign_outlined;
+  static IconData sysNotice() => AppGlyphs.campaign_outlined;
 
   /// 消息流空态（免打扰铃铛）
-  static IconData emptyNotice() => Icons.notifications_none_rounded;
+  static IconData emptyNotice() => AppGlyphs.notifications_none_rounded;
 
   /// 举报行（红色）
-  static IconData reportAbuse() => Icons.report_outlined;
+  static IconData reportAbuse() => AppGlyphs.report_outlined;
 
   /// 收藏夹空态
-  static IconData folderEmpty() => Icons.folder_off_outlined;
+  static IconData folderEmpty() => AppGlyphs.folder_off_outlined;
 
   /// 全部播放（播放列表）
-  static IconData playAll() => Icons.playlist_play;
+  static IconData playAll() => AppGlyphs.playlist_play;
 
   /// 清空（删除横扫）
-  static IconData clearAll() => Icons.delete_sweep;
+  static IconData clearAll() => AppGlyphs.delete_sweep;
 
   /// 搜索无结果空态
-  static IconData searchEmpty() => Icons.search_off;
+  static IconData searchEmpty() => AppGlyphs.search_off;
 
   /// 空间页加载失败
-  static IconData spaceOffline() => Icons.cloud_off_outlined;
+  static IconData spaceOffline() => AppGlyphs.cloud_off_outlined;
 
   /// 番剧播放主按钮
-  static IconData playEpisode() => Icons.play_arrow_rounded;
+  static IconData playEpisode() => AppGlyphs.play_arrow_rounded;
 
   /// 下载空态
-  static IconData downloadEmpty() => Icons.download_done_outlined;
+  static IconData downloadEmpty() => AppGlyphs.download_done_outlined;
 
   /// 动态商品入口
-  static IconData goodsEntry() => Icons.shopping_bag_outlined;
+  static IconData goodsEntry() => AppGlyphs.shopping_bag_outlined;
 
   /// 画廊上一张
-  static IconData galleryPrev() => Icons.chevron_left;
+  static IconData galleryPrev() => AppGlyphs.chevron_left;
 
   // ---------------------------------------------------------------------------
   // 11. 图标欠账收敛（B7-c2：B7 期间漏网与新场景直参——`Icon(` 部件替换的
@@ -519,65 +519,65 @@ abstract final class AppIcons {
   // ---------------------------------------------------------------------------
 
   /// 内容加载失败空态（云断开）
-  static IconData loadFailed() => Icons.cloud_off_outlined;
+  static IconData loadFailed() => AppGlyphs.cloud_off_outlined;
 
   /// 关注流空态（订阅）
-  static IconData followEmpty() => Icons.subscriptions_outlined;
+  static IconData followEmpty() => AppGlyphs.subscriptions_outlined;
 
   /// 表情面板入口
-  static IconData emoteEntry() => Icons.sentiment_satisfied_alt_outlined;
+  static IconData emoteEntry() => AppGlyphs.sentiment_satisfied_alt_outlined;
 
   /// 演示遮罩播放占位（描边圆）
-  static IconData playCircleOutline() => Icons.play_circle_outline;
+  static IconData playCircleOutline() => AppGlyphs.play_circle_outline;
 
   /// 演示单选（选中实心圆勾 / 未选中圆框）
   static IconData singleChoice({required bool selected}) =>
-      selected ? Icons.check_circle : Icons.radio_button_unchecked;
+      selected ? AppGlyphs.check_circle : AppGlyphs.radio_button_unchecked;
 
   /// 直播开始播放（大箭头）
-  static IconData livePlay() => Icons.play_arrow_rounded;
+  static IconData livePlay() => AppGlyphs.play_arrow_rounded;
 
   /// 直播发弹幕入口
-  static IconData danmakuInput() => Icons.comment_outlined;
+  static IconData danmakuInput() => AppGlyphs.comment_outlined;
 
   /// 下拉小箭头
-  static IconData dropdownArrow() => Icons.arrow_drop_down;
+  static IconData dropdownArrow() => AppGlyphs.arrow_drop_down;
 
   /// 网页全屏（比例框）
-  static IconData aspectRatio() => Icons.aspect_ratio;
+  static IconData aspectRatio() => AppGlyphs.aspect_ratio;
 
   /// 直播离线指示（轮播中 / 已下播）
   static IconData liveOffline({required bool round}) =>
-      round ? Icons.repeat : Icons.sensors_off_outlined;
+      round ? AppGlyphs.repeat : AppGlyphs.sensors_off_outlined;
 
   /// 直播热度（火焰）
-  static IconData hotness() => Icons.local_fire_department;
+  static IconData hotness() => AppGlyphs.local_fire_department;
 
   /// 空间认证入口（闪电）
-  static IconData officialBolt() => Icons.offline_bolt;
+  static IconData officialBolt() => AppGlyphs.offline_bolt;
 
   /// 认证标识（盾牌用户）
-  static IconData verifiedUser() => Icons.verified_user_outlined;
+  static IconData verifiedUser() => AppGlyphs.verified_user_outlined;
 
   /// 排序方向箭头（倒序向下 / 正序向上）
   static IconData sortArrow({required bool descending}) =>
-      descending ? Icons.arrow_downward : Icons.arrow_upward;
+      descending ? AppGlyphs.arrow_downward : AppGlyphs.arrow_upward;
 
   /// 取消追番悬停（破心）
-  static IconData heartBroken() => Icons.heart_broken_outlined;
+  static IconData heartBroken() => AppGlyphs.heart_broken_outlined;
 
   /// 无视频信号（摄像机划叉）
-  static IconData videoOff() => Icons.videocam_off_outlined;
+  static IconData videoOff() => AppGlyphs.videocam_off_outlined;
 
   /// 直播状态指示（直播中 / 已结束）
   static IconData liveIndicator({required bool active}) =>
-      active ? Icons.sensors : Icons.sensors_off;
+      active ? AppGlyphs.sensors : AppGlyphs.sensors_off;
 
   /// 图片损坏占位
-  static IconData imageBroken() => Icons.broken_image_outlined;
+  static IconData imageBroken() => AppGlyphs.broken_image_outlined;
 
   /// 认证徽章（闪电小字）
-  static IconData badgeBolt() => Icons.bolt;
+  static IconData badgeBolt() => AppGlyphs.bolt;
 }
 
 /// 自适应图标部件：Miuix 风格下将具备 Miuix 矢量对应的字形升级为
@@ -713,6 +713,36 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
   CupertinoIcons.chat_bubble_fill: MiuixIcons.os4.byName('messages')!,
   CupertinoIcons.bubble_left: MiuixIcons.os4.byName('send')!,
   CupertinoIcons.restart: MiuixIcons.os4.byName('reset')!,
+  // ── b7-d 美术补全（Material 字形载体 → Miuix 矢量） ──
+  // 收录口径：① Miuix 素材集存在**同名/同语义**图标；或② 本项目已对同语义
+  // Cupertino 字形建立映射（本条沿用同一目标，保证同语义跨字形观感一致）。
+  // 未收录者（无同语义对应，如 bolt/cookie/vpn_key/sensors 等设置面专用字形）
+  // 保留 Material 回退渲染并登记于复盘 §保留清单。
+  AppGlyphs.chevron_left: MiuixIcons.extended.byName('chevronBackward')!,
+  AppGlyphs.comment_outlined: MiuixIcons.os4.byName('messages')!,
+  AppGlyphs.sms_outlined: MiuixIcons.os4.byName('messages')!,
+  AppGlyphs.download_done_outlined: MiuixIcons.extended.byName('download')!,
+  AppGlyphs.download_for_offline_outlined:
+      MiuixIcons.extended.byName('download')!,
+  AppGlyphs.equalizer_outlined: MiuixIcons.extended.byName('tune')!,
+  AppGlyphs.file_upload_outlined: MiuixIcons.extended.byName('uploadCloud')!,
+  AppGlyphs.folder_off_outlined: MiuixIcons.extended.byName('folder')!,
+  AppGlyphs.history_toggle_off: MiuixIcons.extended.byName('recent')!,
+  AppGlyphs.merge: MiuixIcons.extended.byName('merge')!,
+  AppGlyphs.minimize: MiuixIcons.extended.byName('remove')!,
+  AppGlyphs.music_video_outlined: MiuixIcons.extended.byName('music')!,
+  AppGlyphs.notifications_none_rounded:
+      MiuixIcons.os4.byName('notifications')!,
+  AppGlyphs.photo_camera_outlined:
+      MiuixIcons.extended.byName('screenCapture')!,
+  AppGlyphs.play_arrow_rounded: MiuixIcons.extended.byName('play')!,
+  AppGlyphs.playlist_play: MiuixIcons.extended.byName('playlist')!,
+  AppGlyphs.qr_code_2: MiuixIcons.extended.byName('scan')!,
+  AppGlyphs.report_outlined: MiuixIcons.extended.byName('report')!,
+  AppGlyphs.search_off: MiuixIcons.extended.byName('search')!,
+  AppGlyphs.style_outlined: MiuixIcons.extended.byName('theme')!,
+  AppGlyphs.brightness_6_outlined: MiuixIcons.extended.byName('theme')!,
+  AppGlyphs.swap_horiz: MiuixIcons.extended.byName('replace')!,
 };
 
 /// 查询字形对应的 Miuix 矢量。
@@ -750,7 +780,7 @@ String _glyphFontTag(IconData glyph) {
 /// 由 `tools/bili_bdc_icons_import.py` 预生成。"eo|" 前缀 = evenodd 填充。
 ///
 /// L5-10b：查表键为「字体族:码点」复合键——此前仅按 codePoint 查询，
-/// 他层字形与 BDC 条目同码点时会错误截胡（如 `Icons.subtitles_outlined`
+/// 他层字形与 BDC 条目同码点时会错误截胡（如 `AppGlyphs.subtitles_outlined`
 /// 0xf3fd 撞 `CupertinoIcons.checkmark`，弹幕数被渲染成对勾）。
 MiuixVectorIcon? miuixBdcIconFor(IconData glyph) {
   final data = kBDCIconPaths[

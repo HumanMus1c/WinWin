@@ -1,8 +1,9 @@
 import 'dart:ui';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/semantics.dart';
 import 'package:winwin/theme/app_colors.dart';
+import 'package:winwin/theme/app_glyphs.g.dart';
 
 /// 哔哩哔哩官方风格等级图标（纯 Canvas 矢量自绘）。
 ///
@@ -139,12 +140,12 @@ extension type LevelCanvas(Canvas _) implements Canvas {
       (ParagraphBuilder(
           ParagraphStyle(
             fontSize: 460,
-            fontFamily: Icons.bolt_rounded.fontFamily,
+            fontFamily: AppGlyphs.bolt_rounded.fontFamily,
             height: 1,
             fontWeight: FontWeight.w900,
             textDirection: TextDirection.ltr,
           ),
-        )..addText(String.fromCharCode(Icons.bolt_rounded.codePoint))).build()
+        )..addText(String.fromCharCode(AppGlyphs.bolt_rounded.codePoint))).build()
         ..layout(const ParagraphConstraints(width: double.infinity));
   void drawBolt() => drawParagraph(_boltIcon, const Offset(840, 5));
 
