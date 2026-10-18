@@ -63,7 +63,7 @@ automaticallyImplyLeading:false, flexibleSpace: FlexibleSpaceBar(background: _bu
 
 ## 五、提交与回滚
 
-- 提交：`<hash>`（本专项 = 1 新增 lib + 1 改 lib + 2 docs）。
+- 提交：`6b3c6f7`（本专项 = 1 新增 lib + 1 改 lib + 2 docs）。
 - 回滚点：改动前工作树 **clean**，基线 = `70959ff`（`git reset --hard 70959ff` 可全量回退）。
 
 ## 遗留与踩坑
