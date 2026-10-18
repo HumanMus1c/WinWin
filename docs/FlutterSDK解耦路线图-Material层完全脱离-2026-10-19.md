@@ -4,6 +4,7 @@
 - 起点 HEAD：`7f53cc1`（Phase 5 下载系统批次2 复盘回填后）
 - 快照：`refs/snapshots/latest` = `7f53cc19b6436b44f2ed67a18623b5dff59e0506`（工作树干净，快照=HEAD）
 - 文档类型：**路线图 / 分析文档（不含任何代码改动）**，待 CVO 确认口径与路径后按 §7 分期实施
+- **进展（2026-10-19）**：§8 **Q2/Q5 已由 CVO 拍板**（82 字形走"Miuix 矢量为主、Cupertino 为辅"，现在实施）；**Phase A 已落地**——见 `docs/PhaseA-图标载体退役复盘-2026-10-19.md`。Q1（口径）/Q3（fork flutter_miuix）/Q4（B7 门槛改语义）仍待确认。
 - 关联：`docs/B7封板-material_ui库级退役收官-2026-10-18.md`、`docs/MD3库级退役进度追踪-2026-10-07.md`、`test/theme/material_ui_absence_test.dart`
 - 结论来源：本仓库源码/SDK/依赖缓存静态取证 + 线上官方议题与 pub.dev（见 §9）
 

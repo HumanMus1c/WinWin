@@ -16,7 +16,6 @@ import 'package:winwin/core/shell/miuix_compat.dart';
 import 'package:winwin/pages/onboarding/user_agreement_page.dart';
 import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
 import 'package:winwin/pages/setting/widgets/normal_item.dart';
-import 'package:winwin/theme/app_glyphs.g.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
@@ -209,7 +208,7 @@ void main() {
           AppGroup(
             children: [
               const AppListItem(
-                icon: Icon(AppGlyphs.code),
+                icon: Icon(CupertinoIcons.chevron_left_slash_chevron_right),
                 title: '项目说明',
                 subtitle: 'GPL-3.0',
               ),
@@ -740,8 +739,7 @@ void main() {
       expect(find.text('开源且免费'), findsOneWidget);
       expect(find.text('免责与版权'), findsOneWidget);
       expect(find.text('反馈与日志'), findsOneWidget);
-      expect(find.byIcon(AppGlyphs.volunteer_activism_outlined),
-          findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.heart), findsOneWidget);
     });
 
     testWidgets('MiuixPopupMenu：点开显示条目、单组选择后收起并回调', (tester) async {

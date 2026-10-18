@@ -2,14 +2,13 @@ import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/pages/whisper/session/session_more_menu_button.dart';
-import 'package:winwin/theme/app_glyphs.g.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 
 import '../support/app_test_host.dart';
 
-/// 零-material 的「曾用 Material 字形」载体（`AppGlyphs` 未收录；仅供
-/// `findsNothing` 断言「树上不得出现 material 字形」时按同一 codePoint 引用）。
+/// 零-material 的「曾用 Material 字形」裸载体（`AppGlyphs` 已退役，暂无同名
+/// 载体；仅供 `findsNothing` 断言「树上不得出现 material 字形」时按 codePoint 引用）。
 const IconData _materialArrowBack =
     IconData(0xe092, fontFamily: 'MaterialIcons');
 const IconData _materialMoreVert =
@@ -236,27 +235,31 @@ void main() {
 
       expect(AppIcons.viewCount(), equals(CupertinoIcons.play_circle));
       // 阶段5e-L5-8：弹幕数改用载体字形（渲染为 B 站官网"弹幕数"矢量）。
-      expect(AppIcons.danmakuCount(), equals(AppGlyphs.subtitles_outlined));
+      expect(AppIcons.danmakuCount(), equals(CupertinoIcons.bubble_middle_top));
       expect(AppIcons.duration(), equals(CupertinoIcons.clock));
       expect(AppIcons.calendar(), equals(CupertinoIcons.calendar));
     });
   });
 
   group('L5-10b 图标层跨字体撞码点回归', () {
-    test('弹幕数载体不再被 BDC 对勾截胡（0xf3fd 复合键）', () {
+    test('弹幕数复用 B 站官网弹幕美术（0xf3fd Web 层）', () {
       // CupertinoIcons.checkmark 仍由 BDC 供给对勾。
       expect(miuixBdcIconFor(CupertinoIcons.checkmark), isNotNull);
-      // Material 的 subtitles_outlined 与 checkmark 同码点但字体族不同：
-      // BDC 层应放行，落到 Web 层「弹幕数」图形。
-      expect(miuixBdcIconFor(AppGlyphs.subtitles_outlined), isNull);
-      final vector = miuixVectorForGlyph(AppGlyphs.subtitles_outlined);
+      // Cupertino 载体 bubble_middle_top（Phase A 接替 subtitles_outlined）不与
+      // 既有码点相撞，由映射表直接复用 Web 层「弹幕数」美术。
+      final vector = miuixVectorForGlyph(CupertinoIcons.bubble_middle_top);
       expect(vector, isNotNull);
-      expect(vector!.name, startsWith('webSite.f3fd'));
+      expect(vector!.name, 'web.danmakuCount');
     });
 
-    test('BDC 层 material 白名单字形不受复合键改造影响', () {
-      expect(miuixBdcIconFor(AppGlyphs.alternate_email_rounded), isNotNull);
-      expect(miuixBdcIconFor(AppGlyphs.campaign_outlined), isNotNull);
+    test('@我 / 系统通知复用 BDC 美术（原 material 白名单载体退役）', () {
+      // Phase A：原 material:0xf55f(alternate_email) / material:0xef27(campaign)
+      // 白名单载体退役，改由 Cupertino 载体经映射表复用同一 BDC 美术。
+      expect(miuixVectorForGlyph(CupertinoIcons.at)?.name, 'bdc.at');
+      expect(
+        miuixVectorForGlyph(CupertinoIcons.bell_circle)?.name,
+        'bdc.sysNotice',
+      );
     });
 
     test('稍后再看载体字形仍命中 BDC（完整图形由生成器保证）', () {

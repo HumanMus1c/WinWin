@@ -1,9 +1,8 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/common/widgets/level_badge.dart';
 import 'package:winwin/common/widgets/medal_widget.dart';
-import 'package:winwin/theme/app_glyphs.g.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
@@ -108,7 +107,7 @@ void main() {
       );
 
       expect(find.text('bilibili 知名UP主'), findsOneWidget);
-      expect(find.byIcon(AppGlyphs.bolt), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.bolt), findsOneWidget);
     });
   });
 
