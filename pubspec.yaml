@@ -48,11 +48,11 @@ dependencies:
   catcher_2: ^2.1.9
   # 字体导入：桌面端文件选择器，用于导入 .ttf/.otf 自定义字体文件。
   file_picker: ^12.2.0
-  # 官方 Material 独立包：SDK 内的 package:flutter/material.dart 已冻结，
-  # 新特性（M3 Expressive 等）只在此包迭代。全库导入已迁至 material_ui。
-  # 1.5.0 = 迁移后评估升级：1.1.0→1.5.0 无破坏性变更；Expressive 为显式
-  # opt-in（默认仍 StyleVariant.material3）；兼容桥接仍存留（见 main.dart）。
-  material_ui: 1.5.0
+  # B7 封板（2026-10-18）：官方 Material 独立包 `material_ui` 已退役——
+  # 应用侧消费面全部迁至 Miuix / 项目自建替身，lib 内零直接导入（门槛测试锁定）。
+  # SDK 内置的 `package:flutter/material.dart` 仍在（flutter_miuix 内部 SDK
+  # TextField 依赖 SDK 类型 MaterialLocalizations，由 lib/core/shell/miuix_compat.dart
+  # 桥接），但项目不再依赖任何第三方 Material 包。
   # 动态页多列瀑布流排版：解决异质卡片在标准网格中的行间留白浪费问题。
   flutter_staggered_grid_view: ^0.7.0
   # Miuix 风格运行时实现：ChuxinNeko/flutter_miuix（miuix 的 Flutter 1:1 移植，
