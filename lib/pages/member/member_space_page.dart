@@ -2,12 +2,13 @@ import 'dart:async';
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/gestures.dart' show GestureBinding, PointerScrollEvent, PointerSignalEvent;
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'package:winwin/common/widgets/app_chip.dart';
+import 'package:winwin/common/widgets/app_sliver_header.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/theme/app_colors.dart';
@@ -952,10 +953,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
         controller: _scrollController,
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
-            // 顶栏容器（**与封面容器解耦**）：只承载返回/分享/更多，不再挂头图
-            // `flexibleSpace`。常态**不画任何底**（透明），仅当分类标签条吸附并入
-            // 本栏时（见 `_tabBandMerged`）才亮起通栏毛玻璃带，与之合成一条顶栏。
-            // 顶栏 sliver：只承载**封面**。头图铺满 [0, _coverHeight)，且从屏幕
+            // 封面 sliver：**只承载头图**，替代原 Material `SliverAppBar` +
+            // `FlexibleSpaceBar` 的组合（折叠语义由自建 `AppSliverHeader` 1:1 复刻，
+            // 零 material 依赖）。返回/分享/更多与按需毛玻璃带见 `_buildTopBarOverlay`。
+            // 头图铺满 [0, _coverHeight)，且从屏幕
             // **最顶端**开始（不再被顶栏下推 56px，故不会被"裁掉一条"）。
             // 返回/分享/更多按钮与"按需毛玻璃带"已抽到页面级覆盖层
             // （`_buildTopBarOverlay`），与本 sliver 解耦。
@@ -966,18 +967,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 final maxCover = _expandedCoverHeight(context);
                 final liveCover = _coverHeight +
                     _expandCtrl.value * (maxCover - _coverHeight);
-                return SliverAppBar(
+                return AppSliverHeader(
                   pinned: true,
                   expandedHeight: liveCover,
                   toolbarHeight: _topBarHeight,
-                  elevation: 0,
-                  scrolledUnderElevation: 0,
-                  backgroundColor: AppColors.transparent,
-                  surfaceTintColor: AppColors.transparent,
-                  automaticallyImplyLeading: false,
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: _buildExpandableHeader(context, card, images),
-                  ),
+                  background: _buildExpandableHeader(context, card, images),
                 );
               },
             ),
