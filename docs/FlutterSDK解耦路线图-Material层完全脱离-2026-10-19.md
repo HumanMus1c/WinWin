@@ -4,7 +4,8 @@
 - 起点 HEAD：`7f53cc1`（Phase 5 下载系统批次2 复盘回填后）
 - 快照：`refs/snapshots/latest` = `7f53cc19b6436b44f2ed67a18623b5dff59e0506`（工作树干净，快照=HEAD）
 - 文档类型：**路线图 / 分析文档（不含任何代码改动）**，待 CVO 确认口径与路径后按 §7 分期实施
-- **进展（2026-10-19）**：§8 **Q2/Q5 已由 CVO 拍板**（82 字形走"Miuix 矢量为主、Cupertino 为辅"，现在实施）；**Phase A 已落地**——见 `docs/PhaseA-图标载体退役复盘-2026-10-19.md`。Q1（口径）/Q3（fork flutter_miuix）/Q4（B7 门槛改语义）仍待确认。
+- **进展（2026-10-19）**：§8 **五项开放问题已全部拍板**——Q1 口径**确认**（目标= §0 三条不变量，非字面删 SDK）；Q2/Q5 采"Miuix 矢量为主、Cupertino 为辅"并即时实施；**Q3 = 不 fork flutter_miuix**（放弃 §3.2 选项 3，改走 §6 (a) 路径）；**Q4 = 升级 B7 门槛为"应用侧零 Material 消费"**（已落地，见 `test/theme/material_ui_absence_test.dart` 不变量 ④⑤）。
+- **已落地批次**：**Phase A**（82 字形退役）见 `docs/PhaseA-图标载体退役复盘-2026-10-19.md`；**Q4 门槛升级**见 `docs/B7门槛升级-应用侧零Material消费-2026-10-19.md`。Phase B 的 fork PoC **已随 Q3 取消**。
 - 关联：`docs/B7封板-material_ui库级退役收官-2026-10-18.md`、`docs/MD3库级退役进度追踪-2026-10-07.md`、`test/theme/material_ui_absence_test.dart`
 - 结论来源：本仓库源码/SDK/依赖缓存静态取证 + 线上官方议题与 pub.dev（见 §9）
 
@@ -21,6 +22,7 @@
 - （c）**不再依赖 SDK 传递引入的 `material_color_utilities`**。
 
 > 本文件全程按此口径分析；"这是否就是你要的靶标"列为待确认项 **§8-Q1**。
+> **Q1 已于 2026-10-19 由 CVO 确认**：靶标即上述三条不变量（"脱离 Material 子系统"），非字面"删除 Flutter SDK"。
 
 ---
 
@@ -230,6 +232,7 @@
   - **(a)** 改 B7 门槛语义为"**应用侧零 Material 消费**"（`lib` 除 compat 桥外零 material 导入），允许依赖树出现过渡期的 `material_ui`；
   - **(b)** **锁定 flutter_miuix 版本 / fork** 掉其 material 依赖（= §3.2 选项 3）。
 - **建议**：把 B7 门槛**升级语义**为"应用侧零 Material 消费"，而非"全仓零 `material_ui` 字样"。理由：门槛若锁死"全仓零 material_ui"，将与官方前进方向正面冲突，且会锁住 flutter_miuix 升级能力。
+- **✅ 决策（2026-10-19）**：CVO 拍板走 **(a)**——B7 门槛升级为"应用侧零 Material 消费"，**允许**依赖树在过渡期出现 `material_ui`；同时 **Q3 = 不 fork flutter_miuix**，即**否掉 (b)/§3.2 选项 3**，以保留 flutter_miuix 升级能力、避免维护分叉。门槛实现在 `test/theme/material_ui_absence_test.dart` 不变量 ④（lib SDK material 导入白名单 `lib/core/shell/miuix_compat.dart`）+ ⑤（pubspec 不回挂 `uses-material-design`）。
 
 ---
 
@@ -238,21 +241,21 @@
 | 阶段 | 内容 | 风险 | 验收 |
 | --- | --- | --- | --- |
 | **A**（低，本主题第一批） | 82 字形 → Miuix 矢量/Cupertino；停 `uses-material-design` | 低 | `lib` 零 `AppGlyphs.`；产物零 MaterialIcons 渲染；`dart analyze` 0 错 0 警；debug+release 双编译；门槛测试绿 |
-| **B**（中） | 桥面治理：`miuix_compat.dart` 依赖面文档化 + 探针测试；**PoC fork flutter_miuix** 评估选项 3 | 中 | PoC 明确 69 文件 shim 可行性与工作量 |
-| **C**（前瞻） | 随官方 **2026-11 弃用窗口**决策 §6 的 (a)/(b)；同步 `flutter_localizations` → `material_ui`/`cupertino_ui` delegates | 中 | 门槛语义定稿；依赖树可编译 |
+| **B**（中 · 已收窄） | 桥面治理：`miuix_compat.dart` 依赖面文档化 + 探针测试。~~PoC fork flutter_miuix~~**已随 Q3 取消** | 中 | 桥面依赖面文档 + 探针测试绿；**不再有 fork PoC 交付物** |
+| **C**（前瞻 · 已收窄） | ~~决策 §6 的 (a)/(b)~~（**已定：(a) + 不 fork**）；仅保留同步 `flutter_localizations` → `material_ui`/`cupertino_ui` delegates（随官方 2026-11 弃用窗口） | 中 | 门槛语义已定稿（Q4 已落地）；依赖树可编译 |
 | **D**（探索，低优先） | 配色引擎自研化以移除 MCU | 低 | 仅在 A/B/C 完成后评估 |
 
 > 注：本主题为**文档-only**，按 dev-workflow-spec §2 **豁免双编译**；但 §7-A 若落地为代码批，则按 §2 正常走双编译 + §1 快照 + §3 提交推送 + §4 复盘。
 
 ---
 
-## 8. 待 CVO 确认的开放问题
+## 8. 开放问题【已全部拍板 · 2026-10-19】
 
-- **Q1 口径确认**：目标是否为"脱离 Material 子系统"（§0 的三条不变量），而非字面"删除 Flutter SDK"？
-- **Q2 82 字形首选路径**：B（Miuix 矢量）为主 / A（Cupertino）为主 / 混合？（本文**建议 B 主、A 辅**）
-- **Q3 是否接受 fork flutter_miuix**（§3.2 选项 3）作为根治手段立项？
-- **Q4 B7 门槛是否改语义**为"应用侧零 Material 消费"（§6）？
-- **Q5 是否现在就动 Phase A**，还是遵守"方案定稿前不改动项目任何文件"（`user-preferences.md` 项目冻结约定）？
+- **Q1 口径确认** → **✅ 确认**：目标为"脱离 Material 子系统"（§0 的三条不变量），**非**字面"删除 Flutter SDK"。
+- **Q2 82 字形首选路径** → **✅ 采"B 为主、A 为辅"**（Miuix 矢量为主、Cupertino 为辅），**Phase A 已落地**。
+- **Q3 是否 fork flutter_miuix**（§3.2 选项 3）→ **✅ 不 fork**（否掉根治分叉，走 §6 (a) 路径）。
+- **Q4 B7 门槛是否改语义**为"应用侧零 Material 消费"（§6）→ **✅ 升级并已落地**：`test/theme/material_ui_absence_test.dart` 增不变量 ④（lib SDK material 导入白名单桥）+ ⑤（pubspec 不回挂 `uses-material-design`）。
+- **Q5 是否现在就动 Phase A** → **✅ 即时实施**，Phase A 已完成。
 
 ---
 
