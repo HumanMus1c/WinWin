@@ -246,7 +246,12 @@ class AppListItem extends StatelessWidget {
       title: title,
       summary: subtitle,
       startAction: IconTheme(
-        data: IconThemeData(color: tint, size: 22),
+        data: IconThemeData(
+          color: tint,
+          // 图标对齐行标题字号：MiuixBasicComponent 标题取 headline1；
+          // 经 TextScaler 换算，与行标签实际渲染高度一致。
+          size: appRowIconSize(context),
+        ),
         child: icon,
       ),
       endActions: trailing == null ? null : [trailing!],

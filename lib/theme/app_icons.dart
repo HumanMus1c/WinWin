@@ -579,6 +579,21 @@ abstract final class AppIcons {
   static IconData badgeBolt() => CupertinoIcons.bolt;
 }
 
+/// 「图标 + 标签」组合行里的图标尺寸：与行标签文本**实际渲染**字号同口径。
+///
+/// 行标签由 `Text` 渲染，字号在绘制时会被 [TextScaler] 放大（系统「文本大小」
+/// 设置，本机 140%）；图标尺寸若只取**名义**字号、不过同一缩放，就会被标签
+/// 明显比下去（实机反馈：视频卡片「更多操作」菜单的图标小于选项文字）。
+///
+/// [labelFontSize] 传该行标签的**名义**字号，返回其**实际**渲染字号；缺省取
+/// Miuix 行式选项的标准标题字号（[MiuixBasicComponent] 标题 = headline1），
+/// 即「图标 + 标题」行不必各自复述口径。
+double appRowIconSize(BuildContext context, [double? labelFontSize]) {
+  final nominal =
+      labelFontSize ?? MiuixTheme.of(context).textStyles.headline1.fontSize ?? 17;
+  return MediaQuery.textScalerOf(context).scale(nominal);
+}
+
 /// 自适应图标部件：Miuix 风格下将具备 Miuix 矢量对应的字形升级为
 /// flutter_miuix 原生矢量图标（[MiuixIcon] + [MiuixVectorIcon]）；
 /// 其余情况（M3 风格 / 无对应字形 / 带 [shadows] 的媒体叠加场景）回退 [Icon]。

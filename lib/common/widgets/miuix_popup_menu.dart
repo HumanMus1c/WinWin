@@ -307,7 +307,13 @@ class _PopupOverlay extends StatelessWidget {
                 : IconTheme(
                     data: IconThemeData(
                       color: contentColor,
-                      size: rowTextStyle.fontSize ?? 14,
+                      // 图标随行文本**实际渲染**字号（名义字号过 TextScaler）。
+                      size: appRowIconSize(
+                        context,
+                        rowTextStyle.fontSize ??
+                            DefaultTextStyle.of(context).style.fontSize ??
+                            14,
+                      ),
                     ),
                     child: item.icon!,
                   ),

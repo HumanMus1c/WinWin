@@ -120,8 +120,11 @@ class _MiuixContextMenuOverlayState extends State<_MiuixContextMenuOverlay>
         (tokens.text.bodyMedium ?? const TextStyle()).copyWith(
       decoration: TextDecoration.none,
     );
-    // 选项图标尺寸 = 行文本尺寸（不再硬编码 16 造成与 14px 文本失配）。
-    final iconSize = rowTextStyle.fontSize ?? 14;
+    // 选项图标尺寸 = 行文本**实际渲染**字号（名义字号过 TextScaler；只取名义
+    // 字号会被文本缩放放大后的标签比下去）。
+    final rowLabelSize =
+        rowTextStyle.fontSize ?? DefaultTextStyle.of(context).style.fontSize ?? 14;
+    final iconSize = appRowIconSize(context, rowLabelSize);
 
     final media = MediaQuery.of(context);
     const gap = 4.0;
@@ -380,8 +383,10 @@ class _MiuixSelectionMenuState extends State<_MiuixSelectionMenu>
         (tokens.text.bodyMedium ?? const TextStyle()).copyWith(
       decoration: TextDecoration.none,
     );
-    // 选项图标尺寸 = 行文本尺寸（与右键菜单同口径）。
-    final iconSize = rowTextStyle.fontSize ?? 14;
+    // 选项图标尺寸 = 行文本**实际渲染**字号（与右键菜单同口径）。
+    final rowLabelSize =
+        rowTextStyle.fontSize ?? DefaultTextStyle.of(context).style.fontSize ?? 14;
+    final iconSize = appRowIconSize(context, rowLabelSize);
 
     final curved = CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic);
     final panel = FadeTransition(

@@ -5,6 +5,7 @@ import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/theme/app_icons.dart';
 
 /// 开关设置项：自动从 [GStorage.setting] 读取初始值，切换时写回。
 ///
@@ -98,7 +99,14 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
                   IconTheme(
                     data: IconThemeData(
                       color: tokens.colors.primary,
-                      size: 22,
+                      // 与行标题同口径：本分支标题用 bodyLarge（未带字号）⇒ 取氛围默认。
+                      size: appRowIconSize(
+                        context,
+                        widget.titleStyle?.fontSize ??
+                            tokens.text.bodyLarge?.fontSize ??
+                            DefaultTextStyle.of(context).style.fontSize ??
+                            14,
+                      ),
                     ),
                     child: widget.leading!,
                   ),
@@ -185,7 +193,8 @@ class _SetSwitchItemState extends State<SetSwitchItem> {
               : IconTheme(
                   data: IconThemeData(
                     color: tokens.colors.primary,
-                    size: 22,
+                    // 与行标题同口径：MiuixSwitchPreference 标题即 headline1。
+                    size: appRowIconSize(context),
                   ),
                   child: widget.leading!,
                 ),

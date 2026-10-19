@@ -2,6 +2,8 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:winwin/theme/app_icons.dart';
+
 /// 普通设置项：标题 + 副标题 + leading + trailing + onTap。
 ///
 /// 移植自 PiliPlus 的 `NormalItem`，去除 GetX 依赖。
@@ -61,7 +63,8 @@ class _NormalItemState extends State<NormalItem> {
               : IconTheme(
                   data: IconThemeData(
                     color: tokens.colors.primary,
-                    size: 22,
+                    // 与行标题同口径：MiuixBasicComponent 标题字号（headline1）。
+                    size: appRowIconSize(context),
                   ),
                   child: widget.leading!,
                 ),

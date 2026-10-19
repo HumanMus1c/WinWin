@@ -541,7 +541,12 @@ class _SearchPageState extends State<SearchPage> {
       itemBuilder: (context, index) {
         final item = _suggests[index];
         return MiuixBasicComponent(
-          startAction: AppIcon(AppIcons.search(), size: 18),
+          // 图标对齐行标题字号（MiuixBasicComponent 标题取 headline1），
+          // 经 TextScaler 换算，与标题实际渲染高度一致。
+          startAction: AppIcon(
+            AppIcons.search(),
+            size: appRowIconSize(context),
+          ),
           title: item.name ?? '',
           onClick: () => _submitSearch(item.term ?? item.name ?? ''),
         );

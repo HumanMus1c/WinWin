@@ -355,7 +355,12 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   ),
                 ),
                 MiuixBasicComponent(
-                  startAction: AppIcon(AppIcons.download()),
+                  // 图标对齐行标题字号（MiuixBasicComponent 标题取 headline1），
+                  // 经 TextScaler 换算，与标题实际渲染高度一致。
+                  startAction: AppIcon(
+                    AppIcons.download(),
+                    size: appRowIconSize(ctx),
+                  ),
                   title: '保存图片到本地',
                   onClick: () {
                     Navigator.of(ctx).pop();
@@ -363,7 +368,10 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   },
                 ),
                 MiuixBasicComponent(
-                  startAction: AppIcon(AppIcons.copy()),
+                  startAction: AppIcon(
+                    AppIcons.copy(),
+                    size: appRowIconSize(ctx),
+                  ),
                   title: '复制图片直链',
                   onClick: () {
                     Navigator.of(ctx).pop();
@@ -376,7 +384,10 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
                   },
                 ),
                 MiuixBasicComponent(
-                  startAction: AppIcon(AppIcons.clear()),
+                  startAction: AppIcon(
+                    AppIcons.clear(),
+                    size: appRowIconSize(ctx),
+                  ),
                   title: '关闭预览',
                   onClick: () {
                     Navigator.of(ctx).pop();

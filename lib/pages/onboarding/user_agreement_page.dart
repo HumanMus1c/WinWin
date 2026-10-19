@@ -209,7 +209,17 @@ class _ClauseTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             IconTheme(
-              data: IconThemeData(size: 20, color: cs.primary),
+              data: IconThemeData(
+                color: cs.primary,
+                // 图标对齐行标题字号：titleSmall 无字号时取氛围默认（14），
+                // 经 TextScaler 换算后与标题实际渲染高度一致。
+                size: appRowIconSize(
+                  context,
+                  tokens.text.titleSmall?.fontSize ??
+                      DefaultTextStyle.of(context).style.fontSize ??
+                      14,
+                ),
+              ),
               child: clause.icon,
             ),
             const SizedBox(width: 12),
