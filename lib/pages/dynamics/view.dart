@@ -81,14 +81,19 @@ class _DynamicsPageState extends State<DynamicsPage> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: '动态',
-      // 布局顺序对齐其它根页面（首页/历史/消息/我的）：顶部安全行（标题「动态」）
-      // 在最上，分类 Tab 栏（全部/视频/追番/专栏）紧随其下，再是内容。
-      // ⚠️ 不可把 Tab 栏放进 [AppScaffold.topBar] 槽——该槽由 MiuixScaffold 渲染在
-      // 顶部安全行**之上**，会造成「Tab 栏在上、标题在下」的顺序与其它根页面相反
-      // （2026-10-19 实机反馈）。故改为随 body 自上而下排列（AppTabView）。
+      // ① 顺序：顶部安全行（标题「动态」）在最上，分类 Tab 栏（全部/视频/追番/专栏）
+      //    紧随其下，再是内容——对齐其它根页面。⚠️ 不可把 Tab 栏放进
+      //    [AppScaffold.topBar] 槽：该槽由 MiuixScaffold 渲染在顶部安全行**之上**，
+      //    会造成「Tab 栏在上、标题在下」的顺序颠倒（2026-10-19 实机反馈）。
+      // ② 材质：[AppTabBar] 默认自带毛玻璃（MiuixFrostedSurface），但非浮动态下
+      //    栏在内容**之上**、背后无内容 → 模糊采样到纯色底而不可见。故改用 AppTabView
+      //    的**浮动态**让 Tab 栏浮于滚动内容之上、内容从其后方穿过（对齐首页「搜索框
+      //    + 分类器合并栏」的可见模糊）；内容顶部避让见 _DynTabPage 的
+      //    [AppTabView.floatingTopReserve]。
       body: AppTabView(
         controller: _tabController,
         tabs: _tabs.map((t) => t.label).toList(),
+        floating: true,
         children: _tabs
             .map((t) => _DynTabPage(type: t.type))
             .toList(),
@@ -272,7 +277,7 @@ class _DynTabPageState extends State<_DynTabPage>
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(
                         Style.safeSpace,
-                        Style.sm,
+                        AppTabView.floatingTopReserve,
                         Style.safeSpace,
                         Style.xxl * 2,
                       ),
@@ -490,7 +495,7 @@ class _DynTabPageState extends State<_DynTabPage>
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(
             Style.safeSpace,
-            Style.sm,
+            AppTabView.floatingTopReserve,
             Style.safeSpace,
             Style.xxl * 2,
           ),
@@ -512,14 +517,21 @@ class _DynTabPageState extends State<_DynTabPage>
     );
   }
 
-  Widget _buildError(String? msg) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(msg ?? '加载失败'),
-            const SizedBox(height: Style.md),
-            MiuixButton(onPressed: () => _load(refresh: true), child: const Text('重试')),
-          ],
+  Widget _buildError(String? msg) => Padding(
+        // 浮动态 Tab 栏叠在内容之上，错误态虽居中亦预留顶部，避免与栏重叠。
+        padding: const EdgeInsets.only(top: AppTabView.floatingTopReserve),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(msg ?? '加载失败'),
+              const SizedBox(height: Style.md),
+              MiuixButton(
+                onPressed: () => _load(refresh: true),
+                child: const Text('重试'),
+              ),
+            ],
+          ),
         ),
       );
 

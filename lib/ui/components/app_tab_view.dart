@@ -7,6 +7,7 @@ import 'package:flutter_miuix/miuix.dart'
 import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/theme/app_colors.dart';
+import 'package:winwin/theme/style.dart';
 
 /// WinWin 通用 Tab 体系（Miuix 轨道），取代 Material 的
 /// [TabBar] + [TabBarView] + [TabController] 三元组。
@@ -466,8 +467,20 @@ class _AppTabBodyState extends State<AppTabBody> {
   }
 }
 
-/// [AppTabBar] + [AppTabBody] 的纵向组合，适用于头体直接上下并列的场景
-/// （如侧栏、对话框内）。头体落在不同槽位时改用两个部件分别落位。
+/// [AppTabBar] + [AppTabBody] 的组合：默认纵向并列，[floating] 为真时
+/// 标签栏**浮于内容之上**（内容从栏后穿过）。
+///
+/// 两种落位：
+/// - **非浮动态（默认）**：`Column[栏, 内容]`，适用于头体直接上下并列的场景
+///   （如侧栏、对话框内）。此时栏在内容**之上**、背后无内容，[AppTabBar] 的
+///   毛玻璃只能采样到纯色页底 → **模糊不可见**。
+/// - **浮动态（[floating] = true）**：`Stack[内容(铺满), 标签栏(浮于顶部)]`，
+///   内容可滚动到栏后方 → 毛玻璃（`BackdropFilter`）采样到滚动内容而**可见**。
+///   根页面 Tab 栏要求可见模糊（对齐首页「搜索框 + 分类器合并栏」）时用此档；
+///   调用方须在**滚动区**顶部预留 [floatingTopReserve] 避让（见该常量说明）。
+///
+/// 头体需落在完全不同的槽位（`AppScaffold.topBar` + `body`、
+/// `SliverPersistentHeader` + `body`）时改用 [AppTabBar] / [AppTabBody] 分别落位。
 class AppTabView extends StatelessWidget {
   const AppTabView({
     super.key,
@@ -476,6 +489,7 @@ class AppTabView extends StatelessWidget {
     required this.children,
     this.barHeight,
     this.colors,
+    this.floating = false,
   });
 
   final AppTabController controller;
@@ -484,18 +498,55 @@ class AppTabView extends StatelessWidget {
   final double? barHeight;
   final MiuixTabRowColors? colors;
 
+  /// 浮动态：标签栏脱离纵向流、浮于内容之上，使内容从栏后穿过而令毛玻璃可见。
+  final bool floating;
+
+  /// 浮动态标签栏外缩（与首页合并栏同口径：水平 [Style.lg]、垂直 [Style.sm]）。
+  static const EdgeInsets floatingInset = EdgeInsets.symmetric(
+    horizontal: Style.lg,
+    vertical: Style.sm,
+  );
+
+  /// 浮动态下**滚动内容顶部**需预留的高度 = 外缩上下留白（[Style.sm] × 2）
+  /// + 标签行高（[AppTabBar.defaultHeight]）+ 下沿间隙（[Style.sm]）。
+  ///
+  /// 必须施加在**可滚动区内部**（`SliverPadding` / `ListView.padding` / `CustomScrollView`
+  /// 的 sliver 内边距）：设在滚动区**外部**会把内容压到栏下方，内容便无法滚到栏后，
+  /// 毛玻璃又不可见。
+  static const double floatingTopReserve =
+      Style.sm * 2 + AppTabBar.defaultHeight + Style.sm;
+
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final bar = AppTabBar(
+      controller: controller,
+      tabs: tabs,
+      height: barHeight,
+      colors: colors,
+    );
+    final body = AppTabBody(controller: controller, children: children);
+
+    if (!floating) {
+      return Column(
+        children: [
+          bar,
+          Expanded(child: body),
+        ],
+      );
+    }
+
+    // 浮动态：内容铺满整区并滚动，标签栏叠在其上 → 内容从栏后穿过时毛玻璃生效。
+    // 栏外缩区域（Padding）非不透明，指针事件仍可穿透到后方内容。
+    return Stack(
       children: [
-        AppTabBar(
-          controller: controller,
-          tabs: tabs,
-          height: barHeight,
-          colors: colors,
-        ),
-        Expanded(
-          child: AppTabBody(controller: controller, children: children),
+        Positioned.fill(child: body),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: RepaintBoundary(
+            child: Padding(padding: floatingInset, child: bar),
+          ),
         ),
       ],
     );
