@@ -2,7 +2,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider;
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
-import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
+import 'package:winwin/common/widgets/app_top_bar_surface.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/bootstrap.dart';
@@ -190,39 +190,35 @@ class _WhisperPageState extends State<WhisperPage>
 
   /// 顶部浮动合并栏：互动入口行 + 分隔线 + 分类栏（合并为一个毛玻璃面板）。
   ///
-  /// 对齐首页合并栏口径：`outline: false`（不画可见描边）+ `shadow: false`
-  /// （去面板自身 4px 下投影）。本面板背后/下缘外侧是空白页底，而面板档投影
-  /// 画在 `BackdropFilter` **之前**、会被模糊核从下缘向内采样 → 在分类栏这一行
-  /// 糊出一条发白的浸润带（CVO 实机反馈「分类栏下缘发散白色阴影、筛选项看不
-  /// 清」）。末端再留 [_filterBarBottomGap] 底距，把 chips 抬出该 ~3σ 带。
+  /// 材质与首页合并栏**同源**——统一走 [AppTopBarSurface]（`cs.surface` α0.72 +
+  /// 模糊 20 + 外壳圆角 `chrome.containerRadius` + 外距 `lg/sm`）。此前用
+  /// `MiuixFrostedSurface`（硬编码底 `0xFF262626`/`0xFFEAEAEA` × 0.85 + 模糊 16
+  /// + 圆角 12），底色不随主题 `surface` 走，实机观感与本页/首页背景不和谐
+  /// （CVO 反馈「顶栏背景模糊的颜色亮度未对齐程序整体背景」）。改为同一材质后
+  /// 两页天然对齐。
+  ///
+  /// 面板背后/下缘外侧是空白页底；`AppTopBarSurface` 不含面板下投影，故此前
+  /// 「面板自身 4px 下投影被 σ 模糊从下缘向内采样 → 分类栏下发白浸润带」的成因
+  /// 已随材质替换消除（见 `miuix_frosted_surface.dart` 的 `shadow` 说明）。
   Widget _buildFrostedHeader(AppTokens tokens) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Style.lg,
-        vertical: Style.sm,
-      ),
-      child: MiuixFrostedSurface(
-        borderRadius: Style.radiusMd,
-        outline: false,
-        shadow: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: Style.md,
-                vertical: Style.md,
-              ),
-              child: _buildEntries(tokens),
+    return AppTopBarSurface(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Style.md,
+              vertical: Style.md,
             ),
-            const MiuixHorizontalDivider(),
-            SessionFilterBar(
-              selectedType: _sessionType,
-              onSelected: _selectSessionType,
-            ),
-            const SizedBox(height: _filterBarBottomGap),
-          ],
-        ),
+            child: _buildEntries(tokens),
+          ),
+          const MiuixHorizontalDivider(),
+          SessionFilterBar(
+            selectedType: _sessionType,
+            onSelected: _selectSessionType,
+          ),
+          const SizedBox(height: _filterBarBottomGap),
+        ],
       ),
     );
   }

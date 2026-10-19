@@ -1,7 +1,6 @@
-import 'dart:ui';
-
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 import 'package:flutter/widgets.dart';
+import 'package:winwin/common/widgets/app_top_bar_surface.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/models/common/home_tab.dart';
 import 'package:winwin/pages/follow/view.dart';
@@ -104,10 +103,9 @@ class _HomeHeader extends StatelessWidget {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final shapes = tokens.shapes;
-    final chrome = tokens.chrome;
     final tabs = HomeTabType.defaultOrder;
 
-    final barColor = cs.surface.withValues(alpha: 0.72);
+    final barColor = AppTopBarSurface.barColor(cs.surface);
     final barContrast = resolveAccessibleContainerColors(
       containerColor: barColor,
       contentColor: cs.onSurfaceVariant,
@@ -115,7 +113,6 @@ class _HomeHeader extends StatelessWidget {
       fallbackContentColors: [cs.onSurface, cs.onInverseSurface],
     );
     final barContentColor = barContrast.contentColor;
-    final barRadius = chrome.containerRadius;
 
     final searchBg = cs.surfaceContainer.withValues(alpha: 0.5);
     final searchFg = barContentColor;
@@ -235,28 +232,8 @@ class _HomeHeader extends StatelessWidget {
       ),
     );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Style.lg,
-        vertical: Style.sm,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(barRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: barColor,
-              borderRadius: BorderRadius.circular(barRadius),
-              border: Border.all(
-                color: cs.outline.withValues(alpha: 0),
-                width: 0.5,
-              ),
-            ),
-            child: headerContent,
-          ),
-        ),
-      ),
-    );
+    // 顶栏材质单一来源：与消息中心合并栏共用 [AppTopBarSurface]（同底色/模糊/
+    // 圆角/外距），避免两页各写一份而漂移。
+    return AppTopBarSurface(child: headerContent);
   }
 }
