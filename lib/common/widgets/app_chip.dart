@@ -19,7 +19,9 @@
 //   · 内边距：`padding` 默认 `EdgeInsets.all(8)`；`labelPadding` 默认
 //     `symmetric(horizontal: 8)`，随有效字号放大线性收敛到 4（≥2× 时恒定 4）。
 //   · 文案：`textTheme.labelLarge`（`Typography.englishLike2021`：size 14 /
-//     w500 / letterSpacing 0.1 / height 1.43）+ 状态色；单行、`TextOverflow.fade`。
+//     w500 / letterSpacing 0.1）+ 状态色；单行、`TextOverflow.fade`。
+//     行高**不**沿用 englishLike 的 1.43，交由字体自然行高（2026-10-19 修复，
+//     见 `_kLabelLargeM3` 与 `_kLabelHeightFactor`）。
 //   · 配色（M3 `flat` 变体）：未选 = 透明底 + 1px `outlineVariant` 描边；
 //     选中 = `secondaryContainer` 底 + 透明描边；label 选中 `onSecondaryContainer`、
 //     未选 `onSurfaceVariant`（ActionChip 恒 `onSurface`、无选中态）。
@@ -52,16 +54,31 @@ const Duration _kDrawerReverseDuration = Duration(milliseconds: 50);
 
 /// `Typography.englishLike2021` 的 `labelLarge`（项目未覆写 `textTheme`）。
 ///
-/// 项目 `AppTextStyles` 只携带墨色（B7-a 起为内联常量），字号/字重/行高
+/// 项目 `AppTextStyles` 只携带墨色（B7-a 起为内联常量），字号/字重、墨色
 /// 仍由 Material `textTheme` 提供 —— 本替身按"最终态"内联该基样式，
-/// 再叠加状态色，与移除 material 前的渲染逐字段一致。
+/// 再叠加状态色。
+///
+/// **行高口径（2026-10-19 修复）**：**不**内联 `englishLike2021` 的
+/// `height: 1.43`。`6169ce7` 起标签挂应用字体（`appFontFamilyOf` ⇒
+/// `MiuixTheme.textStyles.main`），其自然行高大于 1.43，硬编码行盒装不下
+/// 字形墨迹，标签底部被 `TextOverflow.fade` 逐行淡出（实机现象：每个分类
+/// 按钮内部文字下半截发虚/发白）。改由字体自然行高排版即消除；芯片几何
+/// 用的最小高度另见 [_kLabelHeightFactor]。
 const TextStyle _kLabelLargeM3 = TextStyle(
   fontSize: 14.0,
   fontWeight: FontWeight.w500,
   letterSpacing: 0.1,
-  height: 1.43,
   decoration: TextDecoration.none,
 );
+
+/// 标签行高系数（**仅用于芯片几何估算，不参与文字排版**）。
+///
+/// 取 Material `englishLike2021/labelLarge` 的 1.43：它只决定内容框的
+/// **最小**高度（[contentHeight] 与勾选槽位边长），文字实际行盒由字体自然
+/// 行高决定（[_kLabelLargeM3] 已**移除** `height`）。因内容框是
+/// `ConstrainedBox(minHeight:)` 语义，行高更大的字体只会把芯片撑高，
+/// 不会再把字形底部截掉/淡出。
+const double _kLabelHeightFactor = 1.43;
 
 /// 密度（对齐 Material `VisualDensity`）。
 ///
@@ -401,10 +418,14 @@ class _AppChipCoreState extends State<_AppChipCore>
             .merge(widget.labelStyle);
 
         final double fontSize = effectiveLabelStyle.fontSize ?? 14.0;
-        final double lineHeightFactor = effectiveLabelStyle.height ?? 1.43;
+        // 行盒高由字体自然行高决定（本样式不设 `height`）；此系数只用于
+        // 芯片几何的**最小**高度估算，见 [_kLabelHeightFactor]。
+        final double lineHeightFactor =
+            effectiveLabelStyle.height ?? _kLabelHeightFactor;
         final TextScaler scaler = MediaQuery.textScalerOf(context);
         final double scaledFontSize = scaler.scale(fontSize);
-        // 单行标签高度（显式 height ⇒ `字号 × 行高系数`，与 Text 实际排版一致）。
+        // 单行标签高度估算（字号 × 行高系数）：仅作内容框的**最小**高度；
+        // 文字实际行盒由字体自然行高决定。
         final double labelHeight = scaledFontSize * lineHeightFactor;
 
         // `labelPadding`：水平 8 → 4（≥2× 文本缩放时恒定 4），纵向 0。
