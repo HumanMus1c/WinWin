@@ -81,14 +81,14 @@ class _DynamicsPageState extends State<DynamicsPage> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: '动态',
-      // 仅保留分类标签条（无标题栏）。Tab 头/体改用 Miuix 轨道替身
-      // （AppTabBar + AppTabBody），头部直接作为 topBar 槽位。
-      topBar: AppTabBar(
+      // 布局顺序对齐其它根页面（首页/历史/消息/我的）：顶部安全行（标题「动态」）
+      // 在最上，分类 Tab 栏（全部/视频/追番/专栏）紧随其下，再是内容。
+      // ⚠️ 不可把 Tab 栏放进 [AppScaffold.topBar] 槽——该槽由 MiuixScaffold 渲染在
+      // 顶部安全行**之上**，会造成「Tab 栏在上、标题在下」的顺序与其它根页面相反
+      // （2026-10-19 实机反馈）。故改为随 body 自上而下排列（AppTabView）。
+      body: AppTabView(
         controller: _tabController,
         tabs: _tabs.map((t) => t.label).toList(),
-      ),
-      body: AppTabBody(
-        controller: _tabController,
         children: _tabs
             .map((t) => _DynTabPage(type: t.type))
             .toList(),
