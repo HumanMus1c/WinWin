@@ -36,6 +36,7 @@ class MiuixFrostedSurface extends StatelessWidget {
     this.borderRadius = 12,
     this.blurSigma = 16,
     this.outline = true,
+    this.shadow = true,
   });
 
   /// 表面内容（须自带尺寸：面板档由外部定宽高，全宽档建议 `SizedBox.expand`）。
@@ -52,6 +53,14 @@ class MiuixFrostedSurface extends StatelessWidget {
   /// 置 false 时只保留毛玻璃与投影，用于"容器细线多余"的场合（实机反馈：标签
   /// 条面板的上下细线观感不好）。
   final bool outline;
+
+  /// 是否画面板档的 4px 下投影（默认 true）。
+  ///
+  /// 置 false 用于**背后是空白页底**的合并栏：面板自身投影画在 `BackdropFilter`
+  /// **之前**、属其 backdrop，会被模糊核从下缘向内采样，在面板下缘糊出一条
+  /// 「背景决定」的浸润带（实机反馈：分类栏下缘发散阴影、筛选项发虚看不清）。
+  /// 首页合并栏（自绘毛玻璃、无投影）同口径。
+  final bool shadow;
 
   /// 边缘模糊渐变的"搬运"距离：把模糊层外扩的像素量。
   ///
@@ -94,16 +103,21 @@ class MiuixFrostedSurface extends StatelessWidget {
       );
     }
 
+    // 面板档的 4px 下投影 = 既定设计（浮层需要下投影）。注意：该投影画在
+    // `BackdropFilter` **之前**、属其 backdrop，会被模糊核从下缘向内采样，故
+    // 背后是空白页底的合并栏可传 `shadow: false` 关掉（见 [shadow] 说明）。
+    final shadows = <BoxShadow>[
+      BoxShadow(
+        color: AppColors.black.withValues(alpha: isDark ? 0.35 : 0.15),
+        blurRadius: 16,
+        offset: const Offset(0, 4),
+      ),
+    ];
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: radius,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withValues(alpha: isDark ? 0.35 : 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: shadow ? shadows : null,
       ),
       // 描边画在裁剪层之外（前景层）：不被 ClipRRect 抗锯齿吞掉，也不与
       // BackdropFilter 的模糊渐变混在一起 → 四条边一致、清晰。

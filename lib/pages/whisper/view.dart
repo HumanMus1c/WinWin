@@ -108,11 +108,31 @@ class _WhisperPageState extends State<WhisperPage>
   int get _likeUnread => MsgUnreadService().like;
   int get _sysUnread => MsgUnreadService().system;
 
-  /// 顶部浮动合并栏的内容高度预算（供会话列表做顶部避让）：
+  /// 顶部合并栏**首帧**的避让回退值（面板高度由内容自撑，首帧尚无法实测）：
   /// 面板外缩（[Style.sm]×2）+ 互动行（[Style.md]×2 + 头像 52 + 间距 6 + 标签行 ~20）
   /// + 分隔线 1 + 分类行（[SessionFilterBar] 高 44）+ 下沿间隙 [Style.sm]。
   static const double _headerReserve =
       Style.sm * 2 + Style.md * 2 + 52 + 6 + 20 + 1 + 44 + Style.sm;
+
+  /// 分类栏与面板下缘之间的底距：把 chips 抬出面板下缘那条「背景（空白页底 +
+  /// 面板自身投影）被 σ16 模糊从下缘向内浸入」的 ~3σ 带，避免筛选项发虚。
+  static const double _filterBarBottomGap = 24;
+
+  final GlobalKey _headerKey = GlobalKey();
+
+  /// 顶部合并栏的**实测**高度（＝会话列表的顶部避让量）。
+  ///
+  /// 面板高度由内容决定；用预算常量估高/估矮会让列表首行被面板遮住、或在面板
+  /// 下方露出空白页底，故首帧后按实际布局回填，作为 `topInset`。
+  double? _headerHeight;
+
+  void _measureHeader() {
+    final box = _headerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (!mounted || box == null || !box.hasSize) return;
+    final height = box.size.height;
+    if (height == _headerHeight) return;
+    setState(() => _headerHeight = height);
+  }
 
   void _selectSessionType(int type) {
     if (type == _sessionType) return;
@@ -123,9 +143,12 @@ class _WhisperPageState extends State<WhisperPage>
   Widget build(BuildContext context) {
     super.build(context);
     final tokens = AppThemeHost.of(context);
+    // 面板高度由内容自撑，用预算常量估高/估矮都会露馅：首帧后实测回填
+    // （回调内 setState 仅在高度变化时触发，收敛后不再重建）。
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureHeader());
     // 顶部「四类互动入口 + 分类栏」合并为一个**浮动毛玻璃面板**（对齐首页
     // 「搜索框 + 分类器合并栏」）；会话列表铺满并滚到面板后方穿过 → 毛玻璃可见，
-    // 列表顶部按 [_headerReserve] 避让（见 SessionListSection.topInset）。
+    // 列表顶部按面板实测高度避让（见 SessionListSection.topInset）。
     return AppScaffold(
       title: '消息',
       body: Stack(
@@ -144,7 +167,7 @@ class _WhisperPageState extends State<WhisperPage>
               child: SessionListSection(
                 key: _sessionListKey,
                 sessionType: _sessionType,
-                topInset: _headerReserve,
+                topInset: _headerHeight ?? _headerReserve,
                 onRefreshUnread: () => _clearDmUnread(),
               ),
             ),
@@ -153,7 +176,12 @@ class _WhisperPageState extends State<WhisperPage>
             top: 0,
             left: 0,
             right: 0,
-            child: RepaintBoundary(child: _buildFrostedHeader(tokens)),
+            child: RepaintBoundary(
+              child: SizedBox(
+                key: _headerKey,
+                child: _buildFrostedHeader(tokens),
+              ),
+            ),
           ),
         ],
       ),
@@ -162,8 +190,11 @@ class _WhisperPageState extends State<WhisperPage>
 
   /// 顶部浮动合并栏：互动入口行 + 分隔线 + 分类栏（合并为一个毛玻璃面板）。
   ///
-  /// 面板档（圆角 [Style.radiusMd]）自带下投影；对齐首页合并栏口径取
-  /// `outline: false`（不画可见描边，避免面板四周细线多余）。
+  /// 对齐首页合并栏口径：`outline: false`（不画可见描边）+ `shadow: false`
+  /// （去面板自身 4px 下投影）。本面板背后/下缘外侧是空白页底，而面板档投影
+  /// 画在 `BackdropFilter` **之前**、会被模糊核从下缘向内采样 → 在分类栏这一行
+  /// 糊出一条发白的浸润带（CVO 实机反馈「分类栏下缘发散白色阴影、筛选项看不
+  /// 清」）。末端再留 [_filterBarBottomGap] 底距，把 chips 抬出该 ~3σ 带。
   Widget _buildFrostedHeader(AppTokens tokens) {
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -173,6 +204,7 @@ class _WhisperPageState extends State<WhisperPage>
       child: MiuixFrostedSurface(
         borderRadius: Style.radiusMd,
         outline: false,
+        shadow: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -188,6 +220,7 @@ class _WhisperPageState extends State<WhisperPage>
               selectedType: _sessionType,
               onSelected: _selectSessionType,
             ),
+            const SizedBox(height: _filterBarBottomGap),
           ],
         ),
       ),
