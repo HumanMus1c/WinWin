@@ -4,8 +4,10 @@ import 'package:flutter/widgets.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/theme/style.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/hover_container.dart';
 
 /// 构建会话「更多选项」动作列表（三点菜单与右键菜单共用）。
 ///
@@ -107,12 +109,20 @@ class SessionMoreMenuButton extends StatelessWidget {
             ],
           ),
         ],
-        child: AppTooltip(
-          message: '更多选项',
-          child: AppIcon(
-            AppIcons.moreOptions(),
-            size: 20,
-            color: tokens.colors.outline,
+        child: Padding(
+          // 与左侧时间标记留出安全间距，避免长文本（"XX天前"）贴到按钮。
+          padding: const EdgeInsets.only(left: Style.sm),
+          child: HoverContainer(
+            borderRadius: Style.radiusSm,
+            padding: const EdgeInsets.all(Style.xs),
+            child: AppTooltip(
+              message: '更多选项',
+              child: AppIcon(
+                AppIcons.moreOptions(),
+                size: 20,
+                color: tokens.colors.outline,
+              ),
+            ),
           ),
         ),
       );

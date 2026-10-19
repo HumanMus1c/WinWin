@@ -17,7 +17,7 @@ import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/pages/whisper/session/message_preview_parser.dart';
 import 'package:winwin/pages/whisper/session/session_account_resolver.dart';
-import 'package:winwin/pages/whisper/session/session_settings_page.dart';
+import 'package:winwin/pages/whisper/session/session_settings_menu.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/id_utils.dart';
@@ -29,7 +29,6 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
-import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
 
 /// 聊天详情入口（阶段 D）。
@@ -42,14 +41,12 @@ void showChatDetailPage(
   BuildContext context, {
   required int talkerId,
   int sessionType = 1,
-  required String title,
 }) {
   Navigator.of(context).push(
     AppRoute<void>(
       builder: (_) => ChatDetailPage(
         talkerId: talkerId,
         sessionType: sessionType,
-        title: title,
       ),
     ),
   );
@@ -59,12 +56,10 @@ class ChatDetailPage extends StatefulWidget {
   const ChatDetailPage({
     super.key,
     required this.talkerId,
-    required this.title,
     this.sessionType = 1,
   });
 
   final int talkerId;
-  final String title;
   final int sessionType;
 
   @override
@@ -212,16 +207,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final tokens = AppThemeHost.of(context);
     return AppScaffold(
       actions: [
-        MiuixIconButton(
-
-          onPressed: () => showSessionSettingsPage(
-            context,
-            talkerId: widget.talkerId,
-            sessionType: widget.sessionType,
-            title: widget.title,
-          ),
-
-          child: AppTooltip(message: '会话设置', child: AppIcon(AppIcons.more())),
+        SessionSettingsMenuButton(
+          talkerId: widget.talkerId,
+          sessionType: widget.sessionType,
         ),
       ], 
       body: Column(
