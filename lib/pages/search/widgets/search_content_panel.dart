@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart'
     show
@@ -216,11 +217,17 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
     final maxHeight = widget.maxHeight;
     if (maxHeight == null) return content;
     // 限高 + 末尾省略：内容自然高度超过上限时，超出部分被裁掉（不溢出、
-    // 不硬塞滚动条）。ConstrainedBox 保证「内容本来就矮」时不撑高。
+    // 不硬塞滚动条）。
+    //
+    // `fit: OverflowBoxFit.deferToChild` **必须显式指定**：`OverflowBox` 默认
+    // `OverflowBoxFit.max` 会让自身 `sizedByParent` 并取 `constraints.biggest`
+    // ——即无论内容多矮都撑满上限，正是"扩充区下方多出好几行空白"的根因；
+    // deferToChild 才是「按内容高度、上限处截断」。
     return ClipRect(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: OverflowBox(
+          fit: OverflowBoxFit.deferToChild,
           alignment: Alignment.topCenter,
           minHeight: 0,
           maxHeight: double.infinity,

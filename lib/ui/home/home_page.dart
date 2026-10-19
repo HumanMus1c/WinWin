@@ -1,9 +1,9 @@
-import 'package:flutter/services.dart'
-    show LogicalKeyboardKey, TextInputAction;
+import 'package:flutter/services.dart' show TextInputAction;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixMotion;
 
 import 'package:winwin/common/widgets/app_top_bar_surface.dart';
+import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -58,8 +58,19 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
+  /// 搜索态在全局 Esc 路由器（[EscapeLayerRegistry]）里的注销函数。
+  VoidCallback? _escapeUnregister;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchFocusNode.addListener(_onSearchFocusChanged);
+  }
+
   @override
   void dispose() {
+    _escapeUnregister?.call();
+    _escapeUnregister = null;
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -74,15 +85,57 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     setState(() => _searchMode = true);
+    // 登记为「可被 Esc 关闭的二级浮层」：交全局 Esc 路由器（`AppEscapeScope`
+    // 第 2 层）统一处理。**不再自挂 CallbackShortcuts**——键事件只沿当前焦点
+    // 节点的祖先链派发，焦点一旦被导航栏/底栏等抢走，搜索态子树的快捷键就
+    // 不在链上，Esc 会失效（这正是本轮实测反馈的缺陷）。
+    _escapeUnregister =
+        EscapeLayerRegistry.instance.register(_closeSearchLayerIfOpen);
+    // `autofocus` 偶发因首帧竞态未落地；补一次，确保焦点真的在输入框里。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _searchMode && !_searchFocusNode.hasFocus) {
+        _searchFocusNode.requestFocus();
+      }
+    });
   }
 
-  /// 收起搜索态：先取消输入焦点（Esc / 点遮罩 / 返回统一走这里），
-  /// 清空输入并恢复分类标签。
+  /// 供全局 Esc 路由器回调：仅当本页处于最上层时才消费这次 Esc。
+  ///
+  /// 返回 false 时路由器会剔除该登记并继续向下层——因此「设置页 / 搜索结果页 /
+  /// 对话框压在最上层」时的 Esc 语义不会被躺在下面的搜索态抢走。
+  bool _closeSearchLayerIfOpen() {
+    if (!_searchMode) return false;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return false;
+    _exitSearch();
+    return true;
+  }
+
+  /// 收起搜索态：先落开关（避免 `unfocus` 回调重入），取消输入焦点、清空输入、
+  /// 注销 Esc 层，然后恢复分类标签。
   void _exitSearch() {
     if (!_searchMode) return;
+    _searchMode = false;
     _searchFocusNode.unfocus();
     _searchController.clear();
-    setState(() => _searchMode = false);
+    _escapeUnregister?.call();
+    _escapeUnregister = null;
+    if (mounted) setState(() {});
+  }
+
+  /// 焦点离开输入框 = 离开搜索上下文 → 收起（例：点了导航栏/底栏）。
+  ///
+  /// 两点护栏：
+  /// - Windows 上点击普通区域不会抢焦点（`EditableText` 的默认 `onTapOutside`
+  ///   在桌面端什么都不做），故这里只在**真有控件请求焦点**时触发，不会因点
+  ///   面板内的刷新/清空按钮而误收起；
+  /// - 窗口失活（切到别的应用）会让 `FocusManager` 挂起主焦点，属"暂时"而非
+  ///   "离开"，故应用不在 resumed 时直接忽略。
+  void _onSearchFocusChanged() {
+    if (!_searchMode || _searchFocusNode.hasFocus) return;
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
+    _exitSearch();
   }
 
   /// 提交搜索：保存到历史（口径不变：[SearchKeywordHistory]）→ 收起搜索态
@@ -177,26 +230,21 @@ class _HomePageState extends State<HomePage> {
               left: 0,
               right: 0,
               child: RepaintBoundary(
-                child: CallbackShortcuts(
-                  bindings: {
-                    // Esc：先取消输入焦点再收起（由 _exitSearch 统一处理）。
-                    const SingleActivator(LogicalKeyboardKey.escape):
-                        _exitSearch,
-                  },
-                  child: _HomeHeader(
-                    selectedCategory: _selectedCategory,
-                    onSelectCategory: (i) => setState(() {
-                      _selectedCategory = i;
-                      _visitedTabs.add(i);
-                    }),
-                    searchMode: _searchMode,
-                    searchController: _searchController,
-                    searchFocusNode: _searchFocusNode,
-                    onEnterSearch: _enterSearch,
-                    onSubmitSearch: _submitSearch,
-                    panelMaxHeight: maxPanelHeight,
-                    onOpenFullRank: _openFullRank,
-                  ),
+                // Esc 收起不再自挂 CallbackShortcuts（焦点被抢走即失效）：
+                // 搜索态已登记进全局 Esc 路由器，见 _enterSearch。
+                child: _HomeHeader(
+                  selectedCategory: _selectedCategory,
+                  onSelectCategory: (i) => setState(() {
+                    _selectedCategory = i;
+                    _visitedTabs.add(i);
+                  }),
+                  searchMode: _searchMode,
+                  searchController: _searchController,
+                  searchFocusNode: _searchFocusNode,
+                  onEnterSearch: _enterSearch,
+                  onSubmitSearch: _submitSearch,
+                  panelMaxHeight: maxPanelHeight,
+                  onOpenFullRank: _openFullRank,
                 ),
               ),
             ),
