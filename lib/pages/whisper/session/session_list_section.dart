@@ -601,6 +601,11 @@ class _SessionTile extends StatelessWidget {
                 isDnd: isDnd,
                 onToggleTop: () => onToggleTop(index),
                 onToggleDnd: () => onToggleDnd(index),
+                onReport: () => reportSession(
+                  context,
+                  talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
+                  sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
+                ),
                 onRemove: () => _confirmRemove(context),
               ),
             ],
@@ -621,6 +626,11 @@ class _SessionTile extends StatelessWidget {
         isDnd: _isDnd,
         onToggleTop: () => onToggleTop(index),
         onToggleDnd: () => onToggleDnd(index),
+        onReport: () => reportSession(
+          context,
+          talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
+          sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
+        ),
         onRemove: () => _confirmRemove(context),
       ),
       title: '更多选项',

@@ -17,7 +17,6 @@ import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/pages/whisper/session/message_preview_parser.dart';
 import 'package:winwin/pages/whisper/session/session_account_resolver.dart';
-import 'package:winwin/pages/whisper/session/session_settings_menu.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/id_utils.dart';
@@ -206,12 +205,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     return AppScaffold(
-      actions: [
-        SessionSettingsMenuButton(
-          talkerId: widget.talkerId,
-          sessionType: widget.sessionType,
-        ),
-      ], 
       body: Column(
         children: [
           Expanded(

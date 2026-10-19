@@ -457,6 +457,11 @@ class _SessionTile extends StatelessWidget {
               isDnd: isDnd,
               onToggleTop: onToggleTop,
               onToggleDnd: onToggleDnd,
+              onReport: () => reportSession(
+                context,
+                talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
+                sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
+              ),
               onRemove: () => _confirmRemove(context),
             ),
           ],
