@@ -19,7 +19,7 @@
 //   · 内边距：`padding` 默认 `EdgeInsets.all(8)`；`labelPadding` 默认
 //     `symmetric(horizontal: 8)`，随有效字号放大线性收敛到 4（≥2× 时恒定 4）。
 //   · 文案：`textTheme.labelLarge`（`Typography.englishLike2021`：size 14 /
-//     w500 / letterSpacing 0.1）+ 状态色；单行、`TextOverflow.fade`。
+//     w500 / letterSpacing 0.1）+ 状态色；单行、`TextOverflow.visible`（**不**淡出，见下）。
 //     行高**不**沿用 englishLike 的 1.43，交由字体自然行高（2026-10-19 修复，
 //     见 `_kLabelLargeM3` 与 `_kLabelHeightFactor`）。
 //   · 配色（M3 `flat` 变体）：未选 = 透明底 + 1px `outlineVariant` 描边；
@@ -505,7 +505,14 @@ class _AppChipCoreState extends State<_AppChipCore>
               ),
               maxLines: 1,
               softWrap: false,
-              overflow: TextOverflow.fade,
+              // `visible`：**不裁剪、不淡出**。Flutter `RenderParagraph.performLayout`
+              // 在「高度溢出（行盒被外部高度约束压小）+ `TextOverflow.fade`」时刻意
+              // 画一条**竖向** alpha 渐变（`Gradient.linear((0, fadeStart) → (0, size.height))`，
+              // 长度 = 半个「…」行高）把文字**底部逐行淡掉**——即实机所见「每个分类按钮
+              // 内部文字下半截发虚/发白」。本控件按内容定宽、单行排版，不存在需要淡出的
+              // 真实溢出，故取 `visible`（源码分支：`_needsClipping = false` +
+              // `_overflowShader = null`，彻底不绘制该渐变、也不做裁剪）。
+              overflow: TextOverflow.visible,
               textAlign: TextAlign.start,
               child: widget.label,
             ),
