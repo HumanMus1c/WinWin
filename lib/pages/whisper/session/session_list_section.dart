@@ -1,5 +1,5 @@
 import 'package:flutter_miuix/miuix.dart'
-    show MiuixBasicComponent, MiuixHorizontalDivider, MiuixTextButton;
+    show MiuixBasicComponent, MiuixTextButton;
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/app_chip.dart';
@@ -27,13 +27,27 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
-/// 可内嵌的会话列表区（用于消息页直接展示）。
+/// 会话列表区（消息页内嵌）。
 ///
-/// 筛选 chips 固定在顶部，仅会话列表内部滚动。
+/// **仅承载列表**：顶部「分类栏」（筛选 chips）已上移到消息页的**浮动毛玻璃合并栏**
+/// （[SessionFilterBar]），筛选类型经 [sessionType] 由宿主页下传；本部件不再持有
+/// 筛选状态，[sessionType] 变化时自动重载。列表顶部按 [topInset] 避让合并栏。
 class SessionListSection extends StatefulWidget {
-  const SessionListSection({super.key, this.onRefreshUnread});
+  const SessionListSection({
+    super.key,
+    this.onRefreshUnread,
+    this.sessionType = 4,
+    this.topInset = 0,
+  });
 
   final VoidCallback? onRefreshUnread;
+
+  /// 当前筛选类型（服务端 `session_type`；[kSpecialSessionFilterType] = 特别关注）。
+  final int sessionType;
+
+  /// 滚动内容顶部避让高度（宿主页浮动合并栏的高度），使会话行不被合并栏遮住，
+  /// 同时内容可从合并栏**后方穿过** → 合并栏毛玻璃可见。
+  final double topInset;
 
   @override
   State<SessionListSection> createState() => SessionListSectionState();
@@ -45,14 +59,14 @@ class SessionListSectionState extends State<SessionListSection> {
   /// 特别关注筛选模式下维护的完整合并列表（仅显示其中特别关注会话）。
   final List<Map<String, dynamic>> _mergedAll = [];
   Set<int>? _specialMids;
-  int _selectedType = 4;
   int _endTs = 0;
   bool _hasMore = true;
   bool _loading = true;
   String? _error;
   bool _isLoadingMore = false;
 
-  bool get _isSpecialMode => _selectedType == _specialCategoryType;
+  bool get _isSpecialMode =>
+      widget.sessionType == kSpecialSessionFilterType;
 
   /// 演示模式：本地追加的会话行数（滚动每次仅 +1 行）。
   int _demoExtra = 0;
@@ -69,6 +83,15 @@ class SessionListSectionState extends State<SessionListSection> {
     Pref.demoModeNotifier.addListener(_onDemoChanged);
     _scrollCtrl.addListener(_onDemoScroll);
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant SessionListSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 顶部「分类栏」切换筛选类型（宿主页下传）→ 重载该类型会话。
+    if (oldWidget.sessionType != widget.sessionType) {
+      _load(refresh: true);
+    }
   }
 
   @override
@@ -168,7 +191,7 @@ class SessionListSectionState extends State<SessionListSection> {
       }
     }
     final res = await MsgHttp.sessionList(
-      sessionType: _isSpecialMode ? 4 : _selectedType,
+      sessionType: _isSpecialMode ? 4 : widget.sessionType,
       // size 对齐 BiliPai 取 100：置顶会话会在每页重复返回，
       // 页容量太小会导致整页去重后提前终止翻页、会话大量缺失。
       size: 100,
@@ -239,14 +262,6 @@ class SessionListSectionState extends State<SessionListSection> {
     return talkerId > 0 && (_specialMids?.contains(talkerId) ?? false);
   }
 
-  void _selectCategory(int type) {
-    if (type == _selectedType) return;
-    setState(() {
-      _selectedType = type;
-      _load(refresh: true);
-    });
-  }
-
   // 回调处理方法 - 避免闭包创建
   void _handleToggleTop(int index) => _toggleTop(_sessions[index]);
   void _handleToggleDnd(int index) => _toggleDnd(_sessions[index]);
@@ -307,125 +322,143 @@ class SessionListSectionState extends State<SessionListSection> {
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
-    // 筛选 chips 固定在顶部，仅会话列表区域可滚动。
-    return Column(
-      children: [
-        SizedBox(
-          height: 44,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: Style.sm),
-            children: [
-              for (final c in _categories)
-                Padding(
-                  padding: const EdgeInsets.only(right: 6, top: 6),
-                  child: AppChoiceChip(
-                    label: Text(c.label),
-                    selected: c.type == _selectedType,
-                    onSelected: (_) => _selectCategory(c.type),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const MiuixHorizontalDivider(),
-        Expanded(
-          child: CustomScrollView(
-            controller: _scrollCtrl,
-            // AlwaysScrollable：列表不满一屏时仍可下拉刷新。
-            // Clamping 包裹：MiuixPullToRefresh 靠 OverscrollNotification 驱动
-            // （裸 AlwaysScrollable 无边界条件、不产生过卷通知 → 下拉无响应）。
-            physics: const ClampingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
+    // 仅会话列表；顶部「分类栏」已上移到宿主页的浮动合并栏（[SessionFilterBar]）。
+    // 顶部按 [SessionListSection.topInset] 避让合并栏，使会话行不被遮住，且内容可
+    // 从合并栏**后方穿过**（合并栏毛玻璃因此可见）。
+    return CustomScrollView(
+      controller: _scrollCtrl,
+      // AlwaysScrollable：列表不满一屏时仍可下拉刷新。
+      // Clamping 包裹：MiuixPullToRefresh 靠 OverscrollNotification 驱动
+      // （裸 AlwaysScrollable 无边界条件、不产生过卷通知 → 下拉无响应）。
+      physics: const ClampingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      slivers: [
+        // 顶部避让：宿主页浮动合并栏的高度（会话行不被遮住，且内容从其后方穿过）。
+        if (widget.topInset > 0)
+          SliverToBoxAdapter(child: SizedBox(height: widget.topInset)),
+        // 会话列表
+        if (Pref.demoMode)
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => _SessionTile(
+                session: const {'talker_id': 0, 'session_type': 1},
+                index: index,
+                onToggleTop: _handleToggleTop,
+                onToggleDnd: _handleToggleDnd,
+                onRemove: _handleRemove,
+              ),
+              childCount: _demoVisibleRows(context),
             ),
-            slivers: [
-              // 会话列表
-              if (Pref.demoMode)
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _SessionTile(
-                      session: const {'talker_id': 0, 'session_type': 1},
-                      index: index,
-                      onToggleTop: _handleToggleTop,
-                      onToggleDnd: _handleToggleDnd,
-                      onRemove: _handleRemove,
+          )
+        else if (_loading && _sessions.isEmpty)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(Style.xxl),
+              child: Center(child: AppProgressIndicator(color: biliPink)),
+            ),
+          )
+        else if (_error != null && _sessions.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(Style.xxl),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _error!,
+                      style: TextStyle(color: tokens.colors.error),
                     ),
-                    childCount: _demoVisibleRows(context),
-                  ),
-                )
-              else if (_loading && _sessions.isEmpty)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(Style.xxl),
-                    child: Center(child: AppProgressIndicator(color: biliPink)),
-                  ),
-                )
-              else if (_error != null && _sessions.isEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(Style.xxl),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _error!,
-                            style: TextStyle(color: tokens.colors.error),
-                          ),
-                          const SizedBox(height: Style.sm),
-                          MiuixTextButton('重试', onPressed: () => _load(refresh: true)),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-              else if (_sessions.isEmpty && !_hasMore)
-                const SliverToBoxAdapter(child: MsgFeedEmptyView())
-              else
-                SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    if (index == _sessions.length) {
-                      // 加载更多指示器 - 使用 addPostFrameCallback 避免在 build 中调用 _load
-                      if (_hasMore && !_isLoadingMore) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted && _hasMore && !_isLoadingMore) {
-                            _load();
-                          }
-                        });
-                      }
-                      return const Padding(
-                        padding: EdgeInsets.all(Style.md),
-                        child: Center(
-                          child: AppProgressIndicator(
-                            strokeWidth: 2,
-                            color: biliPink,
-                          ),
-                        ),
-                      );
-                    }
-                    return _SessionTile(
-                      session: _sessions[index],
-                      index: index,
-                      onToggleTop: _handleToggleTop,
-                      onToggleDnd: _handleToggleDnd,
-                      onRemove: _handleRemove,
-                    );
-                  }, childCount: _sessions.length + (_hasMore ? 1 : 0)),
+                    const SizedBox(height: Style.sm),
+                    MiuixTextButton('重试', onPressed: () => _load(refresh: true)),
+                  ],
                 ),
-            ],
+              ),
+            ),
+          )
+        else if (_sessions.isEmpty && !_hasMore)
+          const SliverToBoxAdapter(child: MsgFeedEmptyView())
+        else
+          SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              if (index == _sessions.length) {
+                // 加载更多指示器 - 使用 addPostFrameCallback 避免在 build 中调用 _load
+                if (_hasMore && !_isLoadingMore) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _hasMore && !_isLoadingMore) {
+                      _load();
+                    }
+                  });
+                }
+                return const Padding(
+                  padding: EdgeInsets.all(Style.md),
+                  child: Center(
+                    child: AppProgressIndicator(
+                      strokeWidth: 2,
+                      color: biliPink,
+                    ),
+                  ),
+                );
+              }
+              return _SessionTile(
+                session: _sessions[index],
+                index: index,
+                onToggleTop: _handleToggleTop,
+                onToggleDnd: _handleToggleDnd,
+                onRemove: _handleRemove,
+              );
+            }, childCount: _sessions.length + (_hasMore ? 1 : 0)),
           ),
-        ),
       ],
     );
   }
 }
 
 /// 特别关注筛选类的客户端标记（非服务端 session_type）。
-const _specialCategoryType = -10;
+const kSpecialSessionFilterType = -10;
+
+/// 会话分类栏（筛选 chips）。
+///
+/// 由宿主页（消息页）的**浮动毛玻璃合并栏**承载，故本身不持有筛选状态：
+/// 选中项经 [selectedType] 传入、点击经 [onSelected] 回传（状态由宿主页持有，
+/// 并经 [SessionListSection.sessionType] 下传列表区）。
+class SessionFilterBar extends StatelessWidget {
+  const SessionFilterBar({
+    super.key,
+    required this.selectedType,
+    required this.onSelected,
+  });
+
+  final int selectedType;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+        children: [
+          for (final c in _categories)
+            Padding(
+              padding: const EdgeInsets.only(right: 6, top: 6),
+              child: AppChoiceChip(
+                label: Text(c.label),
+                selected: c.type == selectedType,
+                onSelected: (_) => onSelected(c.type),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 const _categories = <_Category>[
   _Category('全部', 4),
-  _Category('特别关注', _specialCategoryType),
+  _Category('特别关注', kSpecialSessionFilterType),
   _Category('关注', 9),
   _Category('未关注', 2),
   _Category('陌生人', 8),

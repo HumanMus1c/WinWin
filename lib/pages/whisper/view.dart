@@ -2,6 +2,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider;
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
+import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/bootstrap.dart';
@@ -39,6 +40,10 @@ class _WhisperPageState extends State<WhisperPage>
       GlobalKey<SessionListSectionState>();
   LoadingState<Map<String, dynamic>> _unreadState = LoadingState.loading();
   bool _loading = false;
+
+  /// 会话筛选类型（服务端 `session_type`）——由顶部「分类栏」选定，下传列表区。
+  int _sessionType = 4;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -103,25 +108,29 @@ class _WhisperPageState extends State<WhisperPage>
   int get _likeUnread => MsgUnreadService().like;
   int get _sysUnread => MsgUnreadService().system;
 
+  /// 顶部浮动合并栏的内容高度预算（供会话列表做顶部避让）：
+  /// 面板外缩（[Style.sm]×2）+ 互动行（[Style.md]×2 + 头像 52 + 间距 6 + 标签行 ~20）
+  /// + 分隔线 1 + 分类行（[SessionFilterBar] 高 44）+ 下沿间隙 [Style.sm]。
+  static const double _headerReserve =
+      Style.sm * 2 + Style.md * 2 + 52 + 6 + 20 + 1 + 44 + Style.sm;
+
+  void _selectSessionType(int type) {
+    if (type == _sessionType) return;
+    setState(() => _sessionType = type);
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final tokens = AppThemeHost.of(context);
-    // 四类互动入口固定在顶部，仅下方会话列表可滚动。
+    // 顶部「四类互动入口 + 分类栏」合并为一个**浮动毛玻璃面板**（对齐首页
+    // 「搜索框 + 分类器合并栏」）；会话列表铺满并滚到面板后方穿过 → 毛玻璃可见，
+    // 列表顶部按 [_headerReserve] 避让（见 SessionListSection.topInset）。
     return AppScaffold(
       title: '消息',
-      body: Column(
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Style.safeSpace,
-              vertical: Style.md,
-            ),
-            child: _buildEntries(tokens),
-          ),
-          // 阶段5d-L1：M3 分支已移除。
-          const MiuixHorizontalDivider(),
-          Expanded(
+          Positioned.fill(
             // B7-c5 反馈轮：观感统一（与其它页面同款自绘紧凑环）+ 回拉不滚内容，
             // 换回 AppRefreshIndicator；处理器仍保持「不清列表」，故反馈轮#2
             // 的「居中加载环与下拉指示器叠加」不会回退。
@@ -134,11 +143,53 @@ class _WhisperPageState extends State<WhisperPage>
               },
               child: SessionListSection(
                 key: _sessionListKey,
+                sessionType: _sessionType,
+                topInset: _headerReserve,
                 onRefreshUnread: () => _clearDmUnread(),
               ),
             ),
           ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: RepaintBoundary(child: _buildFrostedHeader(tokens)),
+          ),
         ],
+      ),
+    );
+  }
+
+  /// 顶部浮动合并栏：互动入口行 + 分隔线 + 分类栏（合并为一个毛玻璃面板）。
+  ///
+  /// 面板档（圆角 [Style.radiusMd]）自带下投影；对齐首页合并栏口径取
+  /// `outline: false`（不画可见描边，避免面板四周细线多余）。
+  Widget _buildFrostedHeader(AppTokens tokens) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Style.lg,
+        vertical: Style.sm,
+      ),
+      child: MiuixFrostedSurface(
+        borderRadius: Style.radiusMd,
+        outline: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Style.md,
+                vertical: Style.md,
+              ),
+              child: _buildEntries(tokens),
+            ),
+            const MiuixHorizontalDivider(),
+            SessionFilterBar(
+              selectedType: _sessionType,
+              onSelected: _selectSessionType,
+            ),
+          ],
+        ),
       ),
     );
   }
