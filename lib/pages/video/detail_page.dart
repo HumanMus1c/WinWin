@@ -154,7 +154,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                         children: [
                           AppIcon(
                             AppIcons.like(active: _liked),
-                            size: 15,
+                            size: appRowIconSize(context, 12),
                             color: _liked ? biliPink : outline,
                           ),
                           DemoInlineEditNumber(
@@ -182,7 +182,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                       }),
                       child: AppIcon(
                         AppIcons.dislike(active: _disliked),
-                        size: 15,
+                        size: appRowIconSize(context, 12),
                         color: _disliked ? biliPink : outline,
                       ),
                     ),
@@ -191,7 +191,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                       child: Row(
                         spacing: 3,
                         children: [
-                          AppIcon(AppIcons.reply(), size: 15, color: outline),
+                          AppIcon(AppIcons.reply(), size: appRowIconSize(context, 12), color: outline),
                           Text('回复', style: grayStyle.copyWith(fontSize: 12)),
                         ],
                       ),
@@ -214,7 +214,7 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                               _expanded
                                   ? AppIcons.chevronUp()
                                   : AppIcons.expandMore(),
-                              size: 16,
+                              size: appRowIconSize(context, 12),
                               color: tokens.colors.primary,
                             ),
                           ],
@@ -1613,19 +1613,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             children: [
               AppIcon(
                 AppIcons.viewCount(),
-                size: 15,
+                size: appRowIconSize(context, 12),
                 color: tokens.colors.onSurfaceVariant,
               ),
               Text(NumUtils.formatNum(stat?.view), style: grayStyle),
               AppIcon(
                 AppIcons.danmakuCount(),
-                size: 14,
+                size: appRowIconSize(context, 12),
                 color: tokens.colors.onSurfaceVariant,
               ),
               Text(NumUtils.formatNum(stat?.danmaku), style: grayStyle),
               AppIcon(
                 AppIcons.duration(),
-                size: 14,
+                size: appRowIconSize(context, 12),
                 color: tokens.colors.onSurfaceVariant,
               ),
               Text(
@@ -1946,7 +1946,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             children: [
                               AppIcon(
                                 AppIcons.like(active: reply.isLiked),
-                                size: 15,
+                                size: appRowIconSize(context, 12),
                                 color: reply.isLiked
                                     ? biliPink
                                     : tokens.colors.onSurfaceVariant,
@@ -1967,7 +1967,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           onTap: () => _toggleDislikeReply(reply),
                           child: AppIcon(
                             AppIcons.dislike(active: reply.isDisliked),
-                            size: 15,
+                            size: appRowIconSize(context, 12),
                             color: reply.isDisliked
                                 ? biliPink
                                 : tokens.colors.onSurfaceVariant,
@@ -2000,7 +2000,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             children: [
                               AppIcon(
                                 AppIcons.reply(),
-                                size: 15,
+                                size: appRowIconSize(context, 12),
                                 color: tokens.colors.onSurfaceVariant,
                               ),
                               Text(
@@ -2030,7 +2030,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                                   subReplies != null
                                       ? AppIcons.chevronUp()
                                       : AppIcons.expandMore(),
-                                  size: 15,
+                                  size: appRowIconSize(context, 12),
                                   color: tokens.colors.primary,
                                 ),
                               ],
@@ -2235,7 +2235,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     children: [
                       AppIcon(
                         AppIcons.like(active: sub.isLiked),
-                        size: 13,
+                        size: appRowIconSize(context, 11.5),
                         color: sub.isLiked
                             ? biliPink
                             : tokens.colors.onSurfaceVariant,
@@ -2256,7 +2256,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   onTap: () => _toggleDislikeReply(sub),
                   child: AppIcon(
                     AppIcons.dislike(active: sub.isDisliked),
-                    size: 13,
+                    size: appRowIconSize(context, 11.5),
                     color: sub.isDisliked
                         ? biliPink
                         : tokens.colors.onSurfaceVariant,
@@ -2290,7 +2290,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     children: [
                       AppIcon(
                         AppIcons.reply(),
-                        size: 13,
+                        size: appRowIconSize(context, 11.5),
                         color: tokens.colors.onSurfaceVariant,
                       ),
                       Text(
@@ -2710,7 +2710,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   children: [
                     AppIcon(
                       AppIcons.profile(),
-                      size: 16,
+                      size: appRowIconSize(context, 13),
                       color: AppThemeHost.of(context).colors.outline,
                     ),
                     const SizedBox(width: 6),
