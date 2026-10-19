@@ -40,6 +40,7 @@ import 'package:flutter_miuix/miuix.dart'
     show MiuixPressable, MiuixPressFeedbackType;
 
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/theme/miuix_theme_bridge.dart';
 
 // ── M3 常量（`material_ui/lib/src/chip.dart`） ──
 const double _kChipHeight = 32.0;
@@ -478,7 +479,9 @@ class _AppChipCoreState extends State<_AppChipCore>
                 ? defaultLabelPadding
                 : (const EdgeInsets.symmetric(horizontal: 8.0)),
             child: DefaultTextStyle(
-              style: effectiveLabelStyle,
+              style: effectiveLabelStyle.copyWith(
+                fontFamily: appFontFamilyOf(context),
+              ),
               maxLines: 1,
               softWrap: false,
               overflow: TextOverflow.fade,

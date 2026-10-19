@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/theme/miuix_theme_bridge.dart';
 
 /// 自研 Miuix 弹层菜单壳（阶段4h）。
 ///
@@ -161,8 +162,10 @@ class _PopupOverlay extends StatelessWidget {
     // （浮层无 Material/DefaultTextStyle 时 Text 合并到该样式）。
     final appTokens = AppThemeHost.of(context);
     final bodyStyle =
-        (appTokens.text.bodyMedium ?? const TextStyle())
-            .copyWith(decoration: TextDecoration.none);
+        (appTokens.text.bodyMedium ?? const TextStyle()).copyWith(
+      decoration: TextDecoration.none,
+      fontFamily: appFontFamilyOf(context),
+    );
     // 条目字号继承触发控件（如播放器控制条 12px），避免弹层与其割裂。
     final rowTextStyle = itemTextStyle == null
         ? bodyStyle

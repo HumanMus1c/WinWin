@@ -134,14 +134,18 @@ class AppShell extends StatelessWidget {
           child: MiuixToastHost(
             child: ImmersiveTitleBarShell(
               // 文本基底：显式声明（WidgetsApp 默认为错误样式）。
-              child: DefaultTextStyle(
-                style: TextStyle(
-                  color: tokens.colors.onBackground,
-                  fontSize: 14,
-                  height: 1.4,
-                  decoration: TextDecoration.none,
+              // 字体取 MiuixTheme（经 Builder 拿到 scope 内 context）。
+              child: Builder(
+                builder: (innerContext) => DefaultTextStyle(
+                  style: TextStyle(
+                    color: tokens.colors.onBackground,
+                    fontSize: 14,
+                    height: 1.4,
+                    decoration: TextDecoration.none,
+                    fontFamily: appFontFamilyOf(innerContext),
+                  ),
+                  child: routed,
                 ),
-                child: routed,
               ),
             ),
           ),

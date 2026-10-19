@@ -29,6 +29,7 @@ import 'package:flutter_miuix/miuix.dart'
     show MiuixPressable, MiuixPressFeedbackType;
 
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/theme/miuix_theme_bridge.dart';
 
 /// 对话框外壳（替代 Material `Dialog` 的纯布局职责）。
 ///
@@ -161,7 +162,8 @@ class AppAlertDialog extends StatelessWidget {
           bottom: effective.bottom,
         ),
         child: DefaultTextStyle(
-          style: tokens.text.headlineSmall ?? const TextStyle(),
+          style: (tokens.text.headlineSmall ?? const TextStyle())
+              .copyWith(fontFamily: appFontFamilyOf(context)),
           textAlign: TextAlign.start,
           child: Semantics(container: true, child: title),
         ),
@@ -188,7 +190,8 @@ class AppAlertDialog extends StatelessWidget {
           bottom: effective.bottom,
         ),
         child: DefaultTextStyle(
-          style: tokens.text.bodyMedium ?? const TextStyle(),
+          style: (tokens.text.bodyMedium ?? const TextStyle())
+                .copyWith(fontFamily: appFontFamilyOf(context)),
           child: Semantics(container: true, explicitChildNodes: true, child: content),
         ),
       );
@@ -317,7 +320,8 @@ class AppSimpleDialog extends StatelessWidget {
               : effectiveTitlePadding.bottom,
         ),
         child: DefaultTextStyle(
-          style: tokens.text.titleLarge ?? const TextStyle(),
+          style: (tokens.text.titleLarge ?? const TextStyle())
+                    .copyWith(fontFamily: appFontFamilyOf(context)),
           textAlign: TextAlign.start,
           child: Semantics(container: true, child: title),
         ),
@@ -340,7 +344,8 @@ class AppSimpleDialog extends StatelessWidget {
             bottom: effectiveContentPadding.bottom * paddingScaleFactor,
           ),
           child: DefaultTextStyle(
-            style: tokens.text.bodyMedium ?? const TextStyle(),
+            style: (tokens.text.bodyMedium ?? const TextStyle())
+                .copyWith(fontFamily: appFontFamilyOf(context)),
             child: ListBody(children: children!),
           ),
         ),

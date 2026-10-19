@@ -192,6 +192,7 @@ class _MiuixToastCard extends StatelessWidget {
     final bodyStyle =
         (tokens.text.bodyMedium ?? const TextStyle()).copyWith(
       decoration: TextDecoration.none,
+      fontFamily: appFontFamilyOf(context),
     );
 
     return AnimatedBuilder(

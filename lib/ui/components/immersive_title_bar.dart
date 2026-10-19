@@ -5,6 +5,7 @@ import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/window/desktop_fullscreen.dart';
+import 'package:winwin/theme/miuix_theme_bridge.dart';
 
 /// 沉浸式标题栏背景色覆写（null = 跟随主题 Scaffold 背景色）。
 ///
@@ -197,6 +198,7 @@ class _ImmersiveTitleBarShellState extends State<ImmersiveTitleBarShell>
                             fontWeight: FontWeight.w500,
                             color: foreground,
                             decoration: TextDecoration.none,
+                            fontFamily: appFontFamilyOf(context),
                           ),
                           child: const Text('WinWin'),
                         ),

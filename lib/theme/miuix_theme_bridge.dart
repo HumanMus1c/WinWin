@@ -84,6 +84,16 @@ MiuixTextStyles miuixBridgeTextStyles(String? fontFamily) {
   );
 }
 
+/// 应用字体族（应用字体的**唯一来源**：`MiuixTheme.textStyles.main`）。
+///
+/// 文本基底层（应用根 `DefaultTextStyle` / [AppTransparentHost] / Toast 卡 /
+/// 对话框 / Chip / 弹层菜单 / 标题栏等）统一用它补 `fontFamily`，使 flutter_miuix
+/// 组件之外的一切文字（裸 `Text`、`Text.rich`、`SelectableText`、
+/// `tokens.text.*` 及所有继承基底的控件）都随继承获得应用字体，
+/// 无需逐个控件改写。`MiuixTheme` 未挂载时返回 `null`（不改变既有样式）。
+String? appFontFamilyOf(BuildContext context) =>
+    MiuixTheme.maybeOf(context)?.textStyles.main.fontFamily;
+
 /// 在 miuix 风格下向整树提供桥接后的 [MiuixTheme]。
 ///
 /// 由 main.dart 的 `MaterialApp.builder`（阶段5d-L4-2 单轨恒启用）

@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:winwin/theme/miuix_theme_bridge.dart';
+
 import 'app_theme_host.dart';
 
 /// `Material(type: MaterialType.transparency)` 的零 material 等价替身。B7-c7 第二批。
@@ -43,7 +45,8 @@ class AppTransparentHost extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     return DefaultTextStyle(
-      style: tokens.text.bodyMedium ?? const TextStyle(),
+      style: (tokens.text.bodyMedium ?? const TextStyle())
+          .copyWith(fontFamily: appFontFamilyOf(context)),
       child: hardClip ? const ClipRect() : child,
     );
   }
