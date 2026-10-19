@@ -220,7 +220,7 @@ class VideoCardV extends StatelessWidget {
                           children: [
                             AppIcon(
                               AppIcons.profile(),
-                              size: 12,
+                              size: appRowIconSizeInherited(context),
                               color: tokens.colors.outline,
                             ),
                             const SizedBox(width: 3),

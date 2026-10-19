@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
+import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
 
@@ -139,7 +140,7 @@ class AppShell extends StatelessWidget {
                 builder: (innerContext) => DefaultTextStyle(
                   style: TextStyle(
                     color: tokens.colors.onBackground,
-                    fontSize: 14,
+                    fontSize: appBaseFontSize,
                     height: 1.4,
                     decoration: TextDecoration.none,
                     fontFamily: appFontFamilyOf(innerContext),

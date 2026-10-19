@@ -164,7 +164,7 @@ class VideoCardH extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   // 右：标题 + UP + 统计
-                  Expanded(child: _buildTextContent(tokens, data, demo: demo)),
+                  Expanded(child: _buildTextContent(context, tokens, data, demo: demo)),
                 ],
               ),
             ),
@@ -177,6 +177,7 @@ class VideoCardH extends StatelessWidget {
   }
 
   Widget _buildTextContent(
+    BuildContext context,
     AppTokens tokens,
     VideoCardData data, {
     required bool demo,
@@ -207,7 +208,7 @@ class VideoCardH extends StatelessWidget {
         Row(
           children: [
             if (demo) ...[
-              AppIcon(AppIcons.profile(), size: 13, color: cs.outline),
+              AppIcon(AppIcons.profile(), size: appRowIconSizeInherited(context), color: cs.outline),
               const SizedBox(width: 3),
               Expanded(
                 child: Align(
@@ -223,7 +224,7 @@ class VideoCardH extends StatelessWidget {
               ),
             ] else ...[
               if (ownerName.isNotEmpty) ...[
-                AppIcon(AppIcons.profile(), size: 13, color: cs.outline),
+                AppIcon(AppIcons.profile(), size: appRowIconSizeInherited(context), color: cs.outline),
                 const SizedBox(width: 3),
                 Expanded(
                   child: Align(

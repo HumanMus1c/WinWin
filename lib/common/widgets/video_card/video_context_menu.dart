@@ -378,7 +378,7 @@ void showVideoCoverDialog({
                         MiuixButton(onPressed: () {
                             Utils.copyText(cover);
                             showToast(dialogCtx, '已复制封面图片链接');
-                          }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.link(), size: 16), const SizedBox(width: 6), const Text('复制链接')])),
+                          }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.link(), size: appRowIconSizeInherited(context)), const SizedBox(width: 6), const Text('复制链接')])),
                         const SizedBox(width: 8),
                         // 另存为图片文件
                         MiuixButton(onPressed: () async {
@@ -412,7 +412,7 @@ void showVideoCoverDialog({
                                 showToast(dialogCtx, '保存封面失败：$e');
                               }
                             }
-                          }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.download(), size: 16), const SizedBox(width: 6), const Text('保存封面')])),
+                          }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.download(), size: appRowIconSizeInherited(context)), const SizedBox(width: 6), const Text('保存封面')])),
                         const SizedBox(width: 8),
                         MiuixTextButton('关闭', onPressed: () => Navigator.pop(dialogCtx)),
                       ],
@@ -510,7 +510,7 @@ void _showDislikeReasonsDialog({
                 if (context.mounted) {
                   showToast(context, res.isSuccess ? '已撤销不感兴趣' : _errMsg(res, '撤销失败'));
                 }
-              }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.undo(), size: 16), const SizedBox(width: 6), const Text('撤销不感兴趣')])),
+              }, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.undo(), size: appRowIconSizeInherited(context)), const SizedBox(width: 6), const Text('撤销不感兴趣')])),
           ),
         ],
       );

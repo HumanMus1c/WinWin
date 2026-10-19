@@ -1,5 +1,12 @@
 import 'package:flutter/widgets.dart';
 
+/// 应用正文基准名义字号（= 根 `DefaultTextStyle`，见 `core/shell/app_shell.dart`；
+/// 亦为 Flutter `TextStyle` 未显式设置字号时的引擎缺省字号 14）。
+///
+/// 「图标 + 文本标签」行中，标签**未复述字号、随基底继承**时的唯一字号来源
+/// （见 `theme/app_icons.dart` 的 `appRowIconSizeInherited`）。
+const double appBaseFontSize = 14;
+
 
 /// 字体排印 Token — 字重 / 字间距体系（阶段5d-L4-2 单轨化）。
 ///

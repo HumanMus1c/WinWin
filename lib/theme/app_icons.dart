@@ -2,6 +2,8 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_miuix/miuix.dart';
 
+import 'package:winwin/theme/app_typography.dart';
+
 import 'app_icons_art.dart';
 import 'app_icons_bdc.g.dart';
 import 'app_icons_bili.g.dart';
@@ -593,6 +595,16 @@ double appRowIconSize(BuildContext context, [double? labelFontSize]) {
       labelFontSize ?? MiuixTheme.of(context).textStyles.headline1.fontSize ?? 17;
   return MediaQuery.textScalerOf(context).scale(nominal);
 }
+
+/// 「图标 + 文本标签」行中，标签**未复述字号、随基底继承**时的图标尺寸。
+///
+/// 取当前继承的 `DefaultTextStyle` 名义字号（与同行标签**同源**，故恒与标签一致）；
+/// 缺省回落到 [appBaseFontSize]。因此：Miuix 按钮内（`MiuixButton` 已把 child
+/// merge 到 `textStyles.button`）即取按钮文本字号；页面正文行即取根基底字号。
+double appRowIconSizeInherited(BuildContext context) => appRowIconSize(
+      context,
+      DefaultTextStyle.of(context).style.fontSize ?? appBaseFontSize,
+    );
 
 /// 自适应图标部件：Miuix 风格下将具备 Miuix 矢量对应的字形升级为
 /// flutter_miuix 原生矢量图标（[MiuixIcon] + [MiuixVectorIcon]）；

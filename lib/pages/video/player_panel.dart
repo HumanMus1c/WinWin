@@ -1894,7 +1894,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                       AppIcon(
                                         AppIcons.chapter(),
                                         color: AppColors.white,
-                                        size: 18,
+                                        size: appRowIconSize(context, 15),
                                       ),
                                       const SizedBox(width: Style.sm),
                                       Text(
@@ -2445,7 +2445,7 @@ class _ScreenshotPreviewDialogState extends State<_ScreenshotPreviewDialog> {
                             height: 16,
                             child: AppProgressIndicator(strokeWidth: 2),
                           )
-                        : AppIcon(AppIcons.download(), size: 18), const SizedBox(width: 6), Text(_savedPath != null ? '已保存' : '保存')])),
+                        : AppIcon(AppIcons.download(), size: appRowIconSizeInherited(context)), const SizedBox(width: 6), Text(_savedPath != null ? '已保存' : '保存')])),
                 ],
               ),
             ],

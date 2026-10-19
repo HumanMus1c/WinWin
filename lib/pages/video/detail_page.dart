@@ -2088,7 +2088,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   if (!subEnd && !subLoading && subReplies.length >= 3)
                     Padding(
                       padding: const EdgeInsets.only(top: Style.xs),
-                      child: MiuixButton(onPressed: () => _loadSubReplies(reply), child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.expandMore(), size: 16), const SizedBox(width: 6), Text(
+                      child: MiuixButton(onPressed: () => _loadSubReplies(reply), child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.expandMore(), size: appRowIconSize(context, 12)), const SizedBox(width: 6), Text(
                           '查看更多回复 ${reply.rcount != null ? "(${subReplies.length}/${reply.rcount})" : ""}',
                           style: const TextStyle(fontSize: 12),
                         )])),
@@ -2724,7 +2724,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   ],
                 ),
               ),
-              MiuixButton(onPressed: () {}, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.add(), size: 16), const SizedBox(width: 6), Text(
+              MiuixButton(onPressed: () {}, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.add(), size: appRowIconSize(context, 12.5)), const SizedBox(width: 6), Text(
                   DemoOverrides.count('demo.followbtn.$bvid', min: 0, max: 1) ==
                           1
                       ? '已关注'
@@ -2832,7 +2832,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               const Expanded(
                 child: Skeleton(child: SkeletonLine(width: 100, height: 14)),
               ),
-              MiuixButton(onPressed: null, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.add(), size: 16), const SizedBox(width: 6), const Text('关注', style: TextStyle(fontSize: 12.5))])),
+              MiuixButton(onPressed: null, child: Row(mainAxisSize: MainAxisSize.min, children: [AppIcon(AppIcons.add(), size: appRowIconSize(context, 12.5)), const SizedBox(width: 6), const Text('关注', style: TextStyle(fontSize: 12.5))])),
             ],
           ),
           const SizedBox(
@@ -3060,7 +3060,7 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
                     color: color ?? cs.primary,
                   ),
                 )
-              : AppIcon(icon, size: 16, color: color), const SizedBox(width: 6), Text(
+              : AppIcon(icon, size: appRowIconSize(context, 12.5), color: color), const SizedBox(width: 6), Text(
             label,
             style: TextStyle(
               fontSize: 12.5,
