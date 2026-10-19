@@ -1,7 +1,12 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
+import 'package:flutter/services.dart'
+    show LogicalKeyboardKey, TextInputAction;
 import 'package:flutter/widgets.dart';
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixMotion;
+
 import 'package:winwin/common/widgets/app_top_bar_surface.dart';
-import 'package:winwin/theme/app_colors.dart';
+import 'package:winwin/core/shell/app_routes.dart';
+import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/models/common/home_tab.dart';
 import 'package:winwin/pages/follow/view.dart';
 import 'package:winwin/pages/hot/view.dart';
@@ -9,17 +14,26 @@ import 'package:winwin/pages/live/view.dart';
 import 'package:winwin/pages/pgc/view.dart';
 import 'package:winwin/pages/rcmd/view.dart';
 import 'package:winwin/pages/search/search_page.dart';
+import 'package:winwin/pages/search/search_result_page.dart';
+import 'package:winwin/pages/search/services/search_history_service.dart';
+import 'package:winwin/pages/search/widgets/search_content_panel.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/core/shell/app_theme_host.dart';
-import 'package:winwin/core/shell/app_routes.dart';
-import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+
+/// 首页顶栏「就地扩充」用的统一动画节奏（与壳层安全行收起同手感）。
+const Duration _kSearchMorphDuration = Duration(milliseconds: 220);
 
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
+///
+/// 2026-10-19：搜索由「跳二级页面」改为「顶栏就地扩充」——点搜索框不再
+/// 跳页，而是在首页顶栏原地长高一块（隐藏分类标签，长出来的地方放搜索
+/// 历史 / 用户胶囊 / 热搜），背景压暗，提交后进搜索结果页。
 class HomePage extends StatefulWidget {
   /// 头像点击跳转到「我的」页面（保留可选向后兼容）。
   final VoidCallback? onGotoProfile;
@@ -32,35 +46,72 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedCategory = 0;
+
   /// 已访问过的 tab 索引集合 — 懒加载：首次切到某 tab 才创建其 Widget，
   /// 避免启动时一次性触发所有 tab 的 HTTP 请求。
   final Set<int> _visitedTabs = {0};
+
+  /// 是否处于「顶栏就地扩充」的搜索态。
+  bool _searchMode = false;
+
+  /// 搜索态输入框的控制器 / 焦点（仅在搜索态挂到顶栏输入条上）。
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  // ─────────────────────────── 搜索态开关 ───────────────────────────
+
+  void _enterSearch() {
+    if (_searchMode) {
+      // 已展开：再点一次仅把焦点还给输入框。
+      _searchFocusNode.requestFocus();
+      return;
+    }
+    setState(() => _searchMode = true);
+  }
+
+  /// 收起搜索态：先取消输入焦点（Esc / 点遮罩 / 返回统一走这里），
+  /// 清空输入并恢复分类标签。
+  void _exitSearch() {
+    if (!_searchMode) return;
+    _searchFocusNode.unfocus();
+    _searchController.clear();
+    setState(() => _searchMode = false);
+  }
+
+  /// 提交搜索：保存到历史（口径不变：[SearchKeywordHistory]）→ 收起搜索态
+  /// → 直接进搜索结果页。
+  Future<void> _submitSearch(String keyword) async {
+    final word = keyword.trim();
+    if (word.isEmpty) return;
+    SearchKeywordHistory.push(SearchKeywordHistory.load(), word);
+    _exitSearch();
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      AppRoute(builder: (_) => SearchResultPage(keyword: word)),
+    );
+  }
+
+  /// 「完整榜单 ›」入口：打开独立搜索页（含完整热搜网格）。
+  void _openFullRank() {
+    _exitSearch();
+    Navigator.push(context, AppRoute(builder: (_) => const SearchPage()));
+  }
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
       title: '首页',
-      body: Stack(
-        children: [
-          // ── Feed content (lazy IndexedStack preserves per-tab state) ──
-          Positioned.fill(child: _buildContent()),
-          // ── Floating shared header (search bar + category tabs) ──
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: RepaintBoundary(
-              child: _HomeHeader(
-                selectedCategory: _selectedCategory,
-                onSelectCategory: (i) => setState(() {
-                  _selectedCategory = i;
-                  _visitedTabs.add(i);
-                }),
-              ),
-            ),
-          ),
-        ],
-      ),
+      // 顶栏与遮罩放进骨架浮层：只有在这一层才能连同「首页」安全行一起压暗。
+      overlayBuilder: _buildOverlay,
+      body: _buildContent(),
     );
   }
 
@@ -83,20 +134,114 @@ class _HomePageState extends State<HomePage> {
       }),
     );
   }
+
+  /// 内容之上的浮层：压暗遮罩（搜索态）+ 悬浮顶栏。
+  ///
+  /// - 顶栏贴在安全行之下（安全行收起时随之上移），沿用首页原有滚动联动；
+  /// - 搜索态压暗**含安全行在内**的整页背景，点遮罩即收起；
+  /// - 扩充块高度上限按当前可用高度算，绝不顶出屏幕（超出末尾省略）。
+  Widget _buildOverlay(BuildContext context, bool stripCollapsed) {
+    final tokens = AppThemeHost.of(context);
+    final stripHeight = stripCollapsed ? 0.0 : AppScaffold.topStripHeight;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 顶栏固定部分：外壳上下边距 + 内容区上下边距 + 搜索框行 38 + 行间 6，
+        // 另留 Style.md 作为底部余量。
+        const fixed = Style.sm * 4 + 38 + 6 + Style.md;
+        final maxPanelHeight = (constraints.maxHeight - stripHeight - fixed)
+            .clamp(120.0, double.infinity);
+        return Stack(
+          children: [
+            // ① 半透明暗色遮罩（含安全行；非搜索态不吸事件、不可见）。
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring: !_searchMode,
+                child: AnimatedOpacity(
+                  opacity: _searchMode ? 1 : 0,
+                  duration: _kSearchMorphDuration,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _exitSearch,
+                    child: ColoredBox(
+                      color: tokens.colors.scrim.withValues(alpha: 0.38),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // ② 悬浮顶栏（搜索框 + 分类标签 / 就地扩充块）。
+            AnimatedPositioned(
+              duration: _kSearchMorphDuration,
+              curve: MiuixMotion.standardDecelerate,
+              top: stripHeight,
+              left: 0,
+              right: 0,
+              child: RepaintBoundary(
+                child: CallbackShortcuts(
+                  bindings: {
+                    // Esc：先取消输入焦点再收起（由 _exitSearch 统一处理）。
+                    const SingleActivator(LogicalKeyboardKey.escape):
+                        _exitSearch,
+                  },
+                  child: _HomeHeader(
+                    selectedCategory: _selectedCategory,
+                    onSelectCategory: (i) => setState(() {
+                      _selectedCategory = i;
+                      _visitedTabs.add(i);
+                    }),
+                    searchMode: _searchMode,
+                    searchController: _searchController,
+                    searchFocusNode: _searchFocusNode,
+                    onEnterSearch: _enterSearch,
+                    onSubmitSearch: _submitSearch,
+                    panelMaxHeight: maxPanelHeight,
+                    onOpenFullRank: _openFullRank,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
-/// 首页共享顶栏容器 — 搜索框 + 一级分类 Tabs。
+/// 首页共享顶栏容器 — 搜索框 + 一级分类 Tabs / 搜索态就地扩充块。
 ///
 /// 头像已迁移至导航栏「我的」TAB。搜索框样式与 [SearchPage] 统一，
-/// 整体包裹于同一个毛玻璃材质/M3 Surface 容器中。
+/// 整体包裹于同一个毛玻璃材质容器中（[AppTopBarSurface] 单一来源）。
 class _HomeHeader extends StatelessWidget {
-  final int selectedCategory;
-  final ValueChanged<int> onSelectCategory;
-
   const _HomeHeader({
     required this.selectedCategory,
     required this.onSelectCategory,
+    required this.searchMode,
+    required this.searchController,
+    required this.searchFocusNode,
+    required this.onEnterSearch,
+    required this.onSubmitSearch,
+    required this.panelMaxHeight,
+    required this.onOpenFullRank,
   });
+
+  final int selectedCategory;
+  final ValueChanged<int> onSelectCategory;
+
+  /// 是否处于搜索态（顶栏就地扩充）。
+  final bool searchMode;
+
+  final TextEditingController searchController;
+  final FocusNode searchFocusNode;
+
+  /// 常态下点击搜索框 → 进入搜索态。
+  final VoidCallback onEnterSearch;
+  final ValueChanged<String> onSubmitSearch;
+
+  /// 扩充块高度上限（由宿主按可用高度算好，绝不顶出屏幕）。
+  final double panelMaxHeight;
+
+  /// 「完整榜单 ›」入口（搜索态热搜标题行）。
+  final VoidCallback onOpenFullRank;
 
   @override
   Widget build(BuildContext context) {
@@ -125,62 +270,20 @@ class _HomeHeader extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Row 1: Search bar (Search box + Settings icon)
+          // Row 1: Search bar —— 高度恒 38（搜索态内外一致，不参与长高）。
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 38,
-                  child: GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      AppRoute(
-                        builder: (_) => const SearchPage(),
-                      ),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: searchBg,
-                        borderRadius: BorderRadius.circular(100),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Style.md,
-                      ),
-                      child: Row(
-                        children: [
-                          AppIcon(
-                            AppIcons.search(),
-                            size: 20,
-                            color: searchFg,
-                          ),
-                          const SizedBox(width: Style.sm),
-                          Expanded(
-                            child: Text(
-                              '搜索视频、UP主...',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: searchFg.withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                child: SizedBox(height: 38, child: _buildSearchRow(searchBg, searchFg)),
               ),
               const SizedBox(width: Style.sm),
               MiuixIconButton(
-
                 onPressed: () => Navigator.push(
                   context,
                   AppRoute(
                     builder: (_) => const SettingPage(),
                   ),
                 ),
-
                 child: AppTooltip(message: '设置', child: AppIcon(
                   AppIcons.settings(),
                   color: searchFg,
@@ -190,43 +293,59 @@ class _HomeHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          // Row 2: Category tabs
-          SizedBox(
-            height: 32,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: tabs.length,
-              separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
-              itemBuilder: (context, index) {
-                final isSelected = index == selectedCategory;
-                final baseColor = cs.primary;
-                return GestureDetector(
-                  onTap: () => onSelectCategory(index),
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? baseColor.withValues(alpha: 0.28)
-                          : AppColors.transparent,
-                      borderRadius: shapes.pillBorder,
-                    ),
-                    child: Text(
-                      tabs[index].label,
-                      style: TextStyle(
-                        color: isSelected
-                            ? baseColor
-                            : barContentColor.withValues(alpha: 0.78),
-                        fontSize: 13,
-                        fontWeight: isSelected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
+          // Row 2: 常态 = 分类标签（32）；搜索态 = 就地扩充块。
+          // 高度变化由 AnimatedSize 补齐（220ms / standardDecelerate，同安全行手感）。
+          AnimatedSize(
+            duration: _kSearchMorphDuration,
+            curve: MiuixMotion.standardDecelerate,
+            alignment: Alignment.topCenter,
+            child: searchMode
+                ? SearchContentPanel(
+                    controller: searchController,
+                    onSubmit: onSubmitSearch,
+                    maxHeight: panelMaxHeight,
+                    onOpenFullRank: onOpenFullRank,
+                    padding: EdgeInsets.zero,
+                  )
+                : SizedBox(
+                    height: 32,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: tabs.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(width: Style.sm),
+                      itemBuilder: (context, index) {
+                        final isSelected = index == selectedCategory;
+                        final baseColor = cs.primary;
+                        return GestureDetector(
+                          onTap: () => onSelectCategory(index),
+                          child: Container(
+                            alignment: Alignment.center,
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? baseColor.withValues(alpha: 0.28)
+                                  : AppColors.transparent,
+                              borderRadius: shapes.pillBorder,
+                            ),
+                            child: Text(
+                              tabs[index].label,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? baseColor
+                                    : barContentColor.withValues(alpha: 0.78),
+                                fontSize: 13,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
@@ -235,5 +354,62 @@ class _HomeHeader extends StatelessWidget {
     // 顶栏材质单一来源：与消息中心合并栏共用 [AppTopBarSurface]（同底色/模糊/
     // 圆角/外距），避免两页各写一份而漂移。
     return AppTopBarSurface(child: headerContent);
+  }
+
+  /// 搜索框行：常态为「假搜索框」（点击进搜索态）；搜索态换成真输入条
+  /// （自动聚焦、回车提交、可清空），高度同为 38。
+  Widget _buildSearchRow(Color searchBg, Color searchFg) {
+    if (searchMode) {
+      return AppCapsuleTextField(
+        controller: searchController,
+        focusNode: searchFocusNode,
+        autofocus: true,
+        textInputAction: TextInputAction.search,
+        onSubmitted: onSubmitSearch,
+        hint: '搜索视频、UP主...',
+        prefix: AppIcon(AppIcons.search(), size: 20),
+        suffix: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: searchController,
+          builder: (context, value, _) {
+            if (value.text.isEmpty) return const SizedBox.shrink();
+            return MiuixIconButton(
+              onPressed: searchController.clear,
+              child: AppIcon(AppIcons.clear(), size: 18),
+            );
+          },
+        ),
+      );
+    }
+    return GestureDetector(
+      onTap: onEnterSearch,
+      child: Container(
+        decoration: BoxDecoration(
+          color: searchBg,
+          borderRadius: BorderRadius.circular(100),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: Style.md),
+        child: Row(
+          children: [
+            AppIcon(
+              AppIcons.search(),
+              size: 20,
+              color: searchFg,
+            ),
+            const SizedBox(width: Style.sm),
+            Expanded(
+              child: Text(
+                '搜索视频、UP主...',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: searchFg.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

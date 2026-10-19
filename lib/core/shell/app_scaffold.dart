@@ -36,6 +36,7 @@ class AppScaffold extends StatefulWidget {
     this.reserveTopStrip = true,
     this.collapsible = true,
     this.actions,
+    this.overlayBuilder,
     required this.body,
   });
 
@@ -77,6 +78,15 @@ class AppScaffold extends StatefulWidget {
 
   /// 顶部安全行右侧的操作区（刷新/清空/分享等）。
   final List<Widget>? actions;
+
+  /// 页面内容**之上**的一层浮层（可空；默认 null = 行为零变化）。
+  ///
+  /// 构造参数 [stripCollapsed] 回传「顶部安全行当前是否已收起」，供页面把自身
+  /// 浮层与安全行高度对齐——首页搜索态需要把顶栏扩充块贴在安全行之下，并对
+  /// **含安全行在内**的整页背景加压暗遮罩（安全行在本层之下，页内 body 的
+  /// Stack 覆盖不到它，故需骨架提供这一层）。
+  final Widget Function(BuildContext context, bool stripCollapsed)?
+  overlayBuilder;
 
   /// 页面主体。
   final Widget body;
@@ -161,26 +171,39 @@ class _AppScaffoldState extends State<AppScaffold> {
             const SizedBox(width: 8),
           ],
         );
+        final overlayBuilder = widget.overlayBuilder;
         return Padding(
           padding: padding,
           child: materialOf(
-            Column(
+            Stack(
               children: [
-                // 安全行：向下滚动收起、向上滚动展开（Miuix 顶栏收缩行为）。
-                ClipRect(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: MiuixMotion.standardDecelerate,
-                    height: _collapsed ? 0 : AppScaffold.topStripHeight,
-                    child: strip,
-                  ),
+                Column(
+                  children: [
+                    // 安全行：向下滚动收起、向上滚动展开（Miuix 顶栏收缩行为）。
+                    ClipRect(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: MiuixMotion.standardDecelerate,
+                        height: _collapsed ? 0 : AppScaffold.topStripHeight,
+                        child: strip,
+                      ),
+                    ),
+                    Expanded(
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: _onScroll,
+                        child: body,
+                      ),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: _onScroll,
-                    child: body,
+                // 页面浮层：位于安全行 + 内容**之上**（默认无 → 零变化）。
+                // 浮层自身不吸事件：无子项命中时指针继续下穿到内容。
+                if (overlayBuilder != null)
+                  Positioned.fill(
+                    child: Builder(
+                      builder: (ctx) => overlayBuilder(ctx, _collapsed),
+                    ),
                   ),
-                ),
               ],
             ),
           ),

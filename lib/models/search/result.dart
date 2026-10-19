@@ -252,15 +252,36 @@ class SearchArticleItemModel {
 
 class SearchTrendingItemModel {
   final String? keyword;
+
+  /// 展示名（`show_name`）；后端未返回时回退 [keyword]，见 [displayName]。
+  final String? showName;
   final String? icon;
+
+  /// 是否为直播条目（`show_live_icon`）。
+  final bool? showLiveIcon;
   final String? recommendReason;
 
-  SearchTrendingItemModel({this.keyword, this.icon, this.recommendReason});
+  SearchTrendingItemModel({
+    this.keyword,
+    this.showName,
+    this.icon,
+    this.showLiveIcon,
+    this.recommendReason,
+  });
 
   SearchTrendingItemModel.fromJson(Map<String, dynamic> json)
       : keyword = json['keyword'] as String?,
+        showName = json['show_name'] as String?,
         icon = json['icon'] as String?,
+        showLiveIcon = json['show_live_icon'] as bool?,
         recommendReason = (json['recommend_reason'] as String?)?.replaceFirst('·', ' ');
+
+  /// 展示用名字：优先 `show_name`，缺失/为空时回退 `keyword`（旧后端兼容）。
+  String get displayName {
+    final name = showName;
+    if (name != null && name.isNotEmpty) return name;
+    return keyword ?? '';
+  }
 }
 
 class SearchTrendingData {
