@@ -42,6 +42,15 @@ const double _kSearchRowHeight = 38;
 const double _kSearchRowInset = Style.md; // 框内左内距（图标左缘到框左缘）
 const double _kSearchIconTextGap = Style.sm; // 图标与文字/占位间距
 
+/// 搜索框字号：常态占位、搜索态占位与输入文本三者共用。
+///
+/// 根因备忘：`MiuixTextField` 未显式传 `textStyle` 时会回退到
+/// `MiuixTheme.textStyles.main`（**17px**）。17px 行高（约 24px）塞进
+/// 38−8×2=22px 的文字区 ⇒ ① 文本光标比输入框还高、溢出框体；
+/// ② 输入文本(17) 与占位(13) 行盒不同高、基线错位，占位视觉下偏。
+/// 统一到 13px 后，输入文本/光标与占位同号同行盒，两个问题一并消除。
+const double _kSearchTextSize = 13;
+
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
 ///
@@ -459,6 +468,13 @@ class _HomeHeader extends StatelessWidget {
         textInputAction: TextInputAction.search,
         onSubmitted: onSubmitSearch,
         hint: '搜索视频、UP主...',
+        // 输入文本与占位同号（顺带把光标收到 13px 行高，不再高过输入框）；
+        // 占位样式与常态框逐项对齐（字号 + 颜色）。
+        textStyle: const TextStyle(fontSize: _kSearchTextSize),
+        hintStyle: TextStyle(
+          fontSize: _kSearchTextSize,
+          color: searchFg.withValues(alpha: 0.7),
+        ),
         prefix: Padding(
           padding: const EdgeInsets.only(
             left: _kSearchRowInset,
@@ -496,7 +512,7 @@ class _HomeHeader extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: _kSearchTextSize,
                   color: searchFg.withValues(alpha: 0.7),
                 ),
               ),
