@@ -25,6 +25,16 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 
+/// 焦点描边宽度（与 flutter_miuix `MiuixTextFieldDefaults.borderWidth` 一致）。
+///
+/// `MiuixSquircleBorder.paint` 用 `drawPath(getOuterPath(rect), side.toPaint())`
+/// —— 描边**沿外轮廓居中绘制** ⇒ 上下左右各向外溢 [_kSearchFocusStrokeInset]
+/// (1px)，使"含描边的可见框体"比布局矩形大 2px。搜索态据此把输入框的**布局
+/// 尺寸各向内收 1px**，让可见框体恰好等于常态框的 38 高 / 整宽（否则聚焦瞬间
+/// 框缘外扩、文字不动，即 CVO 反馈的"占位轻微上下挪动"）。
+const double _kSearchFocusStroke = 2;
+const double _kSearchFocusStrokeInset = _kSearchFocusStroke / 2;
+
 /// 首页顶栏「就地扩充」用的统一动画节奏（与壳层安全行收起同手感）。
 const Duration _kSearchMorphDuration = Duration(milliseconds: 220);
 
@@ -461,36 +471,51 @@ class _HomeHeader extends StatelessWidget {
     final icon = AppIcon(AppIcons.search(), size: 20, color: searchFg);
 
     if (searchMode) {
-      return AppCapsuleTextField(
-        controller: searchController,
-        focusNode: searchFocusNode,
-        autofocus: true,
-        textInputAction: TextInputAction.search,
-        onSubmitted: onSubmitSearch,
-        hint: '搜索视频、UP主...',
-        // 输入文本与占位同号（顺带把光标收到 13px 行高，不再高过输入框）；
-        // 占位样式与常态框逐项对齐（字号 + 颜色）。
-        textStyle: const TextStyle(fontSize: _kSearchTextSize),
-        hintStyle: TextStyle(
-          fontSize: _kSearchTextSize,
-          color: searchFg.withValues(alpha: 0.7),
-        ),
-        prefix: Padding(
-          padding: const EdgeInsets.only(
-            left: _kSearchRowInset,
-            right: _kSearchIconTextGap,
+      // 焦点描边补偿：`MiuixTextField` 的焦点描边沿外轮廓**居中**绘制
+      // （见 `_kSearchFocusStroke` 注释），上下左右各向外溢 1px。故把输入框
+      // 的布局尺寸各向内收 1px，使"含描边的可见框体"恰好等于常态框的 38 高 /
+      // 整宽；图标与文字内距同步 −1，两种状态下图标左缘(12) / 文字起点(40) 一致。
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: _kSearchFocusStrokeInset,
           ),
-          child: icon,
-        ),
-        suffix: ValueListenableBuilder<TextEditingValue>(
-          valueListenable: searchController,
-          builder: (context, value, _) {
-            if (value.text.isEmpty) return const SizedBox.shrink();
-            return MiuixIconButton(
-              onPressed: searchController.clear,
-              child: AppIcon(AppIcons.clear(), size: 18),
-            );
-          },
+          child: SizedBox(
+            width: double.infinity,
+            height: _kSearchRowHeight - _kSearchFocusStroke,
+            child: AppCapsuleTextField(
+              controller: searchController,
+              focusNode: searchFocusNode,
+              autofocus: true,
+              textInputAction: TextInputAction.search,
+              onSubmitted: onSubmitSearch,
+              hint: '搜索视频、UP主...',
+              // 输入文本与占位同号（顺带把光标收到 13px 行高，不再高过输入框）；
+              // 占位样式与常态框逐项对齐（字号 + 颜色）。
+              textStyle: const TextStyle(fontSize: _kSearchTextSize),
+              hintStyle: TextStyle(
+                fontSize: _kSearchTextSize,
+                color: searchFg.withValues(alpha: 0.7),
+              ),
+              prefix: Padding(
+                padding: const EdgeInsets.only(
+                  left: _kSearchRowInset - _kSearchFocusStrokeInset,
+                  right: _kSearchIconTextGap,
+                ),
+                child: icon,
+              ),
+              suffix: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: searchController,
+                builder: (context, value, _) {
+                  if (value.text.isEmpty) return const SizedBox.shrink();
+                  return MiuixIconButton(
+                    onPressed: searchController.clear,
+                    child: AppIcon(AppIcons.clear(), size: 18),
+                  );
+                },
+              ),
+            ),
+          ),
         ),
       );
     }
