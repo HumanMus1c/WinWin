@@ -652,6 +652,11 @@ class _AppCapsuleTextFieldState extends State<AppCapsuleTextField>
       // 自绘占位（与上游文本区同构对齐）：prefix 透明副本占位宽度 +
       // 首行左对齐文本；controller 文本非空即即时隐藏（无动画）。
       bridged = Stack(
+        // 显式居中：默认 topStart 会把"固有高 < 盒子高"的输入框钉在顶部，
+        // 而占位叠加层(Positioned.fill + 对称 padding + Align.center)居中于
+        // 整个盒子 ⇒ 输入内容与占位相差 (盒高−固有高)/2，切换状态时占位±位移。
+        // 两子件同轴心（居中于盒）后，占位与输入文本/图标始终同高。
+        alignment: Alignment.center,
         children: [
           bridged,
           Positioned.fill(
