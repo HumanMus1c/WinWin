@@ -18,8 +18,12 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/history.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/history/history_models.dart';
+import 'package:winwin/pages/article/article_page.dart';
+import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
+import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
@@ -31,16 +35,37 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/core/shell/app_transparent_host.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 历史记录页面（移植自 PiliPlus `lib/pages/history/`，重构为自适应多列宫格排版）。
+///
+/// 多类型支持（对标官方 `/x/web-interface/history/cursor` 与上游 PiliPlus）：
+/// - 分类栏由服务端 `data.tab` 动态下发（官方 `type` 全集 `all/archive/live/article`）；
+/// - 切换分类按 `type` 重新分页，各分类独立缓存（切回不重拉）；
+/// - 点击按 `history.business` 跳转对应落地页：稿件→视频、番剧/影视(pgc)→番剧详情、
+///   直播(live)→直播间、专栏/文集(article/article-list)→文章页。
 void showHistoryPage(BuildContext context) {
   Navigator.of(
     context,
   ).push(AppRoute<void>(builder: (_) => const HistoryPage()));
+}
+
+/// 单个分类（type）的分页状态（对齐上游「每 type 一个 Controller 保活」）。
+class _HistoryTabState {
+  final List<HistoryItem> items = [];
+  int? max;
+  int? viewAt;
+  bool hasMore = true;
+  bool loading = true;
+  bool isLoadingMore = false;
+  String? error;
+
+  /// 是否已完成过一次**成功**加载（切回该分类时据此判断是否需重新请求）。
+  bool loaded = false;
 }
 
 class HistoryPage extends StatefulWidget {
@@ -52,19 +77,24 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   final ScrollController _scrollController = ScrollController();
-  final List<HistoryItem> _items = [];
-  int? _max;
-  int? _viewAt;
-  bool _hasMore = true;
-  bool _loading = true;
-  bool _isLoadingMore = false;
-  String? _error;
+
+  /// 当前分类（官方 `type`：all/archive/live/article）。
+  String _type = 'all';
+
+  /// 各分类独立状态缓存。
+  final Map<String, _HistoryTabState> _tabStates = {};
+
+  /// 服务端下发的分类列表（仅在 `all` 首次刷新时捕获）。
+  List<HistoryTab> _tabs = const [];
 
   /// 演示模式：本地追加的演示卡片数量（滚动每次仅 +1 行）。
   int _demoExtra = 0;
 
   /// 演示模式：上次追加行的滚动位置（需继续滚动约半屏后才再追加）。
   double _demoLastAppendAt = double.negativeInfinity;
+
+  _HistoryTabState get _state =>
+      _tabStates.putIfAbsent(_type, _HistoryTabState.new);
 
   @override
   void initState() {
@@ -79,7 +109,7 @@ class _HistoryPageState extends State<HistoryPage> {
   void _onDemoChanged() {
     if (!mounted) return;
     setState(() {});
-    if (!Pref.demoMode && _items.isEmpty) {
+    if (!Pref.demoMode && _state.items.isEmpty) {
       _load(refresh: true);
     }
   }
@@ -99,21 +129,33 @@ class _HistoryPageState extends State<HistoryPage> {
       _load(refresh: true);
     } else {
       setState(() {
-        _items.clear();
-        _max = null;
-        _viewAt = null;
-        _hasMore = true;
-        _loading = false;
-        _isLoadingMore = false;
-        _error = '请先登录';
+        _tabStates.clear();
+        _tabs = const [];
+        _type = 'all';
+        final s = _state;
+        s.loading = false;
+        s.error = '请先登录';
       });
+    }
+  }
+
+  /// 切换分类：命中缓存则直接展示，否则首次拉取。
+  void _switchType(String type) {
+    if (_type == type) return;
+    setState(() => _type = type);
+    final s = _state;
+    if (!s.loaded) {
+      _load(refresh: true);
+    } else {
+      _checkAutoLoad();
     }
   }
 
   void _checkAutoLoad() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (!_hasMore || _loading || _isLoadingMore) return;
+      final s = _state;
+      if (!s.hasMore || s.loading || s.isLoadingMore) return;
       if (_scrollController.hasClients &&
           _scrollController.position.hasContentDimensions) {
         final pos = _scrollController.position;
@@ -125,24 +167,25 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
+    final s = _state;
     // 演示模式：不拉取云端列表（滚动追加在 _onScroll 中本地处理）。
     if (Pref.demoMode) {
-      _loading = false;
+      s.loading = false;
       return;
     }
     await ensureBootstrap();
     if (refresh) {
-      _max = null;
-      _viewAt = null;
-      _hasMore = true;
-      _items.clear();
-      _loading = true;
-      _isLoadingMore = false;
-      _error = null;
+      s.max = null;
+      s.viewAt = null;
+      s.hasMore = true;
+      s.items.clear();
+      s.loading = true;
+      s.isLoadingMore = false;
+      s.error = null;
       setState(() {});
     } else {
-      if (!_hasMore || _isLoadingMore) return;
-      _isLoadingMore = true;
+      if (!s.hasMore || s.isLoadingMore) return;
+      s.isLoadingMore = true;
       setState(() {});
     }
 
@@ -152,49 +195,64 @@ class _HistoryPageState extends State<HistoryPage> {
         'Accounts.main is not login: ${Accounts.main.runtimeType}',
       );
       setState(() {
-        _loading = false;
-        _isLoadingMore = false;
-        _error = '请先登录';
+        s.loading = false;
+        s.isLoadingMore = false;
+        s.error = '请先登录';
       });
       return;
     }
 
-    AppLogger.d('HistoryPage', 'Loading history max: $_max, viewAt: $_viewAt');
-    final res = await HistoryHttp.historyList(max: _max, viewAt: _viewAt);
+    AppLogger.d(
+      'HistoryPage',
+      'Loading history type: $_type max: ${s.max}, viewAt: ${s.viewAt}',
+    );
+    final res = await HistoryHttp.historyList(
+      type: _type,
+      max: s.max,
+      viewAt: s.viewAt,
+    );
     if (!mounted) return;
 
     switch (res) {
       case Success(:final response):
         AppLogger.d('HistoryPage', 'Loaded ${response.list?.length} items');
         setState(() {
-          _loading = false;
-          _isLoadingMore = false;
-          _error = null;
-          if (response.list != null) _items.addAll(response.list!);
+          s.loading = false;
+          s.isLoadingMore = false;
+          s.error = null;
+          s.loaded = true;
+          if (response.list != null) s.items.addAll(response.list!);
+          // 分类栏仅由 `all` 首次刷新时捕获（官方仅在默认分类下发 tab）。
+          if (refresh &&
+              _type == 'all' &&
+              response.tab != null &&
+              response.tab!.isNotEmpty) {
+            _tabs = response.tab!;
+          }
           // 游标分页：优先使用服务端下发的 cursor，回退到末尾项推算
           if (response.cursor != null &&
               response.cursor!.max != null &&
               response.cursor!.max! > 0) {
-            _max = response.cursor!.max;
-            _viewAt = response.cursor!.viewAt;
-            _hasMore = (response.list?.length ?? 0) >= 20 && _max != 0;
+            s.max = response.cursor!.max;
+            s.viewAt = response.cursor!.viewAt;
+            s.hasMore = (response.list?.length ?? 0) >= 20 && s.max != 0;
           } else if (response.list != null && response.list!.isNotEmpty) {
             final last = response.list!.last;
-            _max = last.history.oid;
-            _viewAt = last.viewAt;
-            _hasMore = response.list!.length >= 20;
+            s.max = last.history.oid;
+            s.viewAt = last.viewAt;
+            s.hasMore = response.list!.length >= 20;
           } else {
-            _hasMore = false;
+            s.hasMore = false;
           }
         });
         _checkAutoLoad();
       case Error(:final errMsg):
         AppLogger.e('HistoryPage', 'Load failed: $errMsg');
         setState(() {
-          _loading = false;
-          _isLoadingMore = false;
-          if (_items.isEmpty) {
-            _error = errMsg ?? '加载失败';
+          s.loading = false;
+          s.isLoadingMore = false;
+          if (s.items.isEmpty) {
+            s.error = errMsg ?? '加载失败';
           }
         });
       case Loading():
@@ -203,7 +261,8 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   void _onScroll() {
-    if (!_hasMore || _loading || _isLoadingMore) return;
+    final s = _state;
+    if (!s.hasMore || s.loading || s.isLoadingMore) return;
     if (_scrollController.hasClients &&
         _scrollController.position.hasContentDimensions) {
       final pos = _scrollController.position;
@@ -228,7 +287,7 @@ class _HistoryPageState extends State<HistoryPage> {
     if (!mounted) return;
     switch (res) {
       case Success():
-        setState(() => _items.remove(item));
+        setState(() => _state.items.remove(item));
       case Error(:final errMsg):
         showToast(context, errMsg ?? '删除失败');
       case Loading():
@@ -236,13 +295,81 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  /// 打开历史项：仅 archive 类型且有 bvid 的稿件可跳转详情页续播，
-  /// 直播/专栏/番剧等类型暂不支持。
+  /// 打开历史项：按 `history.business` 分发到对应落地页。
+  ///
+  /// - `archive`/空 → 普通视频详情（可续播）；
+  /// - `pgc` → 番剧/影视详情（按 epid）；
+  /// - `live` → 直播间（未开播则提示）；
+  /// - `article`/`article-list` → 专栏/文集文章页；
+  /// - `cheese`（课程）→ 暂不支持（WinWin 尚无课程落地页）。
   void _openItem(HistoryItem item) {
+    final business = item.history.business ?? 'archive';
+
+    // 专栏 / 文集
+    if (business.contains('article')) {
+      final id =
+          business == 'article-list' ? item.history.cid : item.history.oid;
+      if (id == null) {
+        showToast(context, '暂不支持打开该类型记录');
+        return;
+      }
+      Navigator.of(context).push(
+        AppRoute<void>(
+          builder: (_) => ArticlePage(
+            id: id.toString(),
+            title: item.title,
+            cover: item.cover,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // 直播
+    if (business == 'live') {
+      if (item.liveStatus != 1) {
+        showToast(context, '直播未开播');
+        return;
+      }
+      final roomId = item.history.oid;
+      if (roomId == null) {
+        showToast(context, '暂不支持打开该类型记录');
+        return;
+      }
+      Navigator.of(context).push(
+        AppRoute<void>(
+          builder: (_) => LiveRoomPage(
+            roomId: roomId,
+            title: item.title,
+            cover: item.cover,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // 番剧 / 影视（pgc）
+    if (business == 'pgc') {
+      final epId = item.history.epid;
+      if (epId == null) {
+        showToast(context, '暂不支持打开该类型记录');
+        return;
+      }
+      Navigator.of(context).push(
+        AppRoute<void>(
+          builder: (_) => BangumiDetailPage(
+            epId: epId,
+            cover: item.cover,
+            title: item.title,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // 稿件（archive / 空）
     final bvid = item.history.bvid;
-    final business = item.history.business;
-    final isArchive =
-        business == 'archive' || business == null || business.isEmpty;
+    final isArchive = business == 'archive' || business.isEmpty;
     if (bvid == null || bvid.isEmpty || !isArchive) {
       showToast(context, '暂不支持打开该类型记录');
       return;
@@ -277,8 +404,11 @@ class _HistoryPageState extends State<HistoryPage> {
     switch (res) {
       case Success():
         setState(() {
-          _items.clear();
-          _hasMore = false;
+          // 服务端清空所有类型，同步清空全部分类缓存。
+          for (final st in _tabStates.values) {
+            st.items.clear();
+            st.hasMore = false;
+          }
         });
       case Error(:final errMsg):
         showToast(context, errMsg ?? '清空失败');
@@ -292,7 +422,7 @@ class _HistoryPageState extends State<HistoryPage> {
     return AppScaffold(
       title: '历史',
       actions: [
-        if (_items.isNotEmpty)
+        if (!Pref.demoMode && _state.items.isNotEmpty)
           MiuixIconButton(
             onPressed: _clearAll,
 
@@ -302,86 +432,171 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
           ),
       ],
-      body: Pref.demoMode
-          ? _buildDemoList()
-          : _loading && _items.isEmpty
-          ? _buildSkeleton()
-          : _error != null && _items.isEmpty
-          ? _buildError()
-          : _items.isEmpty
-          ? AppEmptyState(
-              icon: AppIcon(AppIcons.history(selected: false)),
-              title: '暂无观看记录',
-              subtitle: '看过的视频会出现在这里',
-            )
-          : NotificationListener<ScrollNotification>(
-              onNotification: (n) {
-                if (n is ScrollUpdateNotification ||
-                    n is ScrollEndNotification) {
-                  _onScroll();
-                }
-                return false;
-              },
-              child: AppRefreshIndicator(
-                displacement: 40.0,
-                strokeWidth: 2.5,
-                color: biliPink,
-                onRefresh: () => _load(refresh: true),
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.all(Style.safeSpace),
-                      sliver: SliverGrid.builder(
-                        gridDelegate: Grid.videoCardHDelegate(
-                          maxCrossAxisExtent: 440.0,
-                          mainAxisExtent: 110.0,
-                        ),
-                        itemCount: _items.length,
-                        itemBuilder: (context, index) {
-                          final item = _items[index];
-                          return _HistoryCard(
-                            item: item,
-                            onDelete: () => _deleteItem(item),
-                            onTap: () => _openItem(item),
-                          );
-                        },
-                      ),
+      body: Pref.demoMode ? _buildDemoList() : _buildContent(context),
+    );
+  }
+
+  /// 正文：分类栏 + 内容区（分类未下发或演示模式下退化为纯内容）。
+  Widget _buildContent(BuildContext context) {
+    final content = _state.loading && _state.items.isEmpty
+        ? _buildSkeleton()
+        : _state.error != null && _state.items.isEmpty
+        ? _buildError()
+        : _state.items.isEmpty
+        ? AppEmptyState(
+            icon: AppIcon(AppIcons.history(selected: false)),
+            title: '暂无观看记录',
+            subtitle: '看过的视频会出现在这里',
+          )
+        : _buildList();
+
+    if (_tabs.isEmpty) return content;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTabBar(context),
+        Expanded(child: content),
+      ],
+    );
+  }
+
+  /// 分类胶囊栏：`全部` + 服务端下发分类（对齐上游 PiliPlus，样式复用直播/番剧页）。
+  Widget _buildTabBar(BuildContext context) {
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final shapes = tokens.shapes;
+    final entries = <({String type, String label})>[
+      (type: 'all', label: '全部'),
+      for (final t in _tabs)
+        if (t.type != null && t.type!.isNotEmpty && t.name != null)
+          (type: t.type!, label: t.name!),
+    ];
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.safeSpace,
+          vertical: Style.xs,
+        ),
+        itemCount: entries.length,
+        separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
+        itemBuilder: (context, index) {
+          final entry = entries[index];
+          final isSelected = _type == entry.type;
+          return AppTransparentHost(
+            child: MiuixPressable(
+              feedbackType: MiuixPressFeedbackType.sink,
+              sinkAmount: 0.98,
+              borderRadius: shapes.pillBorder,
+              onPressed: () => _switchType(entry.type),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? cs.primary.withValues(alpha: 0.18)
+                      : cs.surfaceContainerHighest.withValues(alpha: 0.4),
+                  borderRadius: shapes.pillBorder,
+                  border: Border.all(
+                    color: isSelected
+                        ? cs.primary.withValues(alpha: 0.45)
+                        : AppColors.transparent,
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    entry.label,
+                    style: TextStyle(
+                      color: isSelected ? cs.primary : cs.onSurfaceVariant,
+                      fontSize: 12.5,
+                      // 显式行高收紧行盒：消除字体度量导致的下坠，Center 后光学居中。
+                      height: 1.2,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
-                    if (_isLoadingMore)
-                      const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.all(Style.md),
-                          child: Center(
-                            child: AppProgressIndicator(
-                              strokeWidth: 2,
-                              color: biliPink,
-                            ),
-                          ),
-                        ),
-                      )
-                    else if (!_hasMore && _items.isNotEmpty)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: Style.md,
-                          ),
-                          child: Center(
-                            child: Text(
-                              '没有更多了',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppThemeHost.of(context).colors.outline,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ),
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// 内容列表（当前分类）。
+  Widget _buildList() {
+    final s = _state;
+    return NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
+          _onScroll();
+        }
+        return false;
+      },
+      child: AppRefreshIndicator(
+        displacement: 40.0,
+        strokeWidth: 2.5,
+        color: biliPink,
+        onRefresh: () => _load(refresh: true),
+        child: CustomScrollView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.all(Style.safeSpace),
+              sliver: SliverGrid.builder(
+                gridDelegate: Grid.videoCardHDelegate(
+                  maxCrossAxisExtent: 440.0,
+                  mainAxisExtent: 110.0,
+                ),
+                itemCount: s.items.length,
+                itemBuilder: (context, index) {
+                  final item = s.items[index];
+                  return _HistoryCard(
+                    item: item,
+                    onDelete: () => _deleteItem(item),
+                    onTap: () => _openItem(item),
+                  );
+                },
+              ),
+            ),
+            if (s.isLoadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(Style.md),
+                  child: Center(
+                    child: AppProgressIndicator(
+                      strokeWidth: 2,
+                      color: biliPink,
+                    ),
+                  ),
+                ),
+              )
+            else if (!s.hasMore && s.items.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: Style.md),
+                  child: Center(
+                    child: Text(
+                      '没有更多了',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppThemeHost.of(context).colors.outline,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -449,7 +664,8 @@ class _HistoryPageState extends State<HistoryPage> {
 
   /// 错误/未登录态：未登录用语义空态，其余用统一错误态（含重试）。
   Widget _buildError() {
-    if (_error == '请先登录') {
+    final err = _state.error;
+    if (err == '请先登录') {
       return AppEmptyState(
         icon: AppIcon(AppIcons.profile()),
         title: '请先登录',
@@ -457,7 +673,7 @@ class _HistoryPageState extends State<HistoryPage> {
       );
     }
     return AppErrorState(
-      message: _error ?? '加载失败',
+      message: err ?? '加载失败',
       onRetry: () => _load(refresh: true),
     );
   }
@@ -482,6 +698,11 @@ class _HistoryCard extends StatelessWidget {
     final bvid = item.history.bvid;
     final authorName = item.authorName ?? '';
     final authorMid = item.authorMid ?? 0;
+
+    // 类型角标：已收藏优先，否则用服务端 badge（如「番剧」「直播」）。
+    final badgeText = item.isFav == 1
+        ? '已收藏'
+        : (item.badge?.isNotEmpty == true ? item.badge : null);
 
     double progressFraction = 0.0;
     if (progress > 0 && duration > 0) {
@@ -523,6 +744,17 @@ class _HistoryCard extends StatelessWidget {
                                   : null,
                             ),
                           ),
+                          if (badgeText != null)
+                            Positioned(
+                              left: 4,
+                              top: 4,
+                              child: PBadge(
+                                text: badgeText,
+                                type: item.isFav == 1
+                                    ? PBadgeType.status
+                                    : PBadgeType.primary,
+                              ),
+                            ),
                           if (duration > 0 || Pref.demoMode)
                             Positioned(
                               right: 4,
