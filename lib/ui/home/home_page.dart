@@ -497,6 +497,11 @@ class _HomeHeader extends StatelessWidget {
                 fontSize: _kSearchTextSize,
                 color: searchFg.withValues(alpha: 0.7),
               ),
+              // 内容区高度：焦点态布局盒已收到 36 以吸收 2px 焦点描边（见上），
+              // 若沿用默认垂直内距 8+8，内容区只剩 20px —— 20px 图标与光标行高
+              // 几乎顶满，实机表现为文字下移 + 被裁。故把垂直内距收到 4+4，
+              // 内容区回到 28px，图标/文字/光标同轴居中于盒心（= 常态框同轴）。
+              insideMargin: const EdgeInsets.only(top: 4, bottom: 4),
               prefix: Padding(
                 padding: const EdgeInsets.only(
                   left: _kSearchRowInset - _kSearchFocusStrokeInset,
