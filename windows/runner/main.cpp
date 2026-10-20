@@ -1,3 +1,4 @@
+// AI生成
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
@@ -71,6 +72,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   //（fvp DXGI shared handle）在路由转场场景变化时光栅线程空指针崩溃
   //（flutter_windows.dll+0x2C55F7，播放中返回必崩）。回退 Skia 后端规避。
   project.set_impeller_switch(flutter::ImpellerSwitch::Disabled);
+
+  // Flutter 3.35+ 在 Windows 上默认把 UI isolate 与平台线程「合并」运行
+  // （UIThreadPolicy::Default 在引擎中实际解析为把 ui_task_runner 指向平台线程）。
+  // 对本项目的「无边框 + 自研原生全屏 + fvp 外挂 D3D11 纹理」重窗口形态而言，
+  // 切换显示器 / 修改分辨率时系统会集中投递 WM_DPICHANGED / WM_SIZE 并触发
+  // 大量 SetWindowPos(SWP_FRAMECHANGED)，与 Dart 执行互相阻塞 → UI 冻结
+  // （现象：release 才复现、无 Dart 异常、日志停在最后一条）。显式改为分离线程规避，
+  // 参见上游 flutter/flutter#176088（同类回归的官方 workaround）。
+  project.set_ui_thread_policy(flutter::UIThreadPolicy::RunOnSeparateThread);
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
