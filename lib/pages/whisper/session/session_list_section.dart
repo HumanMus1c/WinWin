@@ -1,5 +1,10 @@
 import 'package:flutter_miuix/miuix.dart'
-    show MiuixBasicComponent, MiuixTextButton;
+    show
+        MiuixCard,
+        MiuixCardDefaults,
+        MiuixPressFeedbackType,
+        MiuixPressable,
+        MiuixTextButton;
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/app_chip.dart';
@@ -510,107 +515,144 @@ class _SessionTile extends StatelessWidget {
     final content = _lastMsg?['content']?.toString();
     final ts = (_lastMsg?['timestamp'] as num?)?.toInt();
 
-    return GestureDetector(
-      onSecondaryTapUp: (details) =>
-          _openMoreMenu(context, details.globalPosition),
-      child: MiuixBasicComponent(
-        insideMargin: const EdgeInsets.symmetric(
-          horizontal: Style.safeSpace,
-          vertical: Style.xs,
-        ),
-        onClick: () => showChatDetailPage(
-          context,
-          talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
-          sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
-        ),
-        startAction: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            MsgFeedAvatar(src: _avatar),
-            if (!Pref.demoMode && unread > 0)
-              Positioned(
-                right: -4,
-                top: -4,
-                child: Container(
-                  constraints: const BoxConstraints(minWidth: 18),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tokens.colors.error,
-                    border: Border.all(
-                      color: tokens.colors.background,
-                      width: 1.5,
-                    ),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: Text(
-                    unread > 99 ? '99+' : '$unread',
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 10,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        content: [
-          Row(
-            children: [
-              Flexible(
-                child: Pref.demoMode
-                    ? const SkeletonLine(width: 120, height: 14)
-                    : Text(
-                        _name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: tokens.text.bodyLarge,
+    // 会话行 = **圆角长条 MiuixCard**（与会话列表外的历史/收藏列表卡片同源）。
+    // 此前用无背景的 `MiuixBasicComponent`（透明行，靠 12px 内距分隔），观感是
+    // 无缝列表；改为卡片后：左右 12px 出血边距 + 卡间纵向 4px 外距（视觉 8px），
+    // 内容内距 12×8，squircle 圆角走库默认 [MiuixCardDefaults.cornerRadius]。
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Style.md,
+        vertical: Style.xs,
+      ),
+      child: GestureDetector(
+        onSecondaryTapUp: (details) =>
+            _openMoreMenu(context, details.globalPosition),
+        child: MiuixCard(
+          insideMargin: const EdgeInsets.symmetric(
+            horizontal: Style.md,
+            vertical: Style.sm,
+          ),
+          child: MiuixPressable(
+            onPressed: () => showChatDetailPage(
+              context,
+              talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
+              sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
+            ),
+            // 整卡轻下沉微缩（项目既定点击反馈），替代整卡变暗/波纹。
+            feedbackType: MiuixPressFeedbackType.sink,
+            sinkAmount: 0.98,
+            borderRadius: BorderRadius.circular(
+              MiuixCardDefaults.cornerRadius,
+            ),
+            child: Row(
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    MsgFeedAvatar(src: _avatar),
+                    if (!Pref.demoMode && unread > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          constraints: const BoxConstraints(minWidth: 18),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: tokens.colors.error,
+                            border: Border.all(
+                              color: tokens.colors.background,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: Text(
+                            unread > 99 ? '99+' : '$unread',
+                            style: const TextStyle(
+                              color: AppColors.white,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
                       ),
-              ),
-              if (isPinned) _flag(tokens, '置顶'),
-              if (isSpecial) _flag(tokens, '特别关注', color: biliPink),
-              if (isDnd) _flag(tokens, '免打扰'),
-            ],
-          ),
-          (Pref.demoMode
-              ? const SkeletonLine(width: double.infinity, height: 12)
-              : Text(
-                  MessagePreviewParser.parseSessionPreview(content, msgType),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: tokens.text.bodySmall?.copyWith(
-                    color: tokens.colors.onSurfaceVariant,
-                  ),
-                )),
-        ],
-        endActions: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!Pref.demoMode && ts != null && ts > 0)
-                Text(
-                  msgFeedTime(ts),
-                  style: tokens.text.bodySmall?.copyWith(
-                    color: tokens.colors.outline,
+                  ],
+                ),
+                const SizedBox(width: Style.md),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Pref.demoMode
+                                ? const SkeletonLine(width: 120, height: 14)
+                                : Text(
+                                    _name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: tokens.text.bodyLarge,
+                                  ),
+                          ),
+                          if (isPinned) _flag(tokens, '置顶'),
+                          if (isSpecial)
+                            _flag(tokens, '特别关注', color: biliPink),
+                          if (isDnd) _flag(tokens, '免打扰'),
+                        ],
+                      ),
+                      const SizedBox(height: Style.xs),
+                      (Pref.demoMode
+                          ? const SkeletonLine(
+                              width: double.infinity,
+                              height: 12,
+                            )
+                          : Text(
+                              MessagePreviewParser.parseSessionPreview(
+                                content,
+                                msgType,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: tokens.text.bodySmall?.copyWith(
+                                color: tokens.colors.onSurfaceVariant,
+                              ),
+                            )),
+                    ],
                   ),
                 ),
-              SessionMoreMenuButton(
-                isPinned: isPinned,
-                isDnd: isDnd,
-                onToggleTop: () => onToggleTop(index),
-                onToggleDnd: () => onToggleDnd(index),
-                onReport: () => reportSession(
-                  context,
-                  talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
-                  sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
+                const SizedBox(width: Style.sm),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!Pref.demoMode && ts != null && ts > 0)
+                      Text(
+                        msgFeedTime(ts),
+                        style: tokens.text.bodySmall?.copyWith(
+                          color: tokens.colors.outline,
+                        ),
+                      ),
+                    SessionMoreMenuButton(
+                      isPinned: isPinned,
+                      isDnd: isDnd,
+                      onToggleTop: () => onToggleTop(index),
+                      onToggleDnd: () => onToggleDnd(index),
+                      onReport: () => reportSession(
+                        context,
+                        talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
+                        sessionType:
+                            (session['session_type'] as num?)?.toInt() ?? 1,
+                      ),
+                      onRemove: () => _confirmRemove(context),
+                    ),
+                  ],
                 ),
-                onRemove: () => _confirmRemove(context),
-              ),
-            ],
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
