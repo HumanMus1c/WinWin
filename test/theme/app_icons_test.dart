@@ -295,6 +295,7 @@ void main() {
               isDnd: true,
               onToggleTop: () {},
               onToggleDnd: () {},
+              onReport: () {},
               onRemove: () {},
             ),
           ),
