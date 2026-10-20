@@ -28,6 +28,20 @@ import 'package:winwin/ui/components/app_tooltip.dart';
 /// 首页顶栏「就地扩充」用的统一动画节奏（与壳层安全行收起同手感）。
 const Duration _kSearchMorphDuration = Duration(milliseconds: 220);
 
+/// 搜索框行几何的**唯一口径**（常态「假搜索框」与搜索态真输入条共用）。
+///
+/// 两个状态由**不同 widget** 渲染（常态是自绘 [Container]，搜索态是
+/// `AppCapsuleTextField → MiuixTextField`）。若两边的框内左边距与图标—文字
+/// 间距不写成同源常量，聚焦切换的一瞬间图标/占位文字会横向跳变
+/// （CVO 反馈「点击聚焦后搜索框尺寸和位置发生了偏移」的根因）。
+///
+/// 注意 `MiuixTextField` 在**有 leadingIcon 时不会给图标加水平内距**
+/// （其 `insideMargin.left` 仅作用于无前导图标时的文本区），故前缀必须
+/// 自带左内距，方可与常态框对齐。
+const double _kSearchRowHeight = 38;
+const double _kSearchRowInset = Style.md; // 框内左内距（图标左缘到框左缘）
+const double _kSearchIconTextGap = Style.sm; // 图标与文字/占位间距
+
 /// Home page — ported from BiliPai's HomeScreen.
 /// Floating top bar, category tabs, video feed grid.
 ///
@@ -211,7 +225,7 @@ class _HomePageState extends State<HomePage> {
       builder: (context, constraints) {
         // 顶栏固定部分：外壳上下边距 + 内容区上下边距 + 搜索框行 38 + 行间 6，
         // 另留 Style.md 作为底部余量。
-        const fixed = Style.sm * 4 + 38 + 6 + Style.md;
+        const fixed = Style.sm * 4 + _kSearchRowHeight + 6 + Style.md;
         final maxPanelHeight = (constraints.maxHeight - stripHeight - fixed)
             .clamp(120.0, double.infinity);
         return Stack(
@@ -333,7 +347,10 @@ class _HomeHeader extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: SizedBox(height: 38, child: _buildSearchRow(searchBg, searchFg)),
+                child: SizedBox(
+                  height: _kSearchRowHeight,
+                  child: _buildSearchRow(searchBg, searchFg),
+                ),
               ),
               const SizedBox(width: Style.sm),
               MiuixIconButton(
@@ -428,6 +445,12 @@ class _HomeHeader extends StatelessWidget {
   /// 搜索框行：常态为「假搜索框」（点击进搜索态）；搜索态换成真输入条
   /// （自动聚焦、回车提交、可清空），高度同为 38。
   Widget _buildSearchRow(Color searchBg, Color searchFg) {
+    // 图标 + 间距为两状态共用件：搜索态把它整体作为 `prefix` 交给
+    // `AppCapsuleTextField`（MiuixTextField 有前导图标时不加水平内距，
+    // 故此处自带左内距），常态则直接放进自绘 Row —— 两种渲染下图标左缘
+    // 与文字起点完全一致（_kSearchRowInset / _kSearchIconTextGap 单一来源）。
+    final icon = AppIcon(AppIcons.search(), size: 20, color: searchFg);
+
     if (searchMode) {
       return AppCapsuleTextField(
         controller: searchController,
@@ -436,7 +459,13 @@ class _HomeHeader extends StatelessWidget {
         textInputAction: TextInputAction.search,
         onSubmitted: onSubmitSearch,
         hint: '搜索视频、UP主...',
-        prefix: AppIcon(AppIcons.search(), size: 20),
+        prefix: Padding(
+          padding: const EdgeInsets.only(
+            left: _kSearchRowInset,
+            right: _kSearchIconTextGap,
+          ),
+          child: icon,
+        ),
         suffix: ValueListenableBuilder<TextEditingValue>(
           valueListenable: searchController,
           builder: (context, value, _) {
@@ -454,17 +483,13 @@ class _HomeHeader extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: searchBg,
-          borderRadius: BorderRadius.circular(100),
+          borderRadius: BorderRadius.circular(Style.radiusFull),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: Style.md),
+        padding: const EdgeInsets.only(left: _kSearchRowInset),
         child: Row(
           children: [
-            AppIcon(
-              AppIcons.search(),
-              size: 20,
-              color: searchFg,
-            ),
-            const SizedBox(width: Style.sm),
+            icon,
+            const SizedBox(width: _kSearchIconTextGap),
             Expanded(
               child: Text(
                 '搜索视频、UP主...',
