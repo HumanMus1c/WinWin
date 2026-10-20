@@ -123,18 +123,29 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
   }
 
-  /// 焦点离开输入框 = 离开搜索上下文 → 收起（例：点了导航栏/底栏）。
+  /// 焦点离开输入框 = 离开搜索上下文 → 收起（例：点了导航栏 / 底栏）。
   ///
-  /// 两点护栏：
-  /// - Windows 上点击普通区域不会抢焦点（`EditableText` 的默认 `onTapOutside`
-  ///   在桌面端什么都不做），故这里只在**真有控件请求焦点**时触发，不会因点
-  ///   面板内的刷新/清空按钮而误收起；
+  /// 三重护栏：
+  /// - **面板内点击不算"离开"**：`_HomeHeader` 已整体并入输入框的 TapRegion 组
+  ///   （见其 `build` 外层 `TextFieldTapRegion`），面板内（历史词 / 用户胶囊 /
+  ///   热搜条目 / 清空 / ✕ / 刷新 / 设置齿轮）的按下即"内侧"，不会触发
+  ///   `EditableText` 桌面端默认的 `onTapOutside → unfocus`。**注意该默认值在
+  ///   桌面端并非空实现**——`EditableText` 的 `_EditableTextTapOutsideAction` 对
+  ///   windows/linux/macOS 就是 `focusNode.unfocus()`；真正空实现的是
+  ///   `onTapUpOutside`。第二轮复盘把它当作"桌面端什么都不做"是**误判**，正是
+  ///   本轮"点面板条目即失焦并被误收起、点击被吞"的根因。
+  /// - **被路由 / 对话框压顶不算"离开"**：焦点丢失若伴随本页不再是当前路由
+  ///   （push 用户空间 / 清空确认框 / 设置页等抢走焦点），应**保留**搜索态，返回
+  ///   后原样还在；只有**原地**失焦（点导航栏 / 底栏）才收起。
   /// - 窗口失活（切到别的应用）会让 `FocusManager` 挂起主焦点，属"暂时"而非
   ///   "离开"，故应用不在 resumed 时直接忽略。
   void _onSearchFocusChanged() {
-    if (!_searchMode || _searchFocusNode.hasFocus) return;
+    if (!mounted || !_searchMode || _searchFocusNode.hasFocus) return;
     final lifecycle = WidgetsBinding.instance.lifecycleState;
     if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
+    // 路由/对话框压顶：这次失焦是"被覆盖"，不是"离开搜索上下文"→ 保留。
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return;
     _exitSearch();
   }
 
@@ -401,7 +412,17 @@ class _HomeHeader extends StatelessWidget {
 
     // 顶栏材质单一来源：与消息中心合并栏共用 [AppTopBarSurface]（同底色/模糊/
     // 圆角/外距），避免两页各写一份而漂移。
-    return AppTopBarSurface(child: headerContent);
+    //
+    // 外层 `TextFieldTapRegion`（F1 归组）：把整块顶栏并入搜索输入框的 TapRegion
+    // 组，使面板内（历史词 / 用户胶囊 / 热搜条目 / 清空 / ✕ / 刷新 / 设置齿轮）的
+    // 按下被视为"输入框内侧"，不再触发 `EditableText` 桌面端默认的
+    // `onTapOutside → unfocus`——否则会被"失焦即退出"同步收起搜索态，被按下的
+    // 控件在 tap-up 前就被卸载，点击被吞（本轮根因）。组外点击（遮罩 / 导航栏 /
+    // 底栏）仍走默认失焦，"点导航栏即收起"的语义不变。默认 `groupId == EditableText`
+    // 与输入框自身同组（SDK `TapRegion` 的既定用法，非本项目自定义）。
+    return TextFieldTapRegion(
+      child: AppTopBarSurface(child: headerContent),
+    );
   }
 
   /// 搜索框行：常态为「假搜索框」（点击进搜索态）；搜索态换成真输入条
