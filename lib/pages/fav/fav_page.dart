@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -939,6 +940,9 @@ class _FavPanelState extends State<_FavPanel> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
 
+  /// 收藏夹列表控制器（供自挂的项目自绘滚动条 [AppScrollBar] 使用）。
+  final ScrollController _listController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -972,6 +976,7 @@ class _FavPanelState extends State<_FavPanel> {
   @override
   void dispose() {
     _searchController.dispose();
+    _listController.dispose();
     super.dispose();
   }
 
@@ -1063,24 +1068,31 @@ class _FavPanelState extends State<_FavPanel> {
             const Expanded(child: Center(child: Text('未找到收藏夹')))
           else
             Expanded(
-              child: ListView.builder(
-                itemCount: _filteredFolders.length,
-                itemBuilder: (context, index) {
-                  final f = _filteredFolders[index];
-                  // B6：Material CheckboxListTile → Miuix 偏好组件。
-                  // 不传 startAction：Miuix 会把 startAction 放进灰底圆形容器，
-                  // 与面板观感冲突（且项目图标在该容器内渲染异常）。
-                  return MiuixCheckboxPreference(
-                    value: f.favState == 1,
-                    title: f.title,
-                    summary: '${f.mediaCount} 个内容',
-                    onChanged: _sending
-                        ? null
-                        : (v) => setState(() {
-                              f.favState = v == true ? 1 : 0;
-                            }),
-                  );
-                },
+              // 面板内列表自挂项目自绘滚动条（forceLane 跳过「页面级」比例门控：
+              // 本列表主轴向尺寸远小于窗口高，不强制会被全局挂载逻辑抑制）。
+              child: AppScrollBar(
+                controller: _listController,
+                forceLane: true,
+                child: ListView.builder(
+                  controller: _listController,
+                  itemCount: _filteredFolders.length,
+                  itemBuilder: (context, index) {
+                    final f = _filteredFolders[index];
+                    // B6：Material CheckboxListTile → Miuix 偏好组件。
+                    // 不传 startAction：Miuix 会把 startAction 放进灰底圆形容器，
+                    // 与面板观感冲突（且项目图标在该容器内渲染异常）。
+                    return MiuixCheckboxPreference(
+                      value: f.favState == 1,
+                      title: f.title,
+                      summary: '${f.mediaCount} 个内容',
+                      onChanged: _sending
+                          ? null
+                          : (v) => setState(() {
+                                f.favState = v == true ? 1 : 0;
+                              }),
+                    );
+                  },
+                ),
               ),
             ),
           // B6：Material Divider → 0.5px 细分隔线（Miuix 口径）。

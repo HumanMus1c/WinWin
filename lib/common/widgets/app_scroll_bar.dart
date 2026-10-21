@@ -44,6 +44,7 @@ class AppScrollBar extends StatefulWidget {
     required this.controller,
     required this.child,
     this.axis = Axis.vertical,
+    this.forceLane = false,
   });
 
   /// 目标滚动视图的控制器（须有 clients 才会绘制）。
@@ -54,6 +55,16 @@ class AppScrollBar extends StatefulWidget {
 
   /// 滚动条方向，默认竖向。
   final Axis axis;
+
+  /// 强制启用通道（跳过「页面级」比例门控）。
+  ///
+  /// 默认 `false`：只有主轴向尺寸 ≥ 窗口主轴向 × [pageLevelExtentRatio] 的
+  /// 「页面级」滚动视图才预留通道 —— 弹层 / 面板 / 局部小列表的主轴向尺寸远小于
+  /// 窗口，默认一律被抑制（见 [pageLevelExtentRatio] 说明）。
+  ///
+  /// 置 `true`：显式自挂于弹层 / 面板内的局部列表时仍绘制项目滚动条（覆盖层形态，
+  /// 不占位、不撑开布局）。用于「添加到收藏夹」等底部面板中长列表的滚动指示。
+  final bool forceLane;
 
   /// 滚动条独立通道厚度（同时是 hover 触发带宽度）。
   static const double laneThickness = 12;
@@ -303,8 +314,11 @@ class _AppScrollBarState extends State<AppScrollBar>
         final windowMain = vertical
             ? MediaQuery.sizeOf(context).height
             : MediaQuery.sizeOf(context).width;
-        if (!mainExtent.isFinite ||
-            mainExtent < windowMain * AppScrollBar.pageLevelExtentRatio) {
+        // forceLane：显式自挂于弹层 / 面板内的局部列表时跳过「页面级」比例门控，
+        // 否则小面板一律被抑制、拿不到项目滚动条（框架条也会被一并关闭）。
+        if (!widget.forceLane &&
+            (!mainExtent.isFinite ||
+                mainExtent < windowMain * AppScrollBar.pageLevelExtentRatio)) {
           return _suppressFrameworkBar(widget.child);
         }
         return _buildLane(context, vertical);
