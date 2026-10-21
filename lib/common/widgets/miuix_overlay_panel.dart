@@ -24,6 +24,7 @@ class MiuixOverlayPanel extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.child,
+    this.trailing,
     this.padding = const EdgeInsets.all(16),
   });
 
@@ -31,6 +32,10 @@ class MiuixOverlayPanel extends StatelessWidget {
 
   /// 标题前图标（尺寸/颜色由调用方决定，惯例 16）。
   final Widget icon;
+
+  /// 标题行右端附加控件（可选）。用于把「状态读数」并入标题栏
+  /// （如音量面板的 `N%` / `N% (增益)`），令内容区只留单一主控件、排版更稳。
+  final Widget? trailing;
 
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -64,6 +69,7 @@ class MiuixOverlayPanel extends StatelessWidget {
                       color: cs.onSurface,
                     ),
                   ),
+                  if (trailing != null) ...[const Spacer(), trailing!],
                 ],
               ),
               const SizedBox(height: 10),

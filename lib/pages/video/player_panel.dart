@@ -2226,8 +2226,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// 本轮（2026-10-21）：外观改用**播放器统一抽象的弹层样式**
   /// （`MiuixOverlayPanel` 毛玻璃面板——与投币 / 表情 / 弹幕样式面板同源），
   /// 并经 `MiuixAnchoredPopup` 补齐**对角线展开 / 收起**两段动画；强调色取
-  /// **主题色**（`tokens.colors.primary`，越过 100% 的增益态仍用琥珀色区分）。
-  /// 音量条轨道粗细随音量**实时动态变化**：越小越细、越大越粗。
+  /// **主题色**（`tokens.colors.primary`），越过 100% 的增益态改用**深橙**
+  /// `AppColors.orange700`（原亮黄 `amberAccent` 在浅色毛玻璃面板上过亮刺眼、
+  /// 对比不足，实机反馈"看不清"）。音量读数（含 `(增益)` 后缀）并入**标题栏
+  /// 右端**，内容区只留滑条。音量条轨道粗细随音量**实时动态变化**：越小越细、
+  /// 越大越粗。
   Widget _buildVolumePopup() {
     final c = widget.controller;
     final anchor = _volumeAnchorRect();
@@ -2235,6 +2238,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
     // 收起动画期间锚点仍在，故关闭过程仍能正常渲染。
     if (anchor == null) return const SizedBox.shrink();
     final tokens = AppThemeHost.of(context);
+    // 增益态的强调色：深橙 orange700。原亮黄 amberAccent(#FFD740) 压在浅色
+    // 毛玻璃面板上过亮刺眼、明度又接近底衬导致对比不足（实机"看不清"）。
+    const gainColor = AppColors.orange700;
     // 面板总宽 = 内容 232 + 内边距 16×2；外层定宽，避免 MiuixOverlayPanel
     // 标题行（MainAxisSize.max）在锚定浮层的 loose 约束下被拉成整页宽。
     return MiuixAnchoredPopup(
@@ -2245,93 +2251,77 @@ class _PlayerPanelState extends State<PlayerPanel> {
         width: 264,
         child: MiuixOverlayPanel(
           title: '音量',
+          // 音量读数（`N%` / `N% (增益)`）并入**标题栏右端**：内容区只留滑条，
+          // 排版更稳，也不再需要右侧定宽标签槽来防抖（增益后缀不再改变宽度）。
+          trailing: ValueListenableBuilder<double>(
+            valueListenable: c.volume,
+            builder: (context, vol, _) {
+              final rounded = vol.round();
+              final gain = rounded > 100;
+              return Text(
+                gain ? '$rounded% (增益)' : '$rounded%',
+                maxLines: 1,
+                style: TextStyle(
+                  color: gain ? gainColor : tokens.colors.onSurface,
+                  fontWeight: gain ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 12,
+                ),
+              );
+            },
+          ),
           icon: ValueListenableBuilder<double>(
             valueListenable: c.volume,
-            builder: (context, vol, _) => AppIcon(
-              vol <= 0
-                  ? AppIcons.volumeOff()
-                  : (vol > 100 ? AppIcons.volumeUp() : AppIcons.volumeDown()),
-              size: 16,
-              color: tokens.colors.primary,
-            ),
+            builder: (context, vol, _) {
+              final gain = vol > 100;
+              return AppIcon(
+                vol <= 0
+                    ? AppIcons.volumeOff()
+                    : (gain ? AppIcons.volumeUp() : AppIcons.volumeDown()),
+                size: 16,
+                color: gain ? gainColor : tokens.colors.primary,
+              );
+            },
           ),
           child: SizedBox(
             width: 232,
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 152,
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: c.volume,
-                    builder: (context, vol, _) {
-                      final gain = vol > 100;
-                      final activeColor = gain
-                          ? AppColors.amberAccent
-                          : tokens.colors.primary;
-                      final base = MiuixSliderDefaults.sliderColors(context);
-                      // 动态粗细：0% → 14（最细）线性增长到 100% → 28（最粗）。
-                      final barHeight = lerpDouble(
-                        _kVolumeBarMinHeight,
-                        _kVolumeBarMaxHeight,
-                        (vol / 100).clamp(0.0, 1.0),
-                      )!;
-                      return MiuixSlider(
-                        value: vol.clamp(0.0, Pref.maxVolume).toDouble(),
-                        min: 0,
-                        max: Pref.maxVolume,
-                        height: barHeight,
-                        // 100% 处增加一个吸附关键点：拖动/点击时磁吸到 100%
-                        //（常态音量基准，100% 以上为增益）。magnetThreshold
-                        // 放宽到 3%（≈±6）更易吸附。
-                        keyPoints: Pref.maxVolume > 100 ? const [100.0] : null,
-                        showKeyPoints: Pref.maxVolume > 100,
-                        magnetThreshold: 0.03,
-                        colors: MiuixSliderColors(
-                          foregroundColor: activeColor,
-                          disabledForegroundColor: activeColor,
-                          // 底轨沿用主题默认（随明暗/主题自适应），不再硬编码
-                          // 半透明白（那是旧"黑色玻璃胶囊"底衬的遗留口径）。
-                          backgroundColor: base.backgroundColor,
-                          disabledBackgroundColor: base.disabledBackgroundColor,
-                          thumbColor: activeColor,
-                          disabledThumbColor: activeColor,
-                          keyPointColor: activeColor,
-                          keyPointForegroundColor: activeColor,
-                        ),
-                        onValueChanged: c.setVolume,
-                      );
-                    },
+            child: ValueListenableBuilder<double>(
+              valueListenable: c.volume,
+              builder: (context, vol, _) {
+                final gain = vol > 100;
+                final activeColor = gain ? gainColor : tokens.colors.primary;
+                final base = MiuixSliderDefaults.sliderColors(context);
+                // 动态粗细：0% → 14（最细）线性增长到 100% → 28（最粗）。
+                final barHeight = lerpDouble(
+                  _kVolumeBarMinHeight,
+                  _kVolumeBarMaxHeight,
+                  (vol / 100).clamp(0.0, 1.0),
+                )!;
+                return MiuixSlider(
+                  value: vol.clamp(0.0, Pref.maxVolume).toDouble(),
+                  min: 0,
+                  max: Pref.maxVolume,
+                  height: barHeight,
+                  // 100% 处增加一个吸附关键点：拖动/点击时磁吸到 100%
+                  //（常态音量基准，100% 以上为增益）。magnetThreshold
+                  // 放宽到 3%（≈±6）更易吸附。
+                  keyPoints: Pref.maxVolume > 100 ? const [100.0] : null,
+                  showKeyPoints: Pref.maxVolume > 100,
+                  magnetThreshold: 0.03,
+                  colors: MiuixSliderColors(
+                    foregroundColor: activeColor,
+                    disabledForegroundColor: activeColor,
+                    // 底轨沿用主题默认（随明暗/主题自适应），不再硬编码
+                    // 半透明白（那是旧"黑色玻璃胶囊"底衬的遗留口径）。
+                    backgroundColor: base.backgroundColor,
+                    disabledBackgroundColor: base.disabledBackgroundColor,
+                    thumbColor: activeColor,
+                    disabledThumbColor: activeColor,
+                    keyPointColor: activeColor,
+                    keyPointForegroundColor: activeColor,
                   ),
-                ),
-                const SizedBox(width: Style.sm),
-                // 标签槽位定宽 72：`(增益)` 后缀只在越过 100% 时出现，定宽后
-                // 弹层宽度在 0 ~ 音量上限全程恒定，滑动时滑条/拇指不会横向瞬移。
-                SizedBox(
-                  width: 72,
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: c.volume,
-                    builder: (context, vol, _) {
-                      final rounded = vol.round();
-                      final gain = rounded > 100;
-                      return Text(
-                        gain ? '$rounded% (增益)' : '$rounded%',
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
-                        style: TextStyle(
-                          color: gain
-                              ? AppColors.amberAccent
-                              : tokens.colors.onSurface,
-                          fontWeight: gain
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 12,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+                  onValueChanged: c.setVolume,
+                );
+              },
             ),
           ),
         ),
