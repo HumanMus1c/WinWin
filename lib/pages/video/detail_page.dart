@@ -50,10 +50,8 @@ import 'package:winwin/pages/video/send_danmaku_panel.dart';
 import 'package:winwin/pages/video/video_action_row.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
-import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
-import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
@@ -309,9 +307,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   @override
   void showToast(String msg) => _toast(msg);
 
-  /// Phase 7.6.3：VideoHeader 收缩比例（0.0=展开，1.0=pin），用于顶栏渐变。
-  final ValueNotifier<double> _scrollRatio = ValueNotifier<double>(0.0);
-
   /// 折叠自动暂停：本次是否由折叠触发暂停（展开时仅恢复该情形，不覆盖手动暂停）。
   bool _autoPausedByCollapse = false;
 
@@ -363,7 +358,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   @override
   void dispose() {
     Pref.demoModeNotifier.removeListener(_onDemoChanged);
-    _scrollRatio.dispose();
     SyncTrace.log('DetailPage', 'dispose enter');
     routeObserver.unsubscribe(this);
     // 沉浸标题条：回收本页推送的背景覆写（覆盖 pushReplacement 等未走 didPop 的路径）。
@@ -1110,45 +1104,30 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     );
     return BackButtonOwner(
       controller: appBackButtonController,
-      listenable: _scrollRatio,
-      specBuilder: () => _backButtonSpec(context),
+      // 2026-10-21 R4：按钮规格已恒定（外观全交壳层默认），无需再随滚动进度重算。
+      specBuilder: _backButtonSpec,
       child: scaffold,
     );
   }
 
-  /// 全局返回按钮规格：本页返回键覆盖在播放器上（随滚动在白色/主题可读色间切换），
-  /// 且返回前需暂停并解绑播放器（保留原 `SyncTrace` 日志）。
-  /// 全屏 / 应用内全屏时按钮由播放器控件自己承担 → 壳层按钮让位隐藏。
-  BackButtonSpec _backButtonSpec(BuildContext context) {
-    // 全屏 / 应用内全屏：返回键覆盖在播放器上、点击 = 退出全屏
-    //（原播放器浮层返回键已收口到本全局按钮）。
+  /// 全局返回按钮规格（2026-10-21 R4：**外观统一交回壳层默认**）。
+  ///
+  /// 既往实现把本页按钮覆盖成「透明底 + 白字」，并随左侧栏滚动进度在白色 ↔ 主题可读色
+  /// 之间翻色——那是顶栏时代（顶栏滚动后转不透明毛玻璃、按钮随之翻色）的遗留。
+  /// 顶栏已在 R3 移除，且 CVO 指出「滚动时按钮不应变暗、应像首页顶栏那样有可见的模糊
+  /// 背景」，故此处**不再声明 color/background/shadows/iconSize**：全程使用壳层默认
+  /// （首页顶栏同源毛玻璃圆底 + 主题可读字形 + 伪粗体叠绘加粗），滚动/全屏切换外观恒定。
+  ///
+  /// 本页只声明**语义**：返回前暂停并解绑播放器（保留原 `SyncTrace` 日志）；
+  /// 全屏 / 应用内全屏时点击 = 退出全屏（原播放器浮层返回键已收口到本全局按钮）。
+  BackButtonSpec _backButtonSpec() {
     if (_fullscreen || _inAppFullscreen) {
       return BackButtonSpec(
-        background: AppColors.transparent,
-        color: AppColors.white,
-        shadows: ContrastStyle.glyphShadows,
-        iconSize: 22,
         tooltip: _fullscreen ? '退出全屏（Esc）' : '退出网页全屏（Esc）',
         onPressed: _handleEscape,
       );
     }
-    final tokens = AppThemeHost.of(context);
-    final opacity = _scrollProgress();
-    final overVideo = opacity < 0.5;
-    final barContrast = resolveAccessibleContainerColors(
-      containerColor: tokens.colors.background.withValues(alpha: opacity * 0.95),
-      contentColor: tokens.colors.onSurface,
-      backgroundColor: tokens.colors.background,
-      fallbackContentColors: [
-        tokens.colors.onInverseSurface,
-        tokens.colors.scrim,
-      ],
-    );
     return BackButtonSpec(
-      color: overVideo ? AppColors.white : barContrast.contentColor,
-      background: AppColors.transparent,
-      shadows: overVideo ? ContrastStyle.glyphShadows : null,
-      iconSize: 24,
       tooltip: '返回',
       onBeforePop: () {
         SyncTrace.log('DetailPage', 'back button pressed');
@@ -1193,10 +1172,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       VideoHeader(
                         maxExtent: maxExtent,
                         minExtent: minExtent,
-                        onScrollRatioChange: (r) {
-                          _handleCollapseAutoPause(r);
-                          _scrollRatio.value = r;
-                        },
+                        onScrollRatioChange: _handleCollapseAutoPause,
                         child: _buildPlayerContent(response),
                       ),
                       // 弹幕发送栏：紧贴视频下方，宽度与视频一致
@@ -1331,10 +1307,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       VideoHeader(
                         maxExtent: maxExtent,
                         minExtent: minExtent,
-                        onScrollRatioChange: (r) {
-                          _handleCollapseAutoPause(r);
-                          _scrollRatio.value = r;
-                        },
+                        onScrollRatioChange: _handleCollapseAutoPause,
                         child: _buildPlayerError(code, errMsg),
                       ),
                       SliverPadding(
@@ -1436,31 +1409,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       62012 => '该稿件仅UP主自己可见',
       _ => errMsg ?? '视频信息加载失败',
     };
-  }
-
-  /// 滚动吸收行程上下限（px）：随左栏实际可滚范围收敛。
-  static const double _kTopBarAbsorbMin = 24;
-  static const double _kTopBarAbsorbMax = 56;
-
-  /// 播放区滚动进度（0~1）：由左栏滚动位移驱动。
-  ///
-  /// 用途（2026-10-21 R3 起）：**仅**驱动**壳层全局返回按钮**在「覆盖在播放器上
-  /// （白字 + 阴影）」与「滚动后落回页面背景（主题可读色）」之间的翻色；
-  /// 播放页自身的渐变顶栏已整体移除（含 UP 名文本）。
-  ///
-  /// 历史根因（2026-10-17 实机反馈「过渡中/吸顶完全没有效果」）：旧实现只由
-  /// `_scrollRatio`（播放器收缩进度 = shrinkOffset / (maxExtent - minExtent)）
-  /// 驱动；宽屏两栏布局下评论区迁到右栏 Tab，左栏可滚余量远小于播放器收起行程
-  /// （≈0.44×视频高）→ 该比例封顶在 ~0.3，翻色/吸顶阈值永不可达。改为按滚动位移
-  /// 吸收：行程 = 一条工具栏高（56），不足时按实际可滚范围收敛（下限 24 防抖）。
-  double _scrollProgress() {
-    if (!scrollController.hasClients) return 0.0;
-    final pos = scrollController.position;
-    final absorb = pos.maxScrollExtent.clamp(
-      _kTopBarAbsorbMin,
-      _kTopBarAbsorbMax,
-    );
-    return (pos.pixels / absorb).clamp(0.0, 1.0);
   }
 
   /// 播放器内容（Phase 7.6.4：封面加 Hero 共享元素转场）。

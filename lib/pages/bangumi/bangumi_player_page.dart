@@ -88,7 +88,6 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   late final AppTabController _wideTabCtrl;
   late final AppTabController _narrowTabCtrl;
   final ScrollController _scrollController = ScrollController();
-  final ValueNotifier<double> _scrollRatio = ValueNotifier<double>(0.0);
   bool _autoPausedByCollapse = false;
 
   // 选集排序与状态
@@ -206,7 +205,6 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   void dispose() {
     Pref.demoModeNotifier.removeListener(_onDemoChanged);
     Pref.bangumiEpisodesDescending.removeListener(_onGlobalOrderChanged);
-    _scrollRatio.dispose();
     routeObserver.unsubscribe(this);
     windowManager.removeListener(this);
     _wideTabCtrl.dispose();
@@ -775,12 +773,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     final cs = AppThemeHost.of(context).colors;
 
     final isFill = _fullscreen || _inAppFullscreen;
-    // 返回按钮由壳层单实例承担（观感/副作用见 _backButtonSpec）：
-    // 全屏时播放器控件自己承担 → 壳层按钮让位隐藏。
+    // 返回按钮由壳层单实例承担（观感/副作用见 _backButtonSpec）。
     return BackButtonOwner(
       controller: appBackButtonController,
-      listenable: _scrollRatio,
-      specBuilder: () => _backButtonSpec(context),
+      // 2026-10-21 R4：按钮规格已恒定（外观全交壳层默认），无需再随滚动进度重算。
+      specBuilder: _backButtonSpec,
       child: isFill
           ? KeyboardListener(
               focusNode: _keyboardFocusNode,
@@ -822,36 +819,20 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   /// 全局返回按钮规格：本页返回键覆盖在播放器上（随滚动在白色/主题可读色间切换），
   /// 返回前暂停并解绑播放器；全屏 / 应用内全屏时由播放器控件承担 → 壳层让位隐藏。
-  BackButtonSpec _backButtonSpec(BuildContext context) {
-    // 全屏 / 应用内全屏：返回键覆盖在播放器上、点击 = 退出全屏
-    //（原播放器浮层返回键已收口到本全局按钮）。
+  /// 全局返回按钮规格（2026-10-21 R4：**外观统一交回壳层默认**）。
+  ///
+  /// 同视频详情页：既往用「透明底 + 白字 + 随滚动翻色」，CVO 指出「滚动变暗」与
+  /// 「应是首页顶栏那种可见模糊背景」→ 不再声明 color/background/shadows/iconSize，
+  /// 全程走壳层默认（首页顶栏同源毛玻璃圆底 + 主题可读字形 + 伪粗体），滚动/全屏切换
+  /// 外观恒定；本页只声明**语义**（返回前暂停解绑 / 全屏时点击退出全屏）。
+  BackButtonSpec _backButtonSpec() {
     if (_fullscreen || _inAppFullscreen) {
       return BackButtonSpec(
-        background: AppColors.transparent,
-        color: AppColors.white,
-        shadows: ContrastStyle.glyphShadows,
-        iconSize: 22,
         tooltip: _fullscreen ? '退出全屏（Esc）' : '退出网页全屏（Esc）',
         onPressed: _handleEscape,
       );
     }
-    final tokens = AppThemeHost.of(context);
-    final opacity = _topBarScrollOpacity();
-    final overVideo = opacity < 0.5;
-    final barContrast = resolveAccessibleContainerColors(
-      containerColor: tokens.colors.background.withValues(alpha: opacity * 0.95),
-      contentColor: tokens.colors.onSurface,
-      backgroundColor: tokens.colors.background,
-      fallbackContentColors: [
-        tokens.colors.onInverseSurface,
-        tokens.colors.scrim,
-      ],
-    );
     return BackButtonSpec(
-      color: overVideo ? AppColors.white : barContrast.contentColor,
-      background: AppColors.transparent,
-      shadows: overVideo ? ContrastStyle.glyphShadows : null,
-      iconSize: 24,
       tooltip: '返回',
       onBeforePop: () {
         playerController?.pause();
@@ -1078,10 +1059,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                       VideoHeader(
                         maxExtent: maxExtent,
                         minExtent: minExtent,
-                        onScrollRatioChange: (r) {
-                          _handleCollapseAutoPause(r);
-                          _scrollRatio.value = r;
-                        },
+                        onScrollRatioChange: _handleCollapseAutoPause,
                         child: _buildPlayerContent(),
                       ),
                       // 弹幕发送栏（宽度与视频一致）
@@ -1163,10 +1141,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 VideoHeader(
                   maxExtent: maxExtent,
                   minExtent: minExtent,
-                  onScrollRatioChange: (r) {
-                    _handleCollapseAutoPause(r);
-                    _scrollRatio.value = r;
-                  },
+                  onScrollRatioChange: _handleCollapseAutoPause,
                   child: _buildPlayerContent(),
                 ),
                 if (playerController != null)
