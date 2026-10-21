@@ -692,28 +692,42 @@ class WinWinPlayerController {
     p.setProperty('keep_open', '1');
   }
 
+  /// 「硬件解码模式」→ mdk videoDecoders 列表映射（Windows）。
+  ///
+  /// 依据 mdk-sdk wiki/Decoders 与 fvp Windows 推荐列表：
+  /// - auto：硬解优先（MFT:d3d=11 → D3D11 → DXVA → CUDA），逐级回退软解；
+  /// - d3d11va / dxva2：限定对应硬解后端，失败仍回退软解；
+  /// - no：纯软解（FFmpeg/dav1d）。
+  ///
+  /// 注：mdk 无 mpv 式 `auto-copy` 语义，故「硬件解码模式」暂不提供该档
+  /// （设置页已移除，避免假开关）。
+  static List<String> _videoDecodersForMode(String mode) => switch (mode) {
+        'no' => const ['FFmpeg', 'dav1d'],
+        'd3d11va' => const ['D3D11', 'FFmpeg', 'dav1d'],
+        'dxva2' => const ['DXVA', 'FFmpeg', 'dav1d'],
+        _ => const [
+            'MFT:d3d=11',
+            'D3D11',
+            'DXVA',
+            'CUDA',
+            'hap',
+            'FFmpeg',
+            'dav1d',
+          ],
+      };
+
   /// 创建全局共享的 mdk.Player（仅属性配置，监听器由 [_attachListeners] 挂载）。
   mdk.Player _createPlayer() {
     final player = mdk.Player();
 
-    // 显式设置 video decoders（完整对齐 fvp video_player_mdk.dart Windows 推荐配置）。
-    // Windows 平台首选 Microsoft 原生 Media Foundation Transform D3D11 硬解（MFT:d3d=11），
-    // 其次使用 Direct3D 11 (D3D11)、DXVA、CUDA，若用户关闭硬解则仅使用纯软解。
-    if (Pref.enableHA) {
-      player.videoDecoders = const [
-        'MFT:d3d=11',
-        'D3D11',
-        'DXVA',
-        'CUDA',
-        'hap',
-        'FFmpeg',
-        'dav1d',
-      ];
-      player.setProperty('video.decoder', 'shader_resource=0');
-    } else {
-      player.videoDecoders = const ['FFmpeg', 'dav1d'];
-      player.setProperty('video.decoder', 'shader_resource=0');
-    }
+    // 显式设置 video decoders（对齐 fvp video_player_mdk.dart Windows 推荐配置）。
+    // 依据「开启硬解」总开关 + 「硬件解码模式」细分：
+    // - 硬解关闭 → 纯软解（FFmpeg/dav1d）；
+    // - 硬解开启 → 按模式选择硬解后端，并保留软解回退。
+    player.videoDecoders = Pref.enableHA
+        ? _videoDecodersForMode(Pref.hardwareDecoding)
+        : const ['FFmpeg', 'dav1d'];
+    player.setProperty('video.decoder', 'shader_resource=0');
     // 网络自愈 / 解复用缓存 / 读缓冲水位 / keep_open 等通用属性：
     // 主实例与第二实例（纯音频）必须完全一致（2026-09-25 事故定因，见 [_applyStreamProperties]）。
     _applyStreamProperties(player);

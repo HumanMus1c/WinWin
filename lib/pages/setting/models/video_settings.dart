@@ -113,7 +113,6 @@ List<SettingsModel> get videoSettings => [
             value: Pref.hardwareDecoding,
             values: const [
               ('auto', '自动选择'),
-              ('auto-copy', '自动选择（复制）'),
               ('d3d11va', 'D3D11 (Windows)'),
               ('dxva2', 'DXVA2'),
               ('no', '软解'),
@@ -125,28 +124,8 @@ List<SettingsModel> get videoSettings => [
           }
         },
       ),
-      NormalModel(
-        title: '视频同步模式',
-        leading: AppIcon(AppIcons.refresh()),
-        getSubtitle: () => '当前模式：${Pref.videoSync}',
-        onTap: (context, setState) async {
-          final res = await showSelectDialog<String>(
-            context,
-            title: '视频同步模式',
-            value: Pref.videoSync,
-            values: const [
-              ('audio', '音频同步（默认）'),
-              ('display-resample', '显示同步+重采样'),
-              ('display-desync', '显示同步（不重采样）'),
-              ('display-vdrop', '显示同步+丢帧'),
-            ],
-          );
-          if (res != null) {
-            await GStorage.setting.put(SettingBoxKey.videoSync, res);
-            setState();
-          }
-        },
-      ),
+      // 「视频同步模式」：mdk 内核无 mpv 式 video-sync 语义（仅 avsync.* 属性），
+      // 按 CVO「免假开关」决策暂不提供（设置项隐藏，存储键保留）。见批次3复盘。
       NormalModel(
         title: '缓冲大小',
         leading: AppIcon(AppIcons.bufferSize()),
