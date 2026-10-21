@@ -8,6 +8,7 @@ import 'package:fvp/mdk.dart' as mdk;
 import 'package:window_manager/window_manager.dart' hide calcWindowPosition;
 
 import 'core/bootstrap.dart';
+import 'core/diagnostics/stall_watchdog.dart';
 import 'core/input/app_escape_scope.dart';
 import 'core/log/api_blackbox.dart';
 import 'core/log/app_logger.dart';
@@ -113,10 +114,18 @@ void main() async {
     }
   });
 
-  // Windows 平台开启 D3D11 CPU-GPU 同步屏障，根除 Flutter Texture 纹理读取与 MDK 解码表面之间的时序撕裂与新旧画面闪烁
+  // Windows 平台 D3D11 CPU-GPU 同步屏障。
+  //   =1：根除 Flutter Texture 纹理读取与 MDK 解码表面之间的时序撕裂与新旧画面闪烁。
+  //   =0：规避「GPU 设备丢失」时的硬阻塞——驱动更新 / 整机显示黑屏掉线再恢复会使 D3D
+  //       设备丢失，此时该同步栅栏是一次**永远等不到**的 GPU 调用，会把线程硬阻塞
+  //       （实测：全进程 CPU≈0、线程全 Wait、窗口 Responding=True 但渲染停摆、日志静默）。
+  // 2026-10-21 起按「设备丢失优先」置 0（试验 A）；如出现撕裂再回退为 1。
   if (Platform.isWindows) {
-    mdk.setGlobalOption('d3d11.sync.cpu', 1);
+    mdk.setGlobalOption('d3d11.sync.cpu', 0);
   }
+
+  // 渲染/UI 停摆看门狗：GPU 设备丢失类冻结的取证（logs/render_stall.log）与自愈。
+  unawaited(StallWatchdog.init());
 
   // 对标 PiliPlus 极速启动架构：
   // 极轻量本地存储 bootstrap（Hive/Accounts/Request，仅耗时十数毫秒）与 windowManager 并行执行。
