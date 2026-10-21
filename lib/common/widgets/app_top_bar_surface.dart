@@ -26,7 +26,11 @@ import 'package:winwin/theme/style.dart';
 /// 亮度未对齐程序整体背景」）。此组件把首页那套材质收敛为**唯一实现**，两页
 /// 同源即天然对齐，也杜绝再度漂移（P4「每个概念只在一处定义」）。
 class AppTopBarSurface extends StatelessWidget {
-  const AppTopBarSurface({super.key, required this.child});
+  const AppTopBarSurface({
+    super.key,
+    required this.child,
+    this.shadow = const <BoxShadow>[],
+  });
 
   /// 半透明底的不透明度（与首页合并栏一致）。
   static const double surfaceAlpha = 0.72;
@@ -44,33 +48,50 @@ class AppTopBarSurface extends StatelessWidget {
   /// 容器内容（须自带尺寸；顶栏内容由调用方决定）。
   final Widget child;
 
+  /// 合并栏外投影（**默认无**，零影响：消息中心沿用原观感）。
+  ///
+  /// 传空列表 = 不投影（原行为）；传入时画在 [ClipRRect] **之外**、沿可见栏体
+  /// 轮廓（`chrome.containerRadius`）向外辐射——即「整体悬浮四向辐射阴影」的
+  /// 载体。动画（淡入/淡出的 lerp）由调用方（首页搜索态）负责，本组件只呈现
+  /// 当前帧的阴影值（单一职责：材质）。
+  final List<BoxShadow> shadow;
+
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final barColor = AppTopBarSurface.barColor(cs.surface);
     final radius = tokens.chrome.containerRadius;
+    final borderRadius = BorderRadius.circular(radius);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: Style.lg,
         vertical: Style.sm,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-          child: Container(
-            decoration: BoxDecoration(
-              color: barColor,
-              borderRadius: BorderRadius.circular(radius),
-              // α0 描边：保留 0.5px 占位（与首页一致），视觉上不画线。
-              border: Border.all(
-                color: cs.outline.withValues(alpha: 0),
-                width: 0.5,
+      // 投影层：贴在可见栏体外轮廓上（在 Padding **内侧**，避免阴影从留白外缘
+      // 辐射而与栏体"脱开"）。@see shadow
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          boxShadow: shadow.isEmpty ? null : shadow,
+        ),
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+            child: Container(
+              decoration: BoxDecoration(
+                color: barColor,
+                borderRadius: borderRadius,
+                // α0 描边：保留 0.5px 占位（与首页一致），视觉上不画线。
+                border: Border.all(
+                  color: cs.outline.withValues(alpha: 0),
+                  width: 0.5,
+                ),
               ),
+              child: child,
             ),
-            child: child,
           ),
         ),
       ),

@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart' show TextInputAction;
 import 'package:flutter/widgets.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixIconButton, MiuixMotion;
+import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 
 import 'package:winwin/common/widgets/app_top_bar_surface.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
@@ -20,6 +20,7 @@ import 'package:winwin/pages/search/widgets/search_content_panel.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/theme/app_motion.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
@@ -35,8 +36,29 @@ import 'package:winwin/ui/components/app_tooltip.dart';
 const double _kSearchFocusStroke = 2;
 const double _kSearchFocusStrokeInset = _kSearchFocusStroke / 2;
 
-/// 首页顶栏「就地扩充」用的统一动画节奏（与壳层安全行收起同手感）。
+/// 首页顶栏「就地扩充」用的统一动画节奏。曲线统一走 [MiuixSpringCurve.standard]
+/// （Miuix 弹簧非线性动效），不再用多项式缓动。
 const Duration _kSearchMorphDuration = Duration(milliseconds: 220);
+
+/// 搜索态合并栏（搜索框 + 分类 TAB 合并栏）的「整体悬浮四向辐射阴影」。
+///
+/// `offset` 归零 ⇒ 上下左右**四向等量辐射**；`blurRadius` 给柔边、`spreadRadius`
+/// 给贴边厚度。搜索态淡入、常态淡出，**替代旧的整页背景压暗**。
+const BoxShadow _kSearchBarShadow = BoxShadow(
+  color: Color(0x3D000000),
+  blurRadius: 22,
+  spreadRadius: 1,
+  offset: Offset.zero,
+);
+
+/// 上一阴影的「透明 / 零几何」配对值：供淡出时与 [_kSearchBarShadow]
+/// 做**同长度**插值（长度不等时 `BoxShadow.lerpList` 不插值，会硬切）。
+const BoxShadow _kSearchBarShadowOff = BoxShadow(
+  color: Color(0x00000000),
+  blurRadius: 0,
+  spreadRadius: 0,
+  offset: Offset.zero,
+);
 
 /// 搜索框行几何的**唯一口径**（常态「假搜索框」与搜索态真输入条共用）。
 ///
@@ -232,13 +254,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// 内容之上的浮层：压暗遮罩（搜索态）+ 悬浮顶栏。
+  /// 内容之上的浮层：空白命中层（搜索态）+ 悬浮顶栏。
   ///
   /// - 顶栏贴在安全行之下（安全行收起时随之上移），沿用首页原有滚动联动；
-  /// - 搜索态压暗**含安全行在内**的整页背景，点遮罩即收起；
+  /// - 搜索态**不再压暗背景**——深度感改由顶栏合并栏自身的「整体悬浮四向
+  ///   辐射阴影」承担（见 [_HomeHeader] 的 `searchMode` 阴影分支）；此处只保留
+  ///   一层**透明**命中层承接「点空白处收起搜索态」，语义与旧遮罩一致；
   /// - 扩充块高度上限按当前可用高度算，绝不顶出屏幕（超出末尾省略）。
   Widget _buildOverlay(BuildContext context, bool stripCollapsed) {
-    final tokens = AppThemeHost.of(context);
     final stripHeight = stripCollapsed ? 0.0 : AppScaffold.topStripHeight;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -249,27 +272,25 @@ class _HomePageState extends State<HomePage> {
             .clamp(120.0, double.infinity);
         return Stack(
           children: [
-            // ① 半透明暗色遮罩（含安全行；非搜索态不吸事件、不可见）。
+            // ① 透明命中层（含安全行）：点空白处收起搜索态。
+            //
+            //    视觉上前身是「半透明暗色遮罩」，本轮按 CVO 要求**去掉压暗**，
+            //    只留命中外壳——搜索态的深度感交给顶栏合并栏的四向辐射阴影。
+            //    非搜索态不吸事件、不可见，故 feed 交互与旧行为完全一致。
             Positioned.fill(
               child: IgnorePointer(
                 ignoring: !_searchMode,
-                child: AnimatedOpacity(
-                  opacity: _searchMode ? 1 : 0,
-                  duration: _kSearchMorphDuration,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _exitSearch,
-                    child: ColoredBox(
-                      color: tokens.colors.scrim.withValues(alpha: 0.38),
-                    ),
-                  ),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _exitSearch,
+                  child: const SizedBox.expand(),
                 ),
               ),
             ),
             // ② 悬浮顶栏（搜索框 + 分类标签 / 就地扩充块）。
             AnimatedPositioned(
               duration: _kSearchMorphDuration,
-              curve: MiuixMotion.standardDecelerate,
+              curve: MiuixSpringCurve.standard,
               top: stripHeight,
               left: 0,
               right: 0,
@@ -389,10 +410,11 @@ class _HomeHeader extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           // Row 2: 常态 = 分类标签（32）；搜索态 = 就地扩充块。
-          // 高度变化由 AnimatedSize 补齐（220ms / standardDecelerate，同安全行手感）。
+          // 高度变化由 AnimatedSize 补齐（220ms / Miuix 弹簧非线性曲线，见
+          // [MiuixSpringCurve]：起手快、长尾收敛，与「就地扩充」的物理展开一致）。
           AnimatedSize(
             duration: _kSearchMorphDuration,
-            curve: MiuixMotion.standardDecelerate,
+            curve: MiuixSpringCurve.standard,
             alignment: Alignment.topCenter,
             child: searchMode
                 ? SearchContentPanel(
@@ -457,7 +479,23 @@ class _HomeHeader extends StatelessWidget {
     // 底栏）仍走默认失焦，"点导航栏即收起"的语义不变。默认 `groupId == EditableText`
     // 与输入框自身同组（SDK `TapRegion` 的既定用法，非本项目自定义）。
     return TextFieldTapRegion(
-      child: AppTopBarSurface(child: headerContent),
+      // 合并栏「整体悬浮四向辐射阴影」：搜索态淡入、常态淡出，替代旧的背景压暗。
+      // 用 [TweenAnimationBuilder] 对 `List<BoxShadow>` 做隐式插值（曲线同为
+      // Miuix 弹簧非线性），起点必须是**同长度的透明阴影**——`BoxShadow.lerpList`
+      // 对长度不等的两个列表不做插值（多余项直接拼接），会变成硬切。
+      child: TweenAnimationBuilder<List<BoxShadow>>(
+        tween: _BoxShadowListTween(
+          begin: const <BoxShadow>[_kSearchBarShadowOff],
+          end: searchMode
+              ? const <BoxShadow>[_kSearchBarShadow]
+              : const <BoxShadow>[_kSearchBarShadowOff],
+        ),
+        duration: _kSearchMorphDuration,
+        curve: MiuixSpringCurve.standard,
+        builder: (context, shadows, child) =>
+            AppTopBarSurface(shadow: shadows, child: child!),
+        child: headerContent,
+      ),
     );
   }
 
@@ -552,4 +590,13 @@ class _HomeHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+/// [BoxShadow] 列表的隐式插值：`BoxShadow` 没有 `Tween` 工厂，且
+/// `TweenAnimationBuilder<List<BoxShadow>>` 需要自定义 `lerp`，故建一薄壳。
+class _BoxShadowListTween extends Tween<List<BoxShadow>> {
+  _BoxShadowListTween({super.begin, super.end});
+
+  @override
+  List<BoxShadow> lerp(double t) => BoxShadow.lerpList(begin, end, t)!;
 }
