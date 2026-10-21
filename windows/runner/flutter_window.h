@@ -1,3 +1,4 @@
+// AI生成
 #ifndef RUNNER_FLUTTER_WINDOW_H_
 #define RUNNER_FLUTTER_WINDOW_H_
 
@@ -6,6 +7,7 @@
 
 #include <memory>
 
+#include "tray_icon.h"
 #include "win32_window.h"
 
 #include <flutter/method_channel.h>
@@ -39,6 +41,11 @@ class FlutterWindow : public Win32Window {
   // MethodChannel for native display fullscreen
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       fullscreen_channel_;
+
+  // MethodChannel + 纯原生实现，用于控制系统托盘图标。
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      tray_channel_;
+  std::unique_ptr<TrayIcon> tray_icon_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

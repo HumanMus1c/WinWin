@@ -474,4 +474,12 @@ abstract final class Pref {
       return true;
     }
   }
+
+  /// 是否显示系统托盘图标（默认开）。
+  static bool get showTrayIcon =>
+      _setting.get(SettingBoxKey.showTrayIcon, defaultValue: true) as bool;
+
+  /// 关闭窗口时是否最小化到托盘而非退出（默认关）。
+  static bool get minimizeOnExit =>
+      _setting.get(SettingBoxKey.minimizeOnExit, defaultValue: false) as bool;
 }

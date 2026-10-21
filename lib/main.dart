@@ -21,6 +21,7 @@ import 'core/shell/app_theme_host.dart';
 import 'core/shell/global_back_button.dart';
 import 'core/storage/storage_pref.dart';
 import 'core/window/title_bar_controller.dart';
+import 'core/window/tray_controller.dart';
 import 'core/window/window_state_controller.dart';
 import 'pages/onboarding/user_agreement_page.dart';
 import 'pages/setting/theme_notifier.dart';
@@ -172,6 +173,8 @@ void main() async {
       await windowManager.show();
       await windowManager.focus();
       WindowStateController.instance.startListening();
+      // 原生托盘初始化（按「显示托盘图标」设置决定是否显示）。
+      TrayController.instance.init();
     });
   }
 

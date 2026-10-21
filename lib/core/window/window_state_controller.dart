@@ -6,7 +6,9 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/window/desktop_fullscreen.dart';
+import 'package:winwin/core/window/tray_controller.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
 
 /// 窗口位置/大小记忆控制器。
@@ -38,6 +40,8 @@ class WindowStateController with WindowListener {
   void startListening() {
     if (!_listening) {
       windowManager.addListener(this);
+      // 拦截关闭：交由 onWindowClose 决定「最小化到托盘」还是真正退出。
+      windowManager.setPreventClose(true);
       _listening = true;
     }
   }
@@ -156,5 +160,15 @@ class WindowStateController with WindowListener {
     // 关闭前立即落盘一次（取消未触发的防抖）。
     _saveTimer?.cancel();
     unawaited(_saveNormalState());
+
+    // 「退出时最小化到托盘」：托盘可用且非托盘菜单触发的真正退出时，
+    // 隐藏窗口（进程保活到托盘）；否则放行真正退出。
+    if (Pref.minimizeOnExit &&
+        Pref.showTrayIcon &&
+        !TrayController.instance.isReallyExiting) {
+      unawaited(windowManager.hide());
+      return;
+    }
+    unawaited(windowManager.destroy());
   }
 }

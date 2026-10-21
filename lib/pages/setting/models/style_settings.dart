@@ -6,6 +6,7 @@ import 'package:winwin/common/widgets/miuix_dialog_shell.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
+import 'package:winwin/core/window/tray_controller.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/theme_notifier.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
@@ -137,13 +138,13 @@ List<SettingsModel> get styleSettings => [
         needReboot: true,
       ),
 
-      // 显示托盘图标（桌面端）
+      // 显示托盘图标（桌面端）——热生效：切换后立即创建/销毁原生托盘图标。
       SwitchModel(
         title: '显示托盘图标',
         leading: AppIcon(AppIcons.trayIcon()),
         setKey: SettingBoxKey.showTrayIcon,
         defaultVal: true,
-        needReboot: true,
+        onChanged: (_) => TrayController.instance.refresh(),
       ),
 
       // 退出时最小化到托盘

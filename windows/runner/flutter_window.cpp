@@ -1,6 +1,9 @@
+// AI生成
 #include "flutter_window.h"
 
 #include <optional>
+
+#include "resource.h"
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -78,6 +81,49 @@ bool FlutterWindow::OnCreate() {
         result->NotImplemented();
       });
 
+  // 纯原生系统托盘通道（winwin/tray）：Dart 侧控制显示/隐藏，
+  // 托盘交互事件回调 Dart 处理（显示主窗口 / 真正退出）。
+  tray_icon_ = std::make_unique<TrayIcon>();
+  tray_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "winwin/tray",
+          &flutter::StandardMethodCodec::GetInstance());
+
+  tray_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() == "setTrayVisible") {
+          bool visible = false;
+          if (const auto* value = std::get_if<bool>(call.arguments())) {
+            visible = *value;
+          }
+          if (visible) {
+            tray_icon_->SetEventCallback([this](TrayEvent event) {
+              if (tray_channel_) {
+                tray_channel_->InvokeMethod(
+                    "onTrayEvent",
+                    std::make_unique<flutter::EncodableValue>(
+                        event == TrayEvent::kExit ? "exit" : "show"));
+              }
+            });
+            HICON icon = reinterpret_cast<HICON>(LoadImageW(
+                GetModuleHandle(nullptr), MAKEINTRESOURCEW(IDI_APP_ICON),
+                IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
+                GetSystemMetrics(SM_CYSMICON), 0));
+            tray_icon_->Show(GetHandle(), L"WinWin", icon);
+          } else {
+            tray_icon_->Hide();
+          }
+          result->Success();
+          return;
+        } else if (call.method_name() == "isTrayVisible") {
+          result->Success(flutter::EncodableValue(tray_icon_->visible()));
+          return;
+        }
+        result->NotImplemented();
+      });
+
   // flutter_controller_->engine()->SetNextFrameCallback([&]() {
   //   this->Show();
   // });
@@ -96,6 +142,13 @@ void FlutterWindow::OnDestroy() {
   }
   if (fullscreen_channel_) {
     fullscreen_channel_ = nullptr;
+  }
+  if (tray_icon_) {
+    tray_icon_->Hide();
+    tray_icon_ = nullptr;
+  }
+  if (tray_channel_) {
+    tray_channel_ = nullptr;
   }
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
@@ -129,6 +182,14 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
         mmi->ptMaxTrackSize.y = height;
         return 0;
       }
+    }
+  }
+
+  // 托盘图标消息（uCallbackMessage = WM_WINWIN_TRAY）：先于 Flutter 处理，
+  // 由原生托盘对象消费（左键显示主窗口 / 右键弹菜单）。
+  if (message == WM_WINWIN_TRAY && tray_icon_) {
+    if (tray_icon_->HandleMessage(hwnd, wparam, lparam)) {
+      return 0;
     }
   }
 
