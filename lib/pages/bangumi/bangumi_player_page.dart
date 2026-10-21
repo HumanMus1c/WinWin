@@ -783,6 +783,8 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               focusNode: _keyboardFocusNode,
               onKeyEvent: _handleKey,
               child: AppScaffold(
+                // 2026-10-21 R5：不再预留顶部安全行（默认 50px 空白行）。
+                reserveTopStrip: false,
                 backgroundColor: AppColors.black,
                 body: _withDemoOverlay(
                   playerController != null
@@ -803,6 +805,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
               focusNode: _keyboardFocusNode,
               onKeyEvent: _handleKey,
               child: AppScaffold(
+                // 2026-10-21 R5：与视频播放页对齐——移除顶部安全行（AppScaffold 默认
+                // 预留的 50px 空白行会把播放器整块下压，并让壳层全局返回按钮落在空白行
+                // 而非播放器上）；播放区域贴顶后，全局返回按钮（单实例）即悬浮在
+                // 视频播放器上，视觉与视频播放页一致。
+                reserveTopStrip: false,
                 body: LayoutBuilder(
                   builder: (context, constraints) {
                     final isWide =
