@@ -199,32 +199,25 @@ class AppShell extends StatelessWidget {
       ),
     );
 
-    // 字体大小（textScale，仅文字）+ 界面缩放（uiScale，整树·方案 A）：
-    // 由 LayoutBuilder 取可用尺寸，覆盖 MediaQuery.size 让子树按缩放后的逻辑空间
-    // 布局，再以 Transform.scale 视觉放大（命中测试随 Transform 自动映射）。
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final content = MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            size: Size(
-              constraints.maxWidth / uiScale,
-              constraints.maxHeight / uiScale,
-            ),
-            textScaler: TextScaler.linear(textScale),
-          ),
-          child: host,
-        );
-        if (uiScale == 1.0) return content;
-        return Transform.scale(
-          scale: uiScale,
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: constraints.maxWidth / uiScale,
-            height: constraints.maxHeight / uiScale,
-            child: content,
-          ),
-        );
-      },
+    // 字体大小（textScale）：仅调整文字度量（官方 textScaler），不改变坐标系 ⇒ 安全。
+    //
+    // ⚠️ 界面缩放（uiScale）· 方案 A 实测失效（2026-10-22 CVO 反馈）：
+    // `Transform.scale` 只改变**绘制**，不改"坐标空间"。而 Miuix 弹层用
+    // `box.localToGlobal`（含缩放后的根坐标）当作 Overlay 内的**窗口空间**坐标定位
+    // （见 MiuixPopupPositionProvider 注释：坐标均为相对窗口左上角的逻辑像素），
+    // 自绘标题栏/窗口控件亦按窗口空间布局 ⇒ 与"缩小的逻辑空间"相差 uiScale 倍，表现为：
+    // 右键/更多菜单严重偏离触发原点、窗口控件漂出窗口之外、页面底部入口不可见。
+    //
+    // 纯 Flutter 层无法让整树（含 Overlay 与窗口级参照）统一缩放；正确做法是在
+    // **Windows runner 层**以原生 DPI 缩放等效实现（逻辑尺寸 = 物理 / (dpr · scale)），
+    // 使所有参照（内容 / Overlay / 自绘标题栏）共享同一坐标空间 —— 待方案确认后实施。
+    //
+    // 止血：暂不透传 uiScale（保持 1.0 等效行为，UI 恢复正常）；textScaler 保留生效。
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(textScale),
+      ),
+      child: host,
     );
   }
 }
