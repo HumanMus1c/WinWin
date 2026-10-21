@@ -31,6 +31,15 @@ abstract final class Pref {
   static double get defaultTextScale =>
       _setting.get(SettingBoxKey.defaultTextScale, defaultValue: 1.0);
 
+  /// 深色模式下是否使用纯黑背景（OLED 省电）。默认关。
+  static bool get isPureBlackTheme =>
+      _setting.get(SettingBoxKey.isPureBlackTheme, defaultValue: false) as bool;
+
+  /// 桌面端界面整体缩放（1.0 = 原始）。默认 1.0。
+  static double get uiScale =>
+      (_setting.get(SettingBoxKey.uiScale, defaultValue: 1.0) as num)
+          .toDouble();
+
   static bool get dynamicColor =>
       !Platform.isIOS &&
       _setting.get(SettingBoxKey.dynamicColor, defaultValue: true);

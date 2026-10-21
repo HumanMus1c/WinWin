@@ -84,6 +84,9 @@ class AppShell extends StatelessWidget {
     required this.backButtonController,
     this.navigatorObservers = const <NavigatorObserver>[],
     this.fontFamily,
+    this.pureBlack = false,
+    this.textScale = 1.0,
+    this.uiScale = 1.0,
   });
 
   /// 应用标题（任务栏/路由名）。
@@ -113,10 +116,19 @@ class AppShell extends StatelessWidget {
   /// 应用字体族（AppFontNotifier）。
   final String? fontFamily;
 
+  /// 纯黑主题（深色下背景纯黑，AppearanceNotifier）。
+  final bool pureBlack;
+
+  /// 字体大小缩放（仅文字，AppearanceNotifier）。
+  final double textScale;
+
+  /// 界面整体缩放（整树，AppearanceNotifier）。
+  final double uiScale;
+
   @override
   Widget build(BuildContext context) {
     final brightness = isDark ? Brightness.dark : Brightness.light;
-    final tokens = AppThemeHost.tokensFor(brightness);
+    final tokens = AppThemeHost.tokensFor(brightness, pureBlack: pureBlack);
     final Widget app = WidgetsApp(
       title: title,
       color: tokens.colors.background,
@@ -169,7 +181,7 @@ class AppShell extends StatelessWidget {
         );
       },
     );
-    return AppThemeHost(
+    final host = AppThemeHost(
       tokens: tokens,
       // 全局图标底色（**单一来源**）：向整树注入随主题的 [IconTheme]，令所有
       // “未显式传色、且未被更近 IconTheme 覆盖”的 [AppIcon] 自动跟随明暗反色。
@@ -185,6 +197,34 @@ class AppShell extends StatelessWidget {
           child: app,
         ),
       ),
+    );
+
+    // 字体大小（textScale，仅文字）+ 界面缩放（uiScale，整树·方案 A）：
+    // 由 LayoutBuilder 取可用尺寸，覆盖 MediaQuery.size 让子树按缩放后的逻辑空间
+    // 布局，再以 Transform.scale 视觉放大（命中测试随 Transform 自动映射）。
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final content = MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            size: Size(
+              constraints.maxWidth / uiScale,
+              constraints.maxHeight / uiScale,
+            ),
+            textScaler: TextScaler.linear(textScale),
+          ),
+          child: host,
+        );
+        if (uiScale == 1.0) return content;
+        return Transform.scale(
+          scale: uiScale,
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: constraints.maxWidth / uiScale,
+            height: constraints.maxHeight / uiScale,
+            child: content,
+          ),
+        );
+      },
     );
   }
 }

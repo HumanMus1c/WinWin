@@ -222,6 +222,35 @@ class AppPalette {
     scrim: Color(0xFF000000),
   );
 
+  /// 纯黑主题的深色变体：背景/表面压到纯黑，容器（卡片等）保留原层级色以便区分。
+  static const AppPalette darkPureBlack = AppPalette(
+    primary: miuixDarkPrimary,
+    onPrimary: miuixDarkOnPrimary,
+    primaryContainer: miuixDarkPrimaryContainer,
+    onPrimaryContainer: miuixDarkOnPrimaryContainer,
+    secondary: miuixDarkSecondary,
+    secondaryContainer: miuixDarkSecondaryContainer,
+    onSecondaryContainer: Color(0xFFE8DEF8),
+    tertiary: miuixDarkTertiary,
+    tertiaryContainer: miuixDarkTertiaryContainer,
+    surface: Color(0xFF000000),
+    surfaceContainerLow: Color(0xFF0A0A0A),
+    surfaceContainer: Color(0xFF121212),
+    surfaceContainerHigh: Color(0xFF1A1A1A),
+    surfaceContainerHighest: Color(0xFF232323),
+    onSurface: miuixDarkOnSurface,
+    onSurfaceVariant: miuixDarkOnSurfaceVariant,
+    outline: miuixDarkOutline,
+    outlineVariant: miuixDarkOutlineVariant,
+    background: Color(0xFF000000),
+    onBackground: miuixDarkOnSurface,
+    error: miuixDarkError,
+    onError: Color(0xFF000000),
+    inverseSurface: Color(0xFFE6E1E5),
+    onInverseSurface: Color(0xFF313033),
+    scrim: Color(0xFF000000),
+  );
+
   /// 按明暗取调色板（静态单例，供 [AppTokens] 直接引用）。
   static AppPalette forBrightness(Brightness brightness) =>
       brightness == Brightness.dark ? dark : light;
@@ -296,9 +325,12 @@ class AppThemeHost extends InheritedWidget {
   /// 按明暗构造一套 Token（调色板取项目常量，Token 数据零改动）。
   ///
   /// 文本样式按明暗取 [AppTextStyles.light]/[AppTextStyles.dark]（B7-a 起内联常量）。
-  static AppTokens tokensFor(Brightness brightness) => AppTokens(
+  static AppTokens tokensFor(Brightness brightness, {bool pureBlack = false}) =>
+      AppTokens(
         brightness: brightness,
-        colors: AppPalette.forBrightness(brightness),
+        colors: (brightness == Brightness.dark && pureBlack)
+            ? AppPalette.darkPureBlack
+            : AppPalette.forBrightness(brightness),
         miuix: brightness == Brightness.dark
             ? miuixBridgeDarkColors()
             : miuixBridgeLightColors(),

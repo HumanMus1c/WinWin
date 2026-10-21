@@ -7,6 +7,7 @@ import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/window/tray_controller.dart';
+import 'package:winwin/pages/setting/appearance_notifier.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/theme_notifier.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
@@ -57,14 +58,14 @@ List<SettingsModel> get styleSettings => [
         },
       ),
 
-      // 纯黑主题（深色模式下背景纯黑）
+      // 纯黑主题（深色模式下背景纯黑）——热生效。
       SwitchModel(
         title: '纯黑主题',
         subtitle: '深色模式下使用纯黑背景（OLED 省电）',
         leading: AppIcon(AppIcons.pureBlack()),
         setKey: SettingBoxKey.isPureBlackTheme,
         defaultVal: false,
-        needReboot: true,
+        onChanged: AppearanceNotifier.setPureBlack,
       ),
 
       // 字体大小缩放
@@ -89,9 +90,10 @@ List<SettingsModel> get styleSettings => [
           );
           if (res != null) {
             await GStorage.setting.put(SettingBoxKey.defaultTextScale, res);
+            AppearanceNotifier.setTextScale(res);
             setState();
             if (context.mounted) {
-              showToast(context, '重启生效', duration: const Duration(seconds: 2));
+              showToast(context, '已生效', duration: const Duration(seconds: 1));
             }
           }
         },
@@ -120,9 +122,10 @@ List<SettingsModel> get styleSettings => [
           );
           if (res != null) {
             await GStorage.setting.put(SettingBoxKey.uiScale, res);
+            AppearanceNotifier.setUiScale(res);
             setState();
             if (context.mounted) {
-              showToast(context, '重启生效', duration: const Duration(seconds: 2));
+              showToast(context, '已生效', duration: const Duration(seconds: 1));
             }
           }
         },

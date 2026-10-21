@@ -24,6 +24,7 @@ import 'core/window/title_bar_controller.dart';
 import 'core/window/tray_controller.dart';
 import 'core/window/window_state_controller.dart';
 import 'pages/onboarding/user_agreement_page.dart';
+import 'pages/setting/appearance_notifier.dart';
 import 'pages/setting/theme_notifier.dart';
 import 'pages/video/desktop_pip.dart';
 import 'theme/app_font_notifier.dart';
@@ -143,6 +144,7 @@ void main() async {
     ]);
     ThemeNotifier.instance.refresh();
     AppFontNotifier.instance.refresh();
+    AppearanceNotifier.refresh();
     Pref.refreshDemoMode();
     TitleBarController.instance.update();
   } catch (error, stackTrace) {
@@ -205,33 +207,39 @@ class WinWinApp extends StatelessWidget {
     // （B1：应用壳由 MaterialApp 换为 AppShell（WidgetsApp + AppThemeHost）；
     //  主题模式为项目枚举 ThemeModeType，不再依赖 Material 的 ThemeMode。
     //  B7：过渡期 Material 主题通道已随 material_ui 库级退役一并摘除。）
-    return ValueListenableBuilder<ThemeModeType>(
-      valueListenable: ThemeNotifier.instance,
-      builder: (context, themeMode, _) {
-        return ValueListenableBuilder<String>(
-          valueListenable: AppFontNotifier.instance,
-          builder: (context, fontFamily, _) {
-            final isDark = themeMode.resolveIsDark(
-              MediaQuery.platformBrightnessOf(context),
-            );
-            return AppShell(
-              title: 'WinWin — BiliPai Desktop Port',
-              isDark: isDark,
-              fontFamily: fontFamily,
-              navigatorKey: appNavigatorKey,
-              escapeObserver: appEscapeObserver,
-              backButtonController: appBackButtonController,
-              navigatorObservers: [
-                routeObserver,
-                appEscapeObserver,
-                appBackButtonController,
-              ],
-              home: AgreementGate(
-                bootstrapError: bootstrapError,
-                child: const AppRoot(),
-              ),
-            );
-          },
+    return ListenableBuilder(
+      listenable: Listenable.merge(<Listenable>[
+        ThemeNotifier.instance,
+        AppFontNotifier.instance,
+        AppearanceNotifier.isPureBlack,
+        AppearanceNotifier.textScale,
+        AppearanceNotifier.uiScale,
+      ]),
+      builder: (context, _) {
+        final themeMode = ThemeNotifier.instance.value;
+        final fontFamily = AppFontNotifier.instance.value;
+        final isDark = themeMode.resolveIsDark(
+          MediaQuery.platformBrightnessOf(context),
+        );
+        return AppShell(
+          title: 'WinWin — BiliPai Desktop Port',
+          isDark: isDark,
+          fontFamily: fontFamily,
+          pureBlack: AppearanceNotifier.isPureBlack.value,
+          textScale: AppearanceNotifier.textScale.value,
+          uiScale: AppearanceNotifier.uiScale.value,
+          navigatorKey: appNavigatorKey,
+          escapeObserver: appEscapeObserver,
+          backButtonController: appBackButtonController,
+          navigatorObservers: [
+            routeObserver,
+            appEscapeObserver,
+            appBackButtonController,
+          ],
+          home: AgreementGate(
+            bootstrapError: bootstrapError,
+            child: const AppRoot(),
+          ),
         );
       },
     );
@@ -282,6 +290,7 @@ class _AgreementGateState extends State<AgreementGate> {
     ensureBootstrap().then((_) {
       ThemeNotifier.instance.refresh();
       AppFontNotifier.instance.refresh();
+      AppearanceNotifier.refresh();
       Pref.refreshDemoMode();
       if (!mounted) return;
       final acked = Pref.userAgreementAck;
