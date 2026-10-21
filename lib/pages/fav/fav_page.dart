@@ -29,7 +29,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
-import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCheckboxPreference, MiuixFloatingActionButton, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixSmallTopAppBar, MiuixButton;
+import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixCheckboxPreference, MiuixFloatingActionButton, MiuixPressFeedbackType, MiuixPressable, MiuixSmallTopAppBar, MiuixButton;
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_components.dart';
@@ -935,6 +935,10 @@ class _FavPanelState extends State<_FavPanel> {
   bool _loading = true;
   bool _sending = false;
 
+  /// 收藏夹名搜索关键字（仅用于列表即时过滤，**不参与**提交差集计算）。
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
   @override
   void initState() {
     super.initState();
@@ -963,6 +967,24 @@ class _FavPanelState extends State<_FavPanel> {
       case Loading():
         break;
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// 按关键字过滤后的收藏夹视图（仅用于列表展示）。
+  ///
+  /// **提交仍遍历全量 [_folders]**，避免被搜索隐藏的收藏夹其勾选态被误删/漏加。
+  List<FavFolderInfo> get _filteredFolders {
+    final folders = _folders ?? const <FavFolderInfo>[];
+    final q = _query.toLowerCase();
+    if (q.isEmpty) return folders;
+    return folders
+        .where((f) => f.title.toLowerCase().contains(q))
+        .toList();
   }
 
   Future<void> _submit() async {
@@ -1010,25 +1032,41 @@ class _FavPanelState extends State<_FavPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 关闭 X 已移除：遵循「Esc 生效后移除自绘关闭 X」约定，关闭仍可经
+          // 「取消」按钮 / 点击遮罩 / Esc 单层返回（AppSheetRoute 为 PopupRoute）。
           MiuixSmallTopAppBar(
             title: '添加到收藏夹',
-            navigationIcon: MiuixIconButton(
-
-              onPressed: () => Navigator.of(context).pop(),
-
-              child: AppIcon(AppIcons.clear()),
-            ),
           ),
+          // 搜索框（新增）：按收藏夹名称即时过滤账户自建收藏夹。
+          if (!_loading && (_folders?.isNotEmpty ?? false))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Style.md,
+                Style.sm,
+                Style.md,
+                Style.xs,
+              ),
+              child: AppCapsuleTextField(
+                controller: _searchController,
+                hint: '搜索收藏夹',
+                prefix: AppIcon(AppIcons.search(), size: 20),
+                fillColor: tokens.colors.surfaceContainerHighest
+                    .withValues(alpha: 0.5),
+                onChanged: (v) => setState(() => _query = v.trim()),
+              ),
+            ),
           if (_loading)
             const Expanded(child: Center(child: AppProgressIndicator(color: biliPink)))
           else if (_folders == null || _folders!.isEmpty)
             const Expanded(child: Center(child: Text('暂无收藏夹')))
+          else if (_filteredFolders.isEmpty)
+            const Expanded(child: Center(child: Text('未找到收藏夹')))
           else
             Expanded(
               child: ListView.builder(
-                itemCount: _folders!.length,
+                itemCount: _filteredFolders.length,
                 itemBuilder: (context, index) {
-                  final f = _folders![index];
+                  final f = _filteredFolders[index];
                   // B6：Material CheckboxListTile → Miuix 偏好组件。
                   // 不传 startAction：Miuix 会把 startAction 放进灰底圆形容器，
                   // 与面板观感冲突（且项目图标在该容器内渲染异常）。

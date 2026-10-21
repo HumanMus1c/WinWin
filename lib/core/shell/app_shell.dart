@@ -171,9 +171,19 @@ class AppShell extends StatelessWidget {
     );
     return AppThemeHost(
       tokens: tokens,
-      child: ScrollConfiguration(
-        behavior: const AppScrollBehavior(),
-        child: app,
+      // 全局图标底色（**单一来源**）：向整树注入随主题的 [IconTheme]，令所有
+      // “未显式传色、且未被更近 IconTheme 覆盖”的 [AppIcon] 自动跟随明暗反色。
+      // 根因：`AppIcon` 取色为 `color ?? IconTheme.of(context).color`，而
+      // `IconTheme.of` 恒返回具体值、无祖先时回落到 Flutter 兜底**黑**
+      // (`IconThemeData.fallback()`) ⇒ 裸控件（如「添加到收藏夹」面板关闭钮、
+      // 弹幕发送栏「弹幕样式」钮）在深色下仍是黑、不反色。此处补上全局兜底，
+      // 更近的 IconTheme（导航栏 / 播放器控制条 / 项目自绘组件）仍按原样覆盖。
+      child: IconTheme(
+        data: IconThemeData(color: tokens.colors.onSurface),
+        child: ScrollConfiguration(
+          behavior: const AppScrollBehavior(),
+          child: app,
+        ),
       ),
     );
   }
