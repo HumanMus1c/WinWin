@@ -155,7 +155,7 @@ class SearchLiveItemModel {
         uname = json['uname'] as String?,
         uface = _http2https(json['uface'] as String?),
         title = _stripEm(json['title']),
-        cover = json['cover'] as String?,
+        cover = _http2https(json['cover'] as String?),
         online = _asInt(json['online']),
         roomid = _asInt(json['roomid']),
         cateName = json['cate_name'] as String?,
@@ -201,7 +201,7 @@ class SearchPgcItemModel {
         seasonId = _asInt(json['season_id']),
         seasonType = _asInt(json['season_type']),
         seasonTypeName = json['season_type_name'] as String?,
-        cover = json['cover'] as String?,
+        cover = _http2https(json['cover'] as String?),
         areas = json['areas'] as String?,
         styles = json['styles'] as String?,
         desc = json['desc'] as String?,
@@ -244,7 +244,8 @@ class SearchArticleItemModel {
         like = _asInt(json['like']),
         pubTime = _asInt(json['pub_time']),
         imageUrls = (json['image_urls'] as List?)
-            ?.map((e) => e as String)
+            ?.map((e) => _http2https(e as String))
+            .whereType<String>()
             .toList();
 }
 

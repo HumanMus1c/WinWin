@@ -16,6 +16,10 @@ abstract final class ImageUtils {
   }) {
     if (src == null || src.isEmpty) return '';
     String url = src.replaceFirst('http://', 'https://');
+    // 协议相对 URL（`//host/path`，B 站搜索接口的直播/专栏/番剧封面即此形态）：
+    // 必须补齐 https scheme，否则无 scheme 的 URL 交给 CachedNetworkImage 会抛
+    // `No host specified in URI` 导致封面加载失败。此处作为唯一收口点兜底。
+    if (url.startsWith('//')) url = 'https:$url';
 
     // 如果已有 @ 格式的 CDN 参数，直接返回 https 链接
     if (url.contains('@')) return url;
