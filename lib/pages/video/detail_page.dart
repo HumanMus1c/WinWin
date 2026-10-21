@@ -34,6 +34,7 @@ import 'package:winwin/http/follow.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/reply.dart';
 import 'package:winwin/http/video.dart';
+import 'package:winwin/core/shell/global_back_button.dart';
 import 'package:winwin/main.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
@@ -1072,13 +1073,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Widget build(BuildContext context) {
     final String? upName = _detailState.dataOrNull?.owner?.name;
     final isFillWindow = _fullscreen || _inAppFullscreen;
-    return AppScaffold(
+    final scaffold = AppScaffold(
       backgroundColor: isFillWindow ? AppColors.black : null,
-      // 本页自带渐变顶栏（含返回按钮，覆盖在播放器上显隐）；AppScaffold
-      // 不再预留顶部安全行与悬浮返回，避免双顶栏（50px 空白 + 双返回按钮）。
-      // 全屏/应用内全屏时更需整窗无安全行，保证播放器真正 edge-to-edge。
+      // 本页自带渐变顶栏（覆盖在播放器上，随滚动显隐标题）；AppScaffold
+      // 不再预留顶部安全行，避免双顶栏（50px 空白挤压播放器）。
+      // 返回按钮改由壳层单实例承担（本页经 BackButtonOwner 声明反色与副作用）。
       reserveTopStrip: false,
-      showBackButton: false,
       body: isFillWindow
           ? Stack(
               children: [
@@ -1109,6 +1109,44 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 );
               },
             ),
+    );
+    return BackButtonOwner(
+      controller: appBackButtonController,
+      listenable: _scrollRatio,
+      specBuilder: () => _backButtonSpec(context),
+      child: scaffold,
+    );
+  }
+
+  /// 全局返回按钮规格：本页返回键覆盖在播放器上（随滚动在白色/主题可读色间切换），
+  /// 且返回前需暂停并解绑播放器（保留原 `SyncTrace` 日志）。
+  /// 全屏 / 应用内全屏时按钮由播放器控件自己承担 → 壳层按钮让位隐藏。
+  BackButtonSpec _backButtonSpec(BuildContext context) {
+    if (_fullscreen || _inAppFullscreen) return BackButtonSpec.hidden;
+    final tokens = AppThemeHost.of(context);
+    final opacity = _topBarScrollOpacity();
+    final overVideo = opacity < 0.5;
+    final barContrast = resolveAccessibleContainerColors(
+      containerColor: tokens.colors.background.withValues(alpha: opacity * 0.95),
+      contentColor: tokens.colors.onSurface,
+      backgroundColor: tokens.colors.background,
+      fallbackContentColors: [
+        tokens.colors.onInverseSurface,
+        tokens.colors.scrim,
+      ],
+    );
+    return BackButtonSpec(
+      color: overVideo ? AppColors.white : barContrast.contentColor,
+      background: AppColors.transparent,
+      ringShadow: false,
+      shadows: overVideo ? ContrastStyle.glyphShadows : null,
+      iconSize: 24,
+      tooltip: '返回',
+      onBeforePop: () {
+        SyncTrace.log('DetailPage', 'back button pressed');
+        playerController?.pause();
+        playerController?.detachListeners();
+      },
     );
   }
 
@@ -1444,16 +1482,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           height: Style.toolbarHeight,
           child: Row(
             children: [
-              AppBackButton(
-                color: overVideo ? AppColors.white : barContrast.contentColor,
-                shadows: overVideo ? ContrastStyle.glyphShadows : null,
-                size: 24,
-                onBeforePop: () {
-                  SyncTrace.log('DetailPage', 'back button pressed');
-                  playerController?.pause();
-                  playerController?.detachListeners();
-                },
-              ),
+              // 返回键由壳层单实例承担（观感/副作用见 _backButtonSpec）；此处留出
+              // 等宽槽位，避免标题顶到最左被固定的返回按钮遮挡。
+              const SizedBox(width: 56),
               Expanded(
                 child: opacity > 0.05
                     ? Opacity(

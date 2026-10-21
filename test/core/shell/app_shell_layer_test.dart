@@ -7,6 +7,7 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/core/shell/app_shell.dart';
+import 'package:winwin/core/shell/global_back_button.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_transparent_host.dart';
 import 'package:winwin/core/shell/app_transition.dart';
@@ -313,6 +314,7 @@ void main() {
         isDark: true,
         navigatorKey: navKey,
         escapeObserver: escapeObserver,
+        backButtonController: GlobalBackButtonController(),
         home: Builder(builder: (context) {
           tokens = AppThemeHost.of(context);
           return const Text('首页');

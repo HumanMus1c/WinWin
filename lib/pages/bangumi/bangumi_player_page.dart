@@ -29,6 +29,7 @@ import 'package:winwin/http/pgc.dart';
 import 'package:winwin/http/reply.dart';
 import 'package:winwin/http/toview.dart';
 import 'package:winwin/http/video.dart';
+import 'package:winwin/core/shell/global_back_button.dart';
 import 'package:winwin/main.dart';
 import 'package:winwin/models/bangumi/bangumi_detail.dart';
 import 'package:winwin/models/video/reply_item.dart';
@@ -774,40 +775,78 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     final cs = AppThemeHost.of(context).colors;
 
     final isFill = _fullscreen || _inAppFullscreen;
-    if (isFill) {
-      return KeyboardListener(
-        focusNode: _keyboardFocusNode,
-        onKeyEvent: _handleKey,
-        child: AppScaffold(
-          backgroundColor: AppColors.black,
-          body: _withDemoOverlay(
-            playerController != null
-                ? PlayerPanel(
-                    controller: playerController!,
-                    cover: _currentEpisode.cover ?? widget.detail.cover,
-                    fullscreen: _fullscreen,
-                    inAppFullscreen: _inAppFullscreen,
-                    onToggleFullscreen: _toggleFullscreen,
-                    onToggleInAppFullscreen: _toggleInAppFullscreen,
-                    onEscape: _handleEscape,
-                  )
-                : const Center(child: AppProgressIndicator()),
-          ),
-        ),
-      );
-    }
+    // 返回按钮由壳层单实例承担（观感/副作用见 _backButtonSpec）：
+    // 全屏时播放器控件自己承担 → 壳层按钮让位隐藏。
+    return BackButtonOwner(
+      controller: appBackButtonController,
+      listenable: _scrollRatio,
+      specBuilder: () => _backButtonSpec(context),
+      child: isFill
+          ? KeyboardListener(
+              focusNode: _keyboardFocusNode,
+              onKeyEvent: _handleKey,
+              child: AppScaffold(
+                backgroundColor: AppColors.black,
+                body: _withDemoOverlay(
+                  playerController != null
+                      ? PlayerPanel(
+                          controller: playerController!,
+                          cover: _currentEpisode.cover ?? widget.detail.cover,
+                          fullscreen: _fullscreen,
+                          inAppFullscreen: _inAppFullscreen,
+                          onToggleFullscreen: _toggleFullscreen,
+                          onToggleInAppFullscreen: _toggleInAppFullscreen,
+                          onEscape: _handleEscape,
+                        )
+                      : const Center(child: AppProgressIndicator()),
+                ),
+              ),
+            )
+          : KeyboardListener(
+              focusNode: _keyboardFocusNode,
+              onKeyEvent: _handleKey,
+              child: AppScaffold(
+                body: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide =
+                        constraints.maxWidth >= kDetailNarrowBreakpoint;
+                    return isWide
+                        ? _buildWideLayout(cs)
+                        : _buildNarrowLayout(cs);
+                  },
+                ),
+              ),
+            ),
+    );
+  }
 
-    return KeyboardListener(
-      focusNode: _keyboardFocusNode,
-      onKeyEvent: _handleKey,
-      child: AppScaffold(
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= kDetailNarrowBreakpoint;
-            return isWide ? _buildWideLayout(cs) : _buildNarrowLayout(cs);
-          },
-        ),
-      ),
+  /// 全局返回按钮规格：本页返回键覆盖在播放器上（随滚动在白色/主题可读色间切换），
+  /// 返回前暂停并解绑播放器；全屏 / 应用内全屏时由播放器控件承担 → 壳层让位隐藏。
+  BackButtonSpec _backButtonSpec(BuildContext context) {
+    if (_fullscreen || _inAppFullscreen) return BackButtonSpec.hidden;
+    final tokens = AppThemeHost.of(context);
+    final opacity = _topBarScrollOpacity();
+    final overVideo = opacity < 0.5;
+    final barContrast = resolveAccessibleContainerColors(
+      containerColor: tokens.colors.background.withValues(alpha: opacity * 0.95),
+      contentColor: tokens.colors.onSurface,
+      backgroundColor: tokens.colors.background,
+      fallbackContentColors: [
+        tokens.colors.onInverseSurface,
+        tokens.colors.scrim,
+      ],
+    );
+    return BackButtonSpec(
+      color: overVideo ? AppColors.white : barContrast.contentColor,
+      background: AppColors.transparent,
+      ringShadow: false,
+      shadows: overVideo ? ContrastStyle.glyphShadows : null,
+      iconSize: 24,
+      tooltip: '返回',
+      onBeforePop: () {
+        playerController?.pause();
+        playerController?.detachListeners();
+      },
     );
   }
 
@@ -889,15 +928,9 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
           height: Style.toolbarHeight,
           child: Row(
             children: [
-              AppBackButton(
-                color: overVideo ? AppColors.white : barContrast.contentColor,
-                shadows: overVideo ? ContrastStyle.glyphShadows : null,
-                size: 24,
-                onBeforePop: () {
-                  playerController?.pause();
-                  playerController?.detachListeners();
-                },
-              ),
+              // 返回键由壳层单实例承担（观感/副作用见 _backButtonSpec）；留出等宽
+              // 槽位，避免标题顶到最左被固定的返回按钮遮挡。
+              const SizedBox(width: 56),
               Expanded(
                 child: opacity > 0.05
                     ? Opacity(

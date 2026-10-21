@@ -12,6 +12,7 @@ import 'package:winwin/ui/components/immersive_title_bar.dart';
 
 import 'app_routes.dart';
 import 'app_theme_host.dart';
+import 'global_back_button.dart';
 
 /// 全局滚动/指针行为（**widgets 层**实现，取代 main.dart 中基于
 /// MaterialScrollBehavior 的版本）：Windows 桌面开启平滑滚动与全设备指针。
@@ -80,6 +81,7 @@ class AppShell extends StatelessWidget {
     required this.isDark,
     required this.navigatorKey,
     required this.escapeObserver,
+    required this.backButtonController,
     this.navigatorObservers = const <NavigatorObserver>[],
     this.fontFamily,
   });
@@ -98,6 +100,12 @@ class AppShell extends StatelessWidget {
 
   /// 路由栈观察者（Esc 分层语义）。
   final AppEscapeNavigatorObserver escapeObserver;
+
+  /// 全局返回按钮控制器（壳层单实例按钮的单一来源；同时作为路由观察者）。
+  ///
+  /// 2026-10-21 起返回按钮上提为壳层单实例：挂在 Navigator **之上**、位置固定、
+  /// 仅按路由栈深显隐 ⇒ 不跟随任何页面转场动画、回根页面即隐藏（消除残留）。
+  final GlobalBackButtonController backButtonController;
 
   /// 额外 Navigator 观察者（如全局 routeObserver）。
   final List<NavigatorObserver> navigatorObservers;
@@ -145,7 +153,15 @@ class AppShell extends StatelessWidget {
                     decoration: TextDecoration.none,
                     fontFamily: appFontFamilyOf(innerContext),
                   ),
-                  child: routed,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      routed,
+                      // 全局返回按钮：Navigator 之上的**壳层单实例**（不属于任何
+                      // 页面路由子树 ⇒ 转场动画带不走；位置固定；仅按栈深显隐）。
+                      GlobalBackButton(controller: backButtonController),
+                    ],
+                  ),
                 ),
               ),
             ),

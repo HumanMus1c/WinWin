@@ -30,8 +30,7 @@ class _CommonSettingState extends State<CommonSetting> {
     final showAppBar = widget.showAppBar;
     final padding = MediaQuery.viewPaddingOf(context);
     return AppScaffold(
-      // 内嵌进设置页右列时不显示返回按钮、不预留顶部安全行。
-      showBackButton: showAppBar,
+      // 内嵌进设置页右列时不预留顶部安全行（返回按钮由壳层单实例按栈深决定）。
       reserveTopStrip: showAppBar,
       body: ListView(
         key: ValueKey(widget.settingType.name),

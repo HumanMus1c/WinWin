@@ -18,6 +18,7 @@ import 'core/perf/transition_probe.dart';
 import 'core/shell/app_scaffold.dart';
 import 'core/shell/app_shell.dart';
 import 'core/shell/app_theme_host.dart';
+import 'core/shell/global_back_button.dart';
 import 'core/storage/storage_pref.dart';
 import 'core/window/title_bar_controller.dart';
 import 'core/window/window_state_controller.dart';
@@ -45,6 +46,9 @@ final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 /// 全局 Esc 路由器的路由栈观察器（判断栈顶是否为弹层路由）。
 final AppEscapeNavigatorObserver appEscapeObserver =
     AppEscapeNavigatorObserver();
+
+/// 全局返回按钮控制器见 `core/shell/global_back_button.dart` 的
+/// [appBackButtonController] 单例（在此注册进 `navigatorObservers` 并传给 AppShell）。
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -213,7 +217,12 @@ class WinWinApp extends StatelessWidget {
               fontFamily: fontFamily,
               navigatorKey: appNavigatorKey,
               escapeObserver: appEscapeObserver,
-              navigatorObservers: [routeObserver, appEscapeObserver],
+              backButtonController: appBackButtonController,
+              navigatorObservers: [
+                routeObserver,
+                appEscapeObserver,
+                appBackButtonController,
+              ],
               home: AgreementGate(
                 bootstrapError: bootstrapError,
                 child: const AppRoot(),

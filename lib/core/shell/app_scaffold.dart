@@ -1,9 +1,7 @@
 import 'package:flutter/widgets.dart';
-import 'package:flutter_miuix/miuix.dart'
-    show MiuixIconButton, MiuixMotion, MiuixScaffold;
+import 'package:flutter_miuix/miuix.dart' show MiuixMotion, MiuixScaffold;
 // 过渡期依赖（B7 摘除 material_ui 时替换为 miuix 表面容器）：
 // 骨架必须提供 Material 祖先，见下方 [_AppScaffoldState] 注释。
-import 'package:winwin/theme/app_icons.dart';
 
 import 'app_theme_host.dart';
 import 'app_transparent_host.dart';
@@ -16,12 +14,15 @@ import 'app_transparent_host.dart';
 /// - 背景默认取 [AppTokens] 的 `colors.background`（可由 [backgroundColor] 覆盖）；
 /// - **顶部安全行**（[reserveTopStrip]）：每个页面顶部预留一行（高度 = 此前的紧凑标题栏
 ///   高度 [topStripHeight]）作为安全区域，避免内容贴顶；
-/// - **返回按钮**（[showBackButton]）：仅在**二级页面**（可 pop）的顶部安全行左侧显示
-///   悬浮返回按钮（Miuix 图标按钮规范 + 阴影）；
 /// - 顶部安全行右侧承载 [actions]（原顶栏操作按钮的落点）。
 ///
-/// 2026-10-08 起项目去除页面标题栏，由上述安全行 + 悬浮按钮取代；
+/// 2026-10-08 起项目去除页面标题栏，由上述安全行取代；
 /// **根页面**（一级页面）传入 [title]，安全行即显示页面标题，并可随滚动收缩。
+///
+/// **返回按钮自 2026-10-21 起由壳层单实例承担**（见 `global_back_button.dart`）：
+/// 不再属于本骨架——它挂在 Navigator 之上、位置固定、仅按路由栈深显隐，故既不
+/// 跟随页面转场动画、也不会在返回根页面后残留。需要覆盖观感/行为的页面用
+/// `BackButtonOwner` 声明规格；**不需要返回按钮的页面**声明 `BackButtonSpec.hidden`。
 class AppScaffold extends StatefulWidget {
   const AppScaffold({
     super.key,
@@ -32,7 +33,6 @@ class AppScaffold extends StatefulWidget {
     this.popupHost,
     this.backgroundColor,
     this.title,
-    this.showBackButton = true,
     this.reserveTopStrip = true,
     this.collapsible = true,
     this.actions,
@@ -64,11 +64,8 @@ class AppScaffold extends StatefulWidget {
   /// 背景色；null 时取当前 Token 的应用背景色。
   final Color? backgroundColor;
 
-  /// 页面标题（**根页面**传入）：显示在顶部安全行左侧（二级页面为返回按钮位置）。
+  /// 页面标题（**根页面**传入）：显示在顶部安全行左侧。
   final String? title;
-
-  /// 是否在顶部安全行左侧提供返回按钮（[Navigator.canPop] 为真时显示）。
-  final bool showBackButton;
 
   /// 是否预留顶部安全行（内嵌在别的页面里的子页面可关掉）。
   final bool reserveTopStrip;
@@ -130,8 +127,6 @@ class _AppScaffoldState extends State<AppScaffold> {
       popupHost: widget.popupHost,
       containerColor: widget.backgroundColor ?? tokens.colors.background,
       content: (EdgeInsets padding) {
-        final canPop = widget.showBackButton &&
-            (Navigator.maybeOf(context)?.canPop() ?? false);
         final actions = widget.actions;
         final hasActions = actions != null && actions.isNotEmpty;
         // B5-3 起骨架改用纯 widgets 实现的 MiuixScaffold，树上不再有 Material
@@ -152,11 +147,14 @@ class _AppScaffoldState extends State<AppScaffold> {
           return Padding(padding: padding, child: materialOf(body));
         }
         final title = widget.title;
+        // 安全行只承载**根页面标题**（左）与页面操作（右）。
+        // 二级页的返回按钮自 2026-10-21 起上提为壳层单实例（单例、固定位、仅按
+        // 栈深显隐，不随页面转场动画进出，见 global_back_button.dart）——本骨架
+        // 不再在安全行内渲染返回键（曾致「回根页面残留返回按钮」与「按钮跟随转场」）。
         final strip = Row(
           children: [
             const SizedBox(width: 8),
-            if (canPop) FloatingBackButton(tokens: tokens),
-            if (!canPop && title != null) ...[
+            if (title != null) ...[
               const SizedBox(width: 16),
               Text(
                 title,
@@ -209,49 +207,6 @@ class _AppScaffoldState extends State<AppScaffold> {
           ),
         );
       },
-    );
-  }
-}
-
-/// 悬浮返回按钮：Miuix 图标按钮规范（squircle + 按压反馈）+ 额外阴影。
-///
-/// 尺寸 42；Miuix 图标按钮默认 40 且**无阴影**，
-/// 按项目要求补一层柔和阴影以在内容上可辨识。
-class FloatingBackButton extends StatelessWidget {
-  const FloatingBackButton({super.key, required this.tokens, this.onPressed});
-
-  final AppTokens tokens;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: '返回',
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0x33000000),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: MiuixIconButton(
-          onPressed: onPressed ?? () => Navigator.of(context).maybePop(),
-          minWidth: 42,
-          minHeight: 42,
-          backgroundColor:
-              tokens.colors.surfaceContainerHighest.withValues(alpha: 0.92),
-          child: AppIcon(
-            AppIcons.back(),
-            size: 22,
-            color: tokens.colors.onSurfaceVariant,
-          ),
-        ),
-      ),
     );
   }
 }

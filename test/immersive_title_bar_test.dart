@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_shell.dart';
+import 'package:winwin/core/shell/global_back_button.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_transition.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
@@ -146,6 +147,7 @@ Future<void> _runTransitionCoverageScenario(
         isDark: false,
         navigatorKey: navKey,
         escapeObserver: AppEscapeNavigatorObserver(),
+        backButtonController: GlobalBackButtonController(),
         home: const ColoredBox(color: _homeColor, child: SizedBox.expand()),
       ),
     ),

@@ -63,8 +63,8 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      // 输入条自带返回键（不再用壳层顶部安全行的悬浮返回）：与已迁移的
-      // `SearchResultPage` 严格同构（reserveTopStrip: false + 自绘 topBar）。
+      // 搜索行自绘（reserveTopStrip: false）；返回键由壳层单实例承担（与
+      // `SearchResultPage` 严格同构，此处仅保留 56 宽槽位）。
       reserveTopStrip: false,
       topBar: _buildSearchTopBar(),
       body: SingleChildScrollView(
@@ -77,14 +77,16 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  /// 搜索顶栏（自绘行，替 Material `AppBar`）：返回键走顶栏标准槽位（56×56）——
-  /// 见 `AppLeadingBackButton`；与 `SearchResultPage` 的 topBar 同尺寸同位。
+  /// 搜索顶栏（自绘行，替 Material `AppBar`）：返回键由壳层单实例承担
+  /// （固定位于顶部安全行默认位，见 `global_back_button.dart`）——此处只保留
+  /// 56 宽槽位让输入框原位不被遮挡；与 `SearchResultPage` 的 topBar 同尺寸同位。
   Widget _buildSearchTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, Style.sm, Style.sm, Style.sm),
+      // 顶部不留内边距：使本行纵向中心与壳层返回按钮的默认位对齐。
+      padding: const EdgeInsets.fromLTRB(0, 0, Style.sm, Style.sm),
       child: Row(
         children: [
-          const AppLeadingBackButton(),
+          const SizedBox(width: 56, height: AppScaffold.topStripHeight),
           Expanded(
             child: AppCapsuleTextField(
               controller: _controller,

@@ -68,21 +68,21 @@ class _SearchResultPageState extends State<SearchResultPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      // 输入条自带返回键（不再用壳层顶部安全行的悬浮返回）：本页无标题栏，
-      // 返回键落在搜索行最左，与上级搜索页 `AppBar(leading: ...)` 同位对齐。
+      // 搜索行自绘（reserveTopStrip: false）；本页无标题栏，返回键由壳层单实例
+      // 承担（与上级搜索页同位），此处仅保留 56 宽槽位让输入框原位不被遮挡。
       reserveTopStrip: false,
       // 输入条 + 分类标签条。Tab 头/体使用 Miuix 轨道替身。
       topBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, Style.sm, Style.sm, Style.sm),
+            // 顶部不留内边距：使本行纵向中心与壳层返回按钮的默认位对齐。
+            padding: const EdgeInsets.fromLTRB(0, 0, Style.sm, Style.sm),
             child: Row(
               children: [
-                // 与上级搜索页 `AppBar(leading: ...)` 严格同尺寸同位：顶栏标准
-                // 56×56 槽（材质侧 tight 约束），命中区与 hover 高亮口径一致；
-                // 输入框紧随其后（上级页 titleSpacing: 0 → 同样起于 x≈56）。
-                const AppLeadingBackButton(),
+                // 返回键由壳层单实例承担（固定位于顶部安全行默认位，与上级
+                // 搜索页严格同尺寸同位）；此处只保留 56 宽槽位。
+                const SizedBox(width: 56, height: AppScaffold.topStripHeight),
                 Expanded(
                   child: AppCapsuleTextField(
                     controller: _controller,

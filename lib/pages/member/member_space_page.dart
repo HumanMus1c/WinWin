@@ -30,6 +30,7 @@ import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/event/event_bus.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/shell/global_back_button.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/dyn.dart';
 import 'package:winwin/http/fav.dart';
@@ -922,9 +923,8 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     // 顶栏（返回/分享/更多）是**页面级覆盖层**，与封面容器、滚动视图解耦：
     // 常态透明，仅当分类标签条吸附并入本栏（`_tabBandMerged`）时才亮通栏毛玻璃带。
     // 用 Stack 叠加而非布局槽，是为让头图能**铺到屏幕最顶端**（不被顶栏下推）。
-    return AppScaffold(
+    final scaffold = AppScaffold(
       reserveTopStrip: false,
-      showBackButton: false,
       body: _spaceState is Success
           ? Stack(
               fit: StackFit.expand,
@@ -932,7 +932,22 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             )
           : content,
     );
+    // 返回按钮由壳层单实例承担（覆盖在头图上 → 白色字形 + 半透明黑圆底）。
+    return BackButtonOwner(
+      controller: appBackButtonController,
+      specBuilder: () => _backButtonSpec,
+      child: scaffold,
+    );
   }
+
+  /// 全局返回按钮规格：本页返回键覆盖在头图上 → 白色字形 + 半透明黑圆底。
+  static const BackButtonSpec _backButtonSpec = BackButtonSpec(
+    color: AppColors.white,
+    background: Color(0x59000000),
+    ringShadow: false,
+    iconSize: 20,
+    tooltip: '返回',
+  );
 
   Widget _buildSpaceContent(MemberSpaceData? data) {
     final card = data?.card;
@@ -1056,24 +1071,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   padding: const EdgeInsets.symmetric(horizontal: Style.sm),
                   child: Row(
                     children: [
-                      MiuixIconButton(
-                        onPressed: () => Navigator.maybePop(context),
-                        child: AppTooltip(
-                          message: '返回',
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.black.withValues(alpha: 0.35),
-                              shape: BoxShape.circle,
-                            ),
-                            child: AppIcon(
-                              AppIcons.back(),
-                              color: AppColors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
+                      // 返回键由壳层单实例承担（白字 + 黑圆底，见 _backButtonSpec）。
                       const Spacer(),
                       if (!isOwner)
                         MiuixIconButton(

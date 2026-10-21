@@ -450,7 +450,6 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer>
       onKeyEvent: _handleKeyEvent,
       child: AppScaffold(
         reserveTopStrip: false,
-        showBackButton: false,
         backgroundColor: AppColors.transparent,
         body: ValueListenableBuilder<_GalleryDragState>(
           valueListenable: _dragNotifier,

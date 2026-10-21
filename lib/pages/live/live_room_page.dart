@@ -22,6 +22,7 @@ import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
 import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/shell/global_back_button.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/window/desktop_fullscreen.dart';
 import 'package:winwin/http/live.dart';
@@ -799,7 +800,14 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => BackButtonOwner(
+        // 返回按钮由壳层单实例承担（普通窗口标准观感；全屏覆盖在视频上 → 白字 + 黑圆底）。
+        controller: appBackButtonController,
+        specBuilder: () => _backButtonSpec(_fullscreen || _inAppFullscreen),
+        child: _buildRoom(context),
+      );
+
+  Widget _buildRoom(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final displayTitle = Pref.demoMode
@@ -878,7 +886,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
                     height: Style.toolbarHeight,
                     child: Row(
                       children: [
-                        const AppLeadingBackButton(),
+                        // 返回键由壳层单实例承担；留出槽位以免状态徽标被遮挡。
+                        const SizedBox(width: 56),
                         const SizedBox(width: 16),
                         _buildStatusBadge(),
                         const SizedBox(width: 10),
@@ -1012,6 +1021,20 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     );
   }
 
+  /// 全局返回按钮规格：普通窗口用标准观感；全屏覆盖在视频上 → 白字 + 半透明黑圆底，
+  /// 点击退出全屏（对齐全屏栏原返回键语义）。
+  BackButtonSpec _backButtonSpec(bool isFillWindow) {
+    if (!isFillWindow) return BackButtonSpec.standard;
+    return BackButtonSpec(
+      color: AppColors.white,
+      background: const Color(0x59000000),
+      ringShadow: false,
+      iconSize: 22,
+      tooltip: '退出全屏 (Esc)',
+      onPressed: _handleEscape,
+    );
+  }
+
   /// 视频播放器区域（普通窗口模式）
   Widget _buildPlayerBox() {
     // 演示模式：本地演示播放器（灰画面 + 全要素控制栏 + 本地播放状态；不连流）。
@@ -1133,12 +1156,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
         ),
         child: Row(
           children: [
-            AppBackButton(
-              color: AppColors.white,
-              tooltip: '退出全屏 (Esc)',
-              size: 24,
-              onPressed: _handleEscape,
-            ),
+            // 返回键由壳层单实例承担（见 _backButtonSpec）；留出槽位避免徽标被遮挡。
+            const SizedBox(width: 42),
             const SizedBox(width: 8),
             _buildStatusBadge(),
             const SizedBox(width: 12),
