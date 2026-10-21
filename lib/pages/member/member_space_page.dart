@@ -944,7 +944,6 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   static const BackButtonSpec _backButtonSpec = BackButtonSpec(
     color: AppColors.white,
     background: Color(0x59000000),
-    ringShadow: false,
     iconSize: 20,
     tooltip: '返回',
   );

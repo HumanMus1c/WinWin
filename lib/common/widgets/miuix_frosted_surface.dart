@@ -37,6 +37,7 @@ class MiuixFrostedSurface extends StatelessWidget {
     this.blurSigma = 16,
     this.outline = true,
     this.shadow = true,
+    this.color,
   });
 
   /// 表面内容（须自带尺寸：面板档由外部定宽高，全宽档建议 `SizedBox.expand`）。
@@ -62,6 +63,14 @@ class MiuixFrostedSurface extends StatelessWidget {
   /// 首页合并栏（自绘毛玻璃、无投影）同口径。
   final bool shadow;
 
+  /// 半透明底色；null = 沿用默认的**中性灰**（`0xFF262626`/`0xFFEAEAEA`）。
+  ///
+  /// 供**需要与页面主题面同源**的小尺寸毛玻璃（如壳层全局返回按钮）覆盖：
+  /// 传 `AppTopBarSurface.barColor(cs.surface)` 即与「首页顶栏」同一底色口径，
+  /// 同时复用本组件的**边缘无渐变**（bleed）实现——小圆按钮的模糊核大于按钮本体，
+  /// 若不外扩搬运，四边会被夹断成一片软边渐变。
+  final Color? color;
+
   /// 边缘模糊渐变的"搬运"距离：把模糊层外扩的像素量。
   ///
   /// 取值 3×[blurSigma]，覆盖模糊核在边界被夹断所形成的全部软边（≈3σ）宽度，
@@ -81,7 +90,8 @@ class MiuixFrostedSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final isDark = tokens.isDark;
-    final baseColor = isDark ? const Color(0xFF262626) : const Color(0xFFEAEAEA);
+    final baseColor =
+        color ?? (isDark ? const Color(0xFF262626) : const Color(0xFFEAEAEA));
     final outlineColor = MiuixFrostedSurface.outlineColor(isDark: isDark);
     final isFullBleed = borderRadius <= 0;
     final radius = BorderRadius.circular(isFullBleed ? 0 : borderRadius);

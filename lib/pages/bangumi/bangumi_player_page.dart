@@ -823,7 +823,18 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   /// 全局返回按钮规格：本页返回键覆盖在播放器上（随滚动在白色/主题可读色间切换），
   /// 返回前暂停并解绑播放器；全屏 / 应用内全屏时由播放器控件承担 → 壳层让位隐藏。
   BackButtonSpec _backButtonSpec(BuildContext context) {
-    if (_fullscreen || _inAppFullscreen) return BackButtonSpec.hidden;
+    // 全屏 / 应用内全屏：返回键覆盖在播放器上、点击 = 退出全屏
+    //（原播放器浮层返回键已收口到本全局按钮）。
+    if (_fullscreen || _inAppFullscreen) {
+      return BackButtonSpec(
+        background: AppColors.transparent,
+        color: AppColors.white,
+        shadows: ContrastStyle.glyphShadows,
+        iconSize: 22,
+        tooltip: _fullscreen ? '退出全屏（Esc）' : '退出网页全屏（Esc）',
+        onPressed: _handleEscape,
+      );
+    }
     final tokens = AppThemeHost.of(context);
     final opacity = _topBarScrollOpacity();
     final overVideo = opacity < 0.5;
@@ -839,7 +850,6 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     return BackButtonSpec(
       color: overVideo ? AppColors.white : barContrast.contentColor,
       background: AppColors.transparent,
-      ringShadow: false,
       shadows: overVideo ? ContrastStyle.glyphShadows : null,
       iconSize: 24,
       tooltip: '返回',

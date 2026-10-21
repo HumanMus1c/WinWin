@@ -2,6 +2,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
 
+import 'package:winwin/common/widgets/app_top_bar_surface.dart';
+import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -33,7 +35,6 @@ class BackButtonSpec {
     this.background,
     this.shadows,
     this.iconSize = 22,
-    this.ringShadow,
     this.tooltip,
     this.onPressed,
     this.onBeforePop,
@@ -48,7 +49,7 @@ class BackButtonSpec {
   /// 图标颜色；null = 取当前 Token 的 `onSurfaceVariant`。
   final Color? color;
 
-  /// 按钮底色；null = 取当前 Token 的 `surfaceContainerHighest`（0.92）。
+  /// 按钮底色；null = 取**首页顶栏同源毛玻璃**（`AppTopBarSurface` 材质）。
   /// 传 [AppColors.transparent] 可得到无底色（仅字形，用于覆盖在媒体上）。
   final Color? background;
 
@@ -57,9 +58,6 @@ class BackButtonSpec {
 
   /// 图标字形尺寸（外框恒定为 42，保证固定位不漂移）。
   final double iconSize;
-
-  /// 是否绘制外圈柔和阴影（可辨识底衬）。null = 自动（无自定义底色时为 true）。
-  final bool? ringShadow;
 
   /// 悬浮提示；null = 自动（「返回」/「关闭」）。
   final String? tooltip;
@@ -85,7 +83,6 @@ class BackButtonSpec {
       other.background == background &&
       _sameShadows(other.shadows, shadows) &&
       other.iconSize == iconSize &&
-      other.ringShadow == ringShadow &&
       other.tooltip == tooltip &&
       other.onPressed == onPressed &&
       other.onBeforePop == onBeforePop;
@@ -98,7 +95,6 @@ class BackButtonSpec {
         background,
         shadows?.length,
         iconSize,
-        ringShadow,
         tooltip,
         onPressed,
         onBeforePop,
@@ -259,9 +255,8 @@ class GlobalBackButton extends StatelessWidget {
               spec.icon ?? (isClose ? AppIcons.clear() : AppIcons.back());
           final String tooltip = spec.tooltip ?? (isClose ? '关闭' : '返回');
           final Color color = spec.color ?? tokens.colors.onSurfaceVariant;
-          final Color background = spec.background ??
-              tokens.colors.surfaceContainerHighest.withValues(alpha: 0.92);
-          final bool ring = spec.ringShadow ?? (spec.background == null);
+          // 背景是否为**默认**（首页顶栏同源毛玻璃）；显式底色则按声明渲染。
+          final bool frosted = spec.background == null;
 
           Widget core = MiuixIconButton(
             onPressed: () {
@@ -274,30 +269,32 @@ class GlobalBackButton extends StatelessWidget {
             },
             minWidth: boxSize,
             minHeight: boxSize,
-            backgroundColor: background,
+            backgroundColor: spec.background ?? AppColors.transparent,
             child: AppTooltip(
               message: tooltip,
-              child: AppIcon(
-                iconData,
-                size: spec.iconSize,
-                color: color,
-                shadows: spec.shadows,
+              // 字形加粗：图标字体无 w700 粗体面，用同字形**错位叠绘**一次等效加粗，
+              // 补偿背景由不透明改为半透明后的可读性下降。
+              child: _PseudoBoldGlyph(
+                child: AppIcon(
+                  iconData,
+                  size: spec.iconSize,
+                  color: color,
+                  shadows: spec.shadows,
+                ),
               ),
             ),
           );
 
-          if (ring) {
-            core = DecoratedBox(
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x33000000),
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
+          if (frosted) {
+            // 与「首页顶栏」**同源材质**（AppTopBarSurface：surface×0.72 + σ20 模糊）；
+            // 复用 MiuixFrostedSurface 的「边缘无渐变」实现——小圆按钮的模糊核大于
+            // 本体，不外扩搬运则四边会被夹断成一圈软边渐变。圆形裁剪 = 半径 21。
+            core = MiuixFrostedSurface(
+              color: AppTopBarSurface.barColor(tokens.colors.surface),
+              blurSigma: AppTopBarSurface.blurSigma,
+              borderRadius: boxSize / 2,
+              outline: false,
+              shadow: false,
               child: core,
             );
           }
@@ -403,4 +400,29 @@ class _BackButtonOwnerState extends State<BackButtonOwner> {
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+/// 字形**伪粗体**：把同一字形沿右下方错位**叠绘**一次，等效加粗笔画。
+///
+/// 用途：全局返回按钮内部字形的加粗——图标集（Cupertino/Miuix 矢量）均无 w700
+/// 粗体面，`fontWeight` 无效；改用错位叠绘使笔画加宽约 0.75px，补偿按钮背景由
+/// 不透明改为半透明后的可读性下降。对矢量路径与字体字形两条渲染路径同时生效。
+class _PseudoBoldGlyph extends StatelessWidget {
+  const _PseudoBoldGlyph({required this.child});
+
+  final Widget child;
+
+  /// 错位量（对角）。0.75px 在 20~24 字形上既明显加粗又不显双层重影。
+  static const Offset _offset = Offset(0.75, 0.75);
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        child,
+        Transform.translate(offset: _offset, child: child),
+      ],
+    );
+  }
 }

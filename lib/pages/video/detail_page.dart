@@ -1122,7 +1122,18 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 且返回前需暂停并解绑播放器（保留原 `SyncTrace` 日志）。
   /// 全屏 / 应用内全屏时按钮由播放器控件自己承担 → 壳层按钮让位隐藏。
   BackButtonSpec _backButtonSpec(BuildContext context) {
-    if (_fullscreen || _inAppFullscreen) return BackButtonSpec.hidden;
+    // 全屏 / 应用内全屏：返回键覆盖在播放器上、点击 = 退出全屏
+    //（原播放器浮层返回键已收口到本全局按钮）。
+    if (_fullscreen || _inAppFullscreen) {
+      return BackButtonSpec(
+        background: AppColors.transparent,
+        color: AppColors.white,
+        shadows: ContrastStyle.glyphShadows,
+        iconSize: 22,
+        tooltip: _fullscreen ? '退出全屏（Esc）' : '退出网页全屏（Esc）',
+        onPressed: _handleEscape,
+      );
+    }
     final tokens = AppThemeHost.of(context);
     final opacity = _topBarScrollOpacity();
     final overVideo = opacity < 0.5;
@@ -1138,7 +1149,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     return BackButtonSpec(
       color: overVideo ? AppColors.white : barContrast.contentColor,
       background: AppColors.transparent,
-      ringShadow: false,
       shadows: overVideo ? ContrastStyle.glyphShadows : null,
       iconSize: 24,
       tooltip: '返回',

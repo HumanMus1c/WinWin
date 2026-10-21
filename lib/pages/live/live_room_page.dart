@@ -1028,7 +1028,6 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     return BackButtonSpec(
       color: AppColors.white,
       background: const Color(0x59000000),
-      ringShadow: false,
       iconSize: 22,
       tooltip: '退出全屏 (Esc)',
       onPressed: _handleEscape,

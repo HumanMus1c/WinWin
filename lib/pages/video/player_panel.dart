@@ -495,40 +495,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         ),
                       ),
                     ),
-                  // 全屏/网页全屏浮层返回按钮：与播放器控件同步显隐（鼠标活动出现、
-                  // 3 秒无操作自动隐藏），普通布局由页面顶栏返回按钮承担。
-                  if (!_locked && (widget.fullscreen || widget.inAppFullscreen))
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      child: SafeArea(
-                        bottom: false,
-                        child: ValueListenableBuilder<bool>(
-                          valueListenable: _controlsVisible,
-                          builder: (context, visible, _) {
-                            return AnimatedOpacity(
-                              opacity: visible ? 1.0 : 0.0,
-                              duration: const Duration(milliseconds: 200),
-                              child: IgnorePointer(
-                                ignoring: !visible,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: AppBackButton(
-                                    color: AppColors.white,
-                                    shadows: ContrastStyle.glyphShadows,
-                                    size: 22,
-                                    tooltip: widget.fullscreen
-                                        ? '退出全屏（Esc）'
-                                        : '退出网页全屏（Esc）',
-                                    onPressed: _handleEscape,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
+                  // 全屏浮层返回键自 2026-10-21 起改由**壳层全局返回按钮**承担
+                  // （页面经 BackButtonSpec 声明白色字形 + 退出全屏副作用），
+                  // 本播放器不再自绘——消除「视频播放页未共享全局返回按钮」的最后一处。
                   if (_volumePopupOpen) _buildVolumePopup(),
                   // Phase 4.5：章节悬浮面板（覆盖在播放器控件之上的高层控件，外部视频区域点击 dismiss）。
                   _buildChapterPanel(panelWidth),
