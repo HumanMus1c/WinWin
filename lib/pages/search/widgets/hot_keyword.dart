@@ -20,12 +20,26 @@ import 'package:winwin/ui/components/app_tooltip.dart';
 /// - 每格 = 名字（14 号，超出省略）+ 至多一个后缀，按优先级：
 ///   小图标（高 15）→ 直播小标 → 推荐理由（灰色小字）。
 class HotKeywordGrid extends StatelessWidget {
-  const HotKeywordGrid({super.key, required this.list, required this.onTap});
+  const HotKeywordGrid({
+    super.key,
+    required this.list,
+    required this.onTap,
+    this.placeholder = false,
+  });
 
   final List<SearchTrendingItemModel> list;
 
   /// 点某个关键词的回调（回传关键词原文）。
   final ValueChanged<String> onTap;
+
+  /// 占位（骨架）模式：格子仍走**同一套布局**（同 Wrap、同 [cellPadding]、同名称
+  /// 行盒），只把名称文字透明化并在其上覆盖骨架块。
+  ///
+  /// 这是「骨架与真身逐像素等高」的**唯一可靠做法**：文本行盒受字体/DPR/textScaler
+  /// 影响并有**整像素取整**（14×1.2=16.8 实际渲染为 17.0），手写常量对不准；由真实
+  /// `Text` 撑行盒则天然对齐。详见
+  /// `docs/搜索态扩充动效与合并栏阴影复盘-2026-10-21.md` §八。
+  final bool placeholder;
 
   /// 行间距（上游 5）。
   static const double rowSpacing = 5;
@@ -33,13 +47,9 @@ class HotKeywordGrid extends StatelessWidget {
   /// 列间距（上游 0.4）。
   static const double columnSpacing = 0.4;
 
-  /// 单元格内边距的**唯一口径**（真实格与 [HotKeywordSkeleton] 共用）：
-  /// 只有两边同源，"加载中"与"已加载"才能逐像素等高。
+  /// 单元格内边距的**唯一口径**（真实格与占位格共用）。
   static const EdgeInsets cellPadding =
       EdgeInsets.only(left: 2, right: 10, top: 5, bottom: 5);
-
-  /// 名称行高（fontSize 14 × line-height 1.2）= 单元格文本高度唯一口径。
-  static const double cellLineHeight = 14 * 1.2;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +67,7 @@ class HotKeywordGrid extends StatelessWidget {
                 child: _HotKeywordCell(
                   item: item,
                   onTap: () => onTap(item.keyword ?? ''),
+                  placeholder: placeholder,
                 ),
               ),
           ],
@@ -66,11 +77,16 @@ class HotKeywordGrid extends StatelessWidget {
   }
 }
 
-/// 与 [HotKeywordGrid] **同几何**的骨架：同列/行间距、同单元格留白、同名称行高。
+/// 占位名（仅用于撑起行盒，视觉被骨架块覆盖）。
+const String kHotKeywordPlaceholder = '热搜关键词';
+
+/// 热搜骨架 = [HotKeywordGrid] 的**占位模式**（同一套布局），高度与真身
+/// **逐像素一致**。
 ///
-/// 目的：让"加载中"与"已加载"的**高度逐像素相等**——搜索态展开动画期间面板
-/// 内在高度一旦跳变，`RenderAnimatedSize` 会把尺寸动画从 0 重跑（顿挫根因）；
-/// 等高后跳变消失，动画目标自始至终稳定。
+/// 为何不手写"等高常量"：文本行盒受字体 / DPR / textScaler 影响并有**整像素
+/// 取整**（14×1.2=16.8 实渲为 17.0），手写常量对不准 ⇒ 换真身时子高度变化 ⇒
+/// `RenderAnimatedSize` 从 0 重跑 ⇒ 顿挫（详见
+/// `docs/搜索态扩充动效与合并栏阴影复盘-2026-10-21.md` §八）。
 class HotKeywordSkeleton extends StatelessWidget {
   const HotKeywordSkeleton({super.key, this.itemCount = 20});
 
@@ -80,34 +96,32 @@ class HotKeywordSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cellWidth =
-            (constraints.maxWidth - HotKeywordGrid.columnSpacing) / 2;
-        return Wrap(
-          spacing: HotKeywordGrid.columnSpacing,
-          runSpacing: HotKeywordGrid.rowSpacing,
-          children: [
-            for (var i = 0; i < itemCount; i++)
-              SizedBox(
-                width: cellWidth,
-                child: const Padding(
-                  padding: HotKeywordGrid.cellPadding,
-                  child: SkeletonLine(height: HotKeywordGrid.cellLineHeight),
-                ),
-              ),
-          ],
-        );
-      },
+    return HotKeywordGrid(
+      list: List<SearchTrendingItemModel>.generate(
+        itemCount,
+        (i) => SearchTrendingItemModel(
+          keyword: kHotKeywordPlaceholder,
+          showName: kHotKeywordPlaceholder,
+        ),
+      ),
+      onTap: (_) {},
+      placeholder: true,
     );
   }
 }
 
 class _HotKeywordCell extends StatelessWidget {
-  const _HotKeywordCell({required this.item, required this.onTap});
+  const _HotKeywordCell({
+    required this.item,
+    required this.onTap,
+    required this.placeholder,
+  });
 
   final SearchTrendingItemModel item;
   final VoidCallback onTap;
+
+  /// 占位（骨架）模式：名称文字透明化 + 覆盖骨架块，行盒仍由真实 `Text` 撑起。
+  final bool placeholder;
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +130,32 @@ class _HotKeywordCell extends StatelessWidget {
     final name = item.displayName;
     final icon = item.icon;
     final reason = item.recommendReason;
+    final nameStyle = TextStyle(fontSize: 14, height: 1.2, color: cs.onSurface);
+
+    // 占位格：与真身**同一套布局**，只把名称透明化并盖上骨架块 —— 行盒由真实
+    // `Text` 撑起（含字体/DPR/textScaler 与整像素取整），故高度逐像素一致。
+    if (placeholder) {
+      return Padding(
+        padding: HotKeywordGrid.cellPadding,
+        child: Row(
+          children: [
+            Flexible(
+              child: Stack(
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: nameStyle.copyWith(color: const Color(0x00000000)),
+                  ),
+                  Positioned.fill(child: SkeletonBox()),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     // 后缀优先级（与上游一致）：图标 → 直播标 → 推荐理由。
     Widget? trailing;
@@ -165,11 +205,7 @@ class _HotKeywordCell extends StatelessWidget {
                   name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.2,
-                    color: cs.onSurface,
-                  ),
+                  style: nameStyle,
                 ),
               ),
               ?trailing,

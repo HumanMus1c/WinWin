@@ -102,6 +102,20 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
   List<SearchTrendingItemModel> _trending = [];
   bool _trendingLoading = true;
 
+  /// 是否已完成过至少一次 build：用于区分「initState 里的**同步**命中缓存」
+  /// 与「运行时异步到达」——前者直接落字段（此刻尚未 build，`setState` 会踩
+  /// "setState during build"），后者才 `setState`。
+  bool _built = false;
+
+  /// 展开动画期间的骨架行数：**首次取值即锁定**（数据若在动画途中到达也不改
+  /// 行数），避免行数变化导致面板高度跳变、`AnimatedSize` 从 0 重跑。
+  int? _skeletonPin;
+  int get _skeletonItemCount {
+    final pin = _skeletonPin;
+    if (pin != null) return pin;
+    return _skeletonPin = (_trending.isNotEmpty ? _trending.length : 20);
+  }
+
   /// 搜索建议列表。
   List<SearchSuggestItem> _suggests = [];
   Timer? _debounce;
@@ -152,13 +166,22 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
     // 命中缓存（含首页首帧预取）→ 直接就绪，避免"加载态 → 内容态"高度跳变。
     final cached = SearchTrendingCache.instance.peek();
     if (cached != null) {
-      setState(() {
-        _trendingLoading = false;
-        _trending = cached;
-      });
+      _applyTrending(cached);
       return;
     }
     final list = await SearchTrendingCache.instance.fetch(limit: 20);
+    if (!mounted) return;
+    _applyTrending(list);
+  }
+
+  /// 落热搜数据：首帧（`_built == false`，来自 initState 的**同步**缓存命中）直接
+  /// 写字段，避免 "setState during build"；此后走 `setState`。
+  void _applyTrending(List<SearchTrendingItemModel> list) {
+    if (!_built) {
+      _trending = list;
+      _trendingLoading = false;
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _trendingLoading = false;
@@ -224,6 +247,7 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
 
   @override
   Widget build(BuildContext context) {
+    _built = true;
     final content = Padding(
       padding: widget.padding,
       child: (_showSuggests && !Pref.demoMode)
@@ -507,13 +531,11 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTrendingHeader(
-            onRefresh: _trendingLoading ? null : _refreshTrending,
-          ),
+          // 标题行与已加载态**同构**（同 onRefresh，避免"刷新"按钮出现/消失
+          // 引起标题行高度微变）。
+          _buildTrendingHeader(onRefresh: _refreshTrending),
           const SizedBox(height: Style.sm),
-          HotKeywordSkeleton(
-            itemCount: _trending.isNotEmpty ? _trending.length : 20,
-          ),
+          HotKeywordSkeleton(itemCount: _skeletonItemCount),
         ],
       );
     }
