@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter_miuix/miuix.dart'
     show
@@ -1071,13 +1070,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   @override
   Widget build(BuildContext context) {
-    final String? upName = _detailState.dataOrNull?.owner?.name;
     final isFillWindow = _fullscreen || _inAppFullscreen;
     final scaffold = AppScaffold(
       backgroundColor: isFillWindow ? AppColors.black : null,
-      // 本页自带渐变顶栏（覆盖在播放器上，随滚动显隐标题）；AppScaffold
-      // 不再预留顶部安全行，避免双顶栏（50px 空白挤压播放器）。
-      // 返回按钮改由壳层单实例承担（本页经 BackButtonOwner 声明反色与副作用）。
+      // 2026-10-21 R3：播放页顶栏（含 UP 名文本）已整体移除，只保留该位置的
+      // **全局返回按钮**（壳层单实例，见 global_back_button.dart）；
+      // AppScaffold 不再预留顶部安全行，播放区域真正贴顶。
       reserveTopStrip: false,
       body: isFillWindow
           ? Stack(
@@ -1099,11 +1097,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 // 窄屏断点适配：窄于 [kDetailNarrowBreakpoint] 时单列布局，
                 // 相关推荐追加到左栏滚动视图尾部（复用 _relatedState）。
                 if (constraints.maxWidth < kDetailNarrowBreakpoint) {
-                  return _buildLeftColumn(upName, appendRelated: true);
+                  return _buildLeftColumn(appendRelated: true);
                 }
                 return Row(
                   children: [
-                    Expanded(flex: 65, child: _buildLeftColumn(upName)),
+                    Expanded(flex: 65, child: _buildLeftColumn()),
                     Expanded(flex: 35, child: _buildRightColumn()),
                   ],
                 );
@@ -1135,7 +1133,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       );
     }
     final tokens = AppThemeHost.of(context);
-    final opacity = _topBarScrollOpacity();
+    final opacity = _scrollProgress();
     final overVideo = opacity < 0.5;
     final barContrast = resolveAccessibleContainerColors(
       containerColor: tokens.colors.background.withValues(alpha: opacity * 0.95),
@@ -1163,16 +1161,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   // ─────────────────────────── 左栏 ───────────────────────────
 
   /// 左栏：CustomScrollView + VideoHeader(pin 播放器) + slivers(信息/简介/评论)。
-  /// 顶部叠加渐变工具栏（基于 _scrollRatio 显隐）。
+  /// 2026-10-21 R3：原「顶部叠加渐变工具栏（含 UP 名文本）」已移除，该位置只保留
+  /// 壳层全局返回按钮（见 global_back_button.dart）。
   /// [appendRelated] 为 true（窄屏单列布局）时尾部追加相关推荐 slivers。
   ///
   /// 静态与动态分层控制（DeepSeek 规范）：
   /// 播放器外壳（优先承接封面转场）、弹幕输入条、点赞/投币操作行及 Tab 导航结构
   /// 均为编译期静态控件，始终以最终样式常驻渲染；
   /// 仅在未就绪时对标题行、UP主资料及未到达的评论数据展示局部 Shimmer 骨架占位。
-  Widget _buildLeftColumn(String? upName, {bool appendRelated = false}) {
+  Widget _buildLeftColumn({bool appendRelated = false}) {
     if (_detailState case Error(:final errMsg, :final code)) {
-      return _buildErrorLayout(upName, code, errMsg, narrow: appendRelated);
+      return _buildErrorLayout(code, errMsg, narrow: appendRelated);
     }
 
     final response = _detailState.dataOrNull;
@@ -1293,7 +1292,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   );
                 },
               ),
-              _buildGradientTopBar(upName),
             ],
           ),
         ),
@@ -1312,9 +1310,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   }
 
   /// 稿件信息错误态的左栏布局（参照 BiliPai VideoDetailScreenStateHolder：
-  /// 错误仅占据播放区域，下方保留简介占位卡片，顶栏返回与右栏推荐不受影响）。
+  /// 错误仅占据播放区域，下方保留简介占位卡片，全局返回与右栏推荐不受影响）。
   Widget _buildErrorLayout(
-    String? upName,
     int? code,
     String? errMsg, {
     bool narrow = false,
@@ -1357,7 +1354,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   );
                 },
               ),
-              _buildGradientTopBar(upName),
             ],
           ),
         ),
@@ -1442,21 +1438,22 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     };
   }
 
-  /// 顶栏滚动吸收行程上下限（px）：随左栏实际可滚范围收敛，保证吸顶可达。
+  /// 滚动吸收行程上下限（px）：随左栏实际可滚范围收敛。
   static const double _kTopBarAbsorbMin = 24;
   static const double _kTopBarAbsorbMax = 56;
 
-  /// 顶栏不透明度：由左栏滚动位移驱动。
+  /// 播放区滚动进度（0~1）：由左栏滚动位移驱动。
   ///
-  /// 根因（2026-10-17 实机反馈「过渡中/吸顶完全没有效果」）：旧实现只由
+  /// 用途（2026-10-21 R3 起）：**仅**驱动**壳层全局返回按钮**在「覆盖在播放器上
+  /// （白字 + 阴影）」与「滚动后落回页面背景（主题可读色）」之间的翻色；
+  /// 播放页自身的渐变顶栏已整体移除（含 UP 名文本）。
+  ///
+  /// 历史根因（2026-10-17 实机反馈「过渡中/吸顶完全没有效果」）：旧实现只由
   /// `_scrollRatio`（播放器收缩进度 = shrinkOffset / (maxExtent - minExtent)）
-  /// 驱动。宽屏两栏布局下评论区迁到右栏 Tab，左栏只剩 视频+弹幕条+信息/简介/标签，
-  /// 可滚余量远小于播放器收起行程（≈0.44×视频高）→ 该比例封顶在 ~0.3，
-  /// 0.5 翻色点与 0.95 吸顶阈值永不可达，故观感上「没有任何效果」。
-  ///
-  /// 改为按滚动位移吸收：行程 = 一条工具栏高（56），不足时按实际可滚范围收敛
-  /// （下限 24 防抖），任何窗口/布局都能走完「渐变 → 翻色 → 吸顶」。
-  double _topBarScrollOpacity() {
+  /// 驱动；宽屏两栏布局下评论区迁到右栏 Tab，左栏可滚余量远小于播放器收起行程
+  /// （≈0.44×视频高）→ 该比例封顶在 ~0.3，翻色/吸顶阈值永不可达。改为按滚动位移
+  /// 吸收：行程 = 一条工具栏高（56），不足时按实际可滚范围收敛（下限 24 防抖）。
+  double _scrollProgress() {
     if (!scrollController.hasClients) return 0.0;
     final pos = scrollController.position;
     final absorb = pos.maxScrollExtent.clamp(
@@ -1464,130 +1461,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       _kTopBarAbsorbMax,
     );
     return (pos.pixels / absorb).clamp(0.0, 1.0);
-  }
-
-  /// 渐变顶栏：滚动位移=0 透明（覆盖在播放器上），到位后不透明（显示标题）。
-  Widget _buildGradientTopBar(String? upName, {bool forceOpaque = false}) {
-    return AnimatedBuilder(
-      animation: scrollController,
-      builder: (context, _) {
-        final tokens = AppThemeHost.of(context);
-        final opacity = forceOpaque ? 1.0 : _topBarScrollOpacity();
-        final overVideo = opacity < 0.5;
-        // 半透明容器对比度策略（ThemeContrastPolicy）：顶栏拍平到页面背景后，
-        // 为标题/返回箭头选出达标可读色（覆盖在播放器上时仍用白色）。
-        final barContrast = resolveAccessibleContainerColors(
-          containerColor: tokens.colors.background.withValues(
-            alpha: opacity * 0.95,
-          ),
-          contentColor: tokens.colors.onSurface,
-          backgroundColor: tokens.colors.background,
-          fallbackContentColors: [
-            tokens.colors.onInverseSurface,
-            tokens.colors.scrim,
-          ],
-        );
-
-        final barContent = SizedBox(
-          height: Style.toolbarHeight,
-          child: Row(
-            children: [
-              // 返回键由壳层单实例承担（观感/副作用见 _backButtonSpec）；此处留出
-              // 等宽槽位，避免标题顶到最左被固定的返回按钮遮挡。
-              const SizedBox(width: 56),
-              Expanded(
-                child: opacity > 0.05
-                    ? Opacity(
-                        opacity: opacity,
-                        child: Text(
-                          (Pref.demoMode || !(upName?.isNotEmpty ?? false))
-                              ? '视频详情'
-                              : upName!,
-                          overflow: TextOverflow.ellipsis,
-                          style: tokens.text.titleMedium?.copyWith(
-                            color: barContrast.contentColor,
-                            shadows: overVideo
-                                ? ContrastStyle.glyphShadows
-                                : null,
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          ),
-        );
-
-        // 完全吸顶态（opacity >= 0.95）：固态实色毛玻璃顶栏，防止正文穿透
-        if (opacity >= 0.95) {
-          return Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: Container(
-                    height: Style.toolbarHeight,
-                    decoration: BoxDecoration(
-                      color: tokens.colors.background.withValues(alpha: 0.95),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: tokens.colors.outlineVariant.withValues(
-                            alpha: 0.3,
-                          ),
-                          width: 0.5,
-                        ),
-                      ),
-                    ),
-                    child: barContent,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-
-        // 浮动/过渡态（overVideo 或滚动渐变）：朝下的纯渐进式压暗阴影，轻盈通透且零 GPU 滤镜开销
-        final topColor = overVideo
-            ? AppColors.black.withValues(
-                alpha: (0.45 * (1.0 - opacity) + 0.70 * opacity).clamp(
-                  0.0,
-                  1.0,
-                ),
-              )
-            : tokens.colors.background.withValues(
-                alpha: (opacity * 0.95).clamp(0.0, 1.0),
-              );
-
-        return Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            bottom: false,
-            child: Container(
-              height: Style.toolbarHeight,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [0.0, 0.6, 1.0],
-                  colors: [
-                    topColor,
-                    topColor.withValues(alpha: topColor.a * 0.4),
-                    AppColors.transparent,
-                  ],
-                ),
-              ),
-              child: barContent,
-            ),
-          ),
-        );
-      },
-    );
   }
 
   /// 播放器内容（Phase 7.6.4：封面加 Hero 共享元素转场）。
