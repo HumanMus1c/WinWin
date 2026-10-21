@@ -21,12 +21,14 @@ import 'package:winwin/ui/components/app_tooltip.dart';
 ///
 /// 样式改动即时写入 GStorage，字幕渲染层（PlayerPanel._buildSubtitleLayer）
 /// 下次重建时读取生效。
-void showSubtitleSettingsPanel(
+/// 返回一个"关闭面板才完成"的 Future，供播放器挂起控制条自动隐藏
+/// （见 `PlayerPanel._openSuspending`）。
+Future<void> showSubtitleSettingsPanel(
   BuildContext context, {
   required WinWinPlayerController controller,
   required bool fullscreen,
 }) {
-  showAppDialog<void>(
+  return showAppDialog<void>(
     context: context,
     builder: (context) => _SubtitleSettingsDialog(
       controller: controller,

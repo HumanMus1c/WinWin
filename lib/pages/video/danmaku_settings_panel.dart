@@ -26,12 +26,14 @@ import 'package:winwin/ui/components/app_tooltip.dart';
 /// 每次改动即时写入 GStorage 并刷新 [WinWinPlayerController.danmakuEngine]
 /// 的 option；不透明度改动额外写入 [WinWinPlayerController.danmakuOpacity]
 /// 供弹幕视图层监听刷新。
-void showDanmakuSettingsPanel(
+/// 返回一个"关闭面板才完成"的 Future，供播放器挂起控制条自动隐藏
+/// （见 `PlayerPanel._openSuspending`）。
+Future<void> showDanmakuSettingsPanel(
   BuildContext context, {
   required WinWinPlayerController controller,
   required bool fullscreen,
 }) {
-  showAppDialog<void>(
+  return showAppDialog<void>(
     context: context,
     builder: (context) => _DanmakuSettingsDialog(
       controller: controller,

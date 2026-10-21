@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/miuix_overlay_panel.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -44,6 +45,11 @@ Duration _clampDuration(Duration value, Duration min, Duration max) {
   if (value > max) return max;
   return value;
 }
+
+/// 音量条轨道粗细区间（实时随音量动态变化：0% 最细 → 100% 最粗）。
+/// 上限沿用 `MiuixSliderDefaults.minHeight`(=28)，保证满音量观感与既有默认一致。
+const double _kVolumeBarMinHeight = 14.0;
+const double _kVolumeBarMaxHeight = 28.0;
 
 /// BiliPai 风格的播放器面板。
 ///
@@ -89,6 +95,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
       ValueNotifier(null);
   bool _volumePopupOpen = false;
   bool _chapterPanelOpen = false;
+
+  /// 二级设置弹层（音量 / 章节 / 弹幕设置 / 字幕设置 / 发弹幕 / 画质·音轨·
+  /// 倍速菜单）的**打开计数**：>0 时控制条**不自动隐藏**（挂起隐藏计时），
+  /// 归零（最后一个弹层关闭）后重置隐藏计时器，使控制条再停留一个完整周期。
+  int _popupSuspend = 0;
 
   /// 音量按钮锚点：音量弹层据此定位到**触发按钮正上方**
   /// （B7-c6-4 反馈轮：此前弹层写死在左下角，与触发器脱钩）。
@@ -136,11 +147,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
     super.dispose();
   }
 
-  /// 章节面板开关（唯一出口）：同步全局 Esc 登记表。
+  /// 章节面板开关（唯一出口）：同步全局 Esc 登记表 + 控制条隐藏挂起。
   void _setChapterPanelOpen(bool open) {
     if (_chapterPanelOpen == open) return;
     setState(() => _chapterPanelOpen = open);
     if (open) {
+      _beginPopupSuspend();
       _chapterEscUnregister = EscapeLayerRegistry.instance.register(() {
         if (!_chapterPanelOpen) return false;
         _setChapterPanelOpen(false);
@@ -149,14 +161,16 @@ class _PlayerPanelState extends State<PlayerPanel> {
     } else {
       _chapterEscUnregister?.call();
       _chapterEscUnregister = null;
+      _endPopupSuspend();
     }
   }
 
-  /// 音量弹层开关（唯一出口）：同步全局 Esc 登记表。
+  /// 音量弹层开关（唯一出口）：同步全局 Esc 登记表 + 控制条隐藏挂起。
   void _setVolumePopupOpen(bool open) {
     if (_volumePopupOpen == open) return;
     setState(() => _volumePopupOpen = open);
     if (open) {
+      _beginPopupSuspend();
       _volumeEscUnregister = EscapeLayerRegistry.instance.register(() {
         if (!_volumePopupOpen) return false;
         _setVolumePopupOpen(false);
@@ -165,6 +179,44 @@ class _PlayerPanelState extends State<PlayerPanel> {
     } else {
       _volumeEscUnregister?.call();
       _volumeEscUnregister = null;
+      _endPopupSuspend();
+    }
+  }
+
+  /// 挂起控制条自动隐藏（弹层打开时调用）：计数 +1、取消隐藏计时并保持显示。
+  void _beginPopupSuspend() {
+    _popupSuspend++;
+    _hideTimer?.cancel();
+    _controlsVisible.value = true;
+  }
+
+  /// 恢复控制条自动隐藏（弹层关闭时调用）：计数归零后重置隐藏计时器
+  /// （控制条当前可见才重置；已被隐藏时不再强行弹出）。
+  void _endPopupSuspend() {
+    if (_popupSuspend == 0) return;
+    _popupSuspend--;
+    if (_popupSuspend == 0 && _controlsVisible.value) {
+      _resetHideTimer();
+    }
+  }
+
+  /// 以"弹层挂起"包裹一个"打开即返回 Future、关闭才完成"的弹层调用。
+  Future<void> _openSuspending(Future<void> Function() open) async {
+    _beginPopupSuspend();
+    try {
+      await open();
+    } finally {
+      if (mounted) _endPopupSuspend();
+    }
+  }
+
+  /// 控制条内 `MiuixPopupMenu`（画质 / 音轨 / 倍速）展开态变化 → 挂起/恢复
+  /// 控制条自动隐藏（弹层锚定于控制条按钮，弹层开着时控制条必须保持外露）。
+  void _onMenuOpenChanged(bool open) {
+    if (open) {
+      _beginPopupSuspend();
+    } else {
+      _endPopupSuspend();
     }
   }
 
@@ -251,12 +303,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
     // 检查 controller 是否已 dispose
     if (widget.controller.disposed) return;
     final c = widget.controller;
-    // 锁定状态 / 播放中 / 未拖动进度 / 未打开音量弹层 / 未打开章节面板时才自动隐藏。
+    // 锁定状态 / 播放中 / 未拖动进度 / 无任何设置弹层打开时才自动隐藏。
     if (!_locked &&
         c.playing.value &&
         !_draggingProgress &&
-        !_volumePopupOpen &&
-        !_chapterPanelOpen) {
+        _popupSuspend == 0) {
       _controlsVisible.value = false;
     }
   }
@@ -269,6 +320,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   void _hideControlsNow() {
     _hideTimer?.cancel();
+    // 其它设置弹层（弹幕/字幕设置、发弹幕、画质·音轨·倍速菜单）打开期间保持显示；
+    // 音量弹层自身除外——鼠标移出播放器时仍需随控制条一并收起。
+    if (_popupSuspend > 0 && !_volumePopupOpen) return;
     _controlsVisible.value = false;
     if (_volumePopupOpen) {
       _setVolumePopupOpen(false);
@@ -498,7 +552,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   // 全屏浮层返回键自 2026-10-21 起改由**壳层全局返回按钮**承担
                   // （页面经 BackButtonSpec 声明白色字形 + 退出全屏副作用），
                   // 本播放器不再自绘——消除「视频播放页未共享全局返回按钮」的最后一处。
-                  if (_volumePopupOpen) _buildVolumePopup(),
+                  // 常驻子树（不再 `if (_volumePopupOpen)` 条件挂载）：
+                  // 展开/收起两段动画均由 `_volumePopupOpen` 驱动，
+                  // 收起时由 `MiuixAnchoredPopup` 播完动画自行卸载为空。
+                  _buildVolumePopup(),
                   // Phase 4.5：章节悬浮面板（覆盖在播放器控件之上的高层控件，外部视频区域点击 dismiss）。
                   _buildChapterPanel(panelWidth),
                 ],
@@ -911,7 +968,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         shadows: ContrastStyle.glyphShadows,
                       ),
                       tooltip: '发弹幕',
-                      onPressed: () => showSendDanmakuPanel(context, controller: c),
+                      onPressed: () => _openSuspending(
+                        () => showSendDanmakuPanel(context, controller: c),
+                      ),
                     ),
                     _iconButton(
                       icon: AppIcon(
@@ -919,10 +978,13 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         shadows: ContrastStyle.glyphShadows,
                       ),
                       tooltip: '弹幕设置',
-                      onPressed: () => showDanmakuSettingsPanel(
-                        context,
-                        controller: c,
-                        fullscreen: widget.fullscreen || widget.inAppFullscreen,
+                      onPressed: () => _openSuspending(
+                        () => showDanmakuSettingsPanel(
+                          context,
+                          controller: c,
+                          fullscreen:
+                              widget.fullscreen || widget.inAppFullscreen,
+                        ),
                       ),
                     ),
                     ValueListenableBuilder<double>(
@@ -1383,6 +1445,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
             ],
             title: '画质',
             itemTextStyle: const TextStyle(fontSize: 12),
+            onOpenChanged: _onMenuOpenChanged,
             child: AppTooltip(
               message: '画质',
               child: HoverContainer(
@@ -1478,10 +1541,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
               ? biliBlue.withValues(alpha: 0.45)
               : AppColors.white.withValues(alpha: 0.15),
           child: HoverContainer(
-            onTap: () => showSubtitleSettingsPanel(
-              context,
-              controller: c,
-              fullscreen: widget.fullscreen || widget.inAppFullscreen,
+            onTap: () => _openSuspending(
+              () => showSubtitleSettingsPanel(
+                context,
+                controller: c,
+                fullscreen: widget.fullscreen || widget.inAppFullscreen,
+              ),
             ),
             borderRadius: Style.radiusFull,
             padding: const EdgeInsets.symmetric(
@@ -1578,6 +1643,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
             ],
             title: '音频设置',
             itemTextStyle: const TextStyle(fontSize: 12),
+            onOpenChanged: _onMenuOpenChanged,
             child: AppTooltip(
               message: '音频设置',
               child: HoverContainer(
@@ -2118,6 +2184,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
             ],
             title: '倍速',
             itemTextStyle: const TextStyle(fontSize: 12),
+            onOpenChanged: _onMenuOpenChanged,
             child: AppTooltip(
               message: '倍速',
               child: HoverContainer(
@@ -2155,122 +2222,118 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   /// 音量弹出 Slider。
   ///
-  /// B7-c6-4 反馈轮：由**写死左下角**改为**锚定音量按钮正上方**
-  /// （与画质/音轨/倍速等 MiuixPopupMenu 弹层一致的"贴触发器"行为）。
+  /// B7-c6-4 反馈轮：由**写死左下角**改为**锚定音量按钮正上方**。
+  /// 本轮（2026-10-21）：外观改用**播放器统一抽象的弹层样式**
+  /// （`MiuixOverlayPanel` 毛玻璃面板——与投币 / 表情 / 弹幕样式面板同源），
+  /// 并经 `MiuixAnchoredPopup` 补齐**对角线展开 / 收起**两段动画；强调色取
+  /// **主题色**（`tokens.colors.primary`，越过 100% 的增益态仍用琥珀色区分）。
+  /// 音量条轨道粗细随音量**实时动态变化**：越小越细、越大越粗。
   Widget _buildVolumePopup() {
     final c = widget.controller;
     final anchor = _volumeAnchorRect();
-    // 触发按钮尚未布局（极端首帧）时不渲染，避免弹层落到屏幕角落。
+    // 触发按钮尚未布局（极端首帧）时不渲染，避免弹层落到屏幕角落；
+    // 收起动画期间锚点仍在，故关闭过程仍能正常渲染。
     if (anchor == null) return const SizedBox.shrink();
-    return AppAnchoredPopup(
+    final tokens = AppThemeHost.of(context);
+    // 面板总宽 = 内容 232 + 内边距 16×2；外层定宽，避免 MiuixOverlayPanel
+    // 标题行（MainAxisSize.max）在锚定浮层的 loose 约束下被拉成整页宽。
+    return MiuixAnchoredPopup(
+      visible: _volumePopupOpen,
       anchor: anchor,
-      child: GlassCapsule(
-        blur: 16,
-        backgroundColor: AppColors.black.withValues(alpha: 0.55),
-        borderRadius: Style.radiusSm,
-        padding: const EdgeInsets.symmetric(
-          horizontal: Style.md,
-          vertical: Style.sm,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ValueListenableBuilder<double>(
-              valueListenable: c.volume,
-              builder: (context, vol, _) {
-                return ContrastIcon(
-                  vol <= 0
-                      ? AppIcons.volumeOff()
-                      : (vol > 100
-                            ? AppIcons.volumeUp()
-                            : AppIcons.volumeDown()),
-                  color: vol > 100 ? AppColors.amberAccent : AppColors.white,
-                  size: 18,
-                  shadows: ContrastStyle.glyphShadows,
-                );
-              },
+      alignment: Alignment.bottomRight,
+      child: SizedBox(
+        width: 264,
+        child: MiuixOverlayPanel(
+          title: '音量',
+          icon: ValueListenableBuilder<double>(
+            valueListenable: c.volume,
+            builder: (context, vol, _) => AppIcon(
+              vol <= 0
+                  ? AppIcons.volumeOff()
+                  : (vol > 100 ? AppIcons.volumeUp() : AppIcons.volumeDown()),
+              size: 16,
+              color: tokens.colors.primary,
             ),
-            const SizedBox(width: Style.sm),
-            SizedBox(
-              width: 150,
-              child: ValueListenableBuilder<double>(
-                valueListenable: c.volume,
-                builder: (context, vol, _) {
-                  final activeColor =
-                      vol > 100 ? AppColors.amberAccent : biliPink;
-                  return MiuixSlider(
-                    value: vol.clamp(0.0, Pref.maxVolume).toDouble(),
-                    min: 0,
-                    max: Pref.maxVolume,
-                    // 100% 处增加一个吸附关键点：拖动/点击时磁吸到 100%（常态
-                    // 音量基准，100% 以上为增益），并在轨道上画出标记点，便于
-                    // 快速定位。magnetThreshold 放宽到 3%（≈±6）更易吸附。
-                    keyPoints: Pref.maxVolume > 100 ? const [100.0] : null,
-                    showKeyPoints: Pref.maxVolume > 100,
-                    magnetThreshold: 0.03,
-                    colors: MiuixSliderColors(
-                      foregroundColor: activeColor,
-                      disabledForegroundColor: activeColor,
-                      backgroundColor: AppColors.white24,
-                      disabledBackgroundColor: AppColors.white24,
-                      thumbColor: activeColor,
-                      disabledThumbColor: activeColor,
-                      keyPointColor: activeColor,
-                      keyPointForegroundColor: activeColor,
-                    ),
-                    onValueChanged: c.setVolume,
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: Style.sm),
-            // 标签槽位宽度恒定（B7-c6-4 反馈轮 3）：`(增益)` 后缀只在音量越过
-            // 100% 时出现，若标签按文字自适应宽度，整个弹层会随之变宽，而弹层
-            // 是锚定居中的 —— 变宽瞬间滑条连同拇指会横向瞬移数十像素，正在拖动
-            // 时极易误操作。这里用一枚"不可见但保留尺寸"的最宽标签（粗体、最大
-            // 三位数 + 增益后缀）把槽位撑住，可见标签左对齐贴在槽位左边，弹层
-            // 宽度在 0 ~ 音量上限全程恒定。
-            Stack(
-              alignment: Alignment.centerLeft,
+          ),
+          child: SizedBox(
+            width: 232,
+            child: Row(
               children: [
-                if (Pref.maxVolume > 100)
-                  Visibility(
-                    visible: false,
-                    maintainSize: true,
-                    maintainAnimation: true,
-                    maintainState: true,
-                    child: ContrastText(
-                      '${Pref.maxVolume.round()}% (增益)',
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                      shadows: ContrastStyle.glyphShadows,
-                    ),
+                SizedBox(
+                  width: 152,
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: c.volume,
+                    builder: (context, vol, _) {
+                      final gain = vol > 100;
+                      final activeColor = gain
+                          ? AppColors.amberAccent
+                          : tokens.colors.primary;
+                      final base = MiuixSliderDefaults.sliderColors(context);
+                      // 动态粗细：0% → 14（最细）线性增长到 100% → 28（最粗）。
+                      final barHeight = lerpDouble(
+                        _kVolumeBarMinHeight,
+                        _kVolumeBarMaxHeight,
+                        (vol / 100).clamp(0.0, 1.0),
+                      )!;
+                      return MiuixSlider(
+                        value: vol.clamp(0.0, Pref.maxVolume).toDouble(),
+                        min: 0,
+                        max: Pref.maxVolume,
+                        height: barHeight,
+                        // 100% 处增加一个吸附关键点：拖动/点击时磁吸到 100%
+                        //（常态音量基准，100% 以上为增益）。magnetThreshold
+                        // 放宽到 3%（≈±6）更易吸附。
+                        keyPoints: Pref.maxVolume > 100 ? const [100.0] : null,
+                        showKeyPoints: Pref.maxVolume > 100,
+                        magnetThreshold: 0.03,
+                        colors: MiuixSliderColors(
+                          foregroundColor: activeColor,
+                          disabledForegroundColor: activeColor,
+                          // 底轨沿用主题默认（随明暗/主题自适应），不再硬编码
+                          // 半透明白（那是旧"黑色玻璃胶囊"底衬的遗留口径）。
+                          backgroundColor: base.backgroundColor,
+                          disabledBackgroundColor: base.disabledBackgroundColor,
+                          thumbColor: activeColor,
+                          disabledThumbColor: activeColor,
+                          keyPointColor: activeColor,
+                          keyPointForegroundColor: activeColor,
+                        ),
+                        onValueChanged: c.setVolume,
+                      );
+                    },
                   ),
-                ValueListenableBuilder<double>(
-                  valueListenable: c.volume,
-                  builder: (context, vol, _) {
-                    final rounded = vol.round();
-                    return ContrastText(
-                      rounded > 100 ? '$rounded% (增益)' : '$rounded%',
-                      style: TextStyle(
-                        color: rounded > 100
-                            ? AppColors.amberAccent
-                            : AppColors.white,
-                        fontWeight: rounded > 100
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        fontSize: 12,
-                      ),
-                      shadows: ContrastStyle.glyphShadows,
-                    );
-                  },
+                ),
+                const SizedBox(width: Style.sm),
+                // 标签槽位定宽 72：`(增益)` 后缀只在越过 100% 时出现，定宽后
+                // 弹层宽度在 0 ~ 音量上限全程恒定，滑动时滑条/拇指不会横向瞬移。
+                SizedBox(
+                  width: 72,
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: c.volume,
+                    builder: (context, vol, _) {
+                      final rounded = vol.round();
+                      final gain = rounded > 100;
+                      return Text(
+                        gain ? '$rounded% (增益)' : '$rounded%',
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                        style: TextStyle(
+                          color: gain
+                              ? AppColors.amberAccent
+                              : tokens.colors.onSurface,
+                          fontWeight: gain
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          fontSize: 12,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

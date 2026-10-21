@@ -65,6 +65,112 @@ Rect? anchorRectInRootOverlay(BuildContext anchorContext) {
   return anchorRectOf(anchorContext, ancestorContext: overlay.context);
 }
 
+/// 贴触发器浮层的**开/关动画壳**（二级浮层统一口径：音量弹层等）。
+///
+/// 在 [AppAnchoredPopup] 的定位之上补两段动画，补齐此前"只在打开瞬间突现、
+/// 关闭时硬移除"的缺环：
+/// - 展开：`Fade + Scale`（0.92→1，easeOutCubic，180ms）；
+/// - 收起：同动效反向（140ms）——**保留在树上播完再卸载**，故由 [visible]
+///   驱动（而非调用方 `if (open) popup` 增删子树）。
+/// - 缩放原点取贴近触发器的一角（[alignment]，默认 [Alignment.bottomRight]
+///   ——浮层位于触发器上方时的就近对角），与表情面板 / 弹层菜单同一
+///   "对角线展开"范式。
+///
+/// 完全收起后返回空组件：不占布局、不参与命中。用法同 [AppAnchoredPopup]，
+/// 作为 [Stack] 的直接子节点。
+class MiuixAnchoredPopup extends StatefulWidget {
+  const MiuixAnchoredPopup({
+    super.key,
+    required this.visible,
+    required this.anchor,
+    required this.child,
+    this.alignment = Alignment.bottomRight,
+    this.gap = 8,
+    this.edge = 8,
+  });
+
+  /// 是否展开（true→正向动画；false→反向动画后卸载）。
+  final bool visible;
+
+  /// 触发按钮在目标坐标系中的矩形。
+  final Rect anchor;
+
+  /// 浮层内容（须自带尺寸；通常为 `MiuixOverlayPanel`）。
+  final Widget child;
+
+  /// 对角缩放的锚点角（贴触发器一侧）。
+  final Alignment alignment;
+
+  final double gap;
+  final double edge;
+
+  @override
+  State<MiuixAnchoredPopup> createState() => _MiuixAnchoredPopupState();
+}
+
+class _MiuixAnchoredPopupState extends State<MiuixAnchoredPopup>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+    reverseDuration: const Duration(milliseconds: 140),
+    value: widget.visible ? 1.0 : 0.0,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    // 收起动画播完后触发一次重建，使 build 返回空组件真正卸载子树。
+    _anim.addStatusListener((status) {
+      if (status == AnimationStatus.dismissed && mounted) setState(() {});
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant MiuixAnchoredPopup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible != oldWidget.visible) {
+      if (widget.visible) {
+        _anim.forward();
+      } else {
+        _anim.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.visible && _anim.isDismissed) return const SizedBox.shrink();
+    final curved = CurvedAnimation(
+      parent: _anim,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    return AppAnchoredPopup(
+      anchor: widget.anchor,
+      gap: widget.gap,
+      edge: widget.edge,
+      child: IgnorePointer(
+        ignoring: !widget.visible,
+        child: FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
+            alignment: widget.alignment,
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AppAnchoredPopupLayout extends SingleChildLayoutDelegate {
   const _AppAnchoredPopupLayout({
     required this.anchor,

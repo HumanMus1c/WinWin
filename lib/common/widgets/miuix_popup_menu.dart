@@ -32,6 +32,7 @@ class MiuixPopupMenu extends StatefulWidget {
     this.title,
     this.maxHeight = 420,
     this.itemTextStyle,
+    this.onOpenChanged,
   });
 
   final List<MiuixDropdownEntry> entries;
@@ -48,6 +49,12 @@ class MiuixPopupMenu extends StatefulWidget {
   /// 条目文本样式（仅覆盖给定字段，其余继承面板基底）——用于继承触发
   /// 控件的字号，避免弹层与触发控件割裂（如播放器控制条 12px）。
   final TextStyle? itemTextStyle;
+
+  /// 展开态变化回调（true＝弹层已展开，false＝已收起）。
+  ///
+  /// 供调用方感知"弹层处于打开态"（如播放器据此挂起控制条自动隐藏，
+  /// 并在收起后重置隐藏计时器）；为 null 时行为不变。
+  final ValueChanged<bool>? onOpenChanged;
 
   @override
   State<MiuixPopupMenu> createState() => _MiuixPopupMenuState();
@@ -94,12 +101,14 @@ class _MiuixPopupMenuState extends State<MiuixPopupMenu>
     overlay.insert(_entry!);
     _anim.forward(from: 0);
     _focusNode.requestFocus();
+    widget.onOpenChanged?.call(true);
   }
 
   void _close() {
     final entry = _entry;
     if (entry == null) return;
     _entry = null;
+    widget.onOpenChanged?.call(false);
     _anim.reverse().whenComplete(entry.remove);
   }
 

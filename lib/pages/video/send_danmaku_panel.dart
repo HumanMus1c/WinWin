@@ -29,11 +29,13 @@ import 'package:winwin/ui/components/app_components.dart';
 /// 弹出方式：[showSendDanmakuPanel]，由播放器控制条「发弹幕」按钮调用
 /// （全屏态使用）；内联模式见 [SendDanmakuPanel.inline]，嵌入视频页
 /// 播放器正下方。
-void showSendDanmakuPanel(
+/// 返回一个"关闭面板才完成"的 Future，供播放器挂起控制条自动隐藏
+/// （见 `PlayerPanel._openSuspending`）。
+Future<void> showSendDanmakuPanel(
   BuildContext context, {
   required WinWinPlayerController controller,
 }) {
-  showAppSheet<void>(
+  return showAppSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.transparent,
