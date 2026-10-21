@@ -193,6 +193,14 @@ abstract final class Pref {
   static bool get pauseOnMinimize =>
       _setting.get(SettingBoxKey.pauseOnMinimize, defaultValue: false);
 
+  /// 全屏时是否显示锁定按钮（默认开）。
+  static bool get showFsLockBtn =>
+      _setting.get(SettingBoxKey.showFsLockBtn, defaultValue: true);
+
+  /// 全屏时是否显示截图按钮（默认开）。
+  static bool get showFsScreenshotBtn =>
+      _setting.get(SettingBoxKey.showFsScreenshotBtn, defaultValue: true);
+
   /// 播放器折叠（pin）时自动暂停；展开仅恢复本次被自动暂停的播放。
   static bool get collapseAutoPause =>
       _setting.get(SettingBoxKey.collapseAutoPause, defaultValue: true);

@@ -175,6 +175,35 @@ abstract final class VideoHttp {
     }
   }
 
+  /// 「显示在线人数」：拉取当前视频实时在看人数（返回展示串，如「1.2万」）。
+  ///
+  /// 接口 /x/player/online/total 返回 `data.total`（展示文本）与 `data.count`
+  /// （原始数量）。此处取 total 展示；失败/无数据返回 `Success(null)`，页面不显示。
+  static Future<LoadingState<String?>> onlineTotal({
+    required int aid,
+    required int cid,
+    String? bvid,
+  }) async {
+    final res = await Request().get(
+      Api.onlineTotal,
+      queryParameters: {
+        'aid': aid,
+        'cid': cid,
+        if (bvid != null && bvid.isNotEmpty) 'bvid': bvid,
+        'ts': '${DateTime.now().millisecondsSinceEpoch ~/ 1000}',
+      },
+    );
+    final body = res.data;
+    if (body is Map && body['code'] == 0) {
+      final data = body['data'];
+      if (data is Map) {
+        final total = data['total'];
+        if (total is String && total.isNotEmpty) return Success(total);
+      }
+    }
+    return const Success(null);
+  }
+
   // 视频详情页 相关视频
   static Future<LoadingState<List<RelatedVideoItem>>> relatedVideoList({
     required String bvid,

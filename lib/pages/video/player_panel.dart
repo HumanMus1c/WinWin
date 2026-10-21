@@ -1009,14 +1009,26 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         );
                       },
                     ),
-                    _iconButton(
-                      icon: AppIcon(
-                        AppIcons.lockOutline(),
-                        shadows: ContrastStyle.glyphShadows,
+                    // 「全屏显示锁定按钮」：全屏时按设置显隐（非全屏常显）。
+                    if (!widget.fullscreen || Pref.showFsLockBtn)
+                      _iconButton(
+                        icon: AppIcon(
+                          AppIcons.lockOutline(),
+                          shadows: ContrastStyle.glyphShadows,
+                        ),
+                        tooltip: '锁定控制条',
+                        onPressed: _toggleLock,
                       ),
-                      tooltip: '锁定控制条',
-                      onPressed: _toggleLock,
-                    ),
+                    // 「全屏显示截图按钮」：开启时在全屏显示截图按钮。
+                    if (widget.fullscreen && Pref.showFsScreenshotBtn)
+                      _iconButton(
+                        icon: AppIcon(
+                          AppIcons.screenshotButton(),
+                          shadows: ContrastStyle.glyphShadows,
+                        ),
+                        tooltip: '截图',
+                        onPressed: () => _takeScreenshot(),
+                      ),
                     if (!widget.fullscreen)
                       _iconButton(
                         icon: AppIcon(

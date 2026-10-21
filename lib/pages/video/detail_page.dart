@@ -256,6 +256,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   LoadingState<VideoDetailData> _detailState = LoadingState.loading();
   LoadingState<List<RelatedVideoItem>> _relatedState = LoadingState.loading();
 
+  /// 「显示在线人数」：当前视频实时在看人数展示串（null = 不显示）。
+  String? _onlineTotal;
+
   final List<ReplyItemModel> _replies = [];
   String? _nextOffset;
   bool _replyEnd = false;
@@ -401,6 +404,20 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     } else if (r < 0.5 && _autoPausedByCollapse) {
       ctrl.play();
       _autoPausedByCollapse = false;
+    }
+  }
+
+  /// 「显示在线人数」：拉取实时在看人数（失败/为空则不显示）。
+  Future<void> _loadOnlineTotal(int? aid, int? cid) async {
+    if (aid == null || cid == null || cid <= 0) return;
+    final res = await VideoHttp.onlineTotal(
+      aid: aid,
+      cid: cid,
+      bvid: widget.bvid,
+    );
+    if (!mounted) return;
+    if (res case Success(:final response)) {
+      if (response != null) setState(() => _onlineTotal = response);
     }
   }
 
@@ -567,6 +584,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           unawaited(_checkFollowStatus(response.owner!.mid!));
         }
         setState(() => _detailState = Success(response));
+        // 「显示在线人数」：开启时并发拉取实时在看人数。
+        if (Pref.enableOnlineTotal) {
+          unawaited(_loadOnlineTotal(response.aid, cid));
+        }
         if (response.aid != null) {
           _loadReplies(oid: response.aid!);
         }
@@ -1525,6 +1546,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
               if (data.pubdate != null)
                 Text(_formatDate(data.pubdate), style: grayStyle),
+              // 「显示在线人数」：开启且有数据时展示实时在看人数。
+              if (Pref.enableOnlineTotal && _onlineTotal != null)
+                Text('$_onlineTotal 人在看', style: grayStyle),
             ],
           ),
           const SizedBox(height: Style.md),
