@@ -12,7 +12,9 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/search.dart';
 import 'package:winwin/models/search/result.dart';
 import 'package:winwin/models/search/search_type.dart';
+import 'package:winwin/pages/article/article_page.dart';
 import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
+import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/search/services/search_history_service.dart';
 import 'package:winwin/pages/video/detail_page.dart';
@@ -240,6 +242,17 @@ class _SearchPanelState extends State<SearchPanel>
             face: item.face ?? '',
           );
         }
+        // 直播条目（`type == 'live_room'`，模型标记 `isLive`）无 bvid，
+        // 按直播间 ID 跳转，否则会命中下方 bvid 空判而静默无响应。
+        if (item.isLive && item.roomId != null) {
+          Navigator.push(
+            context,
+            AppRoute(
+              builder: (_) => LiveRoomPage(roomId: item.roomId!),
+            ),
+          );
+          return;
+        }
         if (item.bvid != null) {
           Navigator.push(
             context,
@@ -386,11 +399,25 @@ class _SearchPanelState extends State<SearchPanel>
         feedbackType: MiuixPressFeedbackType.sink,
         sinkAmount: 0.98,
         onPressed: () {
-          // 直播间跳转暂未实现，显示提示
-          showToast(
+          final roomId = item.roomid;
+          if (roomId == null) {
+            showToast(
+              context,
+              '暂不支持打开该直播间',
+              duration: const Duration(seconds: 2),
+            );
+            return;
+          }
+          Navigator.push(
             context,
-            '直播功能暂未接入：${item.uname} 的直播间',
-            duration: const Duration(seconds: 2),
+            AppRoute(
+              builder: (_) => LiveRoomPage(
+                roomId: roomId,
+                title: item.title,
+                uname: item.uname,
+                cover: item.cover,
+              ),
+            ),
           );
         },
         child: Padding(
@@ -602,10 +629,25 @@ class _SearchPanelState extends State<SearchPanel>
         feedbackType: MiuixPressFeedbackType.sink,
         sinkAmount: 0.98,
         onPressed: () {
-          showToast(
+          final articleId = item.id;
+          if (articleId == null) {
+            showToast(
+              context,
+              '暂不支持打开该专栏',
+              duration: const Duration(seconds: 2),
+            );
+            return;
+          }
+          Navigator.push(
             context,
-            '专栏功能暂未接入：${item.title}',
-            duration: const Duration(seconds: 2),
+            AppRoute(
+              builder: (_) => ArticlePage(
+                id: articleId.toString(),
+                title: item.title,
+                cover: hasImg ? item.imageUrls!.first : null,
+                desc: item.desc,
+              ),
+            ),
           );
         },
         child: Padding(
