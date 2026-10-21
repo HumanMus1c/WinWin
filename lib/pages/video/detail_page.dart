@@ -372,6 +372,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       DesktopFullscreen.exit();
     }
     SyncTrace.log('DetailPage', 'dispose before playerController.dispose');
+    playerController?.completed.removeListener(_onPlaybackCompleted);
     playerController?.dispose();
     SyncTrace.log('DetailPage', 'dispose after playerController.dispose');
     scrollController.dispose();
@@ -496,6 +497,25 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
   }
 
+  /// 窗口最小化：按设置决定是否暂停。
+  /// 「暂停时最小化」开启、「后台播放」关闭时暂停；否则保持播放（后台继续）。
+  @override
+  void onWindowMinimize() {
+    final ctrl = playerController;
+    if (ctrl == null) return;
+    if (Pref.pauseOnMinimize || !Pref.enableBackgroundPlay) {
+      ctrl.pause();
+    }
+  }
+
+  /// 播放结束：若开启「自动退出全屏」且当前处于全屏，则退出全屏。
+  void _onPlaybackCompleted() {
+    if (!mounted) return;
+    if (_fullscreen && Pref.autoExitFullscreen) {
+      unawaited(_toggleFullscreen());
+    }
+  }
+
   // ─────────────────────────── 数据加载 ───────────────────────────
 
   Future<void> _loadDetail() async {
@@ -521,8 +541,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
           // 不再串行等待 —— 首帧关键路径少一次 HTTP 往返。
           // playInfo 返回后通过 resumeTo 恢复进度（race-free，见控制器）。
           unawaited(_applyPlayInfo(ctrl, cid, detailDurSec, aid: aid));
+          // 「视频结束自动退出全屏」监听（仅详情页单集；番剧连播不接）。
+          ctrl.completed.addListener(_onPlaybackCompleted);
           // 挂「启动闸门」：续播点（playInfo）返回前不起播，杜绝先闪 0 位画面/声音。
-          ctrl.load(gateForResume: true);
+          // 「自动播放」设置决定进入详情页是否自动起播（默认关）。
+          ctrl.load(gateForResume: true, autoplay: Pref.autoPlayEnable);
+          // 「自动进入全屏」：进入详情页后自动全屏播放（默认关）。
+          if (Pref.autoEnterFullScreen && !_fullscreen) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && !_fullscreen) unawaited(_toggleFullscreen());
+            });
+          }
         }
         // 互动初始态（来自 req_user 或并发拉取云端 videoRelation 真实姿态）。
         hasLike = response.reqUser?.like ?? false;

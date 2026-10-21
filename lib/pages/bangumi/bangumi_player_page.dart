@@ -149,7 +149,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     // 演示模式切换时重建（播放器隔离/灰占位即时生效）。
     Pref.demoModeNotifier.addListener(_onDemoChanged);
 
-    _initPlayerForEpisode(_currentEpisode);
+    _initPlayerForEpisode(
+      _currentEpisode,
+      autoplay: Pref.autoPlayEnable,
+      autoEnterFullscreen: Pref.autoEnterFullScreen,
+    );
     _loadReplies();
     _loadEpisodeInteraction();
   }
@@ -260,9 +264,25 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     if (mounted) setState(() => _fullscreen = false);
   }
 
+  /// 窗口最小化：按设置决定是否暂停。
+  /// 「暂停时最小化」开启、「后台播放」关闭时暂停；否则保持播放（后台继续）。
+  @override
+  void onWindowMinimize() {
+    final ctrl = playerController;
+    if (ctrl == null) return;
+    if (Pref.pauseOnMinimize || !Pref.enableBackgroundPlay) {
+      ctrl.pause();
+    }
+  }
+
   // ─────────────────────────── 播放器初始化与切集 ───────────────────────────
 
-  void _initPlayerForEpisode(BangumiEpisode ep, {Duration? startPos}) {
+  void _initPlayerForEpisode(
+    BangumiEpisode ep, {
+    Duration? startPos,
+    bool autoplay = true,
+    bool autoEnterFullscreen = false,
+  }) {
     // 演示模式：不创建播放器、不拉流（与正常模式完全隔离）。
     if (Pref.demoMode) return;
     final bvid = ep.bvid ?? '';
@@ -301,8 +321,18 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
     // startPos 未知时挂「启动闸门」：续播点（playInfo）返回前不起播，
     // 杜绝先闪 0 位画面/声音（2026-09-29）；已知起点直载无需闸门。
-    ctrl.load(start: startPos, gateForResume: startPos == null);
+    ctrl.load(
+      start: startPos,
+      autoplay: autoplay,
+      gateForResume: startPos == null,
+    );
     if (mounted) setState(() {});
+    // 「自动进入全屏」：仅首次进入时生效（切集保持用户当前全屏状态）。
+    if (autoEnterFullscreen && !_fullscreen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_fullscreen) unawaited(_toggleFullscreen());
+      });
+    }
   }
 
   Future<void> _applyPlayInfo(

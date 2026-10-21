@@ -189,6 +189,10 @@ abstract final class Pref {
   static bool get enableBackgroundPlay =>
       _setting.get(SettingBoxKey.enableBackgroundPlay, defaultValue: true);
 
+  /// 窗口最小化时是否自动暂停播放（默认关）。
+  static bool get pauseOnMinimize =>
+      _setting.get(SettingBoxKey.pauseOnMinimize, defaultValue: false);
+
   /// 播放器折叠（pin）时自动暂停；展开仅恢复本次被自动暂停的播放。
   static bool get collapseAutoPause =>
       _setting.get(SettingBoxKey.collapseAutoPause, defaultValue: true);
