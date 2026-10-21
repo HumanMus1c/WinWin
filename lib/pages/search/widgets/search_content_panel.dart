@@ -25,10 +25,10 @@ import 'package:winwin/models/search/result.dart';
 import 'package:winwin/models/search/suggest.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/search/services/search_history_service.dart';
+import 'package:winwin/pages/search/services/search_trending_cache.dart';
 import 'package:winwin/pages/search/widgets/hot_keyword.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/utils/image_utils.dart';
 
 /// 搜索内容面板 —— 搜索态的**唯一**内容实现（P4：概念只在一处定义）。
@@ -55,6 +55,7 @@ class SearchContentPanel extends StatefulWidget {
     this.maxHeight,
     this.historyVersion = 0,
     this.onOpenFullRank,
+    this.contentReady = true,
     this.padding = const EdgeInsets.all(Style.md),
   });
 
@@ -78,6 +79,13 @@ class SearchContentPanel extends StatefulWidget {
 
   /// 内容内边距（顶栏宿主传更紧凑的值以对齐搜索框行）。
   final EdgeInsets padding;
+
+  /// 展开动画是否已落定（顶栏宿主在动画结束后置 true；独立搜索页恒 true）。
+  ///
+  /// `false` 时热搜区只渲染**等高骨架**、不挂载高热度的热搜网格——避免在动画
+  /// 帧里做重布局/图片解码；落定后高度不变再换真身（详见
+  /// `docs/搜索态扩充动效与合并栏阴影复盘-2026-10-21.md`）。
+  final bool contentReady;
 
   @override
   State<SearchContentPanel> createState() => _SearchContentPanelState();
@@ -141,18 +149,26 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
   Future<void> _loadTrending() async {
     // 演示模式：不跑真实热搜（骨架占位由构建期分支给出）。
     if (Pref.demoMode) return;
-    final res = await SearchHttp.searchTrending(limit: 20);
+    // 命中缓存（含首页首帧预取）→ 直接就绪，避免"加载态 → 内容态"高度跳变。
+    final cached = SearchTrendingCache.instance.peek();
+    if (cached != null) {
+      setState(() {
+        _trendingLoading = false;
+        _trending = cached;
+      });
+      return;
+    }
+    final list = await SearchTrendingCache.instance.fetch(limit: 20);
     if (!mounted) return;
     setState(() {
       _trendingLoading = false;
-      if (res case Success(:final response)) {
-        _trending = response.list ?? [];
-      }
+      _trending = list;
     });
   }
 
   void _refreshTrending() {
     if (Pref.demoMode) return;
+    SearchTrendingCache.instance.invalidate();
     setState(() => _trendingLoading = true);
     _loadTrending();
   }
@@ -482,10 +498,23 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
         ],
       );
     }
-    if (_trendingLoading) {
-      return const Padding(
-        padding: EdgeInsets.all(Style.xl),
-        child: Center(child: AppProgressIndicator()),
+    if (_trendingLoading || !widget.contentReady) {
+      // 数据真的为空（拉取失败/无内容）时整块省略，不留空占位。
+      if (!_trendingLoading && _trending.isEmpty) return const SizedBox.shrink();
+      // **等高骨架**：与已加载的网格同几何（行数取真实条数，未知时按接口上限 20）。
+      // 保证"加载中 / 动画进行中 → 已加载"面板高度逐像素不变 ⇒ 不触发
+      // `AnimatedSize` 从 0 重跑（顿挫根因）。
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTrendingHeader(
+            onRefresh: _trendingLoading ? null : _refreshTrending,
+          ),
+          const SizedBox(height: Style.sm),
+          HotKeywordSkeleton(
+            itemCount: _trending.isNotEmpty ? _trending.length : 20,
+          ),
+        ],
       );
     }
     if (_trending.isEmpty) return const SizedBox.shrink();

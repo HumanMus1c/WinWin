@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart' show TextInputAction;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixIconButton;
@@ -16,6 +18,7 @@ import 'package:winwin/pages/rcmd/view.dart';
 import 'package:winwin/pages/search/search_page.dart';
 import 'package:winwin/pages/search/search_result_page.dart';
 import 'package:winwin/pages/search/services/search_history_service.dart';
+import 'package:winwin/pages/search/services/search_trending_cache.dart';
 import 'package:winwin/pages/search/widgets/search_content_panel.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
 import 'package:winwin/theme/app_colors.dart';
@@ -120,6 +123,9 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _searchFocusNode.addListener(_onSearchFocusChanged);
+    // 首页首帧静默预取热搜（命中缓存即跳过）：用户点搜索框时数据多已就绪，
+    // 减少"加载态 → 内容态"高度跳变落在展开动画窗口内的竞态（顿挫根因）。
+    SearchTrendingCache.instance.prefetch();
   }
 
   @override
@@ -324,7 +330,7 @@ class _HomePageState extends State<HomePage> {
 ///
 /// 头像已迁移至导航栏「我的」TAB。搜索框样式与 [SearchPage] 统一，
 /// 整体包裹于同一个毛玻璃材质容器中（[AppTopBarSurface] 单一来源）。
-class _HomeHeader extends StatelessWidget {
+class _HomeHeader extends StatefulWidget {
   const _HomeHeader({
     required this.selectedCategory,
     required this.onSelectCategory,
@@ -355,6 +361,59 @@ class _HomeHeader extends StatelessWidget {
 
   /// 「完整榜单 ›」入口（搜索态热搜标题行）。
   final VoidCallback onOpenFullRank;
+
+  @override
+  State<_HomeHeader> createState() => _HomeHeaderState();
+}
+
+class _HomeHeaderState extends State<_HomeHeader> {
+  /// 展开动画是否已落定：落定前热搜区只显示**等高骨架**，不挂载高热度的热搜
+  /// 网格——避免在动画帧里做重布局 / 图片解码（顿挫的次要放大因素）。
+  bool _settled = false;
+
+  /// 兜底：`AnimatedSize.onEnd` 依赖"确实发生了尺寸动画"；万一高度恰好没变而不
+  /// 触发，用一次与动画同时长（略富余）的定时器保证热搜最终一定换真身，绝不
+  /// 卡死在骨架。
+  Timer? _settleFallback;
+
+  @override
+  void initState() {
+    super.initState();
+    _settled = !widget.searchMode;
+  }
+
+  @override
+  void didUpdateWidget(_HomeHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.searchMode != widget.searchMode) {
+      _restartSettle();
+    }
+  }
+
+  @override
+  void dispose() {
+    _settleFallback?.cancel();
+    super.dispose();
+  }
+
+  /// 切换搜索态时重置落定：进入 = 未落定 + 挂兜底定时器；退出 = 复位即可。
+  void _restartSettle() {
+    _settleFallback?.cancel();
+    _settled = false;
+    if (widget.searchMode) {
+      _settleFallback = Timer(
+        _kSearchMorphDuration + const Duration(milliseconds: 80),
+        _markSettled,
+      );
+    }
+  }
+
+  /// 标记展开动画已落定（`onEnd` 或兜底定时器触发）。
+  void _markSettled() {
+    if (!mounted || !widget.searchMode || _settled) return;
+    _settleFallback?.cancel();
+    setState(() => _settled = true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -416,12 +475,15 @@ class _HomeHeader extends StatelessWidget {
             duration: _kSearchMorphDuration,
             curve: MiuixSpringCurve.standard,
             alignment: Alignment.topCenter,
-            child: searchMode
+            // 落定回调（D）：动画跑完再放行热搜网格，避免在动画帧里挂重内容。
+            onEnd: _markSettled,
+            child: widget.searchMode
                 ? SearchContentPanel(
-                    controller: searchController,
-                    onSubmit: onSubmitSearch,
-                    maxHeight: panelMaxHeight,
-                    onOpenFullRank: onOpenFullRank,
+                    controller: widget.searchController,
+                    onSubmit: widget.onSubmitSearch,
+                    maxHeight: widget.panelMaxHeight,
+                    onOpenFullRank: widget.onOpenFullRank,
+                    contentReady: _settled,
                     padding: EdgeInsets.zero,
                   )
                 : SizedBox(
@@ -432,10 +494,10 @@ class _HomeHeader extends StatelessWidget {
                       separatorBuilder: (_, _) =>
                           const SizedBox(width: Style.sm),
                       itemBuilder: (context, index) {
-                        final isSelected = index == selectedCategory;
+                        final isSelected = index == widget.selectedCategory;
                         final baseColor = cs.primary;
                         return GestureDetector(
-                          onTap: () => onSelectCategory(index),
+                          onTap: () => widget.onSelectCategory(index),
                           child: Container(
                             alignment: Alignment.center,
                             padding:
@@ -486,7 +548,7 @@ class _HomeHeader extends StatelessWidget {
       child: TweenAnimationBuilder<List<BoxShadow>>(
         tween: _BoxShadowListTween(
           begin: const <BoxShadow>[_kSearchBarShadowOff],
-          end: searchMode
+          end: widget.searchMode
               ? const <BoxShadow>[_kSearchBarShadow]
               : const <BoxShadow>[_kSearchBarShadowOff],
         ),
@@ -508,7 +570,7 @@ class _HomeHeader extends StatelessWidget {
     // 与文字起点完全一致（_kSearchRowInset / _kSearchIconTextGap 单一来源）。
     final icon = AppIcon(AppIcons.search(), size: 20, color: searchFg);
 
-    if (searchMode) {
+    if (widget.searchMode) {
       // 焦点描边补偿：`MiuixTextField` 的焦点描边沿外轮廓**居中**绘制
       // （见 `_kSearchFocusStroke` 注释），上下左右各向外溢 1px。故把输入框
       // 的布局尺寸各向内收 1px，使"含描边的可见框体"恰好等于常态框的 38 高 /
@@ -522,11 +584,11 @@ class _HomeHeader extends StatelessWidget {
             width: double.infinity,
             height: _kSearchRowHeight - _kSearchFocusStroke,
             child: AppCapsuleTextField(
-              controller: searchController,
-              focusNode: searchFocusNode,
+              controller: widget.searchController,
+              focusNode: widget.searchFocusNode,
               autofocus: true,
               textInputAction: TextInputAction.search,
-              onSubmitted: onSubmitSearch,
+              onSubmitted: widget.onSubmitSearch,
               hint: '搜索视频、UP主...',
               // 输入文本与占位同号（顺带把光标收到 13px 行高，不再高过输入框）；
               // 占位样式与常态框逐项对齐（字号 + 颜色）。
@@ -548,11 +610,11 @@ class _HomeHeader extends StatelessWidget {
                 child: icon,
               ),
               suffix: ValueListenableBuilder<TextEditingValue>(
-                valueListenable: searchController,
+                valueListenable: widget.searchController,
                 builder: (context, value, _) {
                   if (value.text.isEmpty) return const SizedBox.shrink();
                   return MiuixIconButton(
-                    onPressed: searchController.clear,
+                    onPressed: widget.searchController.clear,
                     child: AppIcon(AppIcons.clear(), size: 18),
                   );
                 },
@@ -563,7 +625,7 @@ class _HomeHeader extends StatelessWidget {
       );
     }
     return GestureDetector(
-      onTap: onEnterSearch,
+      onTap: widget.onEnterSearch,
       child: Container(
         decoration: BoxDecoration(
           color: searchBg,

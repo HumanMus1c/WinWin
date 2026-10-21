@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart'
     show MiuixPressable, MiuixPressFeedbackType;
 
+import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/models/search/result.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
@@ -32,6 +33,14 @@ class HotKeywordGrid extends StatelessWidget {
   /// 列间距（上游 0.4）。
   static const double columnSpacing = 0.4;
 
+  /// 单元格内边距的**唯一口径**（真实格与 [HotKeywordSkeleton] 共用）：
+  /// 只有两边同源，"加载中"与"已加载"才能逐像素等高。
+  static const EdgeInsets cellPadding =
+      EdgeInsets.only(left: 2, right: 10, top: 5, bottom: 5);
+
+  /// 名称行高（fontSize 14 × line-height 1.2）= 单元格文本高度唯一口径。
+  static const double cellLineHeight = 14 * 1.2;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -48,6 +57,43 @@ class HotKeywordGrid extends StatelessWidget {
                 child: _HotKeywordCell(
                   item: item,
                   onTap: () => onTap(item.keyword ?? ''),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// 与 [HotKeywordGrid] **同几何**的骨架：同列/行间距、同单元格留白、同名称行高。
+///
+/// 目的：让"加载中"与"已加载"的**高度逐像素相等**——搜索态展开动画期间面板
+/// 内在高度一旦跳变，`RenderAnimatedSize` 会把尺寸动画从 0 重跑（顿挫根因）；
+/// 等高后跳变消失，动画目标自始至终稳定。
+class HotKeywordSkeleton extends StatelessWidget {
+  const HotKeywordSkeleton({super.key, this.itemCount = 20});
+
+  /// 占位条目数——**应与真实列表条目数一致**（默认 20，即接口 limit），
+  /// 否则行数不同、高度不等。调用方在已知真实条数时应传入真实条数。
+  final int itemCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cellWidth =
+            (constraints.maxWidth - HotKeywordGrid.columnSpacing) / 2;
+        return Wrap(
+          spacing: HotKeywordGrid.columnSpacing,
+          runSpacing: HotKeywordGrid.rowSpacing,
+          children: [
+            for (var i = 0; i < itemCount; i++)
+              SizedBox(
+                width: cellWidth,
+                child: const Padding(
+                  padding: HotKeywordGrid.cellPadding,
+                  child: SkeletonLine(height: HotKeywordGrid.cellLineHeight),
                 ),
               ),
           ],
@@ -109,7 +155,7 @@ class _HotKeywordCell extends StatelessWidget {
       borderRadius: BorderRadius.circular(3),
       onPressed: onTap,
       child: Padding(
-        padding: const EdgeInsets.only(left: 2, right: 10, top: 5, bottom: 5),
+        padding: HotKeywordGrid.cellPadding,
         child: AppTooltip(
           message: name,
           child: Row(
