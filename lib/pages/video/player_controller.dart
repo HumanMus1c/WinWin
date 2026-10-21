@@ -11,6 +11,7 @@ import 'package:winwin/core/account/account.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/cache/play_url_cache.dart';
+import 'package:winwin/core/diagnostics/stall_watchdog.dart';
 import 'package:winwin/core/log/sync_trace.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/player/hls_manifest.dart';
@@ -60,6 +61,31 @@ class WinWinPlayerController {
     _sharedPlayer ??= _createPlayer();
     initDanmaku();
     attachListeners(); // 内部启动轮询（_startPolling）
+    // 设备丢失 / 渲染停摆：注册进程内轻量恢复入口 + 期望出帧状态跟随播放态（看门狗暖路径）。
+    playing.addListener(_syncRenderExpected);
+    StallWatchdog.registerSoftRecovery(recoverFromDeviceLoss);
+  }
+
+  /// 期望出帧状态跟随播放态：仅「应在出帧」（播放中）时启用渲染停摆判定，
+  /// 避免静止页面无重绘被误判为卡死（[StallWatchdog] 暖路径）。
+  void _syncRenderExpected() {
+    StallWatchdog.setRenderExpected(playing.value && !_disposed);
+  }
+
+  /// 设备丢失 / 渲染停摆的**进程内轻量恢复**：在本共享 player 上重挂媒体（重建纹理）。
+  /// 由 [StallWatchdog] 在"期望出帧却无帧"时调用；若其无效，看门狗会升级为整进程重启。
+  Future<void> recoverFromDeviceLoss(String reason) async {
+    if (_disposed || _isRecovering) return;
+    AppLogger.w('PlayerController', 'device-loss soft recovery: $reason');
+    SyncTrace.log('PlayerCtrl', 'soft-recover device-loss: $reason');
+    try {
+      await load(
+        start: position.value,
+        autoplay: playing.value || _userIntentPlaying,
+      );
+    } catch (e) {
+      AppLogger.w('PlayerController', 'device-loss soft recovery failed: $e');
+    }
   }
 
   final String bvid;
@@ -4494,6 +4520,7 @@ class WinWinPlayerController {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    playing.removeListener(_syncRenderExpected);
     _queuedSeekTargetMs = null;
     _nativeSeekInFlight = false;
     _nativeSeekDoneTime = null;
@@ -4521,6 +4548,8 @@ class WinWinPlayerController {
     _playerCount--;
     if (_playerCount <= 0) {
       _playerCount = 0;
+      StallWatchdog.setRenderExpected(false);
+      StallWatchdog.unregisterSoftRecovery(recoverFromDeviceLoss);
       final player = _sharedPlayer;
       _sharedPlayer = null;
       if (player != null) {
