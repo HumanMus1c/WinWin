@@ -111,6 +111,18 @@ class HistoryItem {
     final b = history.business ?? 'archive';
     return '${b}_$k';
   }
+
+  /// 展示用封面 URL（卡片封面 / 跳转页入参的唯一取值口径）。
+  ///
+  /// 服务端 `cover` 字段仅用于**专栏以外的条目**；专栏（article / article-list）
+  /// 条目的封面只在 `covers`（图组，数组）中下发，`cover` 恒为空。故此处统一回退
+  /// 取 `covers` 首图，否则专栏分类的卡片封面会一直停在占位（对齐上游 PiliPlus
+  /// history item：`cover?.isNotEmpty == true ? cover : covers?.firstOrNull`）。
+  String? get coverUrl {
+    if (cover?.isNotEmpty == true) return cover;
+    if (covers?.isNotEmpty == true) return covers!.first;
+    return null;
+  }
 }
 
 /// 历史记录跳转信息。

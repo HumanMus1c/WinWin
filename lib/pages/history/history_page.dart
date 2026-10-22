@@ -318,7 +318,7 @@ class _HistoryPageState extends State<HistoryPage> {
           builder: (_) => ArticlePage(
             id: id.toString(),
             title: item.title,
-            cover: item.cover,
+            cover: item.coverUrl,
           ),
         ),
       );
@@ -341,7 +341,7 @@ class _HistoryPageState extends State<HistoryPage> {
           builder: (_) => LiveRoomPage(
             roomId: roomId,
             title: item.title,
-            cover: item.cover,
+            cover: item.coverUrl,
           ),
         ),
       );
@@ -359,7 +359,7 @@ class _HistoryPageState extends State<HistoryPage> {
         AppRoute<void>(
           builder: (_) => BangumiDetailPage(
             epId: epId,
-            cover: item.cover,
+            cover: item.coverUrl,
             title: item.title,
           ),
         ),
@@ -378,7 +378,7 @@ class _HistoryPageState extends State<HistoryPage> {
       AppRoute<void>(
         builder: (_) => VideoDetailPage(
           bvid: bvid,
-          cover: item.cover,
+          cover: item.coverUrl,
           heroTag: 'history_$bvid',
         ),
       ),
@@ -735,7 +735,7 @@ class _HistoryCard extends StatelessWidget {
                         children: [
                           Positioned.fill(
                             child: NetworkImgLayer(
-                              src: item.cover,
+                              src: item.coverUrl,
                               width: 140,
                               height: 140 * 9 / 16,
                               borderRadius: BorderRadius.all(radius),
