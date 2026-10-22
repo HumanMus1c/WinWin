@@ -124,14 +124,25 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// 控制条锁定（L 键 / 按钮切换），锁定后隐藏控制条且不响应手势。
   bool _locked = false;
 
+  /// 「自动播放」关闭时的封面兜底（2026-10-22 对齐上游 PiliPlus `videoPlayer`）：
+  /// 进入页面首次起播前，以视频封面整屏遮盖播放面（替代暂停首帧），
+  /// 首次进入播放态后永久失效（见 [_onPlayingChanged]），
+  /// 不影响起播后的正常视频流渲染。
+  bool _coverFallbackActive = false;
+
   @override
   void initState() {
     super.initState();
+    // 「自动播放」关闭（默认值）时启用封面兜底：与上游 PiliPlus 语义一致——
+    // 未起播前展示封面而非暂停首帧（`if (!autoPlay) 封面覆盖 + 点击播放`）。
+    _coverFallbackActive = !Pref.autoPlayEnable;
+    widget.controller.playing.addListener(_onPlayingChanged);
     _showControlsTemporarily();
   }
 
   @override
   void dispose() {
+    widget.controller.playing.removeListener(_onPlayingChanged);
     _hideTimer?.cancel();
     _feedbackTimer?.cancel();
     _dragFeedbackTimer?.cancel();
@@ -344,6 +355,15 @@ class _PlayerPanelState extends State<PlayerPanel> {
     _onPointerActivity();
   }
 
+  /// 首次进入播放态 → 永久解除「自动播放关闭」的封面兜底。
+  /// 只解除、不回盖：一旦起播，封面不再介入视频流（对齐上游 PiliPlus 语义）。
+  void _onPlayingChanged() {
+    if (!_coverFallbackActive) return;
+    if (!widget.controller.playing.value) return;
+    if (!mounted) return;
+    setState(() => _coverFallbackActive = false);
+  }
+
   void _toggleVolumePopup() {
     _setVolumePopupOpen(!_volumePopupOpen);
     _onPointerActivity();
@@ -488,6 +508,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 children: [
                   _buildVideoSurface(c),
                   // 弹幕层（IgnorePointer，不拦截鼠标/点击；RepaintBoundary 隔离高频重绘）。
+                  // 「自动播放关闭」的封面兜底期不渲染弹幕（避免静态封面叠动弹幕）；
+                  // 首次起播后 [_coverFallbackActive] 置假，弹幕照常。
+                  if (!_coverFallbackActive)
                   Positioned.fill(
                     child: RepaintBoundary(
                       child: WinWinDanmaku(
@@ -796,7 +819,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   // - 启动闸门 / 无首帧（加载、缓冲、弱网重试）期间不透明度 1 遮盖
                   //   （杜绝灰屏与 0 位闪帧）；无封面时黑底兜底；
                   // - 首帧就绪后 240ms 淡出完成过渡（替代硬切）。
-                  final coverVisible = gateHeld || !hasFrame;
+                  // 2026-10-22「自动播放关闭」封面兜底：未起播前额外保持封面覆盖，
+                  // 遮挡就绪后的暂停首帧（对齐上游 PiliPlus）；首次起播后该标志置假。
+                  final coverVisible = gateHeld || !hasFrame || _coverFallbackActive;
                   final hasCover = coverUrl != null && coverUrl.isNotEmpty;
                   return Stack(
                     fit: StackFit.expand,
