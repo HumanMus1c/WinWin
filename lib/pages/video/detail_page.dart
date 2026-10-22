@@ -275,7 +275,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 楼中楼展开状态：key = 根评论 rpid，value = 二级回复列表。
   final Map<int, List<ReplyItemModel>> _subReplies = {};
-  final Map<int, String?> _subNextOffset = {};
+  // 楼中楼为己方页码分页（key = 根评论 rpid，value = 待请求的页码），翻页走 `pn`。
+  final Map<int, int> _subPage = {};
   final Map<int, bool> _subEnd = {};
   final Map<int, bool> _subLoading = {};
 
@@ -948,7 +949,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       // 已展开 → 收起。
       setState(() {
         _subReplies.remove(rpid);
-        _subNextOffset.remove(rpid);
+        _subPage.remove(rpid);
         _subEnd.remove(rpid);
         _subLoading.remove(rpid);
       });
@@ -966,22 +967,25 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     final aid = _detailState.dataOrNull?.aid;
     final rpid = reply.rpid;
     if (aid == null || rpid == null) return;
+    final pageNo = _subPage[rpid] ?? 1;
     final res = await VideoHttp.replyReplyList(
       oid: aid,
       root: rpid,
-      nextOffset: _subNextOffset[rpid],
+      pn: pageNo,
     );
     if (!mounted) return;
     switch (res) {
       case Success(:final response):
-        _subNextOffset[rpid] = response.cursor?.nextOffset;
-        _subEnd[rpid] = response.cursor?.isEnd ?? response.replies.isEmpty;
+        // 楼中楼为页码分页：请求成功后页码 +1，由 page.num/size/count 判定末页。
+        _subPage[rpid] = pageNo + 1;
+        _subEnd[rpid] =
+            response.page?.isEnd(response.replies.length) ??
+                response.replies.isEmpty;
         _subLoading[rpid] = false;
         setState(() {
-          _subReplies[rpid]?.addAll(response.replies);
-          if (!_subReplies.containsKey(rpid)) {
-            _subReplies[rpid] = response.replies;
-          }
+          final list = _subReplies.putIfAbsent(rpid, () => <ReplyItemModel>[]);
+          final existing = list.map((e) => e.rpid).toSet();
+          list.addAll(response.replies.where((e) => !existing.contains(e.rpid)));
         });
       case Error():
         _subLoading[rpid] = false;

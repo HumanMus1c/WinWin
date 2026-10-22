@@ -260,6 +260,10 @@ class ReplyMainData {
   final List<ReplyItemModel> replies;
   ReplyCursor? cursor;
 
+  /// 页码分页信息。楼中楼接口 `/x/v2/reply/reply` 只返回 `page`（无 `cursor`），
+  /// 一级评论接口 `/x/v2/reply/main` 返回 `cursor`。
+  ReplyPage? page;
+
   ReplyMainData.fromJson(Map<String, dynamic> json)
       : replies = (json['replies'] as List?)
             ?.whereType<Map>()
@@ -270,6 +274,38 @@ class ReplyMainData {
     cursor = cursorJson is Map
         ? ReplyCursor.fromJson(cursorJson.cast<String, dynamic>())
         : null;
+    final pageJson = json['page'];
+    page = pageJson is Map
+        ? ReplyPage.fromJson(pageJson.cast<String, dynamic>())
+        : null;
+  }
+}
+
+/// 楼中楼页码分页（`/x/v2/reply/reply` 响应的 `page` 节点）。
+class ReplyPage {
+  /// 当前页码（从 1 起）。
+  int? num;
+
+  /// 每页条数。
+  int? size;
+
+  /// 该根评论下的回复总数。
+  int? count;
+
+  ReplyPage.fromJson(Map<String, dynamic> json) {
+    num = _asInt(json['num']);
+    size = _asInt(json['size']);
+    count = _asInt(json['count']);
+  }
+
+  /// 是否已到最后一页：`num*size >= count`，或本页无数据。
+  bool isEnd(int loadedOnThisPage) {
+    if (loadedOnThisPage == 0) return true;
+    final s = size;
+    final c = count;
+    final n = num;
+    if (s == null || c == null || n == null || s <= 0) return false;
+    return n * s >= c;
   }
 }
 

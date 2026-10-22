@@ -461,11 +461,14 @@ abstract final class VideoHttp {
 
   /// 楼中楼回复列表（`/x/v2/reply/reply`）。
   ///
-  /// [root] 为根评论 rpid，[nextOffset] 为分页偏移。
+  /// [root] 为根评论 rpid，[pn] 为页码（从 1 起）。
+  ///
+  /// 注意：该接口为**页码分页**（`pn`/`ps`），响应只返回 `page{num,size,count}`、
+  /// 不含 `cursor`；不要用 `pagination_str` 偏移翻页（会被忽略，导致总是取第 1 页）。
   static Future<LoadingState<ReplyMainData>> replyReplyList({
     required int oid,
     required int root,
-    String? nextOffset,
+    int pn = 1,
   }) async {
     try {
       final account = Accounts.main;
@@ -476,7 +479,7 @@ abstract final class VideoHttp {
           'oid': oid,
           'root': root,
           'ps': 20,
-          'pagination_str': jsonEncode({'offset': nextOffset ?? ''}),
+          'pn': pn,
           'web_location': '1315873',
         },
         options: Options(
