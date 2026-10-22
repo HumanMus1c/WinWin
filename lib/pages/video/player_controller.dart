@@ -134,6 +134,14 @@ class WinWinPlayerController {
 
   // ── 对外状态（ValueNotifier）──
   final ValueNotifier<bool> playing = ValueNotifier(false);
+
+  /// UI 只读：本次加载以来用户是否**明确请求过播放**（[_userIntentPlaying] 由 false 翻 true）。
+  ///
+  /// 供「自动播放关闭」的封面兜底判定——只认**用户意图**，不认底层原生状态机在
+  /// `setMedia/prepare` 打开新源期间的瞬态 `playing` 抖动（该抖动会让封面被提前淡出，
+  /// 表现为「进入播放页一瞬间黑屏 / 未自动播放却露出若干帧」）。
+  /// 单调：一旦置 true 不再回退。
+  final ValueNotifier<bool> userPlayRequested = ValueNotifier(false);
   final ValueNotifier<Duration> position = ValueNotifier(Duration.zero);
   final ValueNotifier<Duration> duration = ValueNotifier(Duration.zero);
   final ValueNotifier<Duration> buffered = ValueNotifier(Duration.zero);
@@ -3469,6 +3477,7 @@ class WinWinPlayerController {
         return;
       }
       _userIntentPlaying = true;
+      userPlayRequested.value = true;
       _bufferingStallMs = 0;
       releaseStartupGate(play: false, reason: 'user-toggle');
       player.state = mdk.PlaybackState.playing;
@@ -3488,6 +3497,7 @@ class WinWinPlayerController {
     if (player == null || _disposed) return;
     completed.value = false;
     _userIntentPlaying = true;
+    userPlayRequested.value = true;
     _bufferingStallMs = 0;
     _reportedEnd = false;
     _maxContinuousBufferedMs = 0;
@@ -3554,6 +3564,7 @@ class WinWinPlayerController {
       return;
     }
     _userIntentPlaying = true;
+    userPlayRequested.value = true;
     _bufferingStallMs = 0;
     releaseStartupGate(play: false, reason: 'user-play');
     if (player.state == mdk.PlaybackState.paused ||
@@ -3586,6 +3597,7 @@ class WinWinPlayerController {
     completed.value = false;
     _reportedEnd = false;
     _userIntentPlaying = true;
+    userPlayRequested.value = true;
     _bufferingStallMs = 0;
     releaseStartupGate(play: false, reason: 'user-seek');
     if (clampedMs == 0) {
@@ -4535,6 +4547,7 @@ class WinWinPlayerController {
     if (_disposed) return;
     _disposed = true;
     playing.removeListener(_syncRenderExpected);
+    userPlayRequested.dispose();
     _queuedSeekTargetMs = null;
     _nativeSeekInFlight = false;
     _nativeSeekDoneTime = null;

@@ -136,13 +136,16 @@ class _PlayerPanelState extends State<PlayerPanel> {
     // 「自动播放」关闭（默认值）时启用封面兜底：与上游 PiliPlus 语义一致——
     // 未起播前展示封面而非暂停首帧（`if (!autoPlay) 封面覆盖 + 点击播放`）。
     _coverFallbackActive = !Pref.autoPlayEnable;
-    widget.controller.playing.addListener(_onPlayingChanged);
+    // 只认「用户播放意图」（controller.userPlayRequested）：底层原生状态机在
+    // setMedia/prepare 打开新源期间的瞬态 playing 抖动不得解除封面（2026-10-22
+    // 稳定性修复：此前挂 playing 会一次性掉封面 → 黑屏/露出若干帧）。
+    widget.controller.userPlayRequested.addListener(_onUserPlayRequested);
     _showControlsTemporarily();
   }
 
   @override
   void dispose() {
-    widget.controller.playing.removeListener(_onPlayingChanged);
+    widget.controller.userPlayRequested.removeListener(_onUserPlayRequested);
     _hideTimer?.cancel();
     _feedbackTimer?.cancel();
     _dragFeedbackTimer?.cancel();
@@ -355,11 +358,13 @@ class _PlayerPanelState extends State<PlayerPanel> {
     _onPointerActivity();
   }
 
-  /// 首次进入播放态 → 永久解除「自动播放关闭」的封面兜底。
-  /// 只解除、不回盖：一旦起播，封面不再介入视频流（对齐上游 PiliPlus 语义）。
-  void _onPlayingChanged() {
+  /// 用户明确请求播放 → 永久解除「自动播放关闭」的封面兜底。
+  /// 只解除、不回盖：一旦用户起播，封面不再介入视频流（对齐上游 PiliPlus 语义）。
+  /// 依据 controller.userPlayRequested（用户意图）而非底层 playing——后者在打开媒体源
+  /// 瞬间会瞬态抖动，曾导致封面被提前淡出（黑屏/未自动播放却露出若干帧）。
+  void _onUserPlayRequested() {
     if (!_coverFallbackActive) return;
-    if (!widget.controller.playing.value) return;
+    if (!widget.controller.userPlayRequested.value) return;
     if (!mounted) return;
     setState(() => _coverFallbackActive = false);
   }
