@@ -58,9 +58,9 @@ CVO 要求：按上游 PiliPlus 的 **scaled-binding** 方案**重新实现**该
 
 ## 五、提交与回滚
 
-- 代码提交：见本轮 commit（hash 回填至本节末尾，**按全局开发规定补记**）。
+- 代码提交：`2b3fa22`（8 files changed, 297 insertions(+), 60 deletions(-)，**按全局开发规定补记**）。
 - 快照基准：本次开工前工作区 clean，`refs/snapshots/latest` 无新快照（无未跟踪改动可存）；回滚锚点为父提交 `53a1260`。
-- 回滚命令：`git revert <本轮提交>`（恢复「界面缩放」为停用态）或 `git reset --hard 53a1260`（回到本轮实现前）。
+- 回滚命令：`git revert 2b3fa22`（恢复「界面缩放」为停用态）或 `git reset --hard 53a1260`（回到本轮实现前）。
 - 推送：会话末尾统一 `git push origin main`。
 
 ## 六、遗留与踩坑
