@@ -794,13 +794,34 @@ final Map<IconData, MiuixVectorIcon> _miuixVectorByGlyph = {
       _rawGlyphArt('web.danmakuCount', kWebIconPaths[0xf3fd]!),
 };
 
+MiuixVectorIcon? _danmakuIconCache;
+
+/// **弹幕语义专用覆盖**：B 站官网「弹幕」气泡美术（web 层 0xf3fd，与元数据行
+/// 「弹幕数」同源），直接嵌在 `chat_bubble` / `chat_bubble_fill` 两个载体字形上。
+///
+/// 为何要顶到最前：这两个字形被 Material Symbols 官方层命中（0xf3fb / 0xf8be），
+/// 而那是**泛化的“对话/消息”气泡**，并不表达“弹幕”；此前弹幕开关即渲染成它。
+/// 现按「官方保真」口径改用 B 站自家弹幕气泡造型（气泡内两行「点 + 横线」）。
+/// 开/关两态沿用控件既有的颜色区分（biliBlue / 白 85%），与替换前一致。
+MiuixVectorIcon? _danmakuGlyphArt(IconData glyph) {
+  if (glyph != CupertinoIcons.chat_bubble &&
+      glyph != CupertinoIcons.chat_bubble_fill) {
+    return null;
+  }
+  return _danmakuIconCache ??= _rawGlyphArt(
+    'web.danmaku',
+    kWebIconPaths[0xf3fd]!,
+  );
+}
+
 /// 查询字形对应的 Miuix 矢量。
 ///
-/// 优先级：**B 站官网 BDC 图标字体**（L5-10：消息/稍后再看/空间/评论区等）
-/// → B 站官网 Web 端素材（L5-9）→ B 站官网字体素材（L5-8）
-/// → 官方美术（L5-7）→ 手绘新美术（L5-6）→ 三集映射 → 内置等价轮廓（L5-5）
-/// → null（回退字形）。
+/// 优先级：**弹幕语义覆盖**（B 站弹幕气泡）→ **B 站官网 BDC 图标字体**
+/// （L5-10：消息/稍后再看/空间/评论区等）→ B 站官网 Web 端素材（L5-9）
+/// → B 站官网字体素材（L5-8）→ 官方美术（L5-7）→ 手绘新美术（L5-6）
+/// → 三集映射 → 内置等价轮廓（L5-5）→ null（回退字形）。
 MiuixVectorIcon? miuixVectorForGlyph(IconData glyph) =>
+    _danmakuGlyphArt(glyph) ??
     miuixBdcIconFor(glyph) ??
     miuixWebIconFor(glyph) ??
     miuixBiliSiteIconFor(glyph) ??

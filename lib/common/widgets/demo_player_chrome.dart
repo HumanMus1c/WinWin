@@ -258,7 +258,6 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                               ),
                             ),
                             const SizedBox(width: Style.sm),
-                            _barIcon(AppIcons.sendDanmaku()),
                             _barIcon(AppIcons.danmakuTune()),
                             _barIcon(AppIcons.volumeDown()),
                             _barIcon(AppIcons.lockOutline()),

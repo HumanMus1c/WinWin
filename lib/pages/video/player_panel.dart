@@ -23,7 +23,6 @@ import 'package:winwin/pages/video/danmaku_settings_panel.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_focus.dart';
-import 'package:winwin/pages/video/send_danmaku_panel.dart';
 import 'package:winwin/pages/video/subtitle_settings_panel.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
@@ -1021,16 +1020,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     _buildChapterButton(),
                     _buildSubtitleChip(),
                     const SizedBox(width: Style.sm),
-                    _iconButton(
-                      icon: AppIcon(
-                        AppIcons.sendDanmaku(),
-                        shadows: ContrastStyle.glyphShadows,
-                      ),
-                      tooltip: '发弹幕',
-                      onPressed: () => _openSuspending(
-                        () => showSendDanmakuPanel(context, controller: c),
-                      ),
-                    ),
                     _iconButton(
                       icon: AppIcon(
                         AppIcons.danmakuTune(),
