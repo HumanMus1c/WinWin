@@ -235,6 +235,7 @@ class DownloadTask {
     int? downloadedSize,
     int? createdAt,
     String? errorMessage,
+    bool clearErrorMessage = false,
     bool? isAudioOnly,
     DownloadOptions? options,
   }) {
@@ -260,7 +261,7 @@ class DownloadTask {
       fileSize: fileSize ?? this.fileSize,
       downloadedSize: downloadedSize ?? this.downloadedSize,
       createdAt: createdAt ?? this.createdAt,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
       isAudioOnly: isAudioOnly ?? this.isAudioOnly,
       options: options ?? this.options,
     );

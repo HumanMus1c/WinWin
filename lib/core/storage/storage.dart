@@ -90,6 +90,12 @@ abstract final class GStorage {
   static late final Box<dynamic> setting;
   static late final Box<dynamic> video;
 
+  /// 离线下载任务记录（Phase 5 下载系统）。
+  ///
+  /// 仅存任务元数据（见 `DownloadTask`），不存文件本体；不参与设置
+  /// 导入导出，也不随全局 [clear] 清空——下载记录是用户内容引用而非「设置」。
+  static late final Box<dynamic> download;
+
   /// Lazy-initialized Hive directory path.
   static String? _hivePath;
 
@@ -117,6 +123,8 @@ abstract final class GStorage {
       Hive.openBox('setting').then((res) => setting = res),
       // 视频设置
       Hive.openBox('video').then((res) => video = res),
+      // 离线下载任务记录
+      Hive.openBox('download').then((res) => download = res),
     ]);
   }
 
@@ -132,6 +140,7 @@ abstract final class GStorage {
       localCache.compact(),
       setting.compact(),
       video.compact(),
+      download.compact(),
     ]);
   }
 
@@ -140,6 +149,7 @@ abstract final class GStorage {
       localCache.close(),
       setting.close(),
       video.close(),
+      download.close(),
     ]);
   }
 
