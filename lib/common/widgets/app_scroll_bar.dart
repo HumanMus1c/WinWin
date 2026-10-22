@@ -234,11 +234,18 @@ class _AppScrollBarState extends State<AppScrollBar>
   /// `maxScrollExtent`（`scroll_position.dart` 的 `_maxScrollExtent!`）即触发
   /// release 空断言崩溃（`Null check operator used on a null value`）。
   /// 故此处以 `hasContentDimensions` + `hasPixels` 双重守卫，未就绪一律视为不可用。
+  ///
+  /// 另：**不使用 `controller.position`** —— 其内部为 `_positions.single`。当同一
+  /// controller 被多个滚动视图 attach（>1 position，如页面转场期间新旧视图短暂
+  /// 并存）时，debug 触发断言 `_positions.length == 1`、release 抛
+  /// `Bad state: Too many elements`（2026-10-22 运行日志 3 次，栈落于本方法）。
+  /// 改为遍历 `positions` 取第一个「已就绪」者：多挂载时不再崩溃，单挂载行为不变。
   ScrollPosition? get _position {
     if (!widget.controller.hasClients) return null;
-    final position = widget.controller.position;
-    if (!position.hasContentDimensions || !position.hasPixels) return null;
-    return position;
+    for (final position in widget.controller.positions) {
+      if (position.hasContentDimensions && position.hasPixels) return position;
+    }
+    return null;
   }
 
   double _thumbLength(double trackExtent, ScrollPosition p) {

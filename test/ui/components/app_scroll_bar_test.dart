@@ -116,6 +116,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('同一 controller 挂载多个 position 时构建不抛异常（Too many elements 回归）',
+      (tester) async {
+    // 背景（2026-10-22 运行日志分析）：`.winwin_logs.json` release 构建上报
+    // `Bad state: Too many elements` @ `ScrollController.position`
+    // （`scroll_controller.dart:173` ⇒ `_positions.single`），栈落在
+    // `_AppScrollBarState._position`。根因：`_position` 用 `controller.position`，
+    // 其内部为 `_positions.single`；当同一 controller 被多个滚动视图 attach
+    // （>1 position，如页面转场期间新旧视图短暂并存）时即抛出。
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    for (var i = 0; i < 2; i++) {
+      controller.attach(
+        ScrollPositionWithSingleContext(
+          physics: const ClampingScrollPhysics(),
+          context: _FakeScrollContext(),
+          keepScrollOffset: false,
+        ),
+      );
+    }
+
+    // 前置条件：已挂载且挂载数 > 1（复刻崩溃态）。
+    expect(controller.hasClients, isTrue);
+    expect(controller.positions.length, 2);
+
+    await tester.pumpWidget(
+      _host(
+        SizedBox(
+          width: 800,
+          height: 600,
+          child: AppScrollBar(
+            controller: controller,
+            forceLane: true,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('reverse 列表渲染不抛异常（会话列表场景冒烟）', (tester) async {
     final controller = ScrollController();
     addTearDown(controller.dispose);
