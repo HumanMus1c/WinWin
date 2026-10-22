@@ -88,6 +88,16 @@ class _PlayerPanelState extends State<PlayerPanel> {
   Timer? _hideTimer;
   Timer? _feedbackTimer;
   final ValueNotifier<bool> _controlsVisible = ValueNotifier(true);
+
+  /// 控制栏「淡出完成后」折叠标记（2026-10-23 方案 B）。
+  ///
+  /// 控制栏整体由 [AnimatedOpacity]（200ms）统一淡入淡出；时间文本/进度条等
+  /// 重控件仅在**淡出动画真正结束**（opacity=0、不可见）后才折叠为占位以跳过
+  /// 构建（保留原性能优化意图）；一旦控制栏重新显示则立即复位折叠标记，使展开
+  /// 动作发生在淡入首帧（opacity≈0，不可见）。由此保证过渡期间真实控件在位、
+  /// 与整体同步淡出且无布局重排——修复「部分控件抢跑隐藏 + 位置漂移」。
+  bool _controlsCollapsed = false;
+
   bool _draggingProgress = false;
   double _dragSeconds = 0;
   /// 进度条悬浮预览状态（fraction, seconds）：独立局部驱动，杜绝滑动触发全局 setState 重绘风暴。
@@ -140,6 +150,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     // setMedia/prepare 打开新源期间的瞬态 playing 抖动不得解除封面（2026-10-22
     // 稳定性修复：此前挂 playing 会一次性掉封面 → 黑屏/露出若干帧）。
     widget.controller.userPlayRequested.addListener(_onUserPlayRequested);
+    _controlsVisible.addListener(_onControlsVisibleChanged);
     _showControlsTemporarily();
   }
 
@@ -154,6 +165,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
     _volumeEscUnregister?.call();
     _volumeEscUnregister = null;
     _sliderHoverNotifier.dispose();
+    _controlsVisible.removeListener(_onControlsVisibleChanged);
     _controlsVisible.dispose();
     _doubleTapFeedback.dispose();
     _longPressSpeedFeedback.dispose();
@@ -301,6 +313,22 @@ class _PlayerPanelState extends State<PlayerPanel> {
   }
 
   // ── 控制条显隐 ──
+
+  /// 控制栏显示态变化回调：一旦重新显示且尚处折叠态，立即解除折叠
+  /// （展开动作发生在淡入首帧 opacity≈0，不可见 → 无位置漂移）。
+  void _onControlsVisibleChanged() {
+    if (!mounted || !_controlsVisible.value || !_controlsCollapsed) return;
+    setState(() => _controlsCollapsed = false);
+  }
+
+  /// 控制栏淡入/淡出动画结束回调：仅在**淡出结束**（不可见）后折叠内部重控件，
+  /// 淡入结束时复位（通常已由 [_onControlsVisibleChanged] 提前复位）。
+  void _onControlsFadeEnd() {
+    if (!mounted) return;
+    final shouldCollapse = !_controlsVisible.value;
+    if (shouldCollapse == _controlsCollapsed) return;
+    setState(() => _controlsCollapsed = shouldCollapse);
+  }
 
   void _showControlsTemporarily() {
     _controlsVisible.value = true;
@@ -568,6 +596,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                             return AnimatedOpacity(
                               opacity: visible ? 1.0 : 0.0,
                               duration: const Duration(milliseconds: 200),
+                              onEnd: _onControlsFadeEnd,
                               child: IgnorePointer(
                                 ignoring: !visible,
                                 child: _buildControlBar(),
@@ -1154,7 +1183,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
         _controlsVisible,
       ]),
       builder: (context, _) {
-        if (!_controlsVisible.value) {
+        if (_controlsCollapsed) {
           return const SizedBox(width: 80, height: 16);
         }
         final pos = DurationUtils.formatDuration(c.currentProgress.inSeconds);
@@ -1255,7 +1284,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
         _controlsVisible,
       ]),
       builder: (context, _) {
-        if (!_controlsVisible.value && !_draggingProgress) {
+        if (_controlsCollapsed && !_draggingProgress) {
           return const SizedBox(height: 18);
         }
         final durMs = c.duration.value.inMilliseconds;
