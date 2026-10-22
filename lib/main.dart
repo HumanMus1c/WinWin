@@ -19,6 +19,7 @@ import 'core/shell/app_scaffold.dart';
 import 'core/shell/app_shell.dart';
 import 'core/shell/app_theme_host.dart';
 import 'core/shell/global_back_button.dart';
+import 'core/shell/scaled_widgets_flutter_binding.dart';
 import 'core/storage/storage_pref.dart';
 import 'core/window/title_bar_controller.dart';
 import 'core/window/tray_controller.dart';
@@ -53,7 +54,10 @@ final AppEscapeNavigatorObserver appEscapeObserver =
 /// [appBackButtonController] 单例（在此注册进 `navigatorObservers` 并传给 AppShell）。
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // 界面缩放（uiScale）走**渲染层**缩放：自定义 Binding 覆写 devicePixelRatio，
+  // 使整棵树（含 Overlay/弹层/自绘标题栏）共享同一坐标空间。
+  // 必须早于任何 Binding 使用与 runApp（见 ScaledWidgetsFlutterBinding 文档）。
+  ScaledWidgetsFlutterBinding.ensureInitialized();
 
   // 图片内存缓存容量：128MB / 1000 items。
   // 原为 256MB；2026-09-27/28 内存调查确认"解码位图在重度浏览后会常驻放大"，

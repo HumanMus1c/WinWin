@@ -99,43 +99,43 @@ List<SettingsModel> get styleSettings => [
         },
       ),
 
-      // 界面缩放 —— 【已停用 · 方案 A 回退】
-      // 原「整树 Transform.scale + MediaQuery.size 覆盖」实测失效：会导致 Miuix 弹层
-      // 严重偏离触发原点、窗口控件漂出窗口、页面底部入口不可见（根因见
-      // `lib/core/shell/app_shell.dart` 的注释）。纯 Flutter 层无法让整树（含 Overlay
-      // 与窗口级参照）统一缩放，需改在 Windows runner 层以原生 DPI 缩放实现。
-      // 暂从设置页隐藏以避免"假开关"，待原生方案确认后重新开放。
-      // 存储键 SettingBoxKey.uiScale / Pref.uiScale / AppearanceNotifier.uiScale 一并保留。
-      // NormalModel(
-      //   title: '界面缩放',
-      //   leading: AppIcon(AppIcons.uiScale()),
-      //   getSubtitle: () =>
-      //       '当前缩放比例：${(GStorage.setting.get(SettingBoxKey.uiScale, defaultValue: 1.0) as double).toStringAsFixed(2)}',
-      //   onTap: (context, setState) async {
-      //     final current = GStorage.setting.get(SettingBoxKey.uiScale,
-      //         defaultValue: 1.0) as double;
-      //     final res = await showAppDialog<double>(
-      //       context: context,
-      //       builder: (context) => AppSliderDialog(
-      //         title: '界面缩放',
-      //         value: current,
-      //         min: 0.8,
-      //         max: 1.5,
-      //         divisions: 14,
-      //         suffix: 'x',
-      //         decimals: 2,
-      //       ),
-      //     );
-      //     if (res != null) {
-      //       await GStorage.setting.put(SettingBoxKey.uiScale, res);
-      //       AppearanceNotifier.setUiScale(res);
-      //       setState();
-      //       if (context.mounted) {
-      //         showToast(context, '已生效', duration: const Duration(seconds: 1));
-      //       }
-      //     }
-      //   },
-      // ),
+      // 界面缩放 —— 【由 ScaledWidgetsFlutterBinding 渲染层 DPR 缩放实现 · 热生效】
+      // 取代曾失效的方案 A（`Transform.scale` 只改绘制、改不动坐标空间，导致 Miuix
+      // 弹层偏移与窗口控件漂移）：本方案在 Binding 层把 `devicePixelRatio × uiScale`
+      // 真实缩放整棵树，并同步指针转换与 MediaQuery（见 `core/shell/app_shell.dart`、
+      // `core/shell/scaled_widgets_flutter_binding.dart`），使内容 / Overlay / 自绘
+      // 标题栏共享同一坐标空间。范围对齐上游 PiliPlus（0.5–2.0）。
+      // [AppearanceNotifier.setUiScale] 同时更新通知器与 `Binding.scaleFactor` ⇒ 即时生效。
+      NormalModel(
+        title: '界面缩放',
+        leading: AppIcon(AppIcons.uiScale()),
+        getSubtitle: () =>
+            '当前缩放比例：${(GStorage.setting.get(SettingBoxKey.uiScale, defaultValue: 1.0) as double).toStringAsFixed(2)}',
+        onTap: (context, setState) async {
+          final current = GStorage.setting.get(SettingBoxKey.uiScale,
+              defaultValue: 1.0) as double;
+          final res = await showAppDialog<double>(
+            context: context,
+            builder: (context) => AppSliderDialog(
+              title: '界面缩放',
+              value: current,
+              min: 0.5,
+              max: 2.0,
+              divisions: 30,
+              suffix: 'x',
+              decimals: 2,
+            ),
+          );
+          if (res != null) {
+            await GStorage.setting.put(SettingBoxKey.uiScale, res);
+            AppearanceNotifier.setUiScale(res);
+            setState();
+            if (context.mounted) {
+              showToast(context, '已生效', duration: const Duration(seconds: 1));
+            }
+          }
+        },
+      ),
 
       // 使用系统原生标题栏（桌面端）
       SwitchModel(
