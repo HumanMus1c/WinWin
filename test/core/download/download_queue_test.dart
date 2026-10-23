@@ -123,6 +123,25 @@ Future<void> waitUntil(
   throw StateError('waitUntil 超时：$reason');
 }
 
+/// 释放调度器并等待在途下载**真正收尾**。
+///
+/// `dispose()` 只是同步**请求**取消（立即返回）：引擎要等下一次取消轮询
+/// （`BlockingTransport` 每 2ms 一次）才发现取消，随后才在 `finally` 里
+/// `raf.close()` 释放文件句柄。Windows 下若在句柄关闭前删除临时目录，会抛
+/// `PathAccessException ... errno = 32`（共享冲突）—— 这正是本文件此前
+/// 概率性失败（本地约 1/3、云端稳定撞上）的根因；Linux/macOS 允许 unlink
+/// 已打开文件，故不暴露。
+///
+/// 收尾闸门取 `hasActiveDownloads` 归零：它在 `_run` 的 `finally` 里移除，
+/// 而该处晚于引擎 `download()` 返回（其内部 `finally` 已 await 关闭句柄）。
+Future<void> disposeAndSettle(DownloadQueueCoordinator coordinator) async {
+  coordinator.dispose();
+  await waitUntil(
+    () => !coordinator.hasActiveDownloads,
+    reason: '在途下载收尾（文件句柄释放）',
+  );
+}
+
 void main() {
   late Directory tempDir;
   late MemoryDownloadTaskStorage storage;
@@ -199,7 +218,7 @@ void main() {
       expect(coordinator.taskOf(c.id)!.status, DownloadStatus.queued);
       expect(coordinator.hasActiveDownloads, isTrue);
 
-      coordinator.dispose();
+      await disposeAndSettle(coordinator);
     });
 
     test('暂停运行中任务后槽位释放给下一个', () async {
@@ -230,7 +249,7 @@ void main() {
       );
       expect(store.getById(a.id)!.status, DownloadStatus.paused);
 
-      coordinator.dispose();
+      await disposeAndSettle(coordinator);
     });
 
     test('恢复暂停任务重新入队（保留续传字节）', () async {
@@ -257,7 +276,7 @@ void main() {
         reason: 'A 恢复下载',
       );
 
-      coordinator.dispose();
+      await disposeAndSettle(coordinator);
     });
 
     test('探测失败时任务标记 failed 并记录原因', () async {
@@ -302,7 +321,7 @@ void main() {
       expect(coordinator.taskOf(a.id), isNull);
       expect(store.getById(a.id), isNull);
 
-      coordinator.dispose();
+      await disposeAndSettle(coordinator);
     });
 
     test('restore 把上次中断的 downloading 复位为 queued', () async {
