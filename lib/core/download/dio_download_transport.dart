@@ -118,8 +118,15 @@ class DioDownloadTransport implements DownloadTransport {
     }
   }
 
+  /// 幂等关闭标记：避免重复 close。
+  bool _closed = false;
+
   @override
-  void close() => _dio.close(force: true);
+  void close() {
+    if (_closed) return;
+    _closed = true;
+    _dio.close(force: true);
+  }
 }
 
 /// `dart:io` 的 `HttpException` 等价物（此处仅作错误语义标记，避免额外 import）。

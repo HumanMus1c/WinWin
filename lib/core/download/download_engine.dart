@@ -112,6 +112,9 @@ class DownloadEngine {
   /// 启用并行分片的最小资源字节阈值。
   final int parallelChunkThresholdBytes;
 
+  /// 是否已释放传输资源（保证 [dispose] 幂等）。
+  bool _disposed = false;
+
   DownloadTransport _resolveTransport() {
     final resolved = transport;
     if (resolved == null) {
@@ -120,6 +123,17 @@ class DownloadEngine {
       );
     }
     return resolved;
+  }
+
+  /// 释放传输层持有的资源（如 dio 连接池）。
+  ///
+  /// **幂等**：重复调用无副作用。引擎自身**不自动**调用（传输生命周期归持有方，
+  /// 见 [DownloadTransport.close]）；调用方应在一次下载编排结束后显式释放，
+  /// 否则每次新建的传输实例（及其底层连接池）会随下载次数累积不释放。
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    transport?.close();
   }
 
   /// 执行下载（自动续传）。

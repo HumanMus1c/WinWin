@@ -180,10 +180,12 @@ class DownloadQueueCoordinator {
     _tasks[id] = task;
 
     var savePath = task.filePath ?? '';
+    // 每次下载新建引擎/传输实例，仅服务本次下载，收尾时必须释放，否则连接池随下载累积泄漏。
+    final engine = engineFactory();
     try {
       await store.save(task);
       savePath = resolveSavePath(task);
-      final outcome = await engineFactory().download(
+      final outcome = await engine.download(
         url: Uri.parse(task.videoUrl),
         savePath: savePath,
         headers: resolveHeaders?.call(task) ?? const <String, String>{},
@@ -206,6 +208,8 @@ class DownloadQueueCoordinator {
       _running.remove(id);
       _cancelRequested.remove(id);
       _lastPersistMs.remove(id);
+      // 释放本次下载的传输资源（连接池等）；幂等，重复调用无副作用。
+      engine.dispose();
     }
 
     final current = _tasks[id];

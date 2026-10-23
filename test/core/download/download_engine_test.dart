@@ -34,6 +34,7 @@ class FakeTransport implements DownloadTransport {
 
   final List<String> fetchCalls = <String>[];
   int probeCount = 0;
+  int closeCount = 0;
 
   @override
   Future<DownloadRangeProbe> probe({
@@ -77,7 +78,7 @@ class FakeTransport implements DownloadTransport {
   }
 
   @override
-  void close() {}
+  void close() => closeCount++;
 }
 
 void main() {
@@ -350,6 +351,20 @@ void main() {
         ),
         throwsA(isA<StateError>()),
       );
+    });
+
+    test('dispose 幂等释放传输（重复调用只 close 一次）', () {
+      final transport = FakeTransport(content: makeContent(10));
+      final engine = engineWith(transport);
+
+      engine.dispose();
+      engine.dispose();
+
+      expect(transport.closeCount, 1);
+    });
+
+    test('未注入传输时 dispose 不抛错', () {
+      DownloadEngine().dispose();
     });
   });
 

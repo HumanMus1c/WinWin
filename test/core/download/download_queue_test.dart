@@ -96,6 +96,45 @@ class BlockingTransport implements DownloadTransport {
   void close() {}
 }
 
+/// 计数包装：转发到内部传输并记录 [close] 调用次数（验证生命周期释放）。
+class CountingTransport implements DownloadTransport {
+  CountingTransport(this._inner);
+
+  final DownloadTransport _inner;
+  int closeCount = 0;
+
+  @override
+  Future<DownloadRangeProbe> probe({
+    required Uri url,
+    required Map<String, String> headers,
+  }) =>
+      _inner.probe(url: url, headers: headers);
+
+  @override
+  Future<void> fetchRange({
+    required Uri url,
+    required Map<String, String> headers,
+    int? startBytes,
+    int? endBytesInclusive,
+    required Future<void> Function(List<int> data, int absoluteOffset) onChunk,
+    bool Function()? isCancelled,
+  }) =>
+      _inner.fetchRange(
+        url: url,
+        headers: headers,
+        startBytes: startBytes,
+        endBytesInclusive: endBytesInclusive,
+        onChunk: onChunk,
+        isCancelled: isCancelled,
+      );
+
+  @override
+  void close() {
+    closeCount++;
+    _inner.close();
+  }
+}
+
 DownloadTask buildTask({
   required String bvid,
   required int cid,
@@ -351,6 +390,51 @@ void main() {
 
       expect(coordinator.taskOf('BV1_1_80')!.status, DownloadStatus.completed);
       expect(coordinator.taskOf('BV2_2_80')!.status, DownloadStatus.paused);
+    });
+
+    test('每次下载完成后关闭该次引擎的传输（不累积连接池）', () async {
+      final content = makeContent(48);
+      final closers = <CountingTransport>[];
+      final coordinator = coordinatorWith(
+        transportFactory: () {
+          final t = CountingTransport(FakeTransport(content: content));
+          closers.add(t);
+          return t;
+        },
+      );
+
+      final task = buildTask(bvid: 'BV1', cid: 1);
+      await coordinator.enqueue(task);
+      await waitUntil(
+        () => coordinator.taskOf(task.id)?.status == DownloadStatus.completed,
+        reason: '任务完成',
+      );
+
+      expect(closers, hasLength(1));
+      expect(closers.single.closeCount, 1);
+    });
+
+    test('dispose 取消在途下载并释放其传输', () async {
+      final closers = <CountingTransport>[];
+      final coordinator = coordinatorWith(
+        transportFactory: () {
+          final t = CountingTransport(BlockingTransport());
+          closers.add(t);
+          return t;
+        },
+      );
+
+      final task = buildTask(bvid: 'BV1', cid: 1);
+      await coordinator.enqueue(task);
+      await waitUntil(
+        () => coordinator.taskOf(task.id)?.status == DownloadStatus.downloading,
+        reason: '开始下载',
+      );
+
+      await disposeAndSettle(coordinator);
+
+      expect(closers, hasLength(1));
+      expect(closers.single.closeCount, 1);
     });
   });
 }
