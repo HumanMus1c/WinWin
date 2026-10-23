@@ -2,11 +2,15 @@ name: CI（依赖更新探测）
 
 # 触发改造（2026-10-06，恢复自 f4afc24 移除的 CI 工作流并改造）：
 #   定时（每 6 小时）用 `flutter pub outdated` 探测「不改 pubspec 即可升级到」的依赖；
-#   与上次快照（actions/cache）对比出现新增 / 变化时，自动运行质量门禁。
-# 2026-10-23 调整（用户指令「Release 编译不再执行"升级依赖到可解析最新"」）：
-#   门禁**不再执行 `flutter pub upgrade`** —— 一律严格按 `pubspec.lock` 现状验证
-#   （analyze + test + Debug 构建），与 Release 工作流口径一致（Release 本就只跑 `pub get --enforce-lockfile`，无升级步骤）；
-#   依赖升级兼容性不再作为云端门禁内容，改为按需人工 / 本地验证。
+#   与上次快照（actions/cache）对比出现新增 / 变化时，自动运行质量门禁（升级验证）。
+# 2026-10-23 调整（同日两轮，最终以恢复为准）：
+#   ① 先按用户指令移除 gate 的 `flutter pub upgrade`（commit 92933fa）；
+#   ② 云端实跑 run 39937697964 证明「gate 失败与升级无关」（失败点仍是「单元测试」的 Windows 句柄竞态，
+#      已由 commit 6b01203 修复；修复后 run 39939028426 两作业全绿），
+#      故按用户复核要求**恢复**「升级依赖到可解析最新」+「升级明细（pubspec.lock diff）」两步——
+#      gate 语义回到「探升级兼容性 + 质量门禁（analyze + test + Debug 构建）」。
+#   说明：Release 工作流（windows-x64-release.yml）自始无升级步骤、只跑 `pub get --enforce-lockfile`，
+#      与本 CI 的门禁意图互不影响（Release 要可复现，CI 要探升级兼容性）。
 # 节流闸：concurrency（cancel-in-progress: false）——同一时刻至多 1 个运行，
 #   前一个完成（失败或成功）后才开始下一个排队触发。
 # 根因防护：固定 PUB_HOSTED_URL 与本地 pubspec.lock 同源 + --enforce-lockfile
@@ -107,7 +111,7 @@ jobs:
           key: dep-probe-${{ github.run_id }}
 
   gate:
-    name: 质量门禁（analyze + test + Debug 构建）
+    name: 质量门禁（升级验证：analyze + test + Debug 构建）
     needs: probe
     if: ${{ needs.probe.outputs.has_updates == 'true' || inputs.force == true }}
     runs-on: windows-latest
@@ -126,6 +130,18 @@ jobs:
 
       - name: 拉取依赖（严格遵循 pubspec.lock）
         run: flutter pub get --enforce-lockfile
+
+      - name: 升级依赖到可解析最新（验证升级兼容性）
+        run: flutter pub upgrade
+
+      - name: 升级明细（pubspec.lock diff）
+        shell: pwsh
+        run: |
+          git diff --stat pubspec.lock
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "## 依赖升级明细（pubspec.lock）"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '```text'
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value (git diff --stat pubspec.lock)
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '```'
 
       - name: 静态分析（info 不拦；warning / error 仍为门禁）
         run: flutter analyze --no-fatal-infos
