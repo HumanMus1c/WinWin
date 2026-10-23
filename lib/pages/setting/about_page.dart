@@ -58,7 +58,7 @@ class AboutPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(Style.radiusLg),
               color: tokens.colors.primaryContainer,
             ),
-            child: AppIcon(AppIcons.play(active: true),
+            child: AppIcon(AppIcons.appLogo(),
               size: 48,
               color: tokens.colors.primary,
             ),
@@ -72,7 +72,7 @@ class AboutPage extends StatelessWidget {
           ),
           const SizedBox(height: Style.xs),
           Text(
-            'BiliPai Desktop Port',
+            'PiliPlus + BiliPai',
             style: tokens.text.bodySmall?.copyWith(
               color: tokens.colors.outline,
             ),
@@ -98,7 +98,7 @@ class AboutPage extends StatelessWidget {
         AppListItem(
           icon: AppIcon(AppIcons.aboutCode()),
           title: '项目说明',
-          subtitle: 'WinWin 是基于 PiliPlus 的 Bilibili 桌面客户端移植版，使用 Flutter + fvp/mdk 内核构建。',
+          subtitle: 'WinWin 是以 PiliPlus 为主体框架，BiliPai 前端组件的桌面客户端，使用 Flutter + fvp/mdk 内核构建。',
         ),
         AppListItem(
           icon: AppIcon(AppIcons.openSource()),

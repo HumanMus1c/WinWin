@@ -1,6 +1,12 @@
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_miuix/miuix.dart';
+// 程序自身品牌 logo 字形（Flutter 官方 `flutter_dash`）。
+// 取 SDK 内置 Material 字体的单一码位，`show Icons` 限定导入面，不引入任何
+// 第三方 Material 包（`material_ui` 已退役，见 pubspec.yaml 注释）。
+// 该字形**不属于**界面语义图标体系（下方 AppIcons 其余方法一律 Cupertino 载体），
+// 仅供 [AppIcons.appLogo] 使用。
+import 'package:flutter/material.dart' show Icons;
 
 import 'package:winwin/theme/app_typography.dart';
 
@@ -579,6 +585,14 @@ abstract final class AppIcons {
 
   /// 认证徽章（闪电小字）
   static IconData badgeBolt() => CupertinoIcons.bolt;
+
+  /// 程序自身品牌 logo（Flutter 官方 `flutter_dash` 造型）。
+  ///
+  /// 仅供「程序 logo」展示位引用：关于页头部、沉浸式标题栏 PNG
+  /// （`assets/app_icon.png`）、Windows exe/任务栏 `.ico`
+  /// （`windows/runner/resources/app_icon.ico`）。**不是**界面语义图标，
+  /// 勿在按钮 / 标签 / 导航等 UI 处使用（这些一律走上方 Cupertino 载体方法）。
+  static IconData appLogo() => Icons.flutter_dash;
 }
 
 /// 「图标 + 标签」组合行里的图标尺寸：与行标签文本**实际渲染**字号同口径。
