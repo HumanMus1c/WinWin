@@ -76,3 +76,7 @@ flutter:
     # 沉浸式标题栏程序图标（与 windows/runner/resources/app_icon.ico 同源，
     # 替换品牌图标时需同步更新两处）。
     - assets/app_icon.png
+    # 程序品牌 Logo（Flutter 官方**双色**标志，源 = docs.flutter.dev 官方 branding SVG）：
+    # 关于页头部展示用高清母版；程序图标三面（关于页 / 标题栏 / exe·任务栏·托盘）同源，
+    # 替换品牌图标时需一并同步。
+    - assets/flutter_logo.png
