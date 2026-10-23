@@ -51,20 +51,16 @@ class AboutPage extends StatelessWidget {
     return Center(
       child: Column(
         children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(Style.radiusLg),
-              color: tokens.colors.primaryContainer,
-            ),
-            child: Image.asset(
-              'assets/flutter_logo.png',
-              width: 48,
-              height: 48,
-              filterQuality: FilterQuality.high,
-              semanticLabel: 'Flutter 官方 Logo',
-            ),
+          // 程序品牌 logo：直接展示官方**双色**标志。
+          // 2026-10-23 用户定：去掉原 88×88 圆角底色容器（彩色标志压在主题色块上、
+          // 尤其深色模式不协调）；同时把显示尺寸由 48 提到 64 —— 无底色块承托后
+          // 48 显得偏小。若需回到 48 或进一步放大，改此两处数值即可。
+          Image.asset(
+            'assets/flutter_logo.png',
+            width: 64,
+            height: 64,
+            filterQuality: FilterQuality.high,
+            semanticLabel: 'Flutter 官方 Logo',
           ),
           const SizedBox(height: Style.md),
           Text(
