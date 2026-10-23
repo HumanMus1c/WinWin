@@ -1,5 +1,6 @@
 import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider, MiuixIconButton;
 import 'package:flutter/widgets.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:winwin/pages/onboarding/user_agreement_page.dart';
 import 'package:winwin/theme/style.dart';
@@ -18,6 +19,16 @@ class AboutPage extends StatelessWidget {
   const AboutPage({super.key, this.showAppBar = true});
 
   final bool showAppBar;
+
+  /// 构建版本信息：只读取一次并缓存，避免每次重建都走平台通道。
+  static final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
+
+  /// 按《版本号管理规范》§4 的 UI 形态 `name (code)` 展示真实构建版本。
+  static String _formatVersion(PackageInfo? info) {
+    if (info == null) return '版本 —';
+    final code = info.buildNumber;
+    return code.isEmpty ? '版本 ${info.version}' : '版本 ${info.version} ($code)';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,10 +78,13 @@ class AboutPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Style.sm),
-          Text(
-            '版本 0.1.0',
-            style: tokens.text.bodySmall?.copyWith(
-              color: tokens.colors.outline,
+          FutureBuilder<PackageInfo>(
+            future: _packageInfo,
+            builder: (context, snapshot) => Text(
+              _formatVersion(snapshot.data),
+              style: tokens.text.bodySmall?.copyWith(
+                color: tokens.colors.outline,
+              ),
             ),
           ),
         ],

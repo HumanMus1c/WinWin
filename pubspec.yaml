@@ -61,6 +61,10 @@ dependencies:
   # 阶段1 复盘见 docs/flutter_miuix阶段1-桥接与试点复盘-2026-10-02.md。
   flutter_miuix: 1.3.0
 
+  # 应用元信息：关于页读取真实构建版本号（Windows 取自 exe 版本资源，
+  # 该资源由 pubspec 的 version 派生；显示形态遵循《版本号管理规范》§4：name (code)）。
+  package_info_plus: ^10.2.2
+
   path: any
 dev_dependencies:
   flutter_test:
