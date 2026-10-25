@@ -10,6 +10,7 @@ import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/member.dart';
 import 'package:winwin/http/pgc.dart';
@@ -158,8 +159,12 @@ class _PgcPageState extends State<PgcPage>
   }
 }
 
-/// 演示模式：番剧页骨架网格（近似 _PgcCard / _MyBangumiCard 布局）。
-Widget _buildPgcSkeletonGrid(SliverGridDelegate gridDelegate, {int count = 12}) {
+/// 演示模式：番剧页**可点击**演示网格（布局近似 `_PgcCard` / `_MyBangumiCard`）。
+///
+/// 与旧骨架网格的关键差异：卡片**可点击**，点击进入「番剧详情页演示模式」
+/// （`BangumiDetailPage` 在演示态忽略入参、改用本地占位详情）。
+/// 封面/文本均为本地脱敏占位，不请求任何真实数据。
+Widget _buildPgcDemoGrid(SliverGridDelegate gridDelegate, {int count = 12}) {
   return CustomScrollView(
     physics: const AlwaysScrollableScrollPhysics(),
     slivers: [
@@ -173,30 +178,143 @@ Widget _buildPgcSkeletonGrid(SliverGridDelegate gridDelegate, {int count = 12}) 
         sliver: SliverGrid(
           gridDelegate: gridDelegate,
           delegate: SliverChildBuilderDelegate(
-            (context, i) => const Skeleton(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: SkeletonBox(
-                      width: double.infinity,
-                      height: double.infinity,
-                      borderRadius: BorderRadius.all(Radius.circular(6)),
-                    ),
-                  ),
-                  SizedBox(height: Style.sm),
-                  SkeletonLine(width: double.infinity, height: 12),
-                  SizedBox(height: 6),
-                  SkeletonLine(width: 80, height: 10),
-                ],
-              ),
-            ),
+            (context, i) => _DemoBangumiCard(seed: i),
             childCount: count,
           ),
         ),
       ),
+      const SliverToBoxAdapter(child: SizedBox(height: Style.xxl * 2)),
     ],
   );
+}
+
+/// 演示模式：番剧卡片（竖版 2:3；角标 / 集数气泡 / 标题 + 副标题对齐
+/// `_PgcCard` 与 `_MyBangumiCard` 的排版）。
+///
+/// 内容全部为本地脱敏占位（封面为灰色占位块，文案为“演示番剧”占位）；
+/// 点击进入番剧详情页（演示模式）。
+class _DemoBangumiCard extends StatelessWidget {
+  const _DemoBangumiCard({required this.seed});
+
+  final int seed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final index = seed + 1;
+    final badge = const ['会员', '限免', '预告'][seed % 3];
+    final epCount = 12 + (seed * 7) % 13; // 12..24
+    final subtitle = seed.isEven
+        ? '更新至第 $epCount 话'
+        : '全 $epCount 话 · ${NumUtils.formatNum(10000 + seed * 1379)} 追番';
+
+    return ClipPath(
+      clipper: ShapeBorderClipper(
+        shape: MiuixSquircleBorder(cornerRadius: MiuixCardDefaults.cornerRadius),
+      ),
+      child: MiuixCard(
+        child: MiuixPressable(
+          feedbackType: MiuixPressFeedbackType.sink,
+          sinkAmount: 0.98,
+          onPressed: () {
+            Navigator.push(
+              context,
+              AppRoute(builder: (_) => const BangumiDetailPage()),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AspectRatio(
+                aspectRatio: 2 / 3,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    const SkeletonBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      borderRadius: BorderRadius.zero,
+                    ),
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.pink.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          badge,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 4,
+                      bottom: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '全 $epCount 话',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(Style.xs),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '演示番剧 ${index.toString().padLeft(2, '0')}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: tokens.text.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: tokens.text.labelSmall?.copyWith(
+                          color: cs.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// 热门追番视图：全站高热度番剧索引网格。
@@ -248,6 +366,8 @@ class _HotBangumiViewState extends State<_HotBangumiView>
   }
 
   Future<void> _load({required bool refresh}) async {
+    // 演示模式：隔离真实网络（演示态滚动到底不再发起真实请求）。
+    if (Pref.demoMode) return;
     if (_loading) return;
     if (!refresh && !_hasMore) return;
     _loading = true;
@@ -311,7 +431,7 @@ class _HotBangumiViewState extends State<_HotBangumiView>
           return false;
         },
         child: DemoMask(
-          skeleton: () => _buildPgcSkeletonGrid(gridDelegate),
+          skeleton: () => _buildPgcDemoGrid(gridDelegate),
           child: () => switch (_state) {
             Loading() => const Center(child: AppProgressIndicator()),
             Error(:final errMsg) => _buildError(errMsg),
@@ -461,6 +581,8 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
   }
 
   Future<void> _load({required bool refresh}) async {
+    // 演示模式：隔离真实网络（演示态滚动到底不再发起真实请求）。
+    if (Pref.demoMode) return;
     if (_loading) return;
     if (!AccountService().isLogin) return;
     if (!refresh && !_hasMore) return;
@@ -517,8 +639,8 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
   Widget build(BuildContext context) {
     super.build(context);
 
-    // 未登录展示登录引导
-    if (!AccountService().isLogin) {
+    // 未登录展示登录引导（演示态不拦截：直接展示本地演示网格）。
+    if (!AccountService().isLogin && !Pref.demoMode) {
       return _buildLoginPrompt(context);
     }
 
@@ -540,7 +662,7 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
           return false;
         },
         child: DemoMask(
-          skeleton: () => _buildPgcSkeletonGrid(gridDelegate),
+          skeleton: () => _buildPgcDemoGrid(gridDelegate),
           child: () => switch (_state) {
             Loading() => const Center(child: AppProgressIndicator()),
             Error(:final errMsg) => _buildError(errMsg),
