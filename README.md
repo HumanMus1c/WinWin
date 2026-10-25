@@ -28,7 +28,7 @@
 
 ## 🖼️ 程序演示模式截图
 
-> 以下均为 **演示模式**（`设置 → 其它设置 → 演示模式`）下的干净截图：云端内容与账号标识被替换为占位，不含第三方素材。每张为**同一页面的浅色 / 深色合成图**——取浅色截图**左半**、深色截图**右半**拼接为一张，尺寸 1920×1080（宽屏布局）。
+> 以下均为 **演示模式**（`设置 → 其它设置 → 演示模式`）下的干净截图：云端内容与账号标识被替换为占位，不含第三方素材。每张为**同一页面的浅色 / 深色合成图**——取浅色截图**左半**、深色截图**右半**拼接为一张（1920×1080，宽屏布局）。其中**首页单列大图**，其余 4 页以**四宫格小图**呈现（整图约单张原图面积的 1/4，四图之间留有留白间距）。
 
 <p align="center">
   <a href="assets/screenshots/01-home.png"><img src="assets/screenshots/01-home.png" alt="根页面（首页）—— 浅色 ｜ 深色" width="100%"></a>
@@ -36,24 +36,9 @@
 <p align="center"><sub><b>根页面（首页）</b>：左侧导航栏 + 推荐流卡片（演示占位）。左：浅色 · 右：深色。</sub></p>
 
 <p align="center">
-  <a href="assets/screenshots/02-player.png"><img src="assets/screenshots/02-player.png" alt="播放页 —— 浅色 ｜ 深色" width="100%"></a>
+  <a href="assets/screenshots/grid-others.png"><img src="assets/screenshots/grid-others.png" alt="其余页面四宫格（播放页 · 用户空间 · 番剧页 · 设置页）" width="46%"></a>
 </p>
-<p align="center"><sub><b>播放页</b>：视频详情 / 播放器画面与控制栏（演示播放态）。左：浅色 · 右：深色。</sub></p>
-
-<p align="center">
-  <a href="assets/screenshots/03-space.png"><img src="assets/screenshots/03-space.png" alt="用户空间 —— 浅色 ｜ 深色" width="100%"></a>
-</p>
-<p align="center"><sub><b>用户空间</b>：头图 / 统计与内容分区（演示占位）。左：浅色 · 右：深色。</sub></p>
-
-<p align="center">
-  <a href="assets/screenshots/04-bangumi.png"><img src="assets/screenshots/04-bangumi.png" alt="番剧页 —— 浅色 ｜ 深色" width="100%"></a>
-</p>
-<p align="center"><sub><b>番剧页</b>：追番卡片网格（演示占位，可点进详情）。左：浅色 · 右：深色。</sub></p>
-
-<p align="center">
-  <a href="assets/screenshots/05-setting.png"><img src="assets/screenshots/05-setting.png" alt="设置页 —— 浅色 ｜ 深色" width="100%"></a>
-</p>
-<p align="center"><sub><b>设置页</b>：外观 / 播放 / 视频 / 其它 / 关于 分区。左：浅色 · 右：深色。</sub></p>
+<p align="center"><sub><b>其余页面四宫格</b>（左上 → 右下）：播放页 · 用户空间 · 番剧页 · 设置页；每张同为浅色左半 ｜ 深色右半合成，整图约单张原图面积的 1/4。</sub></p>
 
 ---
 
