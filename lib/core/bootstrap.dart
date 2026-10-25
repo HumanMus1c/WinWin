@@ -24,6 +24,8 @@ Future<void> ensureBootstrap() {
 
 Future<void> _run() async {
   await GStorage.init();
+  // 兼容迁移：旧「显示托盘图标 / 退出时最小化」两项合并为 closeToTray。
+  await Pref.migrateLegacyTrayKeys();
   await Accounts.init();
   await Request.init();
 

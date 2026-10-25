@@ -496,11 +496,22 @@ abstract final class Pref {
     }
   }
 
-  /// 是否显示系统托盘图标（默认开）。
-  static bool get showTrayIcon =>
-      _setting.get(SettingBoxKey.showTrayIcon, defaultValue: true) as bool;
+  /// 关闭窗口时是否最小化到托盘而非退出（默认开，对齐上游 PiliPlus）。
+  ///
+  /// 托盘图标恒显（不再作为设置项），本开关只决定关闭按钮的行为。
+  static bool get closeToTray =>
+      _setting.get(SettingBoxKey.closeToTray, defaultValue: true) as bool;
 
-  /// 关闭窗口时是否最小化到托盘而非退出（默认关）。
-  static bool get minimizeOnExit =>
-      _setting.get(SettingBoxKey.minimizeOnExit, defaultValue: false) as bool;
+  /// 一次性兼容迁移：把旧「显示托盘图标 / 退出时最小化」合并为 [SettingBoxKey.closeToTray]。
+  ///
+  /// 继承旧 `minimizeOnExit` 的值（缺省 true）；写好后清理旧 key，避免遗留脏数据。
+  /// 仅当新 key 不存在时执行，可重复调用（幂等）。
+  static Future<void> migrateLegacyTrayKeys() async {
+    if (_setting.containsKey(SettingBoxKey.closeToTray)) return;
+    final legacy =
+        _setting.get(SettingBoxKey.minimizeOnExit, defaultValue: true);
+    await _setting.put(SettingBoxKey.closeToTray, legacy == true);
+    await _setting.delete(SettingBoxKey.minimizeOnExit);
+    await _setting.delete(SettingBoxKey.showTrayIcon);
+  }
 }

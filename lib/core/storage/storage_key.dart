@@ -158,13 +158,18 @@ abstract final class SettingBoxKey {
       angleDegrees = 'angleDegrees',
       liveStream = 'liveStream';
 
+  /// 旧托盘设置 key：仅用于启动期兼容迁移读取，勿在新代码复用。
   static const String minimizeOnExit = 'minimizeOnExit',
-      windowSize = 'windowSize',
+      showTrayIcon = 'showTrayIcon';
+
+  /// 关闭窗口时最小化到托盘（托盘两项设置合并后的单一开关）。
+  static const String closeToTray = 'closeToTray';
+
+  static const String windowSize = 'windowSize',
       windowPosition = 'windowPosition',
       isWindowMaximized = 'isWindowMaximized',
       useNativeTitleBar = 'useNativeTitleBar',
       desktopVolume = 'desktopVolume',
-      showTrayIcon = 'showTrayIcon',
       uiScale = 'uiScale',
       // 用户协议确认（版本化 key：升级条款时可换 V2 让老用户重新确认）
       userAgreementAckV1 = 'userAgreementAckV1',

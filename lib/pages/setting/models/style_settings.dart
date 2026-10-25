@@ -147,22 +147,15 @@ List<SettingsModel> get styleSettings => [
         needReboot: true,
       ),
 
-      // 显示托盘图标（桌面端）——热生效：切换后立即创建/销毁原生托盘图标。
+      // 关闭窗口时最小化到托盘（桌面端）——热生效。
+      // 托盘图标恒显、不再单设开关；本项只决定关闭按钮走「收进托盘」还是「直接退出」。
       SwitchModel(
-        title: '显示托盘图标',
-        leading: AppIcon(AppIcons.trayIcon()),
-        setKey: SettingBoxKey.showTrayIcon,
+        title: '关闭窗口时最小化到托盘',
+        subtitle: '关闭窗口时收进系统托盘而非退出程序',
+        leading: AppIcon(AppIcons.minimizeToTray()),
+        setKey: SettingBoxKey.closeToTray,
         defaultVal: true,
         onChanged: (_) => TrayController.instance.refresh(),
-      ),
-
-      // 退出时最小化到托盘
-      SwitchModel(
-        title: '退出时最小化到托盘',
-        subtitle: '关闭窗口时最小化到系统托盘而非退出',
-        leading: AppIcon(AppIcons.minimizeToTray()),
-        setKey: SettingBoxKey.minimizeOnExit,
-        defaultVal: false,
       ),
     ];
 

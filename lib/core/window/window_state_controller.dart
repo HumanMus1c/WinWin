@@ -7,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/core/window/app_exit.dart';
 import 'package:winwin/core/window/desktop_fullscreen.dart';
 import 'package:winwin/core/window/tray_controller.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
@@ -161,14 +162,12 @@ class WindowStateController with WindowListener {
     _saveTimer?.cancel();
     unawaited(_saveNormalState());
 
-    // 「退出时最小化到托盘」：托盘可用且非托盘菜单触发的真正退出时，
-    // 隐藏窗口（进程保活到托盘）；否则放行真正退出。
-    if (Pref.minimizeOnExit &&
-        Pref.showTrayIcon &&
-        !TrayController.instance.isReallyExiting) {
+    // 「关闭窗口时最小化到托盘」：非托盘菜单触发的真正退出时隐藏窗口
+    // （进程保活到托盘）；否则走统一退出流程（对齐上游，绕开引擎 D3D 析构）。
+    if (Pref.closeToTray && !TrayController.instance.isReallyExiting) {
       unawaited(windowManager.hide());
       return;
     }
-    unawaited(windowManager.destroy());
+    unawaited(AppExit.exit());
   }
 }

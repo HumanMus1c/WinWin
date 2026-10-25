@@ -179,7 +179,7 @@ void main() async {
       await windowManager.show();
       await windowManager.focus();
       WindowStateController.instance.startListening();
-      // 原生托盘初始化（按「显示托盘图标」设置决定是否显示）。
+      // 原生托盘初始化（图标恒显，不再是可配置项）。
       TrayController.instance.init();
     });
   }

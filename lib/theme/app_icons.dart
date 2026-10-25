@@ -362,9 +362,6 @@ abstract final class AppIcons {
   /// 系统原生标题栏开关
   static IconData nativeTitleBar() => CupertinoIcons.rectangle;
 
-  /// 托盘图标显隐
-  static IconData trayIcon() => CupertinoIcons.gauge;
-
   /// 退出时最小化到托盘
   static IconData minimizeToTray() => CupertinoIcons.minus;
 
