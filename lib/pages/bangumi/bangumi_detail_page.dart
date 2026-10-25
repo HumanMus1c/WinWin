@@ -8,7 +8,6 @@ import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_colors.dart';
-import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_guard.dart';
@@ -81,9 +80,13 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   final GlobalKey _lastWatchedKey = GlobalKey();
   bool _hasAutoLocated = false;
 
+  /// 演示模式本地占位详情（惰性构建并缓存，仅演示模式使用）。
+  BangumiDetail? _demoDetailCache;
+
   @override
   void dispose() {
     Pref.bangumiEpisodesDescending.removeListener(_onGlobalOrderChanged);
+    Pref.demoModeNotifier.removeListener(_onDemoModeChanged);
     _leftScrollController.dispose();
     _rightScrollController.dispose();
     _narrowScrollController.dispose();
@@ -95,6 +98,10 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
     super.initState();
     _episodesDescending = Pref.bangumiEpisodesDescending.value;
     Pref.bangumiEpisodesDescending.addListener(_onGlobalOrderChanged);
+    Pref.demoModeNotifier.addListener(_onDemoModeChanged);
+    // 演示模式：完全隔离真实网络（不请求 pgcInfo / seasonStatus），
+    // 详情数据改用本地占位对象（见 [_demoDetail]），布局复用正常模式宽/窄屏。
+    if (Pref.demoMode) return;
     if (widget.detail != null) {
       _detail = widget.detail;
       _state = Success(widget.detail!);
@@ -102,6 +109,11 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
       _locateProgressEpisode(widget.detail!);
     }
     _loadDetail();
+  }
+
+  /// 演示模式开关变化时刷新（切换演示态即时生效，无需重进页面）。
+  void _onDemoModeChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onGlobalOrderChanged() {
@@ -127,6 +139,8 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   Future<void> _loadDetail({int? seasonId, int? epId, int? mediaId}) async {
+    // 演示模式：完全隔离真实网络（刷新 / 切季均不请求）。
+    if (Pref.demoMode) return;
     final sid = seasonId ?? widget.seasonId;
     final eid = epId ?? widget.epId;
     final mid = mediaId ?? widget.mediaId;
@@ -276,6 +290,15 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   // ─────────────────────────── 追番交互 ───────────────────────────
 
   Future<void> _followBangumi() async {
+    // 演示模式：本地态切换（实时生效），不触发登录校验与真实追番请求。
+    if (Pref.demoMode) {
+      setState(() {
+        _isFollowed = true;
+        _followStatus = 2; // 默认“在看”
+      });
+      showToast(context, '已开始追番');
+      return;
+    }
     if (!await LoginGuard.requireLogin(context)) return;
     final detail = _detail;
     if (detail == null) return;
@@ -294,6 +317,15 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   Future<void> _unfollowBangumi() async {
+    // 演示模式：本地态切换（实时生效），不触发登录校验与真实请求。
+    if (Pref.demoMode) {
+      setState(() {
+        _isFollowed = false;
+        _followStatus = 0;
+      });
+      showToast(context, '已取消追番');
+      return;
+    }
     if (!await LoginGuard.requireLogin(context)) return;
     final detail = _detail;
     if (detail == null) return;
@@ -312,6 +344,21 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   }
 
   Future<void> _updateFollowStatus(int status) async {
+    // 演示模式：本地态切换（实时生效），不触发登录校验与真实请求。
+    if (Pref.demoMode) {
+      final label = switch (status) {
+        1 => '想看',
+        2 => '在看',
+        3 => '看过',
+        _ => '已更新',
+      };
+      setState(() {
+        _isFollowed = true;
+        _followStatus = status;
+      });
+      showToast(context, '已更新为“$label”');
+      return;
+    }
     if (!await LoginGuard.requireLogin(context)) return;
     final detail = _detail;
     if (detail == null) return;
@@ -462,22 +509,129 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           child: AppTooltip(message: '分享', child: AppIcon(AppIcons.share())),
         ),
       ],
-      body: DemoMask(
-        skeleton: () => _buildSkeleton(cs),
-        child: () => switch (_state) {
-          Loading() => _buildSkeleton(cs),
-          Error(:final errMsg) => _buildError(errMsg),
-          Success(:final response) => LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= kDetailNarrowBreakpoint;
-                return isWide
-                    ? _buildWideLayout(response, cs)
-                    : _buildNarrowLayout(response, cs);
-              },
-            ),
-        },
-      ),
+      // 演示模式：不再整页骨架，改用「本地占位详情 + 复用正常模式宽/窄屏布局」。
+      body: Pref.demoMode
+          ? _buildDetailLayout(_demoDetail(), cs)
+          : switch (_state) {
+              Loading() => _buildSkeleton(cs),
+              Error(:final errMsg) => _buildError(errMsg),
+              Success(:final response) => _buildDetailLayout(response, cs),
+            },
     );
+  }
+
+  /// 宽/窄屏自适应布局分派（正常模式与演示模式共用，保证 1:1 一致）。
+  Widget _buildDetailLayout(BangumiDetail detail, AppPalette cs) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= kDetailNarrowBreakpoint;
+        return isWide
+            ? _buildWideLayout(detail, cs)
+            : _buildNarrowLayout(detail, cs);
+      },
+    );
+  }
+
+  /// 演示模式本地占位详情：与真实数据结构同源（`BangumiDetail`），
+  /// 内容为脱敏占位（不使用任何云端真实数据），仅用于演示排版与交互。
+  ///
+  /// - **不发起任何网络请求**；封面经 `NetworkImgLayer` 在演示态直接命中
+  ///   灰色占位分支（见其 `demo` 判断），不加载真实图片；
+  /// - 剧集 / 季度 / 花絮均为本地生成，集数与集标题可稳定复现；
+  /// - `userStatus` 置空 → 不显示“上次看到”标记（正常模式在无观看记录时
+  ///   同样不显示，非伪造状态）。
+  BangumiDetail _demoDetail() {
+    final cached = _demoDetailCache;
+    if (cached != null) return cached;
+
+    const episodeCount = 24;
+    final episodes = <BangumiEpisode>[
+      for (int i = 1; i <= episodeCount; i++)
+        BangumiEpisode(
+          id: 900000 + i,
+          bvid: 'BV1demo$i',
+          cid: 800000 + i,
+          title: '$i',
+          longTitle: '演示剧集标题 $i',
+          duration: (24 * 60 + i) * 1000,
+          badge: i == episodeCount ? '会员' : null,
+        ),
+    ];
+    final extras = <BangumiEpisode>[
+      for (int i = 1; i <= 3; i++)
+        BangumiEpisode(
+          id: 700000 + i,
+          bvid: 'BV1demopv$i',
+          cid: 600000 + i,
+          title: 'PV $i',
+          longTitle: '演示预告片 $i',
+          duration: 90000,
+        ),
+    ];
+
+    final detail = BangumiDetail(
+      seasonId: 999901,
+      mediaId: 999902,
+      title: '演示番剧名称',
+      subtitle: '演示番剧副标题',
+      seasonTitle: '演示 · 第一季',
+      evaluate: '这是一段用于演示排版的番剧简介占位文本。'
+          '它由本地生成，不含任何云端真实内容，仅用于展示简介区的折叠与展开交互效果。'
+          '当文本长度超过四行时，底部会出现“展开全部简介”入口，点击后完整展示。'
+          '（本段为演示数据，与真实番剧信息无关。）',
+      rating: const BangumiRating(score: 9.4, count: 123456),
+      stat: const BangumiStat(
+        views: 123456789,
+        danmakus: 987654,
+        favorites: 4567890,
+        coins: 1234567,
+        likes: 2345678,
+        reply: 34567,
+        share: 8901,
+      ),
+      newEp: const NewEpDetail(
+        id: 900024,
+        title: '$episodeCount',
+        desc: '更新至第 $episodeCount 话',
+        isNew: 1,
+      ),
+      episodes: episodes,
+      seasons: const [
+        SeasonInfo(
+          seasonId: 999901,
+          seasonTitle: '第一季',
+          title: '演示番剧名称',
+          isNew: 0,
+        ),
+        SeasonInfo(
+          seasonId: 999902,
+          seasonTitle: '第二季',
+          title: '演示番剧名称 Ⅱ',
+          isNew: 1,
+        ),
+      ],
+      sections: [
+        BangumiSection(id: 1, title: '花絮', type: 1, episodes: extras),
+      ],
+      styles: const ['奇幻', '冒险', '热血', '日常'],
+      areas: const [
+        AreaInfo(id: 1, name: '日本'),
+        AreaInfo(id: 2, name: '中国大陆'),
+      ],
+      actors: '演示声优甲 / 演示声优乙 / 演示声优丙',
+      staff: '演示导演 / 演示编剧 / 演示动画制作',
+      seasonType: 1,
+      seasonTypeName: '番剧',
+      total: episodeCount,
+      mode: 3,
+      publish: const BangumiPublish(
+        releaseDateShow: '2026年1月10日',
+        isFinish: 0,
+      ),
+      rights: const BangumiRights(canWatch: 1, allowReview: 1),
+    );
+    _demoDetailCache = detail;
+    return detail;
   }
 
   /// 骨架屏
