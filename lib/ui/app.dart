@@ -34,6 +34,14 @@ class _AppRootState extends State<AppRoot> {
   int _currentIndex = 0;
   Brightness? _brightness;
 
+  /// 已访问过的根页面索引 —— 懒加载：首次切到某页才构建。
+  ///
+  /// 此前 5 个根页面（首页/动态/历史/消息/我的）在 [IndexedStack] 中一次性
+  /// 构建，冷启动即同时触发各页首批请求（动态流、历史、会话列表等），
+  /// 造成启动网络与渲染压力。改为与首页分类 tab 相同的「访问即建」策略：
+  /// 未访问页面先占位 [SizedBox.shrink]，首次切换时才实例化并常驻保留状态。
+  final Set<int> _visitedPages = {0};
+
   @override
   void initState() {
     super.initState();
@@ -53,7 +61,12 @@ class _AppRootState extends State<AppRoot> {
     }
   }
 
-  void _onSelect(int i) => setState(() => _currentIndex = i);
+  void _onSelect(int i) {
+    setState(() {
+      _currentIndex = i;
+      _visitedPages.add(i);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,15 +82,29 @@ class _AppRootState extends State<AppRoot> {
         body: IndexedStack(
           index: _currentIndex,
           children: [
-            HomePage(onGotoProfile: () => _onSelect(_indexOf(AppPage.profile))),
-            DynamicsPage(),
-            HistoryPage(),
-            WhisperPage(),
-            ProfilePage(onNavigate: (p) => _onSelect(_indexOf(p))),
+            _buildLazyPage(
+              0,
+              () => HomePage(
+                onGotoProfile: () => _onSelect(_indexOf(AppPage.profile)),
+              ),
+            ),
+            _buildLazyPage(1, () => const DynamicsPage()),
+            _buildLazyPage(2, () => const HistoryPage()),
+            _buildLazyPage(3, () => const WhisperPage()),
+            _buildLazyPage(
+              4,
+              () => ProfilePage(onNavigate: (p) => _onSelect(_indexOf(p))),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// 未访问页面先占位，首次切到才实例化（状态由 [IndexedStack] 常驻保留）。
+  Widget _buildLazyPage(int index, Widget Function() builder) {
+    if (!_visitedPages.contains(index)) return const SizedBox.shrink();
+    return builder();
   }
 }
 

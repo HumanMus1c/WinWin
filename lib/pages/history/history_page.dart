@@ -30,6 +30,7 @@ import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/date_utils.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
@@ -206,10 +207,27 @@ class _HistoryPageState extends State<HistoryPage> {
       'HistoryPage',
       'Loading history type: $_type max: ${s.max}, viewAt: ${s.viewAt}',
     );
+    // 视口预算：历史卡片为 VideoCardH 宫格，冷启动首批最多 2 屏、
+    // 滚动补批最多 1 屏；小窗口下自动收紧每页条数。
+    final visibleItems = ViewportLoadBudget.visibleGridItems(
+      viewportExtent: ViewportLoadBudget.viewportExtentOf(
+        _scrollController,
+        reservedHeight: 160,
+      ),
+      viewportWidth: ViewportLoadBudget.windowLogicalWidth - 24,
+      rowExtent: 116,
+      maxCrossAxisExtent: 420,
+    );
+    final pageSize = ViewportLoadBudget.capRequestItems(
+      fallback: 20,
+      visibleItems: visibleItems,
+      firstPage: refresh || s.max == null,
+    );
     final res = await HistoryHttp.historyList(
       type: _type,
       max: s.max,
       viewAt: s.viewAt,
+      ps: pageSize,
     );
     if (!mounted) return;
 
@@ -235,12 +253,12 @@ class _HistoryPageState extends State<HistoryPage> {
               response.cursor!.max! > 0) {
             s.max = response.cursor!.max;
             s.viewAt = response.cursor!.viewAt;
-            s.hasMore = (response.list?.length ?? 0) >= 20 && s.max != 0;
+            s.hasMore = (response.list?.length ?? 0) >= pageSize && s.max != 0;
           } else if (response.list != null && response.list!.isNotEmpty) {
             final last = response.list!.last;
             s.max = last.history.oid;
             s.viewAt = last.viewAt;
-            s.hasMore = response.list!.length >= 20;
+            s.hasMore = response.list!.length >= pageSize;
           } else {
             s.hasMore = false;
           }

@@ -11,6 +11,7 @@ import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
@@ -55,7 +56,18 @@ class _SysMsgPageState extends State<SysMsgPage> {
       setState(() => _loading = true);
     }
     if (!_hasMore) return;
-    final res = await MsgHttp.msgFeedNotify(cursor: _cursor);
+    // 视口预算：系统消息行高约 76，冷启动首批最多 2 屏、滚动补批最多 1 屏。
+    final visibleRows = ViewportLoadBudget.visibleRows(
+      viewportExtent: ViewportLoadBudget.viewportExtentOf(null, reservedHeight: 120),
+      rowExtent: 76,
+    );
+    final firstPage = refresh || _cursor == null;
+    final pageSize = ViewportLoadBudget.capRequestItems(
+      fallback: 20,
+      visibleItems: visibleRows,
+      firstPage: firstPage,
+    );
+    final res = await MsgHttp.msgFeedNotify(cursor: _cursor, pageSize: pageSize);
     if (!mounted) return;
     switch (res) {
       case Success(:final response):
@@ -64,7 +76,7 @@ class _SysMsgPageState extends State<SysMsgPage> {
           _loading = false;
           _error = null;
           _items.addAll(items);
-          _hasMore = items.length >= 20;
+          _hasMore = items.length >= pageSize;
           _cursor = items.isNotEmpty
               ? (items.last['cursor'] as num?)?.toInt()
               : _cursor;

@@ -21,6 +21,7 @@ import 'package:winwin/pages/whisper/session/session_more_menu_button.dart';
 import 'package:winwin/pages/whisper/session/session_pagination_policy.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
@@ -142,11 +143,25 @@ class _SessionListPageState extends State<SessionListPage> {
         return;
       }
     }
+    // 视口预算：冷启动首批最多 2 屏、滚动补批最多 1 屏。
+    // 此前固定取 100 条，远超一屏行数（常见窗口约 9~12 行），冷启动会把
+    // 大量不可见会话一并拉回。置顶会话每页重复返回的问题由
+    // SessionPaginationPolicy 的整页去重重试兜底。
+    final visibleRows = ViewportLoadBudget.visibleRows(
+      viewportExtent: ViewportLoadBudget.viewportExtentOf(
+        null,
+        reservedHeight: 150,
+      ),
+      rowExtent: 72,
+    );
+    final pageSize = ViewportLoadBudget.capRequestItems(
+      fallback: 100,
+      visibleItems: visibleRows,
+      firstPage: refresh || _endTs == 0,
+    );
     final res = await MsgHttp.sessionList(
       sessionType: _isSpecialMode ? 4 : _selectedType,
-      // size 对齐 BiliPai 取 100：置顶会话会在每页重复返回，
-      // 页容量太小会导致整页去重后提前终止翻页、会话大量缺失。
-      size: 100,
+      size: pageSize,
       endTs: requestedEndTs > 0 ? requestedEndTs : null,
     );
     _isLoadingMore = false;

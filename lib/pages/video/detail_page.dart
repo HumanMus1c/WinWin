@@ -51,6 +51,7 @@ import 'package:winwin/pages/video/video_action_row.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
 import 'package:winwin/utils/duration_utils.dart';
@@ -702,10 +703,20 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     _loadingReplies = true;
     if (mounted) setState(() {});
     try {
+      // 评论为变高列表，按约 96 的行高估算：冷启动/刷新最多 2 屏，
+      // 滚动补批最多 1 屏（只收紧请求条数，不改变游标语义）。
+      final pageSize = ViewportLoadBudget.pageSizeFor(
+        fallback: 20,
+        rowExtent: 96,
+        controller: scrollController,
+        reservedHeight: 200,
+        firstPage: refresh || nextOffset == null,
+      );
       final res = await VideoHttp.replyMain(
         oid: oid,
         nextOffset: nextOffset,
         mode: _replyMode,
+        ps: pageSize,
       );
       if (!mounted) return;
       switch (res) {
@@ -972,6 +983,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       oid: aid,
       root: rpid,
       pn: pageNo,
+      ps: ViewportLoadBudget.pageSizeFor(
+        fallback: 20,
+        rowExtent: 90,
+        reservedHeight: 220,
+        firstPage: pageNo <= 1,
+      ),
     );
     if (!mounted) return;
     switch (res) {

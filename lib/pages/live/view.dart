@@ -16,6 +16,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_transparent_host.dart';
@@ -320,7 +321,21 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
       setState(() => _state = LoadingState.loading());
     }
     await ensureBootstrap();
-    final res = await LiveHttp.liveFollow(page: _page);
+    // 视口预算：直播卡约 280 行高，冷启动首批最多 2 屏、滚动补批最多 1 屏。
+    final pageSize = ViewportLoadBudget.capRequestItems(
+      fallback: 30,
+      visibleItems: ViewportLoadBudget.visibleGridItems(
+        viewportExtent: ViewportLoadBudget.viewportExtentOf(
+          _scrollController,
+          reservedHeight: 180,
+        ),
+        viewportWidth: ViewportLoadBudget.windowLogicalWidth - 104,
+        rowExtent: 288,
+        maxCrossAxisExtent: 280,
+      ),
+      firstPage: refresh,
+    );
+    final res = await LiveHttp.liveFollow(page: _page, pageSize: pageSize);
     if (!mounted) return;
     switch (res) {
       case Success(:final response):
@@ -328,7 +343,7 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
           _hasMore = false;
         } else {
           _items.addAll(response.list);
-          _hasMore = response.list.length >= 30;
+          _hasMore = response.list.length >= pageSize;
           _page++;
         }
         setState(() => _state = Success(response));
@@ -548,8 +563,23 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
       setState(() => _state = LoadingState.loading());
     }
     await ensureBootstrap();
+    // 视口预算：推荐直播同款卡片网格，冷启动首批最多 2 屏、滚动补批最多 1 屏。
+    final pageSize = ViewportLoadBudget.capRequestItems(
+      fallback: 30,
+      visibleItems: ViewportLoadBudget.visibleGridItems(
+        viewportExtent: ViewportLoadBudget.viewportExtentOf(
+          _scrollController,
+          reservedHeight: 180,
+        ),
+        viewportWidth: ViewportLoadBudget.windowLogicalWidth - 104,
+        rowExtent: 288,
+        maxCrossAxisExtent: 280,
+      ),
+      firstPage: refresh,
+    );
     final res = await LiveHttp.liveRecommend(
       page: _page,
+      pageSize: pageSize,
       parentAreaId: widget.parentAreaId,
     );
     if (!mounted) return;
@@ -559,7 +589,7 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
           _hasMore = false;
         } else {
           _items.addAll(response.list);
-          _hasMore = response.list.length >= 20;
+          _hasMore = response.list.length >= pageSize;
           _page++;
         }
         setState(() => _state = Success(response));

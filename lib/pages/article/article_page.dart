@@ -21,6 +21,7 @@ import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
@@ -101,6 +102,12 @@ class _ArticlePageState extends State<ArticlePage> {
     final res = await VideoHttp.replyMain(
       oid: numericId,
       type: 12, // 12 为 B站专栏评论区业务类型
+      ps: ViewportLoadBudget.pageSizeFor(
+        fallback: 20,
+        rowExtent: 96,
+        reservedHeight: 220,
+        firstPage: true,
+      ),
     );
 
     if (!mounted) return;

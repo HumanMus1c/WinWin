@@ -340,6 +340,7 @@ abstract final class VideoHttp {
     int type = 1,
     String? nextOffset,
     int mode = 3,
+    int ps = 20,
   }) async {
     try {
       final account = Accounts.main;
@@ -354,7 +355,7 @@ abstract final class VideoHttp {
             'mode': mode,
             'type': type,
             'oid': oid,
-            'ps': 20,
+            'ps': ps,
             'pagination_str': paginationParam,
             'web_location': '1315873',
           },
@@ -389,7 +390,7 @@ abstract final class VideoHttp {
             'mode': mode,
             'type': type,
             'oid': oid,
-            'ps': 20,
+            'ps': ps,
             'pagination_str': paginationParam,
             'web_location': '1315873',
           },
@@ -427,7 +428,7 @@ abstract final class VideoHttp {
             'type': type,
             'sort': legacySort,
             'pn': 1,
-            'ps': 20,
+            'ps': ps,
           },
           options: Options(
             headers: {
@@ -469,6 +470,7 @@ abstract final class VideoHttp {
     required int oid,
     required int root,
     int pn = 1,
+    int ps = 20,
   }) async {
     try {
       final account = Accounts.main;
@@ -478,7 +480,7 @@ abstract final class VideoHttp {
           'type': 1,
           'oid': oid,
           'root': root,
-          'ps': 20,
+          'ps': ps,
           'pn': pn,
           'web_location': '1315873',
         },

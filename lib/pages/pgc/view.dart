@@ -19,6 +19,7 @@ import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_transparent_host.dart';
@@ -378,7 +379,21 @@ class _HotBangumiViewState extends State<_HotBangumiView>
       setState(() => _state = LoadingState.loading());
     }
     await ensureBootstrap();
-    final res = await PgcHttp.pgcIndex(page: _page);
+    // 视口预算：番剧索引卡约 270 行高，冷启动首批最多 2 屏、补批最多 1 屏。
+    final pageSize = ViewportLoadBudget.capRequestItems(
+      fallback: 20,
+      visibleItems: ViewportLoadBudget.visibleGridItems(
+        viewportExtent: ViewportLoadBudget.viewportExtentOf(
+          _scrollController,
+          reservedHeight: 180,
+        ),
+        viewportWidth: ViewportLoadBudget.windowLogicalWidth - 24,
+        rowExtent: 278,
+        maxCrossAxisExtent: 180,
+      ),
+      firstPage: refresh,
+    );
+    final res = await PgcHttp.pgcIndex(page: _page, pageSize: pageSize);
     if (!mounted) return;
     switch (res) {
       case Success(:final response):
@@ -386,7 +401,7 @@ class _HotBangumiViewState extends State<_HotBangumiView>
           _hasMore = false;
         } else {
           _items.addAll(response);
-          _hasMore = response.length >= 20;
+          _hasMore = response.length >= pageSize;
           _page++;
         }
         setState(() => _state = Success(response));

@@ -18,13 +18,14 @@ abstract final class HistoryHttp {
     String type = 'all',
     int? max,
     int? viewAt,
+    int ps = 20,
   }) async {
     try {
       final res = await Request().get<dynamic>(
         Api.historyList,
         queryParameters: {
           'type': type,
-          'ps': 20,
+          'ps': ps,
           'max': max ?? 0,
           'view_at': viewAt ?? 0,
         },

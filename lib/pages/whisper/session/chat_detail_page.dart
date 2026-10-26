@@ -21,6 +21,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
@@ -100,9 +101,23 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
     if (!_hasMore || _loadingMore) return;
     _loadingMore = true;
+    // 视口预算：聊天记录行高约 64，冷启动首批最多 2 屏、向上翻历史每次最多 1 屏。
+    final visibleRows = ViewportLoadBudget.visibleRows(
+      viewportExtent: ViewportLoadBudget.viewportExtentOf(
+        _scrollCtrl,
+        reservedHeight: 140,
+      ),
+      rowExtent: 64,
+    );
+    final pageSize = ViewportLoadBudget.capRequestItems(
+      fallback: 20,
+      visibleItems: visibleRows,
+      firstPage: refresh || _minSeqno == null,
+    );
     final res = await MsgHttp.sessionMsg(
       talkerId: widget.talkerId,
       sessionType: widget.sessionType,
+      size: pageSize,
       endSeqno: refresh ? null : _minSeqno,
     );
     _loadingMore = false;

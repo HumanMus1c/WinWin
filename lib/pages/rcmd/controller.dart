@@ -3,6 +3,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/common/common_list_controller.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 
 class RcmdController extends CommonListController {
   // Simplified from Pref.enableSaveLastData; keeps last data on error/refresh.
@@ -17,13 +18,23 @@ class RcmdController extends CommonListController {
   /// 避免裁头导致滚动偏移回缩、在底部反复触发加载）。
   static const int _maxItems = 300;
 
-  /// 单次补货并发拉取的批次数。
+  /// 单次补货并发拉取的批次数上限。
   ///
   /// 实测（2026-10-26 登录态连续探测 31 批）：服务端在同一会话内会大量回送
   /// 刚发过的卡片，单批 8 条去重后常常只剩 0~3 条，而每批要 800ms 左右，
   /// 串行追平的观感就是「新内容一张一张往外蹦」。并发多批可在同一时间窗
   /// 内拿到数倍有效条目，合并后一次性提交，用户看到的是成块新增。
-  static const int _prefetchBatches = 4;
+  ///
+  /// 批次数按视口预算收敛（2026-10-27）：只补足「一屏」的额度，
+  /// 小窗口下自动降到 1~2 批，避免一次拉回远超视口的内容。
+  static const int _maxPrefetchBatches = 4;
+
+  /// App 推荐接口单批原始条数的保守估计（去重后通常更少）。
+  static const int _assumedBatchSize = 8;
+
+  /// 推荐流网格：单行高度（卡片 90 + 间距 8）与单卡宽度上限。
+  static const double _gridRowExtent = 98;
+  static const double _gridMaxCrossAxisExtent = 240;
 
   // Endless feed: never mark as ended.
   @override
@@ -123,13 +134,18 @@ class RcmdController extends CommonListController {
         // "List<dynamic> is not a subtype of Iterable<RcmdVideoItemAppModel>"。
         final added = <RcmdVideoItemAppModel>[];
         // 服务端偶发整轮都只回送已看过的卡片（实测连续 7 批新增 0~1 条），
-        // 空手而归时再补一轮，避免滚到底毫无反应。
-        for (var round = 0; round < 2 && added.isEmpty; round++) {
+        // 空手而归时再补一轮，避免滚到底毫无反应。两轮合计仍受
+        // [_maxPrefetchBatches] 封顶，不会因重试放大拉取量。
+        var batchesLeft = _maxPrefetchBatches;
+        for (var round = 0; round < 2 && added.isEmpty && batchesLeft > 0; round++) {
+          final count = _prefetchBatchCount < batchesLeft
+              ? _prefetchBatchCount
+              : batchesLeft;
           final batches = await Future.wait([
-            for (var i = 0; i < _prefetchBatches; i++)
-              _fetchBatch(nextIdx + i),
+            for (var i = 0; i < count; i++) _fetchBatch(nextIdx + i),
           ]);
-          nextIdx += _prefetchBatches;
+          nextIdx += count;
+          batchesLeft -= count;
 
           final seen = <String>{};
           for (final item in list) {
@@ -153,6 +169,30 @@ class RcmdController extends CommonListController {
         await flushPendingRefresh();
       }
     }
+  }
+
+  /// 当前视口可容纳的推荐卡片数（扣除滚动区上下留白 220）。
+  int get _viewportCardCapacity {
+    final extent = ViewportLoadBudget.viewportExtentOf(scrollController) - 220;
+    final width = ViewportLoadBudget.windowLogicalWidth - 104; // 侧栏 80 + 页边 24
+    return ViewportLoadBudget.visibleGridItems(
+      viewportExtent: extent > 0 ? extent : 1,
+      viewportWidth: width > 0 ? width : _gridMaxCrossAxisExtent,
+      rowExtent: _gridRowExtent,
+      maxCrossAxisExtent: _gridMaxCrossAxisExtent,
+    );
+  }
+
+  /// 本轮补货批次数：只补足「一屏」额度，最多 [_maxPrefetchBatches]。
+  int get _prefetchBatchCount {
+    final target = ViewportLoadBudget.capRequestItems(
+      fallback: _maxPrefetchBatches * _assumedBatchSize,
+      visibleItems: _viewportCardCapacity,
+      firstPage: false,
+    );
+    final count = (target / _assumedBatchSize).ceil();
+    if (count < 1) return 1;
+    return count > _maxPrefetchBatches ? _maxPrefetchBatches : count;
   }
 
   Future<List<RcmdVideoItemAppModel>> _fetchBatch(int idx) async {

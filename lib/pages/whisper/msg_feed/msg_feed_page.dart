@@ -97,6 +97,8 @@ class _MsgFeedPageState extends State<MsgFeedPage> {
       setState(() => _loading = true);
     }
     if (!_hasMore) return;
+    // 回复/艾特/点赞消息接口不开放每页条数（服务端固定批量），
+    // 因此只保证单批在途 + 列表尾项进入视口缓存区时才请求，不并发多批。
     final res = await widget.loader(cursor: _cursor, cursorTime: _cursorTime);
     if (!mounted) return;
     switch (res) {

@@ -54,6 +54,7 @@ import 'package:winwin/utils/date_utils.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
@@ -652,9 +653,21 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   Future<void> _loadMoreVideos() async {
     if (_loadingVideos || _videoEnd || _videoFailed) return;
     setState(() => _loadingVideos = true);
+    // 视口预算：投稿视频宫格，冷启动首批最多 2 屏、滚动补批最多 1 屏。
+    final ps = ViewportLoadBudget.capRequestItems(
+      fallback: 30,
+      visibleItems: ViewportLoadBudget.visibleGridItems(
+        viewportExtent: ViewportLoadBudget.windowLogicalHeight - 260,
+        viewportWidth: ViewportLoadBudget.windowLogicalWidth - 24,
+        rowExtent: 118,
+        maxCrossAxisExtent: 440,
+      ),
+      firstPage: _videoPage <= 1,
+    );
     final res = await MemberHttp.spaceArchive(
       mid: widget.mid,
       pageNum: _videoPage,
+      ps: ps,
       order: _videoOrder,
     );
     if (!mounted) return;

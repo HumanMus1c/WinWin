@@ -13,6 +13,7 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:flutter_miuix/miuix.dart';
@@ -54,14 +55,15 @@ class _RcmdPageState extends State<RcmdPage>
     super.dispose();
   }
 
-  /// 无限推荐流提前补货：距底不足 1.5 屏就发起并发拉取，
-  /// 让用户滚到底之前内容已就绪，而不是到底才等网络一圈一圈地补。
+  /// 无限推荐流提前补货：距底不足 1 屏才发起拉取。
+  ///
+  /// 只允许在视口之外多预取约一屏（2026-10-27 视口预算统一口径）；
+  /// 更早触发会把后面多屏内容提前拉回，徒增接口压力。
   void _onFeedScroll() {
     if (Pref.demoMode) return;
     final sc = controller.scrollController;
     if (!sc.hasClients || !sc.position.hasContentDimensions) return;
-    final pos = sc.position;
-    if (pos.maxScrollExtent - pos.pixels > pos.viewportDimension * 1.5) return;
+    if (!ViewportLoadBudget.shouldLoadMore(sc.position)) return;
     controller.onLoadMore();
   }
 

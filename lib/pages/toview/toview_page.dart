@@ -32,6 +32,7 @@ import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
@@ -189,7 +190,21 @@ class _ToviewPageState extends State<ToviewPage> {
 
     ApiBlackbox.log('ToviewPage', 'Fetching toviewList page=$_page');
     AppLogger.d('ToviewPage', 'Loading toview page $_page');
-    final res = await ToviewHttp.toviewList(page: _page);
+    // 视口预算：稍后再看为 VideoCardH 宫格，冷启动首批最多 2 屏、补批最多 1 屏。
+    final ps = ViewportLoadBudget.capRequestItems(
+      fallback: 20,
+      visibleItems: ViewportLoadBudget.visibleGridItems(
+        viewportExtent: ViewportLoadBudget.viewportExtentOf(
+          _scrollController,
+          reservedHeight: 160,
+        ),
+        viewportWidth: ViewportLoadBudget.windowLogicalWidth - 24,
+        rowExtent: 118,
+        maxCrossAxisExtent: 440,
+      ),
+      firstPage: refresh,
+    );
+    final res = await ToviewHttp.toviewList(page: _page, ps: ps);
     if (!mounted) return;
 
     switch (res) {

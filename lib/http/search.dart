@@ -43,12 +43,13 @@ abstract final class SearchHttp {
     required SearchType searchType,
     required String keyword,
     required int page,
+    int pageSize = 20,
   }) async {
     final params = await WbiSign.makSign({
       'search_type': searchType.name,
       'keyword': keyword,
       'page': page,
-      'page_size': 20,
+      'page_size': pageSize,
       'platform': 'pc',
       'web_location': 1430654,
     });

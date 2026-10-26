@@ -50,6 +50,7 @@ import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/glass_contrast_widgets.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
@@ -505,10 +506,19 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
     if (mounted) setState(() {});
 
     try {
+      // 视口预算：评论变高列表按约 96 行高估算，首批最多 2 屏、补批最多 1 屏。
+      final pageSize = ViewportLoadBudget.pageSizeFor(
+        fallback: 20,
+        rowExtent: 96,
+        controller: _scrollController,
+        reservedHeight: 200,
+        firstPage: refresh || _nextOffset == null,
+      );
       final res = await VideoHttp.replyMain(
         oid: oid,
         mode: _replyMode,
         nextOffset: _nextOffset,
+        ps: pageSize,
       );
 
       if (!mounted) return;
@@ -664,6 +674,12 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
       oid: aid,
       root: rpid,
       pn: pageNo,
+      ps: ViewportLoadBudget.pageSizeFor(
+        fallback: 20,
+        rowExtent: 90,
+        reservedHeight: 220,
+        firstPage: pageNo <= 1,
+      ),
     );
     if (!mounted) return;
     switch (res) {

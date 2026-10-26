@@ -115,6 +115,7 @@ abstract final class MemberHttp {
     required int mid,
     String? cursor,
     int pageNum = 1,
+    int ps = 30,
     ArchiveOrderType order = ArchiveOrderType.pubdate,
     int? seasonId,
     int? seriesId,
@@ -167,7 +168,7 @@ abstract final class MemberHttp {
         '/x/space/arc/search',
         queryParameters: {
           'mid': mid,
-          'ps': 30,
+          'ps': ps,
           'pn': pageNum,
           'order': orderParam,
         },
@@ -195,7 +196,7 @@ abstract final class MemberHttp {
             pubdate: _asInt(m['created']),
           );
         }).toList();
-        final isEnd = (pageNum * 30) >= total;
+        final isEnd = (pageNum * ps) >= total;
         return Success(MemberArchiveData(list: list, isEnd: isEnd));
       } else {
         return Error(data['message']?.toString() ?? '获取投稿列表失败');

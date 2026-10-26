@@ -203,6 +203,10 @@ class _DynTabPageState extends State<_DynTabPage>
     if (Pref.demoMode) return;
     if (_loading) return;
     if (!refresh && !_hasMore) return;
+    // 动态流接口（feed/all）由服务端固定批量（约 20 条），无法按视口调小；
+    // 此处保证「单批在途」且滚动距底不足 240px（＜1 屏）才请求，
+    // 冷启动不打开本页就不拉取（根壳已改懒加载）。
+    // 其余可调 ps 的列表统一走 ViewportLoadBudget 单页上限。
     _loading = true;
     if (refresh) {
       _offset = null;

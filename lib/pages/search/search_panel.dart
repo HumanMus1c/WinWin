@@ -23,6 +23,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
@@ -104,10 +105,25 @@ class _SearchPanelState extends State<SearchPanel>
       if (_page == 1) _firstLoaded = false;
     });
 
+    // 视口预算：搜索结果卡片约 110 行高，冷启动首批最多 2 屏、补批最多 1 屏。
+    final pageSize = ViewportLoadBudget.capRequestItems(
+      fallback: 20,
+      visibleItems: ViewportLoadBudget.visibleGridItems(
+        viewportExtent: ViewportLoadBudget.viewportExtentOf(
+          _scrollController,
+          reservedHeight: 160,
+        ),
+        viewportWidth: ViewportLoadBudget.windowLogicalWidth - 24,
+        rowExtent: 118,
+        maxCrossAxisExtent: 440,
+      ),
+      firstPage: _page == 1,
+    );
     final res = await SearchHttp.searchByType(
       searchType: widget.searchType,
       keyword: widget.keyword,
       page: _page,
+      pageSize: pageSize,
     );
 
     if (!mounted) return;
@@ -119,7 +135,7 @@ class _SearchPanelState extends State<SearchPanel>
           final list = response.list ?? [];
           if (_page == 1) _items.clear();
           _items.addAll(list);
-          _hasMore = list.length >= 20;
+          _hasMore = list.length >= pageSize;
           if (_hasMore) _page++;
         case Error(:final errMsg):
           _errorMsg = errMsg ?? '加载失败';

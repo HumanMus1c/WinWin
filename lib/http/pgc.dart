@@ -69,6 +69,7 @@ abstract final class PgcHttp {
   static Future<LoadingState<List<Map<String, dynamic>>?>> pgcIndex({
     int? page,
     int? indexType,
+    int pageSize = 20,
   }) async {
     final res = await Request().get(
       Api.pgcIndexResult,
@@ -86,7 +87,7 @@ abstract final class PgcHttp {
         'style_id': -1,
         'sort': 0,
         'season_type': 1,
-        'pagesize': 20,
+        'pagesize': pageSize,
         'type': 1,
         'page': page,
         'index_type': ?indexType,

@@ -33,6 +33,7 @@ import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
@@ -180,7 +181,16 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       return;
     }
 
-    final res = await VideoHttp.replyMain(oid: target.oid, type: target.type);
+    final res = await VideoHttp.replyMain(
+      oid: target.oid,
+      type: target.type,
+      ps: ViewportLoadBudget.pageSizeFor(
+        fallback: 20,
+        rowExtent: 96,
+        reservedHeight: 220,
+        firstPage: true,
+      ),
+    );
     if (!mounted) return;
     switch (res) {
       case Success(:final response):

@@ -26,6 +26,7 @@ import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
+import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
@@ -140,8 +141,23 @@ class _FavPageState extends State<FavPage> {
 
     ApiBlackbox.log('FavPage', 'Fetching userFavFolder pn=$_page, mid=${Accounts.main.mid}');
     AppLogger.d('FavPage', 'Loading page $_page for mid ${Accounts.main.mid}');
+    // 视口预算：收藏夹封面卡约 112 行高，冷启动首批最多 2 屏、补批最多 1 屏。
+    final ps = ViewportLoadBudget.capRequestItems(
+      fallback: 20,
+      visibleItems: ViewportLoadBudget.visibleGridItems(
+        viewportExtent: ViewportLoadBudget.viewportExtentOf(
+          _scrollController,
+          reservedHeight: 160,
+        ),
+        viewportWidth: ViewportLoadBudget.windowLogicalWidth - 24,
+        rowExtent: 112,
+        maxCrossAxisExtent: 380,
+      ),
+      firstPage: refresh,
+    );
     var res = await FavHttp.userFavFolder(
       pn: _page,
+      ps: ps,
       mid: Accounts.main.mid,
     );
     if (!mounted) return;

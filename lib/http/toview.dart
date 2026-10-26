@@ -15,6 +15,7 @@ abstract final class ToviewHttp {
   /// [viewed] 0=全部，2=未看完。 [asc] false=最近添加，true=最早添加。
   static Future<LoadingState<LaterData>> toviewList({
     int page = 1,
+    int ps = 20,
     int viewed = 0,
     String keyword = '',
     bool asc = false,
@@ -24,7 +25,7 @@ abstract final class ToviewHttp {
         Api.seeYouLater,
         queryParameters: await WbiSign.makSign({
           'pn': page,
-          'ps': 20,
+          'ps': ps,
           'viewed': viewed,
           'key': keyword,
           'asc': asc,
