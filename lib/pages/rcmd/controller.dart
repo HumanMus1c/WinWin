@@ -16,6 +16,16 @@ class RcmdController extends CommonListController {
   /// 推荐流常驻条数上限（无限 feed 的滑窗大小）。
   static const int _maxItems = 300;
 
+  /// 单次下滚至少补够的新条目数：服务端偶尔回送已看过的卡片时，
+  /// 只追加一两条会让信息流看起来「一张一张」地出现，故按半行以上追平。
+  static const int _minNewPerLoad = 6;
+
+  /// 单次下滚最多追拉的批次数，避免服务端持续重复时形成请求风暴。
+  static const int _maxCatchUp = 3;
+
+  /// 本次下滚实际新增条数（去重后），供 [onLoadMore] 追平判断。
+  int _lastAppended = 0;
+
   // Endless feed: never mark as ended.
   @override
   bool get isEnd => false;
@@ -77,6 +87,7 @@ class RcmdController extends CommonListController {
     // On refresh (page == 0) merge old data below the new batch so users
     // don't lose what they haven't seen yet.
     if (enableSaveLastData && page == 0) {
+      _lastAppended = 0;
       if (loadingState.value case Success(:final response)) {
         final old = response;
         if (old == null || old.isEmpty) {
@@ -115,6 +126,7 @@ class RcmdController extends CommonListController {
         final key = _keyOf(item);
         return key != null && !seen.add(key);
       });
+      _lastAppended = dataList.length;
       final overflow = list.length + dataList.length - _maxItems;
       if (overflow <= 0) return;
       list.removeRange(0, overflow);
@@ -127,12 +139,21 @@ class RcmdController extends CommonListController {
   }
 
   @override
-  Future<void> onRefresh() async {
-    // 收在途的下滚请求：否则 queryData 会被 isLoading 直接吞掉（下拉刷新看起来
-    // 没反应），且旧请求完成后会把刚重置的 page 写回 1，导致后续 idx 重播已加载批次。
-    while (isLoading) {
-      await Future<void>.delayed(const Duration(milliseconds: 40));
+  Future<void> onLoadMore() async {
+    if (isLoading) return;
+    // 服务端同一游标区间可能回送大量已看过的卡片；去重后若新增过少，
+    // 立刻追下一批，避免信息流「一张一张」地出现。
+    for (var attempt = 0; attempt < _maxCatchUp; attempt++) {
+      _lastAppended = 0;
+      await super.onLoadMore();
+      if (_lastAppended >= _minNewPerLoad) return;
     }
+  }
+
+  @override
+  Future<void> onRefresh() async {
+    // 在途请求未收尾时登记补发：既不丢下拉刷新，也不再轮询阻塞指示器。
+    if (isLoading) return deferRefresh();
     page = 0;
     isEnd = false;
     await queryData();

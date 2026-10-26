@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
 import 'package:winwin/http/dio_error_message.dart';
@@ -8,6 +10,9 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
   int page = 1;
   bool isEnd = false;
 
+  /// 在途请求挡住刷新时登记的补发任务。
+  Completer<void>? _pendingRefresh;
+
   @override
   Rx<LoadingState<List<T>?>> loadingState =
       LoadingState<List<T>?>.loading().obs;
@@ -17,6 +22,22 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
   void handleListResponse(List dataList) {}
 
   List<T>? getDataList(R response) => response as List<T>?;
+
+  /// 有请求在途时登记一次「收尾后立刻刷新」，返回的 Future 在刷新完成后结束。
+  ///
+  /// 相比轮询等待：不占用调用方（如下拉指示器）的等待时间，也不会丢刷新请求。
+  Future<void> deferRefresh() => (_pendingRefresh ??= Completer<void>()).future;
+
+  Future<void> _flushPendingRefresh() async {
+    final pending = _pendingRefresh;
+    if (pending == null) return;
+    _pendingRefresh = null;
+    try {
+      await onRefresh();
+    } finally {
+      pending.complete();
+    }
+  }
 
   @override
   Future<void> queryData([bool isRefresh = true]) async {
@@ -39,12 +60,16 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
         final dataList = getDataList(response);
         if (dataList == null || dataList.isEmpty) {
           isEnd = true;
+          // 空批次也推进游标：无限 feed（isEnd 恒为 false）不能靠 isEnd 兜底，
+          // 否则会以同一 idx 反复重试。
+          if (page == startPage) page++;
           if (isRefresh) {
             loadingState.value = Success(dataList);
           } else {
             loadingState.refresh();
           }
           isLoading = false;
+          await _flushPendingRefresh();
           return;
         }
         handleListResponse(dataList);
@@ -62,6 +87,7 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
       }
     }
     isLoading = false;
+    await _flushPendingRefresh();
   }
 
   @override
