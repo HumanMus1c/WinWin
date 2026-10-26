@@ -22,6 +22,9 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
   Future<void> queryData([bool isRefresh = true]) async {
     if (isLoading || (!isRefresh && isEnd)) return;
     isLoading = true;
+    // 请求发起时的游标：请求在途期间若被 onRefresh 重置为 0，
+    // 不能让旧响应把新序列的游标回写成 1（否则后续 idx 会重播已加载批次）。
+    final int startPage = page;
     LoadingState<R> res;
     try {
       res = await customGetData();
@@ -52,7 +55,7 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
           loadingState.refresh();
         }
       }
-      page++;
+      if (page == startPage) page++;
     } else {
       if (isRefresh && !handleError(res is Error ? res.errMsg : null)) {
         loadingState.value = res as Error;

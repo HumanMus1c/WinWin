@@ -123,48 +123,91 @@ class _RcmdPageState extends State<RcmdPage>
       Loading() => _buildSkeleton,
       Success(:final response) =>
         response != null && response.isNotEmpty
-            ? SliverGrid.builder(
-                gridDelegate: gridDelegate,
-                itemBuilder: (context, index) {
-                  if (index == response.length - 1) {
-                    controller.onLoadMore();
-                  }
-                  return VideoCardV(
-                    videoItem: response[index],
-                    heroTag: 'rcmd_${response[index].bvid}',
-                    onTap: () {
-                      final item = response[index];
-                      // 推荐流同时可能是 App 模型或 Web 模型，二者均继承
-                      // BaseRcmdVideoItemModel（含 bvid/cover）。
-                      if (item is! BaseRcmdVideoItemModel) return;
-                      final bvid = item.bvid;
-                      if (bvid == null) return;
-                      Navigator.push(
-                        context,
-                        AppRoute(
-                          builder: (_) => VideoDetailPage(
-                            bvid: bvid,
-                            cover: item.cover,
-                            heroTag: 'rcmd_$bvid',
-                          ),
-                        ),
-                      );
-                    },
-                    onRemove: () {
-                      if (controller.loadingState.value case Success(:final response)) {
-                        if (response != null && index < response.length) {
-                          response.removeAt(index);
-                          controller.loadingState.refresh();
-                        }
-                      }
-                    },
-                  );
-                },
-                itemCount: response.length,
-              )
+            ? _buildFeedGrid(colorScheme, response)
             : _buildError(colorScheme),
       Error(:final errMsg) => _buildError(colorScheme, errMsg),
     };
+  }
+
+  /// 推荐卡片网格；刷新保留旧内容时，在旧内容起点插入「上次看到这里」分隔卡。
+  Widget _buildFeedGrid(AppPalette colorScheme, List<dynamic> response) {
+    final int? tipAt = controller.lastRefreshAt;
+    final bool showTip = tipAt != null && tipAt > 0 && tipAt < response.length;
+    return SliverGrid.builder(
+      gridDelegate: gridDelegate,
+      itemCount: response.length + (showTip ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (showTip && index == tipAt) {
+          return GestureDetector(
+            onTap: controller.onRefresh,
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.all(Style.md),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(Style.radiusLg),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '上次看到这里',
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '点击刷新',
+                    style: TextStyle(color: colorScheme.primary, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        final int itemIndex = showTip && index > tipAt ? index - 1 : index;
+        if (itemIndex == response.length - 1) {
+          controller.onLoadMore();
+        }
+        final item = response[itemIndex];
+        return VideoCardV(
+          videoItem: item,
+          heroTag: 'rcmd_${item.bvid}',
+          onTap: () {
+            // 推荐流同时可能是 App 模型或 Web 模型，二者均继承
+            // BaseRcmdVideoItemModel（含 bvid/cover）。
+            if (item is! BaseRcmdVideoItemModel) return;
+            final bvid = item.bvid;
+            if (bvid == null) return;
+            Navigator.push(
+              context,
+              AppRoute(
+                builder: (_) => VideoDetailPage(
+                  bvid: bvid,
+                  cover: item.cover,
+                  heroTag: 'rcmd_$bvid',
+                ),
+              ),
+            );
+          },
+          onRemove: () {
+            if (controller.loadingState.value case Success(:final response)) {
+              if (response != null && itemIndex < response.length) {
+                response.removeAt(itemIndex);
+                // 溢出点之后的卡片仍有效，只有移除点早于分隔位时才需要左移。
+                final tip = controller.lastRefreshAt;
+                if (tip != null && itemIndex < tip) {
+                  controller.lastRefreshAt = tip - 1;
+                }
+                controller.loadingState.refresh();
+              }
+            }
+          },
+        );
+      },
+    );
   }
 
   Widget get _buildSkeleton => SliverGrid.builder(
