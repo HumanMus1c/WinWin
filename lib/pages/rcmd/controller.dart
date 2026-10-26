@@ -117,26 +117,34 @@ class RcmdController extends CommonListController {
       if (list == null) return;
       isLoading = true;
       try {
-        final int startIdx = page;
-        final batches = await Future.wait([
-          for (var i = 0; i < _prefetchBatches; i++)
-            _fetchBatch(startIdx + i),
-        ]);
-        page = startIdx + _prefetchBatches;
+        var nextIdx = page;
+        // 列表运行时类型是 List<RcmdVideoItemAppModel>，追加列表必须同型；
+        // 用 List<dynamic> 调 addAll 会在运行时抛
+        // "List<dynamic> is not a subtype of Iterable<RcmdVideoItemAppModel>"。
+        final added = <RcmdVideoItemAppModel>[];
+        // 服务端偶发整轮都只回送已看过的卡片（实测连续 7 批新增 0~1 条），
+        // 空手而归时再补一轮，避免滚到底毫无反应。
+        for (var round = 0; round < 2 && added.isEmpty; round++) {
+          final batches = await Future.wait([
+            for (var i = 0; i < _prefetchBatches; i++)
+              _fetchBatch(nextIdx + i),
+          ]);
+          nextIdx += _prefetchBatches;
 
-        final seen = <String>{};
-        for (final item in list) {
-          final key = _keyOf(item);
-          if (key != null) seen.add(key);
-        }
-        final added = <dynamic>[];
-        for (final batch in batches) {
-          for (final item in batch) {
+          final seen = <String>{};
+          for (final item in list) {
             final key = _keyOf(item);
-            if (key == null || seen.add(key)) added.add(item);
+            if (key != null) seen.add(key);
+          }
+          for (final batch in batches) {
+            for (final item in batch) {
+              final key = _keyOf(item);
+              if (key == null || seen.add(key)) added.add(item);
+            }
           }
         }
-        // 全部批次都被去重掉时不刷新 UI，避免空重建。
+        page = nextIdx;
+        // 两轮都被去重掉时不刷新 UI，避免空重建。
         if (added.isEmpty) return;
         list.addAll(added);
         loadingState.refresh();
