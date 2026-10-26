@@ -28,7 +28,7 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
   /// 相比轮询等待：不占用调用方（如下拉指示器）的等待时间，也不会丢刷新请求。
   Future<void> deferRefresh() => (_pendingRefresh ??= Completer<void>()).future;
 
-  Future<void> _flushPendingRefresh() async {
+  Future<void> flushPendingRefresh() async {
     final pending = _pendingRefresh;
     if (pending == null) return;
     _pendingRefresh = null;
@@ -69,7 +69,7 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
             loadingState.refresh();
           }
           isLoading = false;
-          await _flushPendingRefresh();
+          await flushPendingRefresh();
           return;
         }
         handleListResponse(dataList);
@@ -87,7 +87,7 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
       }
     }
     isLoading = false;
-    await _flushPendingRefresh();
+    await flushPendingRefresh();
   }
 
   @override

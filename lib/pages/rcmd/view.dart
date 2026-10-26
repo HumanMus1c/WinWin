@@ -43,13 +43,26 @@ class _RcmdPageState extends State<RcmdPage>
     super.initState();
     Pref.demoModeNotifier.addListener(_onDemoChanged);
     controller.scrollController.addListener(_onDemoScroll);
+    controller.scrollController.addListener(_onFeedScroll);
   }
 
   @override
   void dispose() {
+    controller.scrollController.removeListener(_onFeedScroll);
     controller.scrollController.removeListener(_onDemoScroll);
     Pref.demoModeNotifier.removeListener(_onDemoChanged);
     super.dispose();
+  }
+
+  /// 无限推荐流提前补货：距底不足 1.5 屏就发起并发拉取，
+  /// 让用户滚到底之前内容已就绪，而不是到底才等网络一圈一圈地补。
+  void _onFeedScroll() {
+    if (Pref.demoMode) return;
+    final sc = controller.scrollController;
+    if (!sc.hasClients || !sc.position.hasContentDimensions) return;
+    final pos = sc.position;
+    if (pos.maxScrollExtent - pos.pixels > pos.viewportDimension * 1.5) return;
+    controller.onLoadMore();
   }
 
   void _onDemoChanged() {
