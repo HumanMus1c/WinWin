@@ -29,21 +29,37 @@
 ## 🖼️ 程序演示模式截图
 
 > 以下均为 **演示模式**（`设置 → 其它设置 → 演示模式`）下的干净截图：云端内容与账号标识被替换为占位，不含第三方素材。
+>
+> 每张为同一页面的 **浅色主题（左半）+ 深色主题（右半）** 对照；图片四周的卡片投影为**烘焙进 PNG 的静态阴影**（GitHub 会剥离 `style`，故不用 CSS 实现），点击图片可查看原图。
 
-<p align="center">
-  <a href="assets/screenshots/01-home.png"><img src="assets/screenshots/01-home.png" alt="根页面（首页）" width="100%"></a>
-</p>
-<p align="center"><sub><b>根页面（首页）</b>：左侧导航栏 + 推荐流卡片。</sub></p>
-
-<p align="center">
-  <a href="assets/screenshots/02-player.png"><img src="assets/screenshots/02-player.png" alt="播放页" width="45%"></a>    
-  <a href="assets/screenshots/03-space.png"><img src="assets/screenshots/03-space.png" alt="用户空间" width="45%"></a>
-</p>
-<p align="center">
-  <a href="assets/screenshots/04-bangumi.png"><img src="assets/screenshots/04-bangumi.png" alt="番剧页" width="45%"></a>    
-  <a href="assets/screenshots/05-setting.png"><img src="assets/screenshots/05-setting.png" alt="设置页" width="45%"></a>
-</p>
-<p align="center"><sub><b>其余页面</b>：播放页 · 用户空间 · 番剧页 · 设置页。</sub></p>
+<table align="center">
+  <tr>
+    <td colspan="2" align="center" valign="top">
+      <a href="assets/screenshots/01-home.png"><img src="assets/screenshots/01-home.png" alt="根页面（首页）" width="100%"></a><br>
+      <sub><b>根页面（首页）</b>：左侧导航栏 + 推荐 / 关注 / 热门 / 番剧 / 直播 分组推荐流。</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <a href="assets/screenshots/02-player.png"><img src="assets/screenshots/02-player.png" alt="播放页" width="100%"></a><br>
+      <sub><b>播放页</b>：播放器与控制栏、稿件互动区，右侧评论 / 相关推荐。</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <a href="assets/screenshots/03-space.png"><img src="assets/screenshots/03-space.png" alt="用户空间" width="100%"></a><br>
+      <sub><b>用户空间</b>：头图 + 资料卡 + 投稿 / 合集 / 动态 标签页。</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <a href="assets/screenshots/04-bangumi.png"><img src="assets/screenshots/04-bangumi.png" alt="番剧页" width="100%"></a><br>
+      <sub><b>番剧页</b>：索引筛选条 + 番剧卡片网格（集数与播放量）。</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <a href="assets/screenshots/05-setting.png"><img src="assets/screenshots/05-setting.png" alt="设置页" width="100%"></a><br>
+      <sub><b>设置页</b>：左侧分类导航 + 右侧分组设置项（含滑块与开关）。</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
