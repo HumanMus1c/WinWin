@@ -51,8 +51,8 @@
   </tr>
   <tr>
     <td width="50%" align="center" valign="top">
-      <a href="assets/screenshots/04-bangumi.png"><img src="assets/screenshots/04-bangumi.png" alt="番剧页" width="100%"></a><br>
-      <sub><b>番剧页</b>：索引筛选条 + 番剧卡片网格（集数与播放量）。</sub>
+      <a href="assets/screenshots/04-bangumi.png"><img src="assets/screenshots/04-bangumi.png" alt="番剧详情页" width="100%"></a><br>
+      <sub><b>番剧详情页</b>：海报 / 评分与追番数据、开始播放与追番；右侧相关季度切换、选集网格与花絮特典。</sub>
     </td>
     <td width="50%" align="center" valign="top">
       <a href="assets/screenshots/05-setting.png"><img src="assets/screenshots/05-setting.png" alt="设置页" width="100%"></a><br>
