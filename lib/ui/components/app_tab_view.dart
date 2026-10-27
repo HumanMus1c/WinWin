@@ -129,6 +129,12 @@ class AppTabStrip extends StatefulWidget {
     this.wideColors,
     this.wideCornerRadius,
     this.contentAlignment,
+    this.surface = false,
+    this.surfaceFrosted = true,
+    this.surfacePadding = const EdgeInsets.all(Style.xs),
+    this.surfaceRadius,
+    this.surfaceOutline = true,
+    this.surfaceBlurSigma = 16,
   });
 
   /// 标签文本（顺序与索引一一对应）。
@@ -183,6 +189,29 @@ class AppTabStrip extends StatefulWidget {
   /// 窄屏页签内容对齐方式。
   final AlignmentGeometry? contentAlignment;
 
+  /// 是否由本组件自绘**悬浮容器**（默认 false）。
+  ///
+  /// 开启后容器宽度**随标签数量收缩**（不再占满整行），并在左侧落位；
+  /// 独立 TAB 栏（历史 / 直播 / 番剧 / 动态等）统一开启，首页「搜索框 +
+  /// 分类器」合并控件由宿主自带材质，保持 false。
+  final bool surface;
+
+  /// 悬浮容器材质：true = 毛玻璃（`MiuixFrostedSurface`，与动态页同款），
+  /// false = 实色胶囊（用于已处于毛玻璃合并栏内部、避免二次模糊的场合）。
+  final bool surfaceFrosted;
+
+  /// 悬浮容器内距（标签行与容器边缘的间距，默认 [Style.xs]）。
+  final EdgeInsets surfacePadding;
+
+  /// 悬浮容器圆角；null = 全圆胶囊（容器总高的一半）。
+  final double? surfaceRadius;
+
+  /// 悬浮容器 1px 描边（默认 true，与动态页一致）。
+  final bool surfaceOutline;
+
+  /// 毛玻璃模糊半径（默认 16，与动态页一致）。
+  final double surfaceBlurSigma;
+
   @override
   State<AppTabStrip> createState() => _AppTabStripState();
 }
@@ -195,19 +224,60 @@ class _AppTabStripState extends State<AppTabStrip> {
       form: widget.form,
       breakpoint: widget.breakpoint,
     );
-    if (form == AppTabForm.rail) {
-      return _AppTabRail(
-        tabs: widget.tabs,
-        selectedIndex: widget.selectedIndex,
-        onSelected: widget.onSelected,
-        height: widget.railHeight,
-        padding: widget.railPadding,
-        itemPadding: widget.railItemPadding,
-        itemInset: widget.railItemInset,
-        gap: widget.itemGap,
-        fontSize: widget.labelFontSize,
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final available =
+            constraints.hasBoundedWidth ? constraints.maxWidth : double.infinity;
+        final height =
+            form == AppTabForm.rail ? widget.railHeight : widget.wideHeight;
+        final surfacePadding = widget.surface ? widget.surfacePadding : EdgeInsets.zero;
+        final maxRowWidth = available.isFinite
+            ? math.max(0.0, available - surfacePadding.horizontal)
+            : double.infinity;
+        // 容器宽度随标签数量收缩（不再由父级撑满整行）；父级需给本组件松约束。
+        final rowWidth = _resolveRowWidth(context, form, maxRowWidth);
+        final row = SizedBox(
+          width: rowWidth,
+          height: height,
+          child: form == AppTabForm.rail ? _buildRail() : _buildWideRow(),
+        );
+        if (!widget.surface) return row;
+
+        final totalHeight = height + surfacePadding.vertical;
+        final totalWidth = rowWidth + surfacePadding.horizontal;
+        final radius = widget.surfaceRadius ?? totalHeight / 2;
+        final inner = Padding(padding: surfacePadding, child: row);
+        return SizedBox(
+          width: totalWidth,
+          height: totalHeight,
+          child: widget.surfaceFrosted
+              ? MiuixFrostedSurface(
+                  borderRadius: radius,
+                  blurSigma: widget.surfaceBlurSigma,
+                  outline: widget.surfaceOutline,
+                  child: inner,
+                )
+              : _TabSolidSurface(radius: radius, outline: widget.surfaceOutline, child: inner),
+        );
+      },
+    );
+  }
+
+  Widget _buildRail() {
+    return _AppTabRail(
+      tabs: widget.tabs,
+      selectedIndex: widget.selectedIndex,
+      onSelected: widget.onSelected,
+      height: widget.railHeight,
+      padding: widget.railPadding,
+      itemPadding: widget.railItemPadding,
+      itemInset: widget.railItemInset,
+      gap: widget.itemGap,
+      fontSize: widget.labelFontSize,
+    );
+  }
+
+  Widget _buildWideRow() {
     return _AppWideTabRow(
       tabs: widget.tabs,
       selectedIndex: widget.selectedIndex,
@@ -220,6 +290,114 @@ class _AppTabStripState extends State<AppTabStrip> {
       colors: widget.wideColors,
       cornerRadius: widget.wideCornerRadius,
       contentAlignment: widget.contentAlignment,
+    );
+  }
+
+  /// 标签行所需宽度：容器随标签数量/文字宽度收缩的唯一口径。
+  ///
+  /// - 宽屏轨道：每项 = 文字宽 + 左右内距，逐项累加（与 [_AppTabRail] 一致）；
+  /// - 窄屏页签：库内项宽是**统一值**，故取“所有标签都不省略”的最小统一宽
+  ///   （文字宽 + 库内水平内距 × 2，clamp 到 76–98），再乘数量。
+  ///
+  /// 文字宽度用与渲染同源的 [TextStyle] + [MediaQuery.textScalerOf] 实测；
+  /// 选中态按加粗测量（更宽者优先），避免切换选中时容器宽度抖动。
+  double _resolveRowWidth(BuildContext context, AppTabForm form, double maxWidth) {
+    final tabs = widget.tabs;
+    if (tabs.isEmpty) return 0;
+    double total;
+    if (form == AppTabForm.rail) {
+      final style = _railMeasureStyle(context);
+      total = widget.railPadding.horizontal;
+      for (final label in tabs) {
+        total += _textWidth(context, label, style) +
+            widget.railItemPadding.horizontal;
+      }
+      total += widget.itemGap * (tabs.length - 1);
+    } else {
+      final fontSize = MiuixTheme.of(context).textStyles.body1.fontSize ?? 16;
+      final style = _wideMeasureStyle(context, fontSize);
+      final minWidth = widget.wideMinWidth ?? MiuixTabRowDefaults.tabRowMinWidth;
+      final maxWidthTab = widget.wideMaxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth;
+      double widest = minWidth;
+      for (final label in tabs) {
+        final raw = _textWidth(context, label, style) +
+            MiuixTabRowDefaults.itemHorizontalPadding * 2 +
+            2;
+        widest = math.max(widest, raw.clamp(minWidth, maxWidthTab));
+      }
+      total = widget.widePadding.horizontal +
+          widest * tabs.length +
+          widget.itemGap * (tabs.length - 1);
+    }
+    return maxWidth.isFinite ? math.min(total, maxWidth) : total;
+  }
+
+  TextStyle _railMeasureStyle(BuildContext context) {
+    return DefaultTextStyle.of(context).style.copyWith(
+      fontSize: widget.labelFontSize,
+      fontWeight: FontWeight.w600,
+      height: 1.2,
+      decoration: TextDecoration.none,
+    );
+  }
+
+  TextStyle _wideMeasureStyle(BuildContext context, double fontSize) {
+    return DefaultTextStyle.of(context).style.copyWith(
+      fontSize: fontSize,
+      fontWeight: FontWeight.bold,
+      decoration: TextDecoration.none,
+    );
+  }
+
+  double _textWidth(BuildContext context, String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+}
+
+/// 实色悬浮胶囊：用于**已处在毛玻璃合并栏内部**的标签条（消息中心）。
+///
+/// 与 [MiuixFrostedSurface] 使用同一套投影（16 模糊 / 4px 下移 / 15%·35%），
+/// 只是不做 backdrop 模糊，避免“玻璃里再套玻璃”导致发灰、字发虚。
+class _TabSolidSurface extends StatelessWidget {
+  const _TabSolidSurface({
+    required this.radius,
+    required this.outline,
+    required this.child,
+  });
+
+  final double radius;
+  final bool outline;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = AppThemeHost.of(context);
+    final isDark = tokens.isDark;
+    final borderRadius = BorderRadius.circular(radius);
+    return Container(
+      decoration: BoxDecoration(
+        color: tokens.colors.surfaceContainerHigh,
+        borderRadius: borderRadius,
+        border: outline
+            ? Border.all(color: MiuixFrostedSurface.outlineColor(isDark: isDark))
+            : null,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: AppColors.black.withValues(alpha: isDark ? 0.35 : 0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(borderRadius: borderRadius, child: child),
     );
   }
 }
@@ -808,38 +986,36 @@ class AppTabBar extends StatelessWidget {
       builder: (context, _) {
         final count = tabs.length;
         final selected = count == 0 ? 0 : controller.index.clamp(0, count - 1);
-        final strip = AppTabStrip(
-          tabs: tabs,
-          selectedIndex: selected,
-          onSelected: controller.animateTo,
-          form: form,
-          breakpoint: breakpoint,
-          // 两种形态都用净行高：面板内缩由外层 Padding 承担，
-          // 面板总高恒为 preferredHeight（固定 extent 宿主安全）。
-          railHeight: _rowHeight,
-          wideHeight: _rowHeight,
-          // 面板内距由外层 Padding 承担：两种形态都不再二次缩进，
-          // 否则窄屏页签会比改动前整体右移 12px。
-          railPadding: EdgeInsets.zero,
-          widePadding: EdgeInsets.zero,
-          itemGap: MiuixTabRowDefaults.tabRowItemSpacing,
-          wideMinWidth: minWidth,
-          wideMaxWidth: maxWidth,
-          wideColors: colors,
-          wideCornerRadius: _pillRadius,
-          contentAlignment: contentAlignment,
-        );
-        final content = Padding(padding: panelPadding, child: strip);
-        if (!blurBackground) {
-          return SizedBox(height: preferredHeight, child: content);
-        }
-        return SizedBox(
-          height: preferredHeight,
-          child: MiuixFrostedSurface(
-            borderRadius: _panelRadius,
-            blurSigma: blurSigma,
-            outline: outline,
-            child: content,
+        // 容器宽度由 [AppTabStrip] 按标签数量收缩；此处只负责**左对齐**落位，
+        // 不再用 SizedBox(width: ∞) 撑满整行（动态页等独立 TAB 栏的关键改动）。
+        return Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: AppTabStrip(
+            tabs: tabs,
+            selectedIndex: selected,
+            onSelected: controller.animateTo,
+            form: form,
+            breakpoint: breakpoint,
+            // 两种形态都用净行高：面板总高 = 净行高 + 面板内距 = preferredHeight，
+            // 固定 extent 宿主（番剧播放页 / 空间页吸顶带）不受影响。
+            railHeight: _rowHeight,
+            wideHeight: _rowHeight,
+            railPadding: EdgeInsets.zero,
+            widePadding: EdgeInsets.zero,
+            itemGap: MiuixTabRowDefaults.tabRowItemSpacing,
+            wideMinWidth: minWidth,
+            wideMaxWidth: maxWidth,
+            wideColors: colors,
+            wideCornerRadius: _pillRadius,
+            contentAlignment: contentAlignment,
+            // 独立 TAB 栏统一使用动态页同款悬浮容器（毛玻璃 + 下投影）；
+            // 宿主自带材质的场合（空间页通栏吸顶带）传 blurBackground=false 关闭。
+            surface: blurBackground,
+            surfaceFrosted: true,
+            surfacePadding: panelPadding,
+            surfaceRadius: _panelRadius,
+            surfaceOutline: outline,
+            surfaceBlurSigma: blurSigma,
           ),
         );
       },

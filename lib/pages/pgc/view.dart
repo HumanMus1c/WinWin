@@ -22,10 +22,10 @@ import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
-import 'package:winwin/core/shell/app_transparent_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/ui/home/home_chrome_metrics.dart';
 
 /// 番剧二级分类枚举
@@ -69,10 +69,6 @@ class _PgcPageState extends State<PgcPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final tokens = AppThemeHost.of(context);
-    final cs = tokens.colors;
-    final shapes = tokens.shapes;
-
     // 嵌入 HomePage 时顶部留白避开浮动顶栏 + 分类标签行；
     // 高度随形态变化（宽屏 120 / 窄屏 130），见 HomeChromeMetrics。
     return Padding(
@@ -82,65 +78,28 @@ class _PgcPageState extends State<PgcPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 二级分类器胶囊栏（固定吸顶）
+          // 二级分类器胶囊栏（固定吸顶、容器随标签收缩、统一悬浮材质）
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: Style.safeSpace,
               vertical: Style.xs,
             ),
-            child: Row(
-              children: PgcSubTab.values.map((tab) {
-                final isSelected = tab == _selectedSubTab;
-                return Padding(
-                  padding: const EdgeInsets.only(right: Style.sm),
-                  child: AppTransparentHost(
-                    child: MiuixPressable(
-                      feedbackType: MiuixPressFeedbackType.sink,
-                      sinkAmount: 0.98,
-                      borderRadius: shapes.pillBorder,
-                      onPressed: () {
-                        if (_selectedSubTab != tab) {
-                          setState(() {
-                            _selectedSubTab = tab;
-                            _visitedTabs.add(tab);
-                          });
-                        }
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? cs.primary.withValues(alpha: 0.18)
-                              : cs.surfaceContainerHighest.withValues(alpha: 0.4),
-                          borderRadius: shapes.pillBorder,
-                          border: Border.all(
-                            color: isSelected
-                                ? cs.primary.withValues(alpha: 0.45)
-                                : AppColors.transparent,
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          tab.label,
-                          style: TextStyle(
-                            color: isSelected
-                                ? cs.primary
-                                : cs.onSurfaceVariant,
-                            fontSize: 12.5,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
+            child: AppTabStrip(
+              tabs: [for (final tab in PgcSubTab.values) tab.label],
+              selectedIndex: _selectedSubTab.index,
+              onSelected: (index) {
+                final tab = PgcSubTab.values[index];
+                if (_selectedSubTab == tab) return;
+                setState(() {
+                  _selectedSubTab = tab;
+                  _visitedTabs.add(tab);
+                });
+              },
+              // 外框总高 = 34 + 4×2 = 42，与动态页 / 历史页 TAB 栏同高同材质。
+              railHeight: 34,
+              wideHeight: 34,
+              labelFontSize: 12.5,
+              surface: true,
             ),
           ),
           // 分类内容区（懒加载 IndexedStack 保留各自滚动位置与状态）

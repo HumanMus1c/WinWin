@@ -7,7 +7,6 @@ import 'package:flutter_miuix/miuix.dart'
         MiuixTextButton;
 import 'package:flutter/widgets.dart';
 
-import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
@@ -31,6 +30,7 @@ import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 会话列表区（消息页内嵌）。
@@ -453,22 +453,24 @@ class SessionFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
+    final selected = _categories.indexWhere((c) => c.type == selectedType);
+    return Align(
+      // 胶囊容器随标签收缩，统一左对齐落位。
+      alignment: AlignmentDirectional.centerStart,
+      child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: Style.sm),
-        children: [
-          for (final c in _categories)
-            Padding(
-              padding: const EdgeInsets.only(right: 6, top: 6),
-              child: AppChoiceChip(
-                label: Text(c.label),
-                selected: c.type == selectedType,
-                onSelected: (_) => onSelected(c.type),
-              ),
-            ),
-        ],
+        child: AppTabStrip(
+          tabs: [for (final c in _categories) c.label],
+          selectedIndex: selected < 0 ? 0 : selected,
+          onSelected: (index) => onSelected(_categories[index].type),
+          // 外框总高 = 34 + 4×2 = 42，与动态页 / 历史页 TAB 栏同高。
+          railHeight: 34,
+          wideHeight: 34,
+          labelFontSize: 12.5,
+          surface: true,
+          // 宿主已是毛玻璃合并栏：用实色胶囊 + 同一套悬浮投影，避免二次模糊。
+          surfaceFrosted: false,
+        ),
       ),
     );
   }

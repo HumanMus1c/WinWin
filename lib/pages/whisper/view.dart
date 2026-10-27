@@ -110,9 +110,9 @@ class _WhisperPageState extends State<WhisperPage>
 
   /// 顶部合并栏**首帧**的避让回退值（面板高度由内容自撑，首帧尚无法实测）：
   /// 面板外缩（[Style.sm]×2）+ 互动行（[Style.md]×2 + 头像 52 + 间距 6 + 标签行 ~20）
-  /// + 分隔线 1 + 分类行（[SessionFilterBar] 高 44）+ 下沿间隙 [Style.sm]。
+  /// + 分隔线 1 + 分类行（[SessionFilterBar] 统一 TAB 栏高 42）+ 下沿间隙 [Style.sm]。
   static const double _headerReserve =
-      Style.sm * 2 + Style.md * 2 + 52 + 6 + 20 + 1 + 44 + Style.sm;
+      Style.sm * 2 + Style.md * 2 + 52 + 6 + 20 + 1 + 42 + Style.sm;
 
   /// 分类栏与面板下缘之间的底距：把 chips 抬出面板下缘那条「背景（空白页底 +
   /// 面板自身投影）被 σ16 模糊从下缘向内浸入」的 ~3σ 带，避免筛选项发虚。

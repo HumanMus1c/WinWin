@@ -13,16 +13,15 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
-import 'package:winwin/theme/app_shapes.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
-import 'package:winwin/core/shell/app_transparent_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/ui/home/home_chrome_metrics.dart';
 
 /// 直播二级分类导航条目。
@@ -59,7 +58,6 @@ class _LivePageState extends State<LivePage>
   late List<LiveCategoryTab> _tabs;
   int _selectedIndex = 0;
   final Set<int> _visitedIndices = {0};
-  final ScrollController _tabScrollController = ScrollController();
 
   @override
   bool get wantKeepAlive => true;
@@ -80,7 +78,6 @@ class _LivePageState extends State<LivePage>
 
   @override
   void dispose() {
-    _tabScrollController.dispose();
     super.dispose();
   }
 
@@ -111,10 +108,6 @@ class _LivePageState extends State<LivePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final tokens = AppThemeHost.of(context);
-    final cs = tokens.colors;
-    final shapes = tokens.shapes;
-
     // 嵌入 HomePage 时需顶部留白以避开浮动顶栏 + 一级分类标签行；
     // 高度随形态变化（宽屏 120 / 窄屏 130），见 HomeChromeMetrics。
     return Padding(
@@ -124,8 +117,8 @@ class _LivePageState extends State<LivePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 二级分类器胶囊栏（固定吸顶横向滚动）
-          _buildSubTabBar(cs, shapes),
+          // 二级分类器胶囊栏（固定吸顶、容器随标签收缩）
+          _buildSubTabBar(),
           // 分类内容区（懒加载 IndexedStack 保留各自滚动位置与状态）
           Expanded(
             child: IndexedStack(
@@ -150,70 +143,24 @@ class _LivePageState extends State<LivePage>
     );
   }
 
-  Widget _buildSubTabBar(AppPalette cs, AppShapes shapes) {
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        controller: _tabScrollController,
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-          horizontal: Style.safeSpace,
-          vertical: Style.xs,
-        ),
-        itemCount: _tabs.length,
-        separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
-        itemBuilder: (context, index) {
-          final isSelected = index == _selectedIndex;
-          final tab = _tabs[index];
-          return AppTransparentHost(
-            child: MiuixPressable(
-              feedbackType: MiuixPressFeedbackType.sink,
-              sinkAmount: 0.98,
-              borderRadius: shapes.pillBorder,
-              onPressed: () {
-                if (_selectedIndex != index) {
-                  setState(() {
-                    _selectedIndex = index;
-                    _visitedIndices.add(index);
-                  });
-                }
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? cs.primary.withValues(alpha: 0.18)
-                      : cs.surfaceContainerHighest.withValues(alpha: 0.4),
-                  borderRadius: shapes.pillBorder,
-                  border: Border.all(
-                    color: isSelected
-                        ? cs.primary.withValues(alpha: 0.45)
-                        : AppColors.transparent,
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    tab.label,
-                    style: TextStyle(
-                      color: isSelected ? cs.primary : cs.onSurfaceVariant,
-                      fontSize: 12.5,
-                      // 显式行高收紧行盒：消除字体度量（回退字体）导致的下坠，
-                      // Center 后光学居中（实测净空 11.0/8.33 → 10.0/9.33）。
-                      height: 1.2,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
+  Widget _buildSubTabBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+      child: AppTabStrip(
+        tabs: [for (final tab in _tabs) tab.label],
+        selectedIndex: _selectedIndex,
+        onSelected: (index) {
+          if (_selectedIndex == index) return;
+          setState(() {
+            _selectedIndex = index;
+            _visitedIndices.add(index);
+          });
         },
+        // 外框总高 = 34 + 4×2 = 42，与动态页 / 历史页 TAB 栏同高同材质。
+        railHeight: 34,
+        wideHeight: 34,
+        labelFontSize: 12.5,
+        surface: true,
       ),
     );
   }

@@ -491,15 +491,18 @@ class _HistoryPageState extends State<HistoryPage> {
           (type: t.type!, label: t.name!),
     ];
     final selected = entries.indexWhere((entry) => entry.type == _type);
-    return AppTabStrip(
-      tabs: [for (final entry in entries) entry.label],
-      selectedIndex: selected < 0 ? 0 : selected,
-      onSelected: (index) => _switchType(entries[index].type),
-      railHeight: 40,
-      wideHeight: 42,
-      // 保持原观感：40 行高内胶囊上下各缩 5 → 30 高。
-      railItemInset: 5,
-      labelFontSize: 12.5,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+      child: AppTabStrip(
+        tabs: [for (final entry in entries) entry.label],
+        selectedIndex: selected < 0 ? 0 : selected,
+        onSelected: (index) => _switchType(entries[index].type),
+        // 外框总高 = 34 + 4×2 = 42，与动态页 TAB 栏同高、同悬浮材质。
+        railHeight: 34,
+        wideHeight: 34,
+        labelFontSize: 12.5,
+        surface: true,
+      ),
     );
   }
 

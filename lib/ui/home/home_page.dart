@@ -487,17 +487,21 @@ class _HomeHeaderState extends State<_HomeHeader> {
                     contentReady: _settled,
                     padding: EdgeInsets.zero,
                   )
-                : AppTabStrip(
-                    tabs: [for (final tab in tabs) tab.label],
-                    selectedIndex: widget.selectedCategory,
-                    onSelected: widget.onSelectCategory,
-                    railHeight: HomeChromeMetrics.railTabHeight,
-                    wideHeight: HomeChromeMetrics.wideTabHeight,
-                    // 合并栏自身已有 Style.md 左右内距，标签条不再二次缩进。
-                    railPadding: EdgeInsets.zero,
-                    widePadding: EdgeInsets.zero,
-                    railItemPadding: const EdgeInsets.symmetric(horizontal: 14),
-                    labelFontSize: 13,
+                : Align(
+                    // 分类条容器随标签收缩，必须左对齐（否则会在合并栏里居中）。
+                    alignment: AlignmentDirectional.centerStart,
+                    child: AppTabStrip(
+                      tabs: [for (final tab in tabs) tab.label],
+                      selectedIndex: widget.selectedCategory,
+                      onSelected: widget.onSelectCategory,
+                      railHeight: HomeChromeMetrics.railTabHeight,
+                      wideHeight: HomeChromeMetrics.wideTabHeight,
+                      // 合并栏自身已有 Style.md 左右内距，标签条不再二次缩进。
+                      railPadding: EdgeInsets.zero,
+                      widePadding: EdgeInsets.zero,
+                      railItemPadding: const EdgeInsets.symmetric(horizontal: 14),
+                      labelFontSize: 13,
+                    ),
                   ),
           ),
         ],
