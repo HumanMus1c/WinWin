@@ -17,6 +17,7 @@ import 'package:winwin/pages/whisper/session/session_list_section.dart';
 import 'package:winwin/services/msg_unread_service.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/ui/components/hover_container.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -227,49 +228,63 @@ class _WhisperPageState extends State<WhisperPage>
     return ListenableBuilder(
       listenable: MsgUnreadService(),
       builder: (context, _) {
+        final entries = <Widget>[
+          _EntryItem(
+            icon: AppIcon(AppIcons.reply()),
+            label: '回复我的',
+            count: Pref.demoMode ? 0 : _replyUnread,
+            color: iosBlue,
+            onTap: () {
+              _clearFeedUnread('reply');
+              showReplyMePage(context);
+            },
+          ),
+          _EntryItem(
+            icon: AppIcon(AppIcons.atMe()),
+            label: '艾特我的',
+            count: Pref.demoMode ? 0 : _atUnread,
+            color: iosOrange,
+            onTap: () {
+              _clearFeedUnread('at');
+              showAtMePage(context);
+            },
+          ),
+          _EntryItem(
+            icon: AppIcon(AppIcons.like(active: true)),
+            label: '点赞我的',
+            count: Pref.demoMode ? 0 : _likeUnread,
+            color: iosPink,
+            onTap: () {
+              _clearFeedUnread('like');
+              showLikeMePage(context);
+            },
+          ),
+          _EntryItem(
+            icon: AppIcon(AppIcons.sysNotice()),
+            label: '系统消息',
+            count: Pref.demoMode ? 0 : _sysUnread,
+            color: iosTeal,
+            onTap: () {
+              _clearFeedUnread('system');
+              showSysMsgPage(context);
+            },
+          ),
+        ];
+        // 形态按**整窗宽**切换（与全局 TAB 体系同一断点 [kAppTabBreakpoint]）：
+        // - 窄屏移动端：四项 spaceAround 铺满整行（手指可点面积最大）；
+        // - 宽屏桌面端：固定间距、左对齐的紧凑组，不再被拉开到整窗宽。
+        if (resolveAppTabForm(context) != AppTabForm.rail) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: entries,
+          );
+        }
         return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _EntryItem(
-              icon: AppIcon(AppIcons.reply()),
-              label: '回复我的',
-              count: Pref.demoMode ? 0 : _replyUnread,
-              color: iosBlue,
-              onTap: () {
-                _clearFeedUnread('reply');
-                showReplyMePage(context);
-              },
-            ),
-            _EntryItem(
-              icon: AppIcon(AppIcons.atMe()),
-              label: '艾特我的',
-              count: Pref.demoMode ? 0 : _atUnread,
-              color: iosOrange,
-              onTap: () {
-                _clearFeedUnread('at');
-                showAtMePage(context);
-              },
-            ),
-            _EntryItem(
-              icon: AppIcon(AppIcons.like(active: true)),
-              label: '点赞我的',
-              count: Pref.demoMode ? 0 : _likeUnread,
-              color: iosPink,
-              onTap: () {
-                _clearFeedUnread('like');
-                showLikeMePage(context);
-              },
-            ),
-            _EntryItem(
-              icon: AppIcon(AppIcons.sysNotice()),
-              label: '系统消息',
-              count: Pref.demoMode ? 0 : _sysUnread,
-              color: iosTeal,
-              onTap: () {
-                _clearFeedUnread('system');
-                showSysMsgPage(context);
-              },
-            ),
+            for (var i = 0; i < entries.length; i++) ...[
+              if (i > 0) const SizedBox(width: Style.xxl),
+              entries[i],
+            ],
           ],
         );
       },
