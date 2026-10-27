@@ -21,13 +21,14 @@ import 'package:winwin/pages/search/services/search_history_service.dart';
 import 'package:winwin/pages/search/services/search_trending_cache.dart';
 import 'package:winwin/pages/search/widgets/search_content_panel.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
-import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/app_motion.dart';
 import 'package:winwin/theme/contrast_policy.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/home/home_chrome_metrics.dart';
 
 /// 焦点描边宽度（与 flutter_miuix `MiuixTextFieldDefaults.borderWidth` 一致）。
 ///
@@ -73,7 +74,6 @@ const BoxShadow _kSearchBarShadowOff = BoxShadow(
 /// 注意 `MiuixTextField` 在**有 leadingIcon 时不会给图标加水平内距**
 /// （其 `insideMargin.left` 仅作用于无前导图标时的文本区），故前缀必须
 /// 自带左内距，方可与常态框对齐。
-const double _kSearchRowHeight = 38;
 const double _kSearchRowInset = Style.md; // 框内左内距（图标左缘到框左缘）
 const double _kSearchIconTextGap = Style.sm; // 图标与文字/占位间距
 
@@ -273,7 +273,8 @@ class _HomePageState extends State<HomePage> {
       builder: (context, constraints) {
         // 顶栏固定部分：外壳上下边距 + 内容区上下边距 + 搜索框行 38 + 行间 6，
         // 另留 Style.md 作为底部余量。
-        const fixed = Style.sm * 4 + _kSearchRowHeight + 6 + Style.md;
+        // 合并栏固定部分高度：宽屏分类行 32、窄屏 42，超出部分自动叠加。
+        final fixed = HomeChromeMetrics.headerFixedOf(context);
         final maxPanelHeight = (constraints.maxHeight - stripHeight - fixed)
             .clamp(120.0, double.infinity);
         return Stack(
@@ -419,7 +420,6 @@ class _HomeHeaderState extends State<_HomeHeader> {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
-    final shapes = tokens.shapes;
     final tabs = HomeTabType.defaultOrder;
 
     final barColor = AppTopBarSurface.barColor(cs.surface);
@@ -447,7 +447,7 @@ class _HomeHeaderState extends State<_HomeHeader> {
             children: [
               Expanded(
                 child: SizedBox(
-                  height: _kSearchRowHeight,
+                  height: HomeChromeMetrics.searchRowHeight,
                   child: _buildSearchRow(searchBg, searchFg),
                 ),
               ),
@@ -467,8 +467,9 @@ class _HomeHeaderState extends State<_HomeHeader> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          // Row 2: 常态 = 分类标签（32）；搜索态 = 就地扩充块。
+          const SizedBox(height: HomeChromeMetrics.searchTabGap),
+          // Row 2: 常态 = 分类标签（宽屏 32 高紧凑胶囊轨道 / 窄屏 42 高宽体页签）；
+          //        搜索态 = 就地扩充块。
           // 高度变化由 AnimatedSize 补齐（220ms / Miuix 弹簧非线性曲线，见
           // [MiuixSpringCurve]：起手快、长尾收敛，与「就地扩充」的物理展开一致）。
           AnimatedSize(
@@ -486,44 +487,17 @@ class _HomeHeaderState extends State<_HomeHeader> {
                     contentReady: _settled,
                     padding: EdgeInsets.zero,
                   )
-                : SizedBox(
-                    height: 32,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: tabs.length,
-                      separatorBuilder: (_, _) =>
-                          const SizedBox(width: Style.sm),
-                      itemBuilder: (context, index) {
-                        final isSelected = index == widget.selectedCategory;
-                        final baseColor = cs.primary;
-                        return GestureDetector(
-                          onTap: () => widget.onSelectCategory(index),
-                          child: Container(
-                            alignment: Alignment.center,
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 14),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? baseColor.withValues(alpha: 0.28)
-                                  : AppColors.transparent,
-                              borderRadius: shapes.pillBorder,
-                            ),
-                            child: Text(
-                              tabs[index].label,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? baseColor
-                                    : barContentColor.withValues(alpha: 0.78),
-                                fontSize: 13,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                : AppTabStrip(
+                    tabs: [for (final tab in tabs) tab.label],
+                    selectedIndex: widget.selectedCategory,
+                    onSelected: widget.onSelectCategory,
+                    railHeight: HomeChromeMetrics.railTabHeight,
+                    wideHeight: HomeChromeMetrics.wideTabHeight,
+                    // 合并栏自身已有 Style.md 左右内距，标签条不再二次缩进。
+                    railPadding: EdgeInsets.zero,
+                    widePadding: EdgeInsets.zero,
+                    railItemPadding: const EdgeInsets.symmetric(horizontal: 14),
+                    labelFontSize: 13,
                   ),
           ),
         ],
@@ -582,7 +556,7 @@ class _HomeHeaderState extends State<_HomeHeader> {
           ),
           child: SizedBox(
             width: double.infinity,
-            height: _kSearchRowHeight - _kSearchFocusStroke,
+            height: HomeChromeMetrics.searchRowHeight - _kSearchFocusStroke,
             child: AppCapsuleTextField(
               controller: widget.searchController,
               focusNode: widget.searchFocusNode,

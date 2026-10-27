@@ -23,7 +23,6 @@ import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
-import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
@@ -36,8 +35,8 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
-import 'package:winwin/core/shell/app_transparent_host.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
@@ -478,73 +477,29 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  /// 分类胶囊栏：`全部` + 服务端下发分类（对齐上游 PiliPlus，样式复用直播/番剧页）。
+  /// 分类胶囊栏：`全部` + 服务端下发分类（对齐上游 PiliPlus）。
+  ///
+  /// 形态由 [AppTabStrip] 按窗口宽度自动切换：宽屏为紧凑胶囊轨道（鼠标优先：
+  /// hover / 手型光标 / 滚轮横滚），窄屏为 42 高宽体页签（手指优先）。
+  /// 分类数量由服务端下发、会变化，故走 `selectedIndex / onSelected`
+  /// 而不是 [AppTabController]（后者长度为 final）。
   Widget _buildTabBar(BuildContext context) {
-    final tokens = AppThemeHost.of(context);
-    final cs = tokens.colors;
-    final shapes = tokens.shapes;
     final entries = <({String type, String label})>[
       (type: 'all', label: '全部'),
       for (final t in _tabs)
         if (t.type != null && t.type!.isNotEmpty && t.name != null)
           (type: t.type!, label: t.name!),
     ];
-
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-          horizontal: Style.safeSpace,
-          vertical: Style.xs,
-        ),
-        itemCount: entries.length,
-        separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
-        itemBuilder: (context, index) {
-          final entry = entries[index];
-          final isSelected = _type == entry.type;
-          return AppTransparentHost(
-            child: MiuixPressable(
-              feedbackType: MiuixPressFeedbackType.sink,
-              sinkAmount: 0.98,
-              borderRadius: shapes.pillBorder,
-              onPressed: () => _switchType(entry.type),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? cs.primary.withValues(alpha: 0.18)
-                      : cs.surfaceContainerHighest.withValues(alpha: 0.4),
-                  borderRadius: shapes.pillBorder,
-                  border: Border.all(
-                    color: isSelected
-                        ? cs.primary.withValues(alpha: 0.45)
-                        : AppColors.transparent,
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    entry.label,
-                    style: TextStyle(
-                      color: isSelected ? cs.primary : cs.onSurfaceVariant,
-                      fontSize: 12.5,
-                      // 显式行高收紧行盒：消除字体度量导致的下坠，Center 后光学居中。
-                      height: 1.2,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+    final selected = entries.indexWhere((entry) => entry.type == _type);
+    return AppTabStrip(
+      tabs: [for (final entry in entries) entry.label],
+      selectedIndex: selected < 0 ? 0 : selected,
+      onSelected: (index) => _switchType(entries[index].type),
+      railHeight: 40,
+      wideHeight: 42,
+      // 保持原观感：40 行高内胶囊上下各缩 5 → 30 高。
+      railItemInset: 5,
+      labelFontSize: 12.5,
     );
   }
 

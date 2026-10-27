@@ -1,5 +1,9 @@
 import 'dart:math' as math;
+import 'dart:ui' show PointerDeviceKind;
 
+import 'package:flutter/gestures.dart'
+    show GestureBinding, PointerSignalEvent, PointerScrollEvent;
+import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart'
     show MiuixTabRow, MiuixTabRowColors, MiuixTabRowDefaults, MiuixTheme;
@@ -8,6 +12,40 @@ import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/style.dart';
+
+/// 宽/窄形态切换阈值（**逻辑像素，按窗口宽度**判定）。
+///
+/// 选 700 的依据：窗口最小宽度为 640（`main.dart` 的 `minimumSize`），
+/// 640–699 是桌面实测可拖出的窄屏带；Material 的 600 在该约束下几乎不可达，
+/// 840 则会把 800×600 的桌面窗口误判为移动形态。
+///
+/// 判定读 `MediaQuery.sizeOf`（整窗宽）而不是控件自身约束：同一窗口内
+/// 首页顶栏、历史分类条、动态页 Tab 的左右内距不同，按控件宽度判定会让
+/// 三者在同一窗口宽度下切换时机不一致。
+const double kAppTabBreakpoint = 700;
+
+/// 标签栏形态。
+///
+/// - [rail]：**宽屏/鼠标**——紧凑胶囊轨道，内容自适应宽、左对齐、横向滚动，
+///   hover + 手型光标 + 滚轮横滚（首页/历史现行观感）；
+/// - [wide]：**窄屏/手指**——宽体页签（76–98 × 42），胶囊选中、横向滚动并可
+///   自动居中选中项（动态页现行观感）；
+/// - [auto]：按 [kAppTabBreakpoint] 自动选择。
+enum AppTabForm { auto, rail, wide }
+
+/// 解析当前窗口宽度对应的形态。
+///
+/// 显式传入 [form]（非 auto）时直接采用，供页面按语义强制形态。
+AppTabForm resolveAppTabForm(
+  BuildContext context, {
+  AppTabForm form = AppTabForm.auto,
+  double breakpoint = kAppTabBreakpoint,
+}) {
+  if (form != AppTabForm.auto) return form;
+  return MediaQuery.sizeOf(context).width >= breakpoint
+      ? AppTabForm.rail
+      : AppTabForm.wide;
+}
 
 /// WinWin 通用 Tab 体系（Miuix 轨道），取代 Material 的
 /// [TabBar] + [TabBarView] + [TabController] 三元组。
@@ -58,29 +96,619 @@ class AppTabController extends ChangeNotifier {
   int _normalize(int value) => _length > 1 ? value.clamp(0, _length - 1) : 0;
 }
 
-/// Tab 头部标签栏：[MiuixTabRow] 的封装，并补齐库缺失的交互与材质。
+/// 表现层标签条：只认 `selectedIndex / onSelected`，不持有控制器。
+///
+/// 与 [AppTabBar] 的分工：需要与 [AppTabBody] 联动（有 PageView）的页面用
+/// [AppTabBar]；只有“分类切换、无翻页主体”的页面（首页分类、历史分类）直接
+/// 用本组件即可——历史分类由服务端下发、数量会变，而 [AppTabController] 的
+/// 长度是 final，不适合这类场景。
+///
+/// 两种形态的规格（细节原因见 [AppTabForm]）：
+/// - 宽屏 [AppTabForm.rail]：行高默认 32，项宽随文字、左对齐、横向滚动；
+///   hover 6% / 按压 sink 0.98 / 手型光标 / 滚轮横滚 / 选中项滚入可见；
+/// - 窄屏 [AppTabForm.wide]：直接复用 flutter_miuix [MiuixTabRow]（76–98 宽、
+///   42 高、胶囊选中），并保留库缺失的 hover 与按压反馈（见 [_AppWideTabRow]）。
+class AppTabStrip extends StatefulWidget {
+  const AppTabStrip({
+    super.key,
+    required this.tabs,
+    required this.selectedIndex,
+    required this.onSelected,
+    this.form = AppTabForm.auto,
+    this.breakpoint = kAppTabBreakpoint,
+    this.railHeight = 32,
+    this.wideHeight = 42,
+    this.railPadding = const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+    this.widePadding = const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+    this.railItemPadding = const EdgeInsets.symmetric(horizontal: 14),
+    this.railItemInset = 0,
+    this.itemGap = Style.sm,
+    this.labelFontSize = 13,
+    this.wideMinWidth,
+    this.wideMaxWidth,
+    this.wideColors,
+    this.wideCornerRadius,
+    this.contentAlignment,
+  });
+
+  /// 标签文本（顺序与索引一一对应）。
+  final List<String> tabs;
+
+  /// 当前选中索引。
+  final int selectedIndex;
+
+  /// 选中回调（传标签索引）。
+  final ValueChanged<int> onSelected;
+
+  /// 形态；[AppTabForm.auto] 时按窗口宽度自动选择。
+  final AppTabForm form;
+
+  /// 自动形态的切换阈值。
+  final double breakpoint;
+
+  /// 宽屏轨道行高（默认 32，沿用首页分类条）。
+  final double railHeight;
+
+  /// 窄屏宽体行高（默认 42 = `MiuixTabRowDefaults.tabRowHeight`）。
+  final double wideHeight;
+
+  /// 宽屏轨道左右内距（默认 `Style.safeSpace`）。
+  final EdgeInsets railPadding;
+
+  /// 窄屏页签左右内距（默认 `Style.safeSpace`）。
+  final EdgeInsets widePadding;
+
+  /// 宽屏胶囊的左右内距。
+  final EdgeInsets railItemPadding;
+
+  /// 宽屏胶囊的上下内缩（0 = 胶囊填满行高；历史页传 5 保持原观感）。
+  final double railItemInset;
+
+  /// 项间距（两种形态共用，默认 `Style.sm`）。
+  final double itemGap;
+
+  /// 宽屏胶囊字号（默认 13）。
+  final double labelFontSize;
+
+  /// 窄屏页签的最小/最大项宽（默认取库值 76/98）。
+  final double? wideMinWidth;
+  final double? wideMaxWidth;
+
+  /// 窄屏页签配色覆盖（默认取 Miuix 主题默认色）。
+  final MiuixTabRowColors? wideColors;
+
+  /// 窄屏页签圆角覆盖（默认取“自身高度的一半”全圆胶囊）。
+  final double? wideCornerRadius;
+
+  /// 窄屏页签内容对齐方式。
+  final AlignmentGeometry? contentAlignment;
+
+  @override
+  State<AppTabStrip> createState() => _AppTabStripState();
+}
+
+class _AppTabStripState extends State<AppTabStrip> {
+  @override
+  Widget build(BuildContext context) {
+    final form = resolveAppTabForm(
+      context,
+      form: widget.form,
+      breakpoint: widget.breakpoint,
+    );
+    if (form == AppTabForm.rail) {
+      return _AppTabRail(
+        tabs: widget.tabs,
+        selectedIndex: widget.selectedIndex,
+        onSelected: widget.onSelected,
+        height: widget.railHeight,
+        padding: widget.railPadding,
+        itemPadding: widget.railItemPadding,
+        itemInset: widget.railItemInset,
+        gap: widget.itemGap,
+        fontSize: widget.labelFontSize,
+      );
+    }
+    return _AppWideTabRow(
+      tabs: widget.tabs,
+      selectedIndex: widget.selectedIndex,
+      onSelected: widget.onSelected,
+      height: widget.wideHeight,
+      padding: widget.widePadding,
+      gap: widget.itemGap,
+      minWidth: widget.wideMinWidth,
+      maxWidth: widget.wideMaxWidth,
+      colors: widget.wideColors,
+      cornerRadius: widget.wideCornerRadius,
+      contentAlignment: widget.contentAlignment,
+    );
+  }
+}
+
+/// 宽屏形态：紧凑胶囊轨道（鼠标优先）。
+///
+/// 与旧实现的关键差异：hover / 按压按**单项**判定（每项自带 `MouseRegion`），
+/// 不再复刻 flutter_miuix 内部私有的宽度算法（旧 [AppTabBar] 的 `_tabWidth` /
+/// `_hitIndex` 镜像会随库升级漂移）。
+class _AppTabRail extends StatefulWidget {
+  const _AppTabRail({
+    required this.tabs,
+    required this.selectedIndex,
+    required this.onSelected,
+    required this.height,
+    required this.padding,
+    required this.itemPadding,
+    required this.itemInset,
+    required this.gap,
+    required this.fontSize,
+  });
+
+  final List<String> tabs;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+  final double height;
+  final EdgeInsets padding;
+  final EdgeInsets itemPadding;
+  final double itemInset;
+  final double gap;
+  final double fontSize;
+
+  @override
+  State<_AppTabRail> createState() => _AppTabRailState();
+}
+
+class _AppTabRailState extends State<_AppTabRail> {
+  static const Duration _colorDuration = Duration(milliseconds: 160);
+  static const Duration _sinkDuration = Duration(milliseconds: 90);
+
+  static const double _hoverAlpha = 0.06;
+  static const double _sinkAmount = 0.98;
+
+  final ScrollController _scroll = ScrollController();
+
+  /// 每项一个 Key：选中项滚入可见时需要取它的 RenderBox。
+  List<GlobalKey> _keys = const [];
+
+  int? _hoverIndex;
+  int? _pressIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _rebuildKeys();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelected(animate: false));
+  }
+
+  @override
+  void didUpdateWidget(_AppTabRail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_keys.length != widget.tabs.length) {
+      _rebuildKeys();
+    }
+    if (widget.selectedIndex != oldWidget.selectedIndex ||
+        widget.tabs.length != oldWidget.tabs.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelected());
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _rebuildKeys() {
+    _keys = List<GlobalKey>.generate(widget.tabs.length, (_) => GlobalKey());
+  }
+
+  double get _pillHeight =>
+      math.max(0, widget.height - widget.itemInset * 2);
+
+  /// 选中项滚入可见：**只在被裁切时**移动，避免每次换项都把轨道拉回居中。
+  void _revealSelected({bool animate = true}) {
+    if (!mounted || !_scroll.hasClients) return;
+    if (widget.tabs.isEmpty) return;
+    final index = widget.selectedIndex.clamp(0, widget.tabs.length - 1);
+    final context = _keys[index].currentContext;
+    final box = context?.findRenderObject();
+    if (box is! RenderBox || !box.attached || !box.hasSize) return;
+    final position = _scroll.position;
+    if (position.maxScrollExtent <= 0) return;
+    final viewport = RenderAbstractViewport.of(box);
+    final leading = viewport.getOffsetToReveal(box, 0).offset;
+    final trailing = viewport.getOffsetToReveal(box, 1).offset;
+    final fullyVisible = leading >= position.pixels &&
+        trailing <= position.pixels + position.viewportDimension;
+    if (fullyVisible) return;
+    final target = viewport
+        .getOffsetToReveal(box, 0.5)
+        .offset
+        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    if ((target - position.pixels).abs() < 0.5) return;
+    if (animate) {
+      _scroll.animateTo(
+        target,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _scroll.jumpTo(target);
+    }
+  }
+
+  /// 纵向滚轮 → 轨道横向滚动（桌面浏览器标签条的通行语义）。
+  ///
+  /// 仅在轨道确实溢出时接管；否则不注册 `PointerSignalResolver`，
+  /// 让滚轮继续驱动页面纵向滚动。
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (!_scroll.hasClients) return;
+    final position = _scroll.position;
+    if (position.maxScrollExtent <= position.minScrollExtent) return;
+    final delta = event.scrollDelta.dy.abs() >= event.scrollDelta.dx.abs()
+        ? event.scrollDelta.dy
+        : event.scrollDelta.dx;
+    if (delta == 0) return;
+    final target = (position.pixels + delta)
+        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    if ((target - position.pixels).abs() < 0.5) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      if (_scroll.hasClients) _scroll.jumpTo(target);
+    });
+  }
+
+  void _setHover(int? index) {
+    if (_hoverIndex == index) return;
+    setState(() => _hoverIndex = index);
+  }
+
+  void _setPress(int? index) {
+    if (_pressIndex == index) return;
+    setState(() => _pressIndex = index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppThemeHost.of(context).colors;
+    return SizedBox(
+      height: widget.height,
+      child: Listener(
+        onPointerSignal: _handlePointerSignal,
+        child: SingleChildScrollView(
+          controller: _scroll,
+          scrollDirection: Axis.horizontal,
+          physics: const ClampingScrollPhysics(),
+          padding: widget.padding,
+          child: Row(
+            children: [
+              for (var i = 0; i < widget.tabs.length; i++) ...[
+                if (i > 0) SizedBox(width: widget.gap),
+                _buildItem(palette, i),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItem(AppPalette palette, int index) {
+    final selected = index == widget.selectedIndex;
+    final hovered = _hoverIndex == index || _pressIndex == index;
+    final pressed = _pressIndex == index;
+    final primary = palette.primary;
+    final onSurface = palette.onSurface;
+    return MouseRegion(
+      key: _keys[index],
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => _setHover(index),
+      onExit: (_) => _setHover(null),
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) {
+          _setHover(index);
+          _setPress(index);
+        },
+        onPointerUp: (_) => _setPress(null),
+        onPointerCancel: (_) => _setPress(null),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => widget.onSelected(index),
+          child: AnimatedScale(
+            scale: pressed ? _sinkAmount : 1,
+            duration: _sinkDuration,
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: _colorDuration,
+              curve: Curves.easeOut,
+              height: _pillHeight,
+              padding: widget.itemPadding,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected
+                    ? primary.withValues(alpha: 0.18)
+                    : (hovered
+                        ? onSurface.withValues(alpha: _hoverAlpha)
+                        : AppColors.transparent),
+                borderRadius: BorderRadius.circular(_pillHeight / 2),
+                border: Border.all(
+                  color: selected
+                      ? primary.withValues(alpha: 0.45)
+                      : AppColors.transparent,
+                ),
+              ),
+              child: Text(
+                widget.tabs[index],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? primary : palette.onSurfaceVariant,
+                  fontSize: widget.fontSize,
+                  // 显式行高收紧行盒：消除字体度量导致的下坠，Center 后光学居中。
+                  height: 1.2,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 窄屏形态：flutter_miuix [MiuixTabRow] 的封装，并补齐库缺失的交互。
 ///
 /// flutter_miuix 1.3.0 的 `MiuixTabRow` 内部只用 `GestureDetector(onTap:)`
-/// 承载标签项，**没有 hover 与按压反馈**；条形底色也是不透明的 `ColoredBox`，
-/// **无法承载模糊**。库为外部依赖不可改，故本组件在外层补齐：
+/// 承载标签项，**没有 hover 与按压反馈**；条形底色也是不透明的 `ColoredBox`。
+/// 库为外部依赖不可改，故本组件在外层补齐：
 /// - **hover / 按压反馈**：自算标签项矩形（复刻库内宽度算法）后，在库组件
-///   **下层**绘制圆角高亮（未选标签项自身透明，可透出），按压时高亮加深并按
-///   项目既有 sink 口径（`sinkAmount` 0.98）整体轻微微缩；
-/// - **毛玻璃底**（[blurBackground]）：与 `lib/common/widgets/miuix_overlay_panel.dart`
-///   同口径（blur 16 + 半透明底 × [kMiuixSurfaceAlpha] + 可选 1px 描边（[outline]）
-///   + 下投影），同时把库内底色改为透明，使滚动内容从栏后经过时呈模糊；
-/// - **全圆胶囊**：面板与选中项默认都取自身高度的一半作圆角（[borderRadius] 传
-///   null），配合 [panelPadding] 的四向内缩，得到上游 PiliPlus 分类条的
-///   「浅底胶囊 + 浮起白色胶囊」观感；
-/// - **去掉逐格描边**：库的未选中标签项自带 1px insetsquircle 描边
-///   （`_InsetSquircleBorderPainter`，取 `MiuixTheme.colors.outline`，库内无开关），
-///   实机上看着像"每格一个额外容器"并连成整行上下细线；故在局部 [MiuixTheme]
-///   覆盖中把 `outline` 置透明（仅影响本子树，不动全局主题与库）。
+///   **下层**绘制圆角高亮，按压时高亮加深并按 sink 口径整体轻微微缩；
+/// - **透明条底**：库内底色恒置透明，由宿主决定材质（毛玻璃 / 页面底）；
+/// - **去掉逐格描边**：库的未选中标签项自带 1px insetsquircle 描边，
+///   实机上像“每格一个额外容器”，故在局部 [MiuixTheme] 覆盖中把 `outline`
+///   置透明（仅影响本子树，不动全局主题与库）。
+class _AppWideTabRow extends StatefulWidget {
+  const _AppWideTabRow({
+    required this.tabs,
+    required this.selectedIndex,
+    required this.onSelected,
+    required this.height,
+    required this.padding,
+    required this.gap,
+    this.minWidth,
+    this.maxWidth,
+    this.colors,
+    this.cornerRadius,
+    this.contentAlignment,
+  });
+
+  final List<String> tabs;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+  final double height;
+  final EdgeInsets padding;
+  final double gap;
+  final double? minWidth;
+  final double? maxWidth;
+  final MiuixTabRowColors? colors;
+  final double? cornerRadius;
+  final AlignmentGeometry? contentAlignment;
+
+  @override
+  State<_AppWideTabRow> createState() => _AppWideTabRowState();
+}
+
+class _AppWideTabRowState extends State<_AppWideTabRow> {
+  static const Duration _feedbackDuration = Duration(milliseconds: 120);
+  static const Duration _sinkDuration = Duration(milliseconds: 90);
+
+  static const double _hoverAlpha = 0.06;
+  static const double _pressAlpha = 0.12;
+  static const double _sinkAmount = 0.98;
+
+  /// 交给库的滚动控制器：既能读回偏移量（高亮层定位需要），
+  /// 也让库不再自建控制器（由本组件负责释放）。
+  final ScrollController _scroll = ScrollController();
+
+  int? _hoverIndex;
+  int? _pressIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_onScrolled);
+  }
+
+  @override
+  void dispose() {
+    _scroll.removeListener(_onScrolled);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  /// 横向滚动会平移高亮层，需重建（仅在标签总宽超出可用宽时才触发）。
+  void _onScrolled() {
+    if (mounted) setState(() {});
+  }
+
+  double get _radius => widget.cornerRadius ?? widget.height / 2;
+
+  /// 复刻 flutter_miuix 1.3.0 `_calculateTabWidth`（库内私有）。
+  ///
+  /// 库不暴露单项矩形，hover/按压的命中判定必须自算，故此处镜像同一算法；
+  /// 算法随库版本变化时会漂移，升级 flutter_miuix 后需复核本函数。
+  double _tabWidth(double available) {
+    final count = widget.tabs.length;
+    final minWidth = widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth;
+    final maxWidth = widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth;
+    if (count == 0) return minWidth;
+    final totalSpacing = count > 1 ? (count - 1) * widget.gap : 0.0;
+    final contentWidth = available - totalSpacing;
+    if (contentWidth <= 0) return minWidth;
+    final ideal = contentWidth / count;
+    if (ideal < minWidth) return minWidth;
+    if (ideal > maxWidth) {
+      final totalMax = maxWidth * count + totalSpacing;
+      return totalMax < available ? ideal : maxWidth;
+    }
+    return ideal;
+  }
+
+  /// 指针坐标 → 标签索引（落在标签间距的缝隙里返回 null）。
+  int? _hitIndex(Offset local, double width, EdgeInsets padding) {
+    final count = widget.tabs.length;
+    if (count == 0) return null;
+    final available = math.max(0.0, width - padding.horizontal);
+    final tabWidth = _tabWidth(available);
+    final pitch = tabWidth + widget.gap;
+    final x = local.dx - padding.left + (_scroll.hasClients ? _scroll.offset : 0.0);
+    if (x < 0) return null;
+    final index = (x / pitch).floor();
+    if (index < 0 || index >= count) return null;
+    if (x - index * pitch > tabWidth) return null;
+    return index;
+  }
+
+  void _onHover(Offset local, double width, EdgeInsets padding) {
+    final index = _hitIndex(local, width, padding);
+    if (index == _hoverIndex) return;
+    setState(() => _hoverIndex = index);
+  }
+
+  void _onPointerDown(Offset local, double width, EdgeInsets padding) {
+    final index = _hitIndex(local, width, padding);
+    setState(() {
+      _pressIndex = index;
+      if (index != null) _hoverIndex = index;
+    });
+  }
+
+  void _clearPress() {
+    if (_pressIndex == null) return;
+    setState(() => _pressIndex = null);
+  }
+
+  void _clearHover() {
+    if (_hoverIndex == null) return;
+    setState(() => _hoverIndex = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = widget.padding.resolve(Directionality.of(context));
+    return SizedBox(
+      height: widget.height,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.hasBoundedWidth ? constraints.maxWidth : 0.0;
+          return Listener(
+            // 仅做视觉反馈，不参与手势竞技：点击仍由库内 onTabSelected 处理。
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (event) =>
+                _onPointerDown(event.localPosition, width, padding),
+            onPointerUp: (_) => _clearPress(),
+            onPointerCancel: (_) => _clearPress(),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onHover: (event) => _onHover(event.localPosition, width, padding),
+              onExit: (_) => _clearHover(),
+              child: AnimatedScale(
+                scale: _pressIndex == null ? 1.0 : _sinkAmount,
+                duration: _sinkDuration,
+                curve: Curves.easeOut,
+                child: _buildSurface(context, width, padding),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSurface(BuildContext context, double width, EdgeInsets padding) {
+    final tokens = AppThemeHost.of(context);
+    final count = widget.tabs.length;
+    final selected = count == 0 ? 0 : widget.selectedIndex.clamp(0, count - 1);
+    // 高亮层常驻（透明度切换）以获得淡入淡出；按压优先于 hover。
+    final highlightIndex = _pressIndex ?? _hoverIndex ?? selected;
+    final highlightAlpha = _pressIndex != null
+        ? _pressAlpha
+        : (_hoverIndex != null ? _hoverAlpha : 0.0);
+    final available = math.max(0.0, width - padding.horizontal);
+    final tabWidth = _tabWidth(available);
+    final offset = _scroll.hasClients ? _scroll.offset : 0.0;
+
+    return Stack(
+      children: [
+        Positioned(
+          left: padding.left + highlightIndex * (tabWidth + widget.gap) - offset,
+          top: 0,
+          width: tabWidth,
+          height: widget.height,
+          child: AnimatedContainer(
+            duration: _feedbackDuration,
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(
+              color: tokens.colors.onSurface.withValues(alpha: highlightAlpha),
+              borderRadius: BorderRadius.circular(_radius),
+            ),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.only(left: padding.left, right: padding.right),
+          child: _buildRow(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRow(BuildContext context) {
+    final count = widget.tabs.length;
+    final baseColors = widget.colors ?? MiuixTabRowDefaults.defaultColors(context);
+    final theme = MiuixTheme.of(context);
+    return MiuixTheme(
+      // 库未暴露开关：未选中标签项由 `_InsetSquircleBorderPainter` 画 1px
+      // insetsquircle 描边，颜色取 `MiuixTheme.colors.outline`。本项目标签条不要
+      // 逐格方框（实机反馈：像每格一个额外容器，并连成整行上下细线），故在局部
+      // 主题覆盖里把 outline 置透明；只影响本子树，不动全局主题与库。
+      data: theme.copyWith(
+        colors: theme.colors.copy(outline: AppColors.transparent),
+      ),
+      child: MiuixTabRow(
+        tabs: widget.tabs,
+        selectedTabIndex: count == 0 ? 0 : widget.selectedIndex.clamp(0, count - 1),
+        onTabSelected: widget.onSelected,
+        // 库内条底色恒置透明：材质由宿主承担（毛玻璃 / 页面底），否则库的
+        // `ColoredBox` 不透明底会盖住模糊层。
+        colors: MiuixTabRowColors(
+          backgroundColor: AppColors.transparent,
+          contentColor: baseColors.contentColor,
+          selectedBackgroundColor: baseColors.selectedBackgroundColor,
+          selectedContentColor: baseColors.selectedContentColor,
+        ),
+        minWidth: widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth,
+        maxWidth: widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth,
+        height: widget.height,
+        itemSpacing: widget.gap,
+        cornerRadius: _radius,
+        contentAlignment: widget.contentAlignment ?? Alignment.center,
+        scrollController: _scroll,
+      ),
+    );
+  }
+}
+
+/// Tab 头部标签栏：[MiuixTabRow] 的封装（宽/窄两形态），并补齐库缺失的材质。
+///
+/// 形态由 [AppTabStrip] 按窗口宽度自动选择：
+/// - 宽屏（≥ [kAppTabBreakpoint]）：紧凑胶囊轨道（首页/历史观感），
+///   行高与面板内距之和仍等于 [preferredHeight]，固定 extent 宿主不受影响；
+/// - 窄屏：76–98 × 42 的宽体页签（动态页观感）。
 ///
 /// 与 [AppTabBody] 共享 [controller]；点击项经 [AppTabController.animateTo]
 /// 驱动主体切页。可落在 `AppScaffold.topBar`、`SliverPersistentHeader`
 /// 或任意行内（配固定宽度即可收缩）。
-class AppTabBar extends StatefulWidget {
+class AppTabBar extends StatelessWidget {
   const AppTabBar({
     super.key,
     required this.controller,
@@ -95,6 +723,8 @@ class AppTabBar extends StatefulWidget {
     this.borderRadius,
     this.panelPadding = const EdgeInsets.all(Style.xs),
     this.outline = true,
+    this.form = AppTabForm.auto,
+    this.breakpoint = kAppTabBreakpoint,
   });
 
   /// 头体共享控制器。
@@ -143,251 +773,84 @@ class AppTabBar extends StatefulWidget {
   /// 是否画面板 1px 描边（默认 true；置 false 时只保留毛玻璃与投影）。
   final bool outline;
 
+  /// 形态覆盖；[AppTabForm.auto] 时按窗口宽度自动选择。
+  final AppTabForm form;
+
+  /// 自动形态的切换阈值。
+  final double breakpoint;
+
   /// 默认标签行高（= flutter_miuix [MiuixTabRowDefaults.tabRowHeight]）。
   ///
   /// 供宿主计算"通栏毛玻璃带"总高或 Sliver 委托的固定 extent 使用，避免各处硬编码 42。
+  /// **同时是两种形态的高度上限**：宽屏轨道只会更矮，固定 extent 宿主不会被裁切。
   static const double defaultHeight = MiuixTabRowDefaults.tabRowHeight;
 
   /// 头部实际高度（含覆盖值），供 Sliver 委托等需要固定 extent 的场景使用。
   double get preferredHeight => height ?? MiuixTabRowDefaults.tabRowHeight;
 
-  @override
-  State<AppTabBar> createState() => _AppTabBarState();
-}
+  /// 面板圆角：未显式覆盖时取全圆（整条高度的一半），得到胶囊外轮廓。
+  double get _panelRadius => borderRadius ?? preferredHeight / 2;
 
-class _AppTabBarState extends State<AppTabBar> {
-  /// 高亮淡入淡出时长。
-  static const Duration _feedbackDuration = Duration(milliseconds: 120);
-
-  /// 按压微缩时长。
-  static const Duration _sinkDuration = Duration(milliseconds: 90);
-
-  static const double _hoverAlpha = 0.06;
-  static const double _pressAlpha = 0.12;
-  static const double _sinkAmount = 0.98;
-
-  /// 交给库的滚动控制器：既能读回偏移量（高亮层定位需要），
-  /// 也让库不再自建控制器（由本组件负责释放）。
-  final ScrollController _scroll = ScrollController();
-
-  int? _hoverIndex;
-  int? _pressIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    _scroll.addListener(_onScrolled);
-  }
-
-  @override
-  void dispose() {
-    _scroll.removeListener(_onScrolled);
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  /// 横向滚动会平移高亮层，需重建（仅在标签总宽超出可用宽时才触发）。
-  void _onScrolled() {
-    if (mounted) setState(() {});
-  }
-
+  /// 标签行高：面板内缩后的净行高，也是选中胶囊的直径。
   double get _rowHeight {
-    final inner =
-        (widget.height ?? MiuixTabRowDefaults.tabRowHeight) -
-        widget.panelPadding.vertical;
+    final inner = preferredHeight - panelPadding.vertical;
     return inner > 0 ? inner : MiuixTabRowDefaults.tabRowHeight;
   }
 
-  /// 面板圆角：未显式覆盖时取全圆（整条高度的一半），得到胶囊外轮廓。
-  double get _panelRadius => widget.borderRadius ?? widget.preferredHeight / 2;
-
   /// 选中项 / hover 高亮圆角：未显式覆盖时取全圆（自身高度的一半）；
   /// 面板内缩后高亮层比面板矮，故不能沿用面板半径，否则会退化成方角。
-  double get _pillRadius => widget.borderRadius ?? _rowHeight / 2;
-
-  double get _spacing => MiuixTabRowDefaults.tabRowItemSpacing;
-
-  /// 复刻 flutter_miuix 1.3.0 `_calculateTabWidth`（库内私有）。
-  ///
-  /// 库不暴露单项矩形，hover/按压的命中判定必须自算，故此处镜像同一算法；
-  /// 算法随库版本变化时会漂移，升级 flutter_miuix 后需复核本函数。
-  double _tabWidth(double available) {
-    final count = widget.tabs.length;
-    final minWidth = widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth;
-    final maxWidth = widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth;
-    if (count == 0) return minWidth;
-    final totalSpacing = count > 1 ? (count - 1) * _spacing : 0.0;
-    final contentWidth = available - totalSpacing;
-    if (contentWidth <= 0) return minWidth;
-    final ideal = contentWidth / count;
-    if (ideal < minWidth) return minWidth;
-    if (ideal > maxWidth) {
-      final totalMax = maxWidth * count + totalSpacing;
-      return totalMax < available ? ideal : maxWidth;
-    }
-    return ideal;
-  }
-
-  /// 指针坐标 → 标签索引（落在标签间距的缝隙里返回 null）。
-  int? _hitIndex(Offset local, double width) {
-    final count = widget.tabs.length;
-    if (count == 0) return null;
-    final pad = widget.panelPadding;
-    final available = math.max(0.0, width - pad.horizontal);
-    final tabWidth = _tabWidth(available);
-    final pitch = tabWidth + _spacing;
-    final x = local.dx - pad.left + (_scroll.hasClients ? _scroll.offset : 0.0);
-    if (x < 0) return null;
-    final index = (x / pitch).floor();
-    if (index < 0 || index >= count) return null;
-    if (x - index * pitch > tabWidth) return null;
-    return index;
-  }
-
-  void _onHover(Offset local, double width) {
-    final index = _hitIndex(local, width);
-    if (index == _hoverIndex) return;
-    setState(() => _hoverIndex = index);
-  }
-
-  void _onPointerDown(Offset local, double width) {
-    final index = _hitIndex(local, width);
-    setState(() {
-      _pressIndex = index;
-      if (index != null) _hoverIndex = index;
-    });
-  }
-
-  void _clearPress() {
-    if (_pressIndex == null) return;
-    setState(() => _pressIndex = null);
-  }
-
-  void _clearHover() {
-    if (_hoverIndex == null) return;
-    setState(() => _hoverIndex = null);
-  }
+  double get _pillRadius => borderRadius ?? _rowHeight / 2;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: widget.controller,
-      builder: (context, _) => LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.hasBoundedWidth ? constraints.maxWidth : 0.0;
-          return Listener(
-            // 仅做视觉反馈，不参与手势竞技：点击仍由库内 onTabSelected 处理。
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (event) => _onPointerDown(event.localPosition, width),
-            onPointerUp: (_) => _clearPress(),
-            onPointerCancel: (_) => _clearPress(),
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              onHover: (event) => _onHover(event.localPosition, width),
-              onExit: (_) => _clearHover(),
-              child: AnimatedScale(
-                scale: _pressIndex == null ? 1.0 : _sinkAmount,
-                duration: _sinkDuration,
-                curve: Curves.easeOut,
-                child: _buildSurface(context, width),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSurface(BuildContext context, double width) {
-    final tokens = AppThemeHost.of(context);
-    final pad = widget.panelPadding;
-    final rowHeight = _rowHeight;
-    final count = widget.tabs.length;
-    final selected = count == 0 ? 0 : widget.controller.index.clamp(0, count - 1);
-    // 高亮层常驻（透明度切换）以获得淡入淡出；按压优先于 hover。
-    final highlightIndex = _pressIndex ?? _hoverIndex ?? selected;
-    final highlightAlpha = _pressIndex != null
-        ? _pressAlpha
-        : (_hoverIndex != null ? _hoverAlpha : 0.0);
-
-    final available = math.max(0.0, width - pad.horizontal);
-    final tabWidth = _tabWidth(available);
-    final offset = _scroll.hasClients ? _scroll.offset : 0.0;
-
-    final content = Stack(
-      children: [
-        Positioned(
-          left: pad.left + highlightIndex * (tabWidth + _spacing) - offset,
-          top: pad.top,
-          width: tabWidth,
-          height: rowHeight,
-          child: AnimatedContainer(
-            duration: _feedbackDuration,
-            curve: Curves.easeOut,
-            decoration: BoxDecoration(
-              color: tokens.colors.onSurface.withValues(alpha: highlightAlpha),
-              borderRadius: BorderRadius.circular(_pillRadius),
-            ),
+      listenable: controller,
+      builder: (context, _) {
+        final count = tabs.length;
+        final selected = count == 0 ? 0 : controller.index.clamp(0, count - 1);
+        final strip = AppTabStrip(
+          tabs: tabs,
+          selectedIndex: selected,
+          onSelected: controller.animateTo,
+          form: form,
+          breakpoint: breakpoint,
+          // 两种形态都用净行高：面板内缩由外层 Padding 承担，
+          // 面板总高恒为 preferredHeight（固定 extent 宿主安全）。
+          railHeight: _rowHeight,
+          wideHeight: _rowHeight,
+          // 面板内距由外层 Padding 承担：两种形态都不再二次缩进，
+          // 否则窄屏页签会比改动前整体右移 12px。
+          railPadding: EdgeInsets.zero,
+          widePadding: EdgeInsets.zero,
+          itemGap: MiuixTabRowDefaults.tabRowItemSpacing,
+          wideMinWidth: minWidth,
+          wideMaxWidth: maxWidth,
+          wideColors: colors,
+          wideCornerRadius: _pillRadius,
+          contentAlignment: contentAlignment,
+        );
+        final content = Padding(padding: panelPadding, child: strip);
+        if (!blurBackground) {
+          return SizedBox(height: preferredHeight, child: content);
+        }
+        return SizedBox(
+          height: preferredHeight,
+          child: MiuixFrostedSurface(
+            borderRadius: _panelRadius,
+            blurSigma: blurSigma,
+            outline: outline,
+            child: content,
           ),
-        ),
-        Padding(padding: pad, child: _buildRow(context, rowHeight)),
-      ],
-    );
-
-    if (!widget.blurBackground) {
-      return SizedBox(height: widget.preferredHeight, child: content);
-    }
-
-    // 毛玻璃面板：复用与 MiuixOverlayPanel 同材质的共享件，面板底由它承担，
-    // 库内底色已在 [_buildRow] 改透明（否则会盖住模糊层）。
-    return SizedBox(
-      height: widget.preferredHeight,
-      child: MiuixFrostedSurface(
-        borderRadius: _panelRadius,
-        blurSigma: widget.blurSigma,
-        outline: widget.outline,
-        child: content,
-      ),
-    );
-  }
-
-  Widget _buildRow(BuildContext context, double rowHeight) {
-    final count = widget.tabs.length;
-    final baseColors = widget.colors ?? MiuixTabRowDefaults.defaultColors(context);
-    final theme = MiuixTheme.of(context);
-    return MiuixTheme(
-      // 库未暴露开关：未选中标签项由 `_InsetSquircleBorderPainter` 画 1px
-      // insetsquircle 描边，颜色取 `MiuixTheme.colors.outline`。本项目标签条不要
-      // 逐格方框（实机反馈：像每格一个额外容器，并连成整行上下细线），故在局部
-      // 主题覆盖里把 outline 置透明；只影响本子树，不动全局主题与库。
-      data: theme.copyWith(
-        colors: theme.colors.copy(outline: AppColors.transparent),
-      ),
-      child: MiuixTabRow(
-        tabs: widget.tabs,
-        selectedTabIndex: count == 0 ? 0 : widget.controller.index.clamp(0, count - 1),
-        onTabSelected: widget.controller.animateTo,
-        // 库内条底色恒置透明：自绘面板时由毛玻璃承担材质，不自绘面板时透出宿主
-        // 背景（如空间页按钮行的通栏毛玻璃带）；否则库的 `ColoredBox` 不透明底
-        // 会盖住模糊层。
-        colors: MiuixTabRowColors(
-          backgroundColor: AppColors.transparent,
-          contentColor: baseColors.contentColor,
-          selectedBackgroundColor: baseColors.selectedBackgroundColor,
-          selectedContentColor: baseColors.selectedContentColor,
-        ),
-        minWidth: widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth,
-        maxWidth: widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth,
-        height: rowHeight,
-        cornerRadius: _pillRadius,
-        contentAlignment: widget.contentAlignment ?? Alignment.center,
-        scrollController: _scroll,
-      ),
+        );
+      },
     );
   }
 }
 
 /// Tab 主体内容：[PageView] 的薄封装，与 [AppTabBar] 共享 [controller]。
+///
+/// 宽屏（≥ [kAppTabBreakpoint]）关闭**鼠标拖动**翻页（桌面以点选为主），
+/// 触摸 / 触控笔仍可左右滑；窄屏保持全设备可滑。
 class AppTabBody extends StatefulWidget {
   const AppTabBody({
     super.key,
@@ -403,6 +866,17 @@ class AppTabBody extends StatefulWidget {
 
   @override
   State<AppTabBody> createState() => _AppTabBodyState();
+}
+
+/// 宽屏下剔除鼠标拖拽的滚动行为：两指滚动/滚轮不受影响，只是不允许“按住拖动翻页”。
+class _AppTabPageScrollBehavior extends ScrollBehavior {
+  const _AppTabPageScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => const <PointerDeviceKind>{
+        PointerDeviceKind.touch,
+        PointerDeviceKind.stylus,
+      };
 }
 
 class _AppTabBodyState extends State<AppTabBody> {
@@ -476,10 +950,15 @@ class _AppTabBodyState extends State<AppTabBody> {
 
   @override
   Widget build(BuildContext context) {
-    return PageView(
+    final page = PageView(
       controller: _pageController,
       onPageChanged: _onPageChanged,
       children: widget.children,
+    );
+    if (MediaQuery.sizeOf(context).width < kAppTabBreakpoint) return page;
+    return ScrollConfiguration(
+      behavior: const _AppTabPageScrollBehavior(),
+      child: page,
     );
   }
 }
@@ -530,6 +1009,8 @@ class AppTabView extends StatelessWidget {
   /// 必须施加在**可滚动区内部**（`SliverPadding` / `ListView.padding` / `CustomScrollView`
   /// 的 sliver 内边距）：设在滚动区**外部**会把内容压到栏下方，内容便无法滚到栏后，
   /// 毛玻璃又不可见。
+  ///
+  /// 按**高度上限**（42）预留：宽屏形态的轨道更矮，只多出一点栏后留白，不会遮内容。
   static const double floatingTopReserve =
       Style.sm * 2 + AppTabBar.defaultHeight + Style.sm;
 

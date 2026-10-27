@@ -16,6 +16,7 @@ import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/ui/home/home_chrome_metrics.dart';
 import 'package:flutter_miuix/miuix.dart';
 
 /// Recommended videos feed — ported from PiliPlus's RcmdPage.
@@ -97,9 +98,10 @@ class _RcmdPageState extends State<RcmdPage>
     return AppScrollBar(
       controller: controller.scrollController,
       child: AppRefreshIndicator(
-        // 实机反馈#5：指示器出现在可见滚动区域顶部（浮动组合控件下方，页内预留 120）。
+        // 实机反馈#5：指示器出现在可见滚动区域顶部（浮动组合控件下方）。
+        // 预留高度随分类行形态变化（宽屏 120 / 窄屏 130），见 HomeChromeMetrics。
         displacement: 12,
-        edgeOffset: 120,
+        edgeOffset: HomeChromeMetrics.topReserveOf(context),
         strokeWidth: 2.5,
         onRefresh: controller.onRefresh,
         child: CustomScrollView(
@@ -107,9 +109,13 @@ class _RcmdPageState extends State<RcmdPage>
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverPadding(
-              // Extra top padding (120) to clear the floating top bar (52)
-              // and the category tabs row (~36) rendered above in a Stack.
-              padding: const EdgeInsets.fromLTRB(Style.safeSpace, 120, Style.safeSpace, 100),
+              // 顶部留白避开浮动顶栏 + 分类标签行（宽屏/窄屏高度不同）。
+              padding: EdgeInsets.fromLTRB(
+                Style.safeSpace,
+                HomeChromeMetrics.topReserveOf(context),
+                Style.safeSpace,
+                100,
+              ),
               sliver: Obx(
                 () => _buildBody(colorScheme, controller.loadingState.value),
               ),

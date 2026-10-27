@@ -23,6 +23,7 @@ import 'package:winwin/core/shell/app_transparent_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/ui/home/home_chrome_metrics.dart';
 
 /// 直播二级分类导航条目。
 class LiveCategoryTab {
@@ -114,9 +115,12 @@ class _LivePageState extends State<LivePage>
     final cs = tokens.colors;
     final shapes = tokens.shapes;
 
-    // 嵌入 HomePage 时需顶部留白以避开浮动顶栏(60) + 一级分类标签行(36)
+    // 嵌入 HomePage 时需顶部留白以避开浮动顶栏 + 一级分类标签行；
+    // 高度随形态变化（宽屏 120 / 窄屏 130），见 HomeChromeMetrics。
     return Padding(
-      padding: const EdgeInsets.only(top: 112),
+      padding: EdgeInsets.only(
+        top: HomeChromeMetrics.topReserveOf(context),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
