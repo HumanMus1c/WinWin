@@ -969,10 +969,9 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final tabs = _availableTabs;
     _syncTabController();
 
-    // 分类标签条的**通栏毛玻璃带**：总高 = 标签行高（库默认）+ 上下各 4px 呼吸位，
-    // 与顶栏那条 56px 通栏带同材质，吸顶贴合时形成一条完整顶栏。
-    const bandPad = Style.xs;
-    final tabBandHeight = AppTabBar.defaultHeight + bandPad * 2;
+    // 分类标签条：与全库统一的**悬浮胶囊**（窗口底色 + 圆角 + 投影 + 随标签收缩），
+    // 不再是通栏毛玻璃带（CVO：用户空间不得保留直角矩形底）。
+    const tabBandHeight = AppTabBar.defaultHeight;
 
     return AppRefreshIndicator(
       onRefresh: _loadAll,
@@ -1020,16 +1019,17 @@ class _MemberSpacePageState extends State<MemberSpacePage>
               delegate: _SliverTabBarDelegate(
                 child: KeyedSubtree(
                   key: _tabBandKey,
-                  child: MiuixFrostedSurface(
-                    borderRadius: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Style.safeSpace,
+                    ),
                     child: AppTabBar(
                       controller: _tabController,
                       tabs: tabs.map((t) => _tabTitle(t)).toList(),
-                      blurBackground: false,
                       height: tabBandHeight,
                       panelPadding: const EdgeInsets.symmetric(
                         horizontal: Style.sm,
-                        vertical: bandPad,
+                        vertical: Style.xs,
                       ),
                     ),
                   ),
