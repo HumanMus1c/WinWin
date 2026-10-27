@@ -1027,7 +1027,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                       tabs: tabs.map((t) => _tabTitle(t)).toList(),
                       blurBackground: false,
                       height: tabBandHeight,
-                      panelPadding: const EdgeInsets.symmetric(vertical: bandPad),
+                      panelPadding: const EdgeInsets.symmetric(
+                        horizontal: Style.sm,
+                        vertical: bandPad,
+                      ),
                     ),
                   ),
                 ),

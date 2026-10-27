@@ -68,7 +68,10 @@ class AppTabController extends ChangeNotifier {
 ///   项目既有 sink 口径（`sinkAmount` 0.98）整体轻微微缩；
 /// - **毛玻璃底**（[blurBackground]）：与 `lib/common/widgets/miuix_overlay_panel.dart`
 ///   同口径（blur 16 + 半透明底 × [kMiuixSurfaceAlpha] + 可选 1px 描边（[outline]）
-///   + 圆角 12 + 下投影），同时把库内底色改为透明，使滚动内容从栏后经过时呈模糊；
+///   + 下投影），同时把库内底色改为透明，使滚动内容从栏后经过时呈模糊；
+/// - **全圆胶囊**：面板与选中项默认都取自身高度的一半作圆角（[borderRadius] 传
+///   null），配合 [panelPadding] 的四向内缩，得到上游 PiliPlus 分类条的
+///   「浅底胶囊 + 浮起白色胶囊」观感；
 /// - **去掉逐格描边**：库的未选中标签项自带 1px insetsquircle 描边
 ///   （`_InsetSquircleBorderPainter`，取 `MiuixTheme.colors.outline`，库内无开关），
 ///   实机上看着像"每格一个额外容器"并连成整行上下细线；故在局部 [MiuixTheme]
@@ -89,8 +92,8 @@ class AppTabBar extends StatefulWidget {
     this.contentAlignment,
     this.blurBackground = true,
     this.blurSigma = 16,
-    this.borderRadius = MiuixTabRowDefaults.tabRowCornerRadius,
-    this.panelPadding = EdgeInsets.zero,
+    this.borderRadius,
+    this.panelPadding = const EdgeInsets.all(Style.xs),
     this.outline = true,
   });
 
@@ -124,10 +127,17 @@ class AppTabBar extends StatefulWidget {
   /// 毛玻璃模糊半径（默认 16，对齐 `MiuixOverlayPanel`）。
   final double blurSigma;
 
-  /// 圆角（同时用于面板与选中指示，默认 12）。
-  final double borderRadius;
+  /// 圆角（同时用于面板与选中指示）。
+  ///
+  /// 默认 `null` = **全圆胶囊**：面板取整条高度的一半（[preferredHeight] / 2），
+  /// 选中指示取自身高度的一半（行高 / 2），与上游 PiliPlus 的分类
+  /// 胶囊同观感；显式传值（含 0）时统一按该值作用于面板与选中项（旧口径）。
+  final double? borderRadius;
 
-  /// 面板内缩（标签条与面板边缘的间距，默认 0）。
+  /// 面板内缩（标签条与面板边缘的间距，默认 [Style.xs]）。
+  ///
+  /// 四向留白让选中胶囊**浮**在面板内（贴边时会与面板外轮廓重合而看不出层次），
+  /// 同时把标签行高压缩到 `高度 - 2×[Style.xs]`，选中胶囊据此取自身半径。
   final EdgeInsets panelPadding;
 
   /// 是否画面板 1px 描边（默认 true；置 false 时只保留毛玻璃与投影）。
@@ -187,6 +197,13 @@ class _AppTabBarState extends State<AppTabBar> {
         widget.panelPadding.vertical;
     return inner > 0 ? inner : MiuixTabRowDefaults.tabRowHeight;
   }
+
+  /// 面板圆角：未显式覆盖时取全圆（整条高度的一半），得到胶囊外轮廓。
+  double get _panelRadius => widget.borderRadius ?? widget.preferredHeight / 2;
+
+  /// 选中项 / hover 高亮圆角：未显式覆盖时取全圆（自身高度的一半）；
+  /// 面板内缩后高亮层比面板矮，故不能沿用面板半径，否则会退化成方角。
+  double get _pillRadius => widget.borderRadius ?? _rowHeight / 2;
 
   double get _spacing => MiuixTabRowDefaults.tabRowItemSpacing;
 
@@ -309,7 +326,7 @@ class _AppTabBarState extends State<AppTabBar> {
             curve: Curves.easeOut,
             decoration: BoxDecoration(
               color: tokens.colors.onSurface.withValues(alpha: highlightAlpha),
-              borderRadius: BorderRadius.circular(widget.borderRadius),
+              borderRadius: BorderRadius.circular(_pillRadius),
             ),
           ),
         ),
@@ -326,7 +343,7 @@ class _AppTabBarState extends State<AppTabBar> {
     return SizedBox(
       height: widget.preferredHeight,
       child: MiuixFrostedSurface(
-        borderRadius: widget.borderRadius,
+        borderRadius: _panelRadius,
         blurSigma: widget.blurSigma,
         outline: widget.outline,
         child: content,
@@ -362,7 +379,7 @@ class _AppTabBarState extends State<AppTabBar> {
         minWidth: widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth,
         maxWidth: widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth,
         height: rowHeight,
-        cornerRadius: widget.borderRadius,
+        cornerRadius: _pillRadius,
         contentAlignment: widget.contentAlignment ?? Alignment.center,
         scrollController: _scroll,
       ),
