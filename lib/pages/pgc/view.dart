@@ -98,7 +98,6 @@ class _PgcPageState extends State<PgcPage>
               // 外框总高 = 34 + 4×2 = 42，与动态页 / 历史页 TAB 栏同高同材质。
               railHeight: 34,
               wideHeight: 34,
-              labelFontSize: 12.5,
               surface: true,
             ),
           ),

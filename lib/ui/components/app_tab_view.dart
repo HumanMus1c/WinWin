@@ -118,8 +118,8 @@ class AppTabStrip extends StatefulWidget {
     this.breakpoint = kAppTabBreakpoint,
     this.railHeight = 32,
     this.wideHeight = 42,
-    this.railPadding = const EdgeInsets.symmetric(horizontal: Style.safeSpace),
-    this.widePadding = const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+    this.railPadding = EdgeInsets.zero,
+    this.widePadding = EdgeInsets.zero,
     this.railItemPadding = const EdgeInsets.symmetric(horizontal: 14),
     this.railItemInset = 0,
     this.itemGap = Style.sm,
@@ -130,11 +130,12 @@ class AppTabStrip extends StatefulWidget {
     this.wideCornerRadius,
     this.contentAlignment,
     this.surface = false,
-    this.surfaceFrosted = true,
-    this.surfacePadding = const EdgeInsets.all(Style.xs),
+    this.surfacePadding = const EdgeInsets.symmetric(
+      horizontal: Style.sm,
+      vertical: Style.xs,
+    ),
     this.surfaceRadius,
     this.surfaceOutline = true,
-    this.surfaceBlurSigma = 16,
   });
 
   /// 标签文本（顺序与索引一一对应）。
@@ -158,10 +159,13 @@ class AppTabStrip extends StatefulWidget {
   /// 窄屏宽体行高（默认 42 = `MiuixTabRowDefaults.tabRowHeight`）。
   final double wideHeight;
 
-  /// 宽屏轨道左右内距（默认 `Style.safeSpace`）。
+  /// 宽屏轨道左右内距（默认 0）。
+  ///
+  /// **不要再用它做页面级缩进**：页面级位置由宿主的外层 `Padding` 提供，
+  /// 容器内部距统一由 [surfacePadding] 决定（否则会出现「左内距过大」）。
   final EdgeInsets railPadding;
 
-  /// 窄屏页签左右内距（默认 `Style.safeSpace`）。
+  /// 窄屏页签左右内距（默认 0，口径同 [railPadding]）。
   final EdgeInsets widePadding;
 
   /// 宽屏胶囊的左右内距。
@@ -196,11 +200,11 @@ class AppTabStrip extends StatefulWidget {
   /// 分类器」合并控件由宿主自带材质，保持 false。
   final bool surface;
 
-  /// 悬浮容器材质：true = 毛玻璃（`MiuixFrostedSurface`，与动态页同款），
-  /// false = 实色胶囊（用于已处于毛玻璃合并栏内部、避免二次模糊的场合）。
-  final bool surfaceFrosted;
-
-  /// 悬浮容器内距（标签行与容器边缘的间距，默认 [Style.xs]）。
+  /// 悬浮容器内距（标签行与容器边缘的间距）。
+  ///
+  /// 水平默认 [Style.sm]（8）：容器是全圆胶囊，4px 时末端圆弧会切到首/末
+  /// 胶囊的圆角（实机反馈「最后一个胶囊无法完整显示」）；8px 是能容纳
+  /// 34 高胶囊圆角的最小常用档。
   final EdgeInsets surfacePadding;
 
   /// 悬浮容器圆角；null = 全圆胶囊（容器总高的一半）。
@@ -208,9 +212,6 @@ class AppTabStrip extends StatefulWidget {
 
   /// 悬浮容器 1px 描边（默认 true，与动态页一致）。
   final bool surfaceOutline;
-
-  /// 毛玻璃模糊半径（默认 16，与动态页一致）。
-  final double surfaceBlurSigma;
 
   @override
   State<AppTabStrip> createState() => _AppTabStripState();
@@ -250,14 +251,13 @@ class _AppTabStripState extends State<AppTabStrip> {
         return SizedBox(
           width: totalWidth,
           height: totalHeight,
-          child: widget.surfaceFrosted
-              ? MiuixFrostedSurface(
-                  borderRadius: radius,
-                  blurSigma: widget.surfaceBlurSigma,
-                  outline: widget.surfaceOutline,
-                  child: inner,
-                )
-              : _TabSolidSurface(radius: radius, outline: widget.surfaceOutline, child: inner),
+          // 容器**不填任何背景**（CVO：容器背景应为空或与窗口背景一致），
+          // 只保留悬浮投影 + 1px 描边，由圆角轮廓定义胶囊形状。
+          child: _TabFloatingSurface(
+            radius: radius,
+            outline: widget.surfaceOutline,
+            child: inner,
+          ),
         );
       },
     );
@@ -309,8 +309,11 @@ class _AppTabStripState extends State<AppTabStrip> {
       final style = _railMeasureStyle(context);
       total = widget.railPadding.horizontal;
       for (final label in tabs) {
-        total += _textWidth(context, label, style) +
-            widget.railItemPadding.horizontal;
+        // 文字宽向上取整 + 每项 1px 余量：避免亚像素/字体回退导致容器比
+        // 真实内容窄 1~2px（会表现为「末项被裁」或「可向左短滑一下」）。
+        total += _textWidth(context, label, style).ceilToDouble() +
+            widget.railItemPadding.horizontal +
+            1;
       }
       total += widget.itemGap * (tabs.length - 1);
     } else {
@@ -362,12 +365,14 @@ class _AppTabStripState extends State<AppTabStrip> {
   }
 }
 
-/// 实色悬浮胶囊：用于**已处在毛玻璃合并栏内部**的标签条（消息中心）。
+/// TAB 栏悬浮容器：**无背景色**，只有投影 + 1px 描边。
 ///
-/// 与 [MiuixFrostedSurface] 使用同一套投影（16 模糊 / 4px 下移 / 15%·35%），
-/// 只是不做 backdrop 模糊，避免“玻璃里再套玻璃”导致发灰、字发虚。
-class _TabSolidSurface extends StatelessWidget {
-  const _TabSolidSurface({
+/// CVO 口径：容器背景应为空（或与窗口背景一致），不得再叠毛玻璃 / 实色底；
+/// 形状完全由圆角轮廓 + 悬浮投影定义。描边用 [foregroundDecoration]
+/// （只画不占布局），否则 `Container` 会把 border 折算成内距，
+/// 使末端胶囊被额外挤窄 1~2px（上一轮「最后一个胶囊显示不全」的成因之一）。
+class _TabFloatingSurface extends StatelessWidget {
+  const _TabFloatingSurface({
     required this.radius,
     required this.outline,
     required this.child,
@@ -384,11 +389,7 @@ class _TabSolidSurface extends StatelessWidget {
     final borderRadius = BorderRadius.circular(radius);
     return Container(
       decoration: BoxDecoration(
-        color: tokens.colors.surfaceContainerHigh,
         borderRadius: borderRadius,
-        border: outline
-            ? Border.all(color: MiuixFrostedSurface.outlineColor(isDark: isDark))
-            : null,
         boxShadow: <BoxShadow>[
           BoxShadow(
             color: AppColors.black.withValues(alpha: isDark ? 0.35 : 0.15),
@@ -397,9 +398,31 @@ class _TabSolidSurface extends StatelessWidget {
           ),
         ],
       ),
+      foregroundDecoration: outline
+          ? BoxDecoration(
+              borderRadius: borderRadius,
+              border: Border.all(
+                color: MiuixFrostedSurface.outlineColor(isDark: isDark),
+              ),
+            )
+          : null,
       child: ClipRRect(borderRadius: borderRadius, child: child),
     );
   }
+}
+
+/// TAB 轨道的滚动行为：剔除鼠标拖动（保留触摸 / 触控笔）。
+///
+/// 桌面端“按住鼠标拖动标签条”没有任何收益，却会让轨道产生几像素的整体位移；
+/// 溢出时的横向滚动通过滚轮（[_AppTabRail] 的 PointerSignal 映射）完成。
+class _TabRailScrollBehavior extends ScrollBehavior {
+  const _TabRailScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => const <PointerDeviceKind>{
+        PointerDeviceKind.touch,
+        PointerDeviceKind.stylus,
+      };
 }
 
 /// 宽屏形态：紧凑胶囊轨道（鼠标优先）。
@@ -551,18 +574,23 @@ class _AppTabRailState extends State<_AppTabRail> {
       height: widget.height,
       child: Listener(
         onPointerSignal: _handlePointerSignal,
-        child: SingleChildScrollView(
-          controller: _scroll,
-          scrollDirection: Axis.horizontal,
-          physics: const ClampingScrollPhysics(),
-          padding: widget.padding,
-          child: Row(
-            children: [
-              for (var i = 0; i < widget.tabs.length; i++) ...[
-                if (i > 0) SizedBox(width: widget.gap),
-                _buildItem(palette, i),
+        // 桌面端不允许“按住鼠标拖动”整条轨道（实机反馈：用户空间可向左短滑）；
+        // 触摸/触控笔仍可拖，滚轮走上面的 PointerSignal 映射。
+        child: ScrollConfiguration(
+          behavior: const _TabRailScrollBehavior(),
+          child: SingleChildScrollView(
+            controller: _scroll,
+            scrollDirection: Axis.horizontal,
+            physics: const ClampingScrollPhysics(),
+            padding: widget.padding,
+            child: Row(
+              children: [
+                for (var i = 0; i < widget.tabs.length; i++) ...[
+                  if (i > 0) SizedBox(width: widget.gap),
+                  _buildItem(palette, i),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -607,6 +635,11 @@ class _AppTabRailState extends State<_AppTabRail> {
                     : (hovered
                         ? onSurface.withValues(alpha: _hoverAlpha)
                         : AppColors.transparent),
+                borderRadius: BorderRadius.circular(_pillHeight / 2),
+              ),
+              // 描边只画不占布局：放在 decoration.border 里会让 Container 把
+              // border 折算成内距，每项实际宽比测量值多 2px（导致末项被裁）。
+              foregroundDecoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(_pillHeight / 2),
                 border: Border.all(
                   color: selected
@@ -844,33 +877,36 @@ class _AppWideTabRowState extends State<_AppWideTabRow> {
     final count = widget.tabs.length;
     final baseColors = widget.colors ?? MiuixTabRowDefaults.defaultColors(context);
     final theme = MiuixTheme.of(context);
-    return MiuixTheme(
-      // 库未暴露开关：未选中标签项由 `_InsetSquircleBorderPainter` 画 1px
-      // insetsquircle 描边，颜色取 `MiuixTheme.colors.outline`。本项目标签条不要
-      // 逐格方框（实机反馈：像每格一个额外容器，并连成整行上下细线），故在局部
-      // 主题覆盖里把 outline 置透明；只影响本子树，不动全局主题与库。
-      data: theme.copyWith(
-        colors: theme.colors.copy(outline: AppColors.transparent),
-      ),
-      child: MiuixTabRow(
-        tabs: widget.tabs,
-        selectedTabIndex: count == 0 ? 0 : widget.selectedIndex.clamp(0, count - 1),
-        onTabSelected: widget.onSelected,
-        // 库内条底色恒置透明：材质由宿主承担（毛玻璃 / 页面底），否则库的
-        // `ColoredBox` 不透明底会盖住模糊层。
-        colors: MiuixTabRowColors(
-          backgroundColor: AppColors.transparent,
-          contentColor: baseColors.contentColor,
-          selectedBackgroundColor: baseColors.selectedBackgroundColor,
-          selectedContentColor: baseColors.selectedContentColor,
+    return ScrollConfiguration(
+      behavior: const _TabRailScrollBehavior(),
+      child: MiuixTheme(
+        // 库未暴露开关：未选中标签项由 `_InsetSquircleBorderPainter` 画 1px
+        // insetsquircle 描边，颜色取 `MiuixTheme.colors.outline`。本项目标签条不要
+        // 逐格方框（实机反馈：像每格一个额外容器，并连成整行上下细线），故在局部
+        // 主题覆盖里把 outline 置透明；只影响本子树，不动全局主题与库。
+        data: theme.copyWith(
+          colors: theme.colors.copy(outline: AppColors.transparent),
         ),
-        minWidth: widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth,
-        maxWidth: widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth,
-        height: widget.height,
-        itemSpacing: widget.gap,
-        cornerRadius: _radius,
-        contentAlignment: widget.contentAlignment ?? Alignment.center,
-        scrollController: _scroll,
+        child: MiuixTabRow(
+          tabs: widget.tabs,
+          selectedTabIndex:
+              count == 0 ? 0 : widget.selectedIndex.clamp(0, count - 1),
+          onTabSelected: widget.onSelected,
+          // 库内条底色恒置透明；容器材质由 [AppTabStrip] 的悬浮容器承担。
+          colors: MiuixTabRowColors(
+            backgroundColor: AppColors.transparent,
+            contentColor: baseColors.contentColor,
+            selectedBackgroundColor: baseColors.selectedBackgroundColor,
+            selectedContentColor: baseColors.selectedContentColor,
+          ),
+          minWidth: widget.minWidth ?? MiuixTabRowDefaults.tabRowMinWidth,
+          maxWidth: widget.maxWidth ?? MiuixTabRowDefaults.tabRowMaxWidth,
+          height: widget.height,
+          itemSpacing: widget.gap,
+          cornerRadius: _radius,
+          contentAlignment: widget.contentAlignment ?? Alignment.center,
+          scrollController: _scroll,
+        ),
       ),
     );
   }
@@ -897,9 +933,11 @@ class AppTabBar extends StatelessWidget {
     this.colors,
     this.contentAlignment,
     this.blurBackground = true,
-    this.blurSigma = 16,
     this.borderRadius,
-    this.panelPadding = const EdgeInsets.all(Style.xs),
+    this.panelPadding = const EdgeInsets.symmetric(
+      horizontal: Style.sm,
+      vertical: Style.xs,
+    ),
     this.outline = true,
     this.form = AppTabForm.auto,
     this.breakpoint = kAppTabBreakpoint,
@@ -926,14 +964,11 @@ class AppTabBar extends StatelessWidget {
   /// 覆盖单项内容对齐方式。
   final AlignmentGeometry? contentAlignment;
 
-  /// 是否由本组件自绘毛玻璃底（默认 true）。
+  /// 是否由本组件自绘**悬浮容器**（默认 true）。
   ///
-  /// 置 false 时不画毛玻璃面板（标签条自身透明），供宿主自带背景的场合使用
-  /// （如空间页按钮行：该行已有通栏毛玻璃带，避免两层材质叠加发灰）。
+  /// 容器本身**无背景色**（CVO 口径），只有圆角轮廓 + 1px 描边 + 下投影。
+  /// 置 false 时不画容器，供宿主自带材质的场合使用（如空间页通栏吸顶带）。
   final bool blurBackground;
-
-  /// 毛玻璃模糊半径（默认 16，对齐 `MiuixOverlayPanel`）。
-  final double blurSigma;
 
   /// 圆角（同时用于面板与选中指示）。
   ///
@@ -942,10 +977,10 @@ class AppTabBar extends StatelessWidget {
   /// 胶囊同观感；显式传值（含 0）时统一按该值作用于面板与选中项（旧口径）。
   final double? borderRadius;
 
-  /// 面板内缩（标签条与面板边缘的间距，默认 [Style.xs]）。
+  /// 面板内缩（标签条与容器边缘的间距，默认水平 [Style.sm] / 垂直 [Style.xs]）。
   ///
-  /// 四向留白让选中胶囊**浮**在面板内（贴边时会与面板外轮廓重合而看不出层次），
-  /// 同时把标签行高压缩到 `高度 - 2×[Style.xs]`，选中胶囊据此取自身半径。
+  /// 水平 8 是能容纳 34 高胶囊圆角的最小常用档（4px 时末端胶囊贴边）；
+  /// 垂直 4 把标签行高压缩到 `高度 - 2×[Style.xs]`，选中胶囊据此取自身半径。
   final EdgeInsets panelPadding;
 
   /// 是否画面板 1px 描边（默认 true；置 false 时只保留毛玻璃与投影）。
@@ -1011,11 +1046,9 @@ class AppTabBar extends StatelessWidget {
             // 独立 TAB 栏统一使用动态页同款悬浮容器（毛玻璃 + 下投影）；
             // 宿主自带材质的场合（空间页通栏吸顶带）传 blurBackground=false 关闭。
             surface: blurBackground,
-            surfaceFrosted: true,
             surfacePadding: panelPadding,
             surfaceRadius: _panelRadius,
             surfaceOutline: outline,
-            surfaceBlurSigma: blurSigma,
           ),
         );
       },

@@ -500,7 +500,6 @@ class _HistoryPageState extends State<HistoryPage> {
         // 外框总高 = 34 + 4×2 = 42，与动态页 TAB 栏同高、同悬浮材质。
         railHeight: 34,
         wideHeight: 34,
-        labelFontSize: 12.5,
         surface: true,
       ),
     );

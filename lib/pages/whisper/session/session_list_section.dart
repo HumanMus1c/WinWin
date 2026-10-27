@@ -466,10 +466,8 @@ class SessionFilterBar extends StatelessWidget {
           // 外框总高 = 34 + 4×2 = 42，与动态页 / 历史页 TAB 栏同高。
           railHeight: 34,
           wideHeight: 34,
-          labelFontSize: 12.5,
+          // 容器无背景色，只有投影 + 描边（宿主合并栏的毛玻璃不会被二次叠加）。
           surface: true,
-          // 宿主已是毛玻璃合并栏：用实色胶囊 + 同一套悬浮投影，避免二次模糊。
-          surfaceFrosted: false,
         ),
       ),
     );
