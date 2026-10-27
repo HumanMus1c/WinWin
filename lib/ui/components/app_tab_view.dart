@@ -365,12 +365,16 @@ class _AppTabStripState extends State<AppTabStrip> {
   }
 }
 
-/// TAB 栏悬浮容器：**无背景色**，只有投影 + 1px 描边。
+/// TAB 栏悬浮容器：**填充窗口背景色** + 投影 + 1px 描边。
 ///
-/// CVO 口径：容器背景应为空（或与窗口背景一致），不得再叠毛玻璃 / 实色底；
-/// 形状完全由圆角轮廓 + 悬浮投影定义。描边用 [foregroundDecoration]
-/// （只画不占布局），否则 `Container` 会把 border 折算成内距，
-/// 使末端胶囊被额外挤窄 1~2px（上一轮「最后一个胶囊显示不全」的成因之一）。
+/// 为什么不能纯透明：`BoxDecoration.boxShadow` 是画在背景**之前**的一整块
+/// 模糊圆角矩形；当 `color` 为空时，没有背景去盖住它，投影会从容器内部透出，
+/// 表现为「TAB 栏里透出一层灰色」（除首页外的所有页面均如此）。
+/// 因此这里填 `tokens.colors.background`（= 程序窗口背景色）：
+/// 与页面底同色 ⇒ 视觉上「无背景」，同色填充又能挡住投影内侧与后方滚动内容。
+///
+/// 描边用 [foregroundDecoration]（只画不占布局），否则 `Container` 会把
+/// border 折算成内距，使末端胶囊被额外挤窄 1~2px。
 class _TabFloatingSurface extends StatelessWidget {
   const _TabFloatingSurface({
     required this.radius,
@@ -389,6 +393,8 @@ class _TabFloatingSurface extends StatelessWidget {
     final borderRadius = BorderRadius.circular(radius);
     return Container(
       decoration: BoxDecoration(
+        // 与窗口背景同色：视觉上无背景，同时遮住「投影内侧」与后方滚动内容。
+        color: tokens.colors.background,
         borderRadius: borderRadius,
         boxShadow: <BoxShadow>[
           BoxShadow(
