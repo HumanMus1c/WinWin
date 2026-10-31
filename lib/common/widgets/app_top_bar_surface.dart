@@ -56,6 +56,14 @@ class AppTopBarSurface extends StatelessWidget {
   /// 当前帧的阴影值（单一职责：材质）。
   final List<BoxShadow> shadow;
 
+  /// 深色主题下的栏体**浅描边**不透明度（0 = 不画）。
+  ///
+  /// 深色页底（`miuixDarkBackground` `0xFF131316`）与栏体半透明底同源 ⇒ 两者
+  /// 亮度几乎一致，投影又是黑色、在近黑底上不可见；没有描边时顶栏与后方内容
+  /// 完全糊在一起（CVO 反馈「深色主题下看不见阴影、没有层次」）。深色下改用
+  /// `outline` 浅灰细线定义轮廓（浅色页底栏体本身比页底亮，无需描边，保持 0）。
+  static const double darkRimAlpha = 0.26;
+
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
@@ -76,21 +84,30 @@ class AppTopBarSurface extends StatelessWidget {
           borderRadius: borderRadius,
           boxShadow: shadow.isEmpty ? null : shadow,
         ),
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-            child: Container(
-              decoration: BoxDecoration(
-                color: barColor,
-                borderRadius: borderRadius,
-                // α0 描边：保留 0.5px 占位（与首页一致），视觉上不画线。
-                border: Border.all(
-                  color: cs.outline.withValues(alpha: 0),
-                  width: 0.5,
-                ),
+        child: DecoratedBox(
+          // 描边画在**前景层**：栏体内部是半透明底 + 背景模糊，若放在背景层
+          // 会被上层的半透明填充盖住、只剩 ~28% 可见度；前景层保证四边一致。
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            border: Border.all(
+              color: cs.outline.withValues(
+                alpha: tokens.isDark ? darkRimAlpha : 0,
               ),
-              child: child,
+              width: 0.5,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: borderRadius,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: barColor,
+                  borderRadius: borderRadius,
+                ),
+                child: child,
+              ),
             ),
           ),
         ),

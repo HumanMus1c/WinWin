@@ -21,6 +21,7 @@ import 'package:winwin/pages/search/services/search_history_service.dart';
 import 'package:winwin/pages/search/services/search_trending_cache.dart';
 import 'package:winwin/pages/search/widgets/search_content_panel.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/app_motion.dart';
 import 'package:winwin/theme/contrast_policy.dart';
@@ -46,29 +47,32 @@ const Duration _kSearchMorphDuration = Duration(milliseconds: 220);
 
 /// **常态**合并栏的悬浮阴影：搜索态之外也有轮廓分离，避免顶栏与滚动内容贴平。
 ///
-/// 与搜索态同一口径（`offset` 归零 = 上下左右四向等量辐射），仅透明度与柔边
-/// 更浅一档；搜索态仍用 [_kSearchBarShadow] 加深，分化「常态悬浮 / 搜索抬起」两级。
-const BoxShadow _kHomeBarShadow = BoxShadow(
-  color: Color(0x1F000000),
-  blurRadius: 16,
-  spreadRadius: 0,
-  offset: Offset.zero,
-);
+/// `offset` 归零 = 上下左右四向等量辐射（与搜索态同口径）。按主题分档：
+/// - **浅色**：黑色 α0.26 / blur 20，比初版（α0.12）加深一倍（CVO 反馈"太弱"）；
+/// - **深色**：黑色 α0.85 / blur 24 / spread 2 —— 深色页底本身接近纯黑，
+///   投影只能把**亮内容**（封面/卡片）的边缘压暗，故配合
+///   [AppTopBarSurface] 的深色 1px 浅描边才读得出层次（单靠投影在纯黑底上不可见）。
+BoxShadow _homeBarShadow({required bool isDark}) => BoxShadow(
+      color: AppColors.black.withValues(alpha: isDark ? 0.85 : 0.26),
+      blurRadius: isDark ? 24 : 20,
+      spreadRadius: isDark ? 2 : 0,
+      offset: Offset.zero,
+    );
 
 /// 搜索态合并栏（搜索框 + 分类 TAB 合并栏）的「整体悬浮四向辐射阴影」。
 ///
 /// `offset` 归零 ⇒ 上下左右**四向等量辐射**；`blurRadius` 给柔边、`spreadRadius`
-/// 给贴边厚度。常态为浅档 [_kHomeBarShadow]，搜索态在此基础上加深，
+/// 给贴边厚度。常态为浅档 [_homeBarShadow]，搜索态在此基础上升一档，
 /// **替代旧的整页背景压暗**。
-const BoxShadow _kSearchBarShadow = BoxShadow(
-  color: Color(0x3D000000),
-  blurRadius: 22,
-  spreadRadius: 1,
-  offset: Offset.zero,
-);
+BoxShadow _searchBarShadow({required bool isDark}) => BoxShadow(
+      color: AppColors.black.withValues(alpha: isDark ? 0.95 : 0.38),
+      blurRadius: isDark ? 28 : 26,
+      spreadRadius: isDark ? 3 : 1,
+      offset: Offset.zero,
+    );
 
-/// 上一阴影的「透明 / 零几何」配对值：供首次构建时从无阴影淡入，
-/// 并与 [_kHomeBarShadow] / [_kSearchBarShadow] 做**同长度**插值
+/// 阴影的「透明 / 零几何」起点：供首次构建时从无阴影淡入，
+/// 并与 [_homeBarShadow] / [_searchBarShadow] 做**同长度**插值
 /// （长度不等时 `BoxShadow.lerpList` 不插值，会硬切）。
 const BoxShadow _kSearchBarShadowOff = BoxShadow(
   color: Color(0x00000000),
@@ -540,8 +544,8 @@ class _HomeHeaderState extends State<_HomeHeader> {
         tween: _BoxShadowListTween(
           begin: const <BoxShadow>[_kSearchBarShadowOff],
           end: widget.searchMode
-              ? const <BoxShadow>[_kSearchBarShadow]
-              : const <BoxShadow>[_kHomeBarShadow],
+              ? <BoxShadow>[_searchBarShadow(isDark: tokens.isDark)]
+              : <BoxShadow>[_homeBarShadow(isDark: tokens.isDark)],
         ),
         duration: _kSearchMorphDuration,
         curve: MiuixSpringCurve.standard,
