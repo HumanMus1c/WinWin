@@ -8,8 +8,8 @@ import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
-import 'package:winwin/common/widgets/p_badge.dart';
-import 'package:winwin/core/demo/demo_overrides.dart';
+import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
+import 'package:winwin/common/widgets/video_card/video_card_v.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
@@ -19,9 +19,9 @@ import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/pages/whisper/session/message_preview_parser.dart';
 import 'package:winwin/pages/whisper/session/session_account_resolver.dart';
+import 'package:winwin/services/video_card_meta_service.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
@@ -355,10 +355,12 @@ class _ChatBubble extends StatelessWidget {
     final isRevoked = (msg['msg_status'] as num?)?.toInt() == 1;
     final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
-    // 演示模式：消息内容不展示云端数据（视频卡片消息渲染为静态骨架卡）。
+    // 演示模式：消息内容不展示云端数据（视频卡片消息渲染为竖卡演示占位）。
     if (Pref.demoMode) {
       return _wrap(
-        msgType == 11 ? _buildDemoVideoCard(tokens) : _buildDemoTextBubble(tokens),
+        msgType == 11
+            ? _buildDemoVideoCard(context)
+            : _buildDemoTextBubble(tokens),
       );
     }
 
@@ -414,55 +416,14 @@ class _ChatBubble extends StatelessWidget {
     );
   }
 
-  /// 演示模式：视频卡片消息的静态骨架占位（不展示云端数据）。
-  ///
-  /// 结构对齐首页竖卡（[VideoCardV]）：16:10 封面 + 右下时长角标 + 两行标题位。
-  Widget _buildDemoVideoCard(AppTokens tokens) {
-    final durationText = DurationUtils.formatDuration(
-      DemoOverrides.durationSeconds('demo.chat.card'),
-    );
-    return Container(
-      width: 300,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: tokens.colors.surfaceContainerHighest,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AspectRatio(
-            aspectRatio: 16 / 10,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const SkeletonBox(
-                  width: double.infinity,
-                  height: double.infinity,
-                ),
-                Positioned(
-                  right: 7,
-                  bottom: 6,
-                  child: PBadge(
-                    text: durationText,
-                    type: PBadgeType.duration,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(6, 5, 6, 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SkeletonLine(width: double.infinity, height: 13),
-                SizedBox(height: 6),
-                SkeletonLine(width: 140, height: 11),
-              ],
-            ),
-          ),
-        ],
-      ),
+  /// 演示模式：视频卡片消息复用首页竖卡的演示态（骨架标题 + 演示角标 + WinWin 胶囊）。
+  Widget _buildDemoVideoCard(BuildContext context) {
+    return VideoCardV(
+      videoItem: const VideoCardData(bvid: 'BV1demo-chat'),
+      shrinkWrap: true,
+      showMenu: false,
+      enableContextMenu: false,
+      onTap: () => _openVideo(context, 'BV1demo-chat', null),
     );
   }
 
@@ -605,8 +566,8 @@ class _ChatBubble extends StatelessWidget {
 
   /// 视频稿件卡片（msg_type=11）：content = {bvid, title, cover, times}。
   ///
-  /// 信息布局与首页竖卡 [VideoCardV] 保持一致：
-  /// 16:10 封面（右下时长角标）→ 标题（最多 2 行）。
+  /// 直接复用首页竖卡 [VideoCardV]（shrinkWrap 模式），消息协议缺失的
+  /// UP / 播放 / 弹幕由 [VideoCardMetaService] 按 bvid 补全后显示。
   Widget _buildVideoCard(BuildContext context, AppTokens tokens) {
     final json = _contentJson;
     if (json == null) return _fallbackText(tokens);
@@ -618,52 +579,12 @@ class _ChatBubble extends StatelessWidget {
     final duration = (json['times'] as num?)?.toInt() ??
         (json['duration'] as num?)?.toInt() ??
         0;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: tokens.colors.surfaceContainerHighest,
-      ),
-      child: MiuixPressable(
-        feedbackType: MiuixPressFeedbackType.sink,
-        sinkAmount: 0.98,
-        onPressed: bvid.isEmpty ? null : () => _openVideo(context, bvid, cover),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AspectRatio(
-              aspectRatio: 16 / 10,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetworkImgLayer(
-                    width: double.infinity,
-                    height: double.infinity,
-                    src: cover,
-                  ),
-                  if (duration > 0)
-                    Positioned(
-                      right: 7,
-                      bottom: 6,
-                      child: PBadge(
-                        text: DurationUtils.formatDuration(duration),
-                        type: PBadgeType.duration,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
-              child: Text(
-                title.isEmpty ? '[视频]' : title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: tokens.text.bodyMedium?.copyWith(height: 1.35),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return _ChatVideoCard(
+      bvid: bvid,
+      title: title,
+      cover: cover,
+      duration: duration,
+      onTap: bvid.isEmpty ? null : () => _openVideo(context, bvid, cover),
     );
   }
 
@@ -746,5 +667,76 @@ class _ChatBubble extends StatelessWidget {
 
   void _toast(BuildContext context, String msg) {
     showToast(context, msg, duration: const Duration(seconds: 1));
+  }
+}
+
+/// 聊天视频卡：直接挂 [VideoCardV]（与首页推荐流同构），
+/// 并按 bvid 补全消息协议缺失的 UP / 播放 / 弹幕信息。
+class _ChatVideoCard extends StatefulWidget {
+  const _ChatVideoCard({
+    required this.bvid,
+    required this.title,
+    required this.cover,
+    required this.duration,
+    this.onTap,
+  });
+
+  final String bvid;
+  final String title;
+  final String cover;
+  final int duration;
+  final VoidCallback? onTap;
+
+  @override
+  State<_ChatVideoCard> createState() => _ChatVideoCardState();
+}
+
+class _ChatVideoCardState extends State<_ChatVideoCard> {
+  late VideoCardData _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _reset();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ChatVideoCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.bvid != widget.bvid) {
+      _reset();
+    }
+  }
+
+  void _reset() {
+    _data = VideoCardMetaService.cached(widget.bvid) ??
+        VideoCardData(
+          bvid: widget.bvid,
+          cover: widget.cover,
+          title: widget.title.isEmpty ? '[视频]' : widget.title,
+          duration: widget.duration,
+        );
+    _enrich();
+  }
+
+  void _enrich() {
+    if (widget.bvid.isEmpty) return;
+    if (VideoCardMetaService.cached(widget.bvid) != null) return;
+    VideoCardMetaService.enrich(_data).then((data) {
+      if (!mounted || data.bvid != widget.bvid) return;
+      setState(() => _data = data);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return VideoCardV(
+      videoItem: _data,
+      shrinkWrap: true,
+      showMenu: false,
+      enableContextMenu: false,
+      showStat: _data.playCount != null || _data.danmakuCount != null,
+      onTap: widget.onTap,
+    );
   }
 }

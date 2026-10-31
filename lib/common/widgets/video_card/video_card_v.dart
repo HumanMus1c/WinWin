@@ -34,6 +34,7 @@ class VideoCardV extends StatelessWidget {
     this.showStat = true,
     this.showPublishTime = false,
     this.enableContextMenu = true,
+    this.shrinkWrap = false,
   });
 
   final dynamic videoItem;
@@ -59,6 +60,12 @@ class VideoCardV extends StatelessWidget {
 
   /// 是否响应右键 / 长按卡片菜单（用户空间等无操作场景可关闭）。
   final bool enableContextMenu;
+
+  /// 是否按内容高度收缩（聊天消息等无固定网格高度的宿主）。
+  ///
+  /// 网格宿主为 false：标题区用 [Expanded] 吃掉固定瓦片高度；
+  /// 自由高度宿主为 true：整卡按封面 + 标题 + 底栏自然高度排列。
+  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +109,7 @@ class VideoCardV extends StatelessWidget {
             borderRadius: BorderRadius.all(radius),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
               children: [
                 AspectRatio(
                   aspectRatio: 16 / 10,
@@ -187,33 +195,36 @@ class VideoCardV extends StatelessWidget {
     final String ownerName = data.ownerName;
     final int? mid = data.mid;
 
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: demo
-                  ? const Align(
-                      alignment: Alignment.topLeft,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SkeletonLine(width: double.infinity, height: 13),
-                          SizedBox(height: 6),
-                          SkeletonLine(width: 150, height: 13),
-                        ],
-                      ),
-                    )
-                  : Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(height: 1.38),
-                    ),
+    final Widget titleWidget = demo
+        ? const Align(
+            alignment: Alignment.topLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLine(width: double.infinity, height: 13),
+                SizedBox(height: 6),
+                SkeletonLine(width: 150, height: 13),
+              ],
             ),
-            Row(
+          )
+        : Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(height: 1.38),
+          );
+
+    final Widget info = Padding(
+      padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
+        children: [
+          if (shrinkWrap)
+            titleWidget
+          else
+            Expanded(child: titleWidget),
+          Row(
               spacing: 2,
               children: [
                 if (demo) ...[
@@ -334,8 +345,9 @@ class VideoCardV extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
+
+    return shrinkWrap ? info : Expanded(child: info);
   }
 
   /// 用户空间底栏发布时间胶囊：与 UP 胶囊同壳，仅换日历图标 + 时间文案。

@@ -2,7 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart'
     show MiuixCard, MiuixPressFeedbackType, MiuixPressable;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_card_info.dart';
+import 'package:winwin/common/widgets/video_card/video_card_v.dart';
 import 'package:winwin/utils/grid.dart';
 import '../support/app_test_host.dart';
 
@@ -88,5 +90,38 @@ void main() {
     final up0 = tester.getTopLeft(find.text('UP').at(0));
     final up1 = tester.getTopLeft(find.text('UP').at(1));
     expect((up0.dy - up1.dy).abs(), lessThan(1.0));
+  });
+
+  testWidgets('聊天竖卡 shrinkWrap 高度按内容收缩，不被视口拉高', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      appTestHost(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 320,
+            child: VideoCardV(
+              videoItem: const VideoCardData(
+                bvid: 'BV1chat',
+                title: '聊天视频标题两行测试',
+                duration: 96,
+                playCount: 1000,
+                danmakuCount: 10,
+              ),
+              shrinkWrap: true,
+              showMenu: false,
+              enableContextMenu: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final size = tester.getSize(find.byType(VideoCardV));
+    expect(size.width, 320);
+    expect(size.height, lessThan(320));
   });
 }
