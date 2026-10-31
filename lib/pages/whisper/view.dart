@@ -1,4 +1,3 @@
-import 'package:flutter_miuix/miuix.dart' show MiuixHorizontalDivider;
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
@@ -111,13 +110,15 @@ class _WhisperPageState extends State<WhisperPage>
 
   /// 顶部合并栏**首帧**的避让回退值（面板高度由内容自撑，首帧尚无法实测）：
   /// 面板外缩（[Style.sm]×2）+ 互动行（[Style.md]×2 + 头像 52 + 间距 6 + 标签行 ~20）
-  /// + 分隔线 1 + 分类行（[SessionFilterBar] 统一 TAB 栏高 42）+ 下沿间隙 [Style.sm]。
+  /// + 分类行（[SessionFilterBar] 统一 TAB 栏高 34）+ 下沿间隙 [Style.sm]。
   static const double _headerReserve =
-      Style.sm * 2 + Style.md * 2 + 52 + 6 + 20 + 1 + 42 + Style.sm;
+      Style.sm * 2 + Style.md * 2 + 52 + 6 + 20 + 34 + Style.sm;
 
-  /// 分类栏与面板下缘之间的底距：把 chips 抬出面板下缘那条「背景（空白页底 +
-  /// 面板自身投影）被 σ16 模糊从下缘向内浸入」的 ~3σ 带，避免筛选项发虚。
-  static const double _filterBarBottomGap = 24;
+  /// 分类栏与面板下缘之间的底距。
+  ///
+  /// 分类条已并入合并栏（不再自带悬浮容器），只需与面板圆角下缘留呼吸位；
+  /// 与首页分类行下沿同为 [Style.sm]。
+  static const double _filterBarBottomGap = Style.sm;
 
   final GlobalKey _headerKey = GlobalKey();
 
@@ -189,7 +190,7 @@ class _WhisperPageState extends State<WhisperPage>
     );
   }
 
-  /// 顶部浮动合并栏：互动入口行 + 分隔线 + 分类栏（合并为一个毛玻璃面板）。
+  /// 顶部浮动合并栏：互动入口行 + 分类栏（**同一块毛玻璃面板**，无分隔线）。
   ///
   /// 材质与首页合并栏**同源**——统一走 [AppTopBarSurface]（`cs.surface` α0.72 +
   /// 模糊 20 + 外壳圆角 `chrome.containerRadius` + 外距 `lg/sm`）。此前用
@@ -198,11 +199,12 @@ class _WhisperPageState extends State<WhisperPage>
   /// （CVO 反馈「顶栏背景模糊的颜色亮度未对齐程序整体背景」）。改为同一材质后
   /// 两页天然对齐。
   ///
-  /// 面板背后/下缘外侧是空白页底；`AppTopBarSurface` 不含面板下投影，故此前
-  /// 「面板自身 4px 下投影被 σ 模糊从下缘向内采样 → 分类栏下发白浸润带」的成因
-  /// 已随材质替换消除（见 `miuix_frosted_surface.dart` 的 `shadow` 说明）。
+  /// 结构对齐首页「搜索框 + 分类器」：两类内容都在**同一容器内**、只有一层轮廓
+  /// 与一层投影；分类条不再自带悬浮容器（见 [SessionFilterBar]）。
   Widget _buildFrostedHeader(AppTokens tokens) {
     return AppTopBarSurface(
+      // 合并栏「整体悬浮」投影：与首页常态同档（单一来源，含深色分档）。
+      shadow: [AppTopBarSurface.floatingShadow(isDark: tokens.isDark)],
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -213,7 +215,9 @@ class _WhisperPageState extends State<WhisperPage>
             ),
             child: _buildEntries(tokens),
           ),
-          const MiuixHorizontalDivider(),
+          // 分类栏作为合并栏的**第二行**（与首页「搜索框 + 分类器」同构）：
+          // 去掉行间分隔线，也不再给分类条单独的悬浮容器/投影 —— 整块面板
+          // 只有一层轮廓、一层投影（见 AppTopBarSurface.shadow）。
           SessionFilterBar(
             selectedType: _sessionType,
             onSelected: _selectSessionType,

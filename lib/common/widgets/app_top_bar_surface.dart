@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/style.dart';
 
 /// App 顶部**合并栏**毛玻璃容器的材质单一来源。
@@ -63,6 +64,26 @@ class AppTopBarSurface extends StatelessWidget {
   /// 完全糊在一起（CVO 反馈「深色主题下看不见阴影、没有层次」）。深色下改用
   /// `outline` 浅灰细线定义轮廓（浅色页底栏体本身比页底亮，无需描边，保持 0）。
   static const double darkRimAlpha = 0.26;
+
+  /// 合并栏「常态悬浮」投影（浅色 / 深色分档的**单一来源**）。
+  ///
+  /// 浅色：黑色 α0.26 / blur 20；深色：黑色 α0.85 / blur 24 / spread 2
+  /// （深色页底近黑，投影只能压暗**亮内容**的边缘，轮廓主要靠 [darkRimAlpha]）。
+  /// `offset` 归零 = 上下左右四向等量辐射；首页常态与消息中心合并栏共用本档。
+  static BoxShadow floatingShadow({required bool isDark}) => BoxShadow(
+        color: AppColors.black.withValues(alpha: isDark ? 0.85 : 0.26),
+        blurRadius: isDark ? 24 : 20,
+        spreadRadius: isDark ? 2 : 0,
+        offset: Offset.zero,
+      );
+
+  /// 合并栏「抬起」投影：在 [floatingShadow] 基础上升一档（首页搜索态用）。
+  static BoxShadow raisedShadow({required bool isDark}) => BoxShadow(
+        color: AppColors.black.withValues(alpha: isDark ? 0.95 : 0.38),
+        blurRadius: isDark ? 28 : 26,
+        spreadRadius: isDark ? 3 : 1,
+        offset: Offset.zero,
+      );
 
   @override
   Widget build(BuildContext context) {

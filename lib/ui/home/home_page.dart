@@ -21,7 +21,6 @@ import 'package:winwin/pages/search/services/search_history_service.dart';
 import 'package:winwin/pages/search/services/search_trending_cache.dart';
 import 'package:winwin/pages/search/widgets/search_content_panel.dart';
 import 'package:winwin/pages/setting/setting_page.dart';
-import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/app_motion.dart';
 import 'package:winwin/theme/contrast_policy.dart';
@@ -45,35 +44,11 @@ const double _kSearchFocusStrokeInset = _kSearchFocusStroke / 2;
 /// （Miuix 弹簧非线性动效），不再用多项式缓动。
 const Duration _kSearchMorphDuration = Duration(milliseconds: 220);
 
-/// **常态**合并栏的悬浮阴影：搜索态之外也有轮廓分离，避免顶栏与滚动内容贴平。
-///
-/// `offset` 归零 = 上下左右四向等量辐射（与搜索态同口径）。按主题分档：
-/// - **浅色**：黑色 α0.26 / blur 20，比初版（α0.12）加深一倍（CVO 反馈"太弱"）；
-/// - **深色**：黑色 α0.85 / blur 24 / spread 2 —— 深色页底本身接近纯黑，
-///   投影只能把**亮内容**（封面/卡片）的边缘压暗，故配合
-///   [AppTopBarSurface] 的深色 1px 浅描边才读得出层次（单靠投影在纯黑底上不可见）。
-BoxShadow _homeBarShadow({required bool isDark}) => BoxShadow(
-      color: AppColors.black.withValues(alpha: isDark ? 0.85 : 0.26),
-      blurRadius: isDark ? 24 : 20,
-      spreadRadius: isDark ? 2 : 0,
-      offset: Offset.zero,
-    );
-
-/// 搜索态合并栏（搜索框 + 分类 TAB 合并栏）的「整体悬浮四向辐射阴影」。
-///
-/// `offset` 归零 ⇒ 上下左右**四向等量辐射**；`blurRadius` 给柔边、`spreadRadius`
-/// 给贴边厚度。常态为浅档 [_homeBarShadow]，搜索态在此基础上升一档，
-/// **替代旧的整页背景压暗**。
-BoxShadow _searchBarShadow({required bool isDark}) => BoxShadow(
-      color: AppColors.black.withValues(alpha: isDark ? 0.95 : 0.38),
-      blurRadius: isDark ? 28 : 26,
-      spreadRadius: isDark ? 3 : 1,
-      offset: Offset.zero,
-    );
-
 /// 阴影的「透明 / 零几何」起点：供首次构建时从无阴影淡入，
-/// 并与 [_homeBarShadow] / [_searchBarShadow] 做**同长度**插值
+/// 并与 `AppTopBarSurface.floatingShadow` / `raisedShadow` 做**同长度**插值
 /// （长度不等时 `BoxShadow.lerpList` 不插值，会硬切）。
+///
+/// 常态 / 搜索态两档阴影的数值口径见 [AppTopBarSurface]（单一来源，消息中心合并栏共用）。
 const BoxShadow _kSearchBarShadowOff = BoxShadow(
   color: Color(0x00000000),
   blurRadius: 0,
@@ -544,8 +519,10 @@ class _HomeHeaderState extends State<_HomeHeader> {
         tween: _BoxShadowListTween(
           begin: const <BoxShadow>[_kSearchBarShadowOff],
           end: widget.searchMode
-              ? <BoxShadow>[_searchBarShadow(isDark: tokens.isDark)]
-              : <BoxShadow>[_homeBarShadow(isDark: tokens.isDark)],
+              ? <BoxShadow>[AppTopBarSurface.raisedShadow(isDark: tokens.isDark)]
+              : <BoxShadow>[
+                  AppTopBarSurface.floatingShadow(isDark: tokens.isDark),
+                ],
         ),
         duration: _kSearchMorphDuration,
         curve: MiuixSpringCurve.standard,

@@ -458,16 +458,17 @@ class SessionFilterBar extends StatelessWidget {
       // 胶囊容器随标签收缩，统一左对齐落位。
       alignment: AlignmentDirectional.centerStart,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+        // 与合并栏内互动入口行的水平内距同源（Style.md），两行左缘对齐。
+        padding: const EdgeInsets.symmetric(horizontal: Style.md),
         child: AppTabStrip(
           tabs: [for (final c in _categories) c.label],
           selectedIndex: selected < 0 ? 0 : selected,
           onSelected: (index) => onSelected(_categories[index].type),
-          // 外框总高 = 34 + 4×2 = 42，与动态页 / 历史页 TAB 栏同高。
+          // 分类条已并入宿主合并栏：不再自绘悬浮容器（无独立描边与投影），
+          // 整块面板只有一层轮廓/一层阴影。
           railHeight: 34,
           wideHeight: 34,
-          // 容器无背景色，只有投影 + 描边（宿主合并栏的毛玻璃不会被二次叠加）。
-          surface: true,
+          surface: false,
         ),
       ),
     );
