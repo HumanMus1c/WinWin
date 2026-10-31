@@ -44,10 +44,22 @@ const double _kSearchFocusStrokeInset = _kSearchFocusStroke / 2;
 /// （Miuix 弹簧非线性动效），不再用多项式缓动。
 const Duration _kSearchMorphDuration = Duration(milliseconds: 220);
 
+/// **常态**合并栏的悬浮阴影：搜索态之外也有轮廓分离，避免顶栏与滚动内容贴平。
+///
+/// 与搜索态同一口径（`offset` 归零 = 上下左右四向等量辐射），仅透明度与柔边
+/// 更浅一档；搜索态仍用 [_kSearchBarShadow] 加深，分化「常态悬浮 / 搜索抬起」两级。
+const BoxShadow _kHomeBarShadow = BoxShadow(
+  color: Color(0x1F000000),
+  blurRadius: 16,
+  spreadRadius: 0,
+  offset: Offset.zero,
+);
+
 /// 搜索态合并栏（搜索框 + 分类 TAB 合并栏）的「整体悬浮四向辐射阴影」。
 ///
 /// `offset` 归零 ⇒ 上下左右**四向等量辐射**；`blurRadius` 给柔边、`spreadRadius`
-/// 给贴边厚度。搜索态淡入、常态淡出，**替代旧的整页背景压暗**。
+/// 给贴边厚度。常态为浅档 [_kHomeBarShadow]，搜索态在此基础上加深，
+/// **替代旧的整页背景压暗**。
 const BoxShadow _kSearchBarShadow = BoxShadow(
   color: Color(0x3D000000),
   blurRadius: 22,
@@ -55,8 +67,9 @@ const BoxShadow _kSearchBarShadow = BoxShadow(
   offset: Offset.zero,
 );
 
-/// 上一阴影的「透明 / 零几何」配对值：供淡出时与 [_kSearchBarShadow]
-/// 做**同长度**插值（长度不等时 `BoxShadow.lerpList` 不插值，会硬切）。
+/// 上一阴影的「透明 / 零几何」配对值：供首次构建时从无阴影淡入，
+/// 并与 [_kHomeBarShadow] / [_kSearchBarShadow] 做**同长度**插值
+/// （长度不等时 `BoxShadow.lerpList` 不插值，会硬切）。
 const BoxShadow _kSearchBarShadowOff = BoxShadow(
   color: Color(0x00000000),
   blurRadius: 0,
@@ -519,16 +532,16 @@ class _HomeHeaderState extends State<_HomeHeader> {
     // 底栏）仍走默认失焦，"点导航栏即收起"的语义不变。默认 `groupId == EditableText`
     // 与输入框自身同组（SDK `TapRegion` 的既定用法，非本项目自定义）。
     return TextFieldTapRegion(
-      // 合并栏「整体悬浮四向辐射阴影」：搜索态淡入、常态淡出，替代旧的背景压暗。
+      // 合并栏「整体悬浮四向辐射阴影」：常态为浅档、搜索态加深（两级同为四向辐射）。
       // 用 [TweenAnimationBuilder] 对 `List<BoxShadow>` 做隐式插值（曲线同为
-      // Miuix 弹簧非线性），起点必须是**同长度的透明阴影**——`BoxShadow.lerpList`
+      // Miuix 弹簧非线性），起点是**同长度的透明阴影**——`BoxShadow.lerpList`
       // 对长度不等的两个列表不做插值（多余项直接拼接），会变成硬切。
       child: TweenAnimationBuilder<List<BoxShadow>>(
         tween: _BoxShadowListTween(
           begin: const <BoxShadow>[_kSearchBarShadowOff],
           end: widget.searchMode
               ? const <BoxShadow>[_kSearchBarShadow]
-              : const <BoxShadow>[_kSearchBarShadowOff],
+              : const <BoxShadow>[_kHomeBarShadow],
         ),
         duration: _kSearchMorphDuration,
         curve: MiuixSpringCurve.standard,
