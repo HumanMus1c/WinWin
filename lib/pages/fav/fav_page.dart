@@ -7,7 +7,9 @@ import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
+import 'package:winwin/common/widgets/video_card/video_card_info.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
+import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -25,7 +27,6 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
-import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -808,6 +809,15 @@ class _FavVideoCard extends StatelessWidget {
                             type: PBadgeType.duration,
                           ),
                         ),
+                      if (cnt?.play != null || cnt?.danmaku != null)
+                        Positioned(
+                          left: 4,
+                          bottom: 4,
+                          child: VideoCoverStatBadge(
+                            playCount: cnt?.play,
+                            danmakuCount: cnt?.danmaku,
+                          ),
+                        ),
                       if (isInvalid)
                         Positioned(
                           left: 4,
@@ -822,81 +832,28 @@ class _FavVideoCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // 右侧描述
+              // 右侧描述（统一信息列：标题 → UP/发布时间 → 动作）
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      item.title ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: tokens.text.bodyMedium?.copyWith(
-                        height: 1.35,
-                        color: isInvalid ? cs.outline : null,
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (upper?.name != null && upper!.name!.isNotEmpty)
-                          Row(
-                            children: [
-                              AppIcon(AppIcons.profile(), size: 12, color: cs.outline),
-                              const SizedBox(width: 2),
-                              Flexible(
-                                child: Text(
-                                  upper.name!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: tokens.text.labelSmall?.copyWith(
-                                    color: cs.outline,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            if (cnt?.play != null) ...[
-                              AppIcon(AppIcons.viewCount(),
-                                size: 12,
-                                color: cs.outline,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                NumUtils.formatNum(cnt!.play),
-                                style: tokens.text.labelSmall?.copyWith(
-                                  color: cs.outline,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                            if (cnt?.danmaku != null) ...[
-                              AppIcon(AppIcons.danmakuCount(),
-                                size: 12,
-                                color: cs.outline,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                NumUtils.formatNum(cnt!.danmaku),
-                                style: tokens.text.labelSmall?.copyWith(
-                                  color: cs.outline,
-                                ),
-                              ),
-                            ],
-                            const Spacer(),
-                            VideoPopupMenu(
-                              data: data,
-                              videoItem: item,
+                child: VideoCardInfoColumn(
+                  title: item.title ?? '',
+                  ownerName: upper?.name ?? '',
+                  titleColor: isInvalid ? cs.outline : null,
+                  timeText: VideoCardInfoText.publishedAt(item.pubtime),
+                  onOwnerTap: (upper?.mid != null && upper!.mid! > 0)
+                      ? () {
+                          Navigator.push(
+                            context,
+                            AppRoute(
+                              builder: (_) =>
+                                  MemberSpacePage(mid: upper.mid!),
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
+                          );
+                        }
+                      : null,
+                  trailing: VideoPopupMenu(
+                    data: data,
+                    videoItem: item,
+                  ),
                 ),
               ),
             ],

@@ -17,11 +17,15 @@ class VideoCardHSkeleton extends StatelessWidget {
     this.coverWidth = 140,
     this.coverHeight,
     this.inCard = true,
+    this.showProgressSlot = false,
   });
 
   final double coverWidth;
   final double? coverHeight;
   final bool inCard;
+
+  /// 是否在卡片下缘预留播放进度条占位（历史 / 稍后再看为 true）。
+  final bool showProgressSlot;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +116,26 @@ class VideoCardHSkeleton extends StatelessWidget {
       ),
     );
 
-    final shimmerContent = Skeleton(child: content);
+    final shimmerContent = Skeleton(
+      child: showProgressSlot
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                content,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: blockColor,
+                      borderRadius: BorderRadius.circular(2.5),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : content,
+    );
 
     if (!inCard) {
       return RepaintBoundary(child: shimmerContent);

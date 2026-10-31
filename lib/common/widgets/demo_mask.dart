@@ -333,8 +333,8 @@ class DemoVideoCardH extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(Style.radiusMd),
                   child: SizedBox(
-                    width: 150,
-                    height: 150 * 9 / 16,
+                    width: 140,
+                    height: 140 * 9 / 16,
                     child: Stack(
                       children: [
                         const Positioned.fill(
@@ -379,12 +379,12 @@ class DemoVideoCardH extends StatelessWidget {
                       const SkeletonLine(width: double.infinity, height: 13),
                       const SizedBox(height: 6),
                       const SkeletonLine(width: 150, height: 13),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           AppIcon(
                             AppIcons.profile(),
-                            size: 13,
+                            size: 12,
                             color: cs.outline,
                           ),
                           const SizedBox(width: 3),
@@ -396,12 +396,15 @@ class DemoVideoCardH extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: tokens.text.labelSmall
-                                    ?.copyWith(color: cs.outline),
+                                    ?.copyWith(color: cs.outline, fontSize: 11),
                               ),
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 4),
+                      // 时间 / 进度信息行的骨架占位（对齐真实卡片的三段结构）。
+                      const SkeletonLine(width: 96, height: 10),
                     ],
                   ),
                 ),

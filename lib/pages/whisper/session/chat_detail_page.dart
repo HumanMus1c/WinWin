@@ -8,6 +8,8 @@ import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/bootstrap.dart';
@@ -19,6 +21,7 @@ import 'package:winwin/pages/whisper/session/message_preview_parser.dart';
 import 'package:winwin/pages/whisper/session/session_account_resolver.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
@@ -412,28 +415,47 @@ class _ChatBubble extends StatelessWidget {
   }
 
   /// 演示模式：视频卡片消息的静态骨架占位（不展示云端数据）。
+  ///
+  /// 结构对齐首页竖卡（[VideoCardV]）：16:10 封面 + 右下时长角标 + 两行标题位。
   Widget _buildDemoVideoCard(AppTokens tokens) {
+    final durationText = DurationUtils.formatDuration(
+      DemoOverrides.durationSeconds('demo.chat.card'),
+    );
     return Container(
       width: 300,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: tokens.colors.surfaceContainerHighest,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AspectRatio(
-            aspectRatio: 16 / 9,
-            child: SkeletonBox(
-              width: double.infinity,
-              height: double.infinity,
+          AspectRatio(
+            aspectRatio: 16 / 10,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const SkeletonBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
+                Positioned(
+                  right: 7,
+                  bottom: 6,
+                  child: PBadge(
+                    text: durationText,
+                    type: PBadgeType.duration,
+                  ),
+                ),
+              ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(Style.sm),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(6, 5, 6, 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                SkeletonLine(width: double.infinity, height: 12),
+              children: [
+                SkeletonLine(width: double.infinity, height: 13),
                 SizedBox(height: 6),
                 SkeletonLine(width: 140, height: 11),
               ],
@@ -581,36 +603,63 @@ class _ChatBubble extends StatelessWidget {
     );
   }
 
-  /// 视频稿件卡片（msg_type=11）：content = {bvid, title, cover, times...}。
+  /// 视频稿件卡片（msg_type=11）：content = {bvid, title, cover, times}。
+  ///
+  /// 信息布局与首页竖卡 [VideoCardV] 保持一致：
+  /// 16:10 封面（右下时长角标）→ 标题（最多 2 行）。
   Widget _buildVideoCard(BuildContext context, AppTokens tokens) {
     final json = _contentJson;
     if (json == null) return _fallbackText(tokens);
     final bvid = json['bvid']?.toString() ?? '';
     final title = json['title']?.toString() ?? '';
-    final cover = SessionAccountResolver.normalizeAvatarUrl(json['cover']?.toString());
+    final cover = SessionAccountResolver.normalizeAvatarUrl(
+      json['cover']?.toString(),
+    );
+    final duration = (json['times'] as num?)?.toInt() ??
+        (json['duration'] as num?)?.toInt() ??
+        0;
     return Container(
       color: tokens.colors.surfaceContainerHighest,
+      clipBehavior: Clip.antiAlias,
       child: MiuixPressable(
         feedbackType: MiuixPressFeedbackType.sink,
         sinkAmount: 0.98,
         onPressed: bvid.isEmpty ? null : () => _openVideo(context, bvid, cover),
-        child: Padding(
-          padding: const EdgeInsets.all(Style.sm),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (cover.isNotEmpty)
-                NetworkImgLayer(width: 300, height: 300 / 16 * 9, src: cover),
-              const SizedBox(height: Style.sm),
-              Text(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  NetworkImgLayer(
+                    width: double.infinity,
+                    height: double.infinity,
+                    src: cover,
+                  ),
+                  if (duration > 0)
+                    Positioned(
+                      right: 7,
+                      bottom: 6,
+                      child: PBadge(
+                        text: DurationUtils.formatDuration(duration),
+                        type: PBadgeType.duration,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+              child: Text(
                 title.isEmpty ? '[视频]' : title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: tokens.text.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: const TextStyle(height: 1.38),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

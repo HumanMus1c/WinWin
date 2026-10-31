@@ -2,17 +2,18 @@ import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
-import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
+import 'package:winwin/common/widgets/video_card/video_card_info.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/utils/duration_utils.dart';
-import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 
 /// 视频卡片 - 水平布局（高性能适配版）。
@@ -164,7 +165,7 @@ class VideoCardH extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   // 右：标题 + UP + 统计
-                  Expanded(child: _buildTextContent(context, tokens, data, demo: demo)),
+                  Expanded(child: _buildTextContent(context, data, demo: demo)),
                 ],
               ),
             ),
@@ -178,77 +179,31 @@ class VideoCardH extends StatelessWidget {
 
   Widget _buildTextContent(
     BuildContext context,
-    AppTokens tokens,
     VideoCardData data, {
     required bool demo,
   }) {
-    final String title = data.title;
-    final cs = tokens.colors;
-    final String ownerName = data.ownerName;
+    final int? mid = data.mid;
+    final String playedText = VideoCardInfoText.playedAt(data.playedAt);
+    final String timeText = playedText.isNotEmpty
+        ? playedText
+        : VideoCardInfoText.publishedAt(data.publishedAt);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        demo
-            ? const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SkeletonLine(width: double.infinity, height: 13),
-                  SizedBox(height: 6),
-                  SkeletonLine(width: 150, height: 13),
-                ],
+    return VideoCardInfoColumn(
+      title: data.title,
+      ownerName: data.ownerName,
+      timeText: timeText,
+      demo: demo,
+      onOwnerTap: mid != null && mid > 0
+          ? () => Navigator.push(
+                context,
+                AppRoute(builder: (_) => MemberSpacePage(mid: mid)),
               )
-            : Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: tokens.text.bodyMedium?.copyWith(height: 1.35),
-              ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            if (demo) ...[
-              AppIcon(AppIcons.profile(), size: appRowIconSizeInherited(context), color: cs.outline),
-              const SizedBox(width: 3),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    kDemoDisplayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        tokens.text.labelSmall?.copyWith(color: cs.outline),
-                  ),
-                ),
-              ),
-            ] else ...[
-              if (ownerName.isNotEmpty) ...[
-                AppIcon(AppIcons.profile(), size: appRowIconSizeInherited(context), color: cs.outline),
-                const SizedBox(width: 3),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      ownerName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style:
-                          tokens.text.labelSmall?.copyWith(color: cs.outline),
-                    ),
-                  ),
-                ),
-              ] else
-                const Spacer(),
-            ],
-            VideoPopupMenu(
-              data: data,
-              videoItem: videoItem,
-              onRemove: onRemove,
-            ),
-          ],
-        ),
-      ],
+          : null,
+      trailing: VideoPopupMenu(
+        data: data,
+        videoItem: videoItem,
+        onRemove: onRemove,
+      ),
     );
   }
 }

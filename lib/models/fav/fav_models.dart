@@ -99,6 +99,9 @@ class FavDetailItem {
   int? attr;
   CntInfo? cntInfo;
   int? favTime;
+
+  /// 稿件发布时间（秒级时间戳，接口 `pubtime` 字段）。
+  int? pubtime;
   String? bvid;
   int? cid;
 
@@ -113,6 +116,7 @@ class FavDetailItem {
     this.attr,
     this.cntInfo,
     this.favTime,
+    this.pubtime,
     this.bvid,
     this.cid,
   });
@@ -132,6 +136,7 @@ class FavDetailItem {
             ? null
             : CntInfo.fromJson(json['cnt_info'] as Map<String, dynamic>),
         favTime: json['fav_time'] as int?,
+        pubtime: json['pubtime'] as int?,
         bvid: json['bvid'] ?? json['bv_id'],
         cid: json['ugc']?['first_cid'] as int?,
       );

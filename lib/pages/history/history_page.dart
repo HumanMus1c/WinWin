@@ -3,11 +3,11 @@ import 'package:flutter_miuix/miuix.dart'
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/refresh_indicator.dart';
-import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
+import 'package:winwin/common/widgets/video_card/video_card_info.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/app_messenger.dart';
@@ -26,7 +26,6 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
-import 'package:winwin/utils/date_utils.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
@@ -629,7 +628,7 @@ class _HistoryPageState extends State<HistoryPage> {
               ),
               itemCount: 12,
               itemBuilder: (context, index) =>
-                  const VideoCardHSkeleton(coverWidth: 140, inCard: true),
+                  const VideoCardHSkeleton(coverWidth: 140, inCard: true, showProgressSlot: true),
             ),
           ),
         ],
@@ -751,108 +750,47 @@ class _HistoryCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  // 右侧描述
+                  // 右侧描述（统一信息列：标题 → UP/时间 → 进度/动作）
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Pref.demoMode
-                            ? const SkeletonLine(
-                                width: double.infinity,
-                                height: 13,
-                              )
-                            : Text(
-                                item.title ?? '',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: tokens.text.bodyMedium?.copyWith(
-                                  height: 1.35,
-                                ),
-                              ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (authorName.isNotEmpty)
-                              GestureDetector(
-                                onTap: () {
-                                  if (authorMid > 0) {
-                                    Navigator.push(
-                                      context,
-                                      AppRoute(
-                                        builder: (_) =>
-                                            MemberSpacePage(mid: authorMid),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: Row(
-                                  children: [
-                                    AppIcon(
-                                      AppIcons.profile(),
-                                      size: 12,
-                                      color: cs.outline,
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Flexible(
-                                      child: Text(
-                                        Pref.demoMode
-                                            ? kDemoDisplayName
-                                            : authorName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: tokens.text.labelSmall?.copyWith(
-                                          color: cs.outline,
-                                          // B7 反馈轮#2：显式 11 口径（与日期行
-                                          // 一致；避免继承 14 撑破行高预算）。
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                if (!Pref.demoMode &&
-                                    item.viewAt != null &&
-                                    item.viewAt! > 0)
-                                  Text(
-                                    DateFormatUtils.dateFormat(item.viewAt),
-                                    style: tokens.text.labelSmall?.copyWith(
-                                      color: cs.outline,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                const Spacer(),
-                                // B7 反馈轮#2：改紧凑按压原语（24×24 命中盒），
-                                // 与右/下边框保留安全空间，杜绝溢出导致不可点。
-                                MiuixPressable(
-                                  borderRadius: BorderRadius.circular(6),
-                                  onPressed: onDelete,
-                                  child: AppTooltip(
-                                    message: '删除此记录',
-                                    child: Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        6,
-                                        5,
-                                        4,
-                                        5,
-                                      ),
-                                      child: AppIcon(
-                                        AppIcons.clear(),
-                                        size: 14,
-                                        color: cs.outline,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                    child: VideoCardInfoColumn(
+                      title: item.title ?? '',
+                      ownerName: authorName,
+                      demo: Pref.demoMode,
+                      timeText:
+                          Pref.demoMode ? '' : VideoCardInfoText.playedAt(item.viewAt),
+                      progressText: Pref.demoMode
+                          ? ''
+                          : VideoCardInfoText.progress(
+                              item.progress,
+                              item.duration,
                             ),
-                          ],
+                      onOwnerTap: authorMid > 0
+                          ? () {
+                              Navigator.push(
+                                context,
+                                AppRoute(
+                                  builder: (_) => MemberSpacePage(mid: authorMid),
+                                ),
+                              );
+                            }
+                          : null,
+                      // B7 反馈轮#2：改紧凑按压原语（24×24 命中盒），
+                      // 与右/下边框保留安全空间，杜绝溢出导致不可点。
+                      trailing: MiuixPressable(
+                        borderRadius: BorderRadius.circular(6),
+                        onPressed: onDelete,
+                        child: AppTooltip(
+                          message: '删除此记录',
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(6, 5, 4, 5),
+                            child: AppIcon(
+                              AppIcons.clear(),
+                              size: 14,
+                              color: cs.outline,
+                            ),
+                          ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ],

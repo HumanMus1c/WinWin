@@ -23,6 +23,15 @@ class VideoCardData {
   final String? rcmdReason;
   final bool isFollowed;
   final double? progress; // 0.0 ~ 1.0 归一化进度
+
+  /// 已看秒数（服务端 `progress`；`-1` 表示已看完）。
+  final int? progressSeconds;
+
+  /// 视频发布时间（秒级时间戳）。
+  final int? publishedAt;
+
+  /// 观看/播放时间（秒级时间戳，历史记录专用）。
+  final int? playedAt;
   final int? aid;
   final int? cid;
   final String? goto;
@@ -41,6 +50,9 @@ class VideoCardData {
     this.rcmdReason,
     this.isFollowed = false,
     this.progress,
+    this.progressSeconds,
+    this.publishedAt,
+    this.playedAt,
     this.aid,
     this.cid,
     this.goto,
@@ -110,6 +122,8 @@ class VideoCardData {
         ownerName: item.authorName ?? '',
         mid: item.authorMid,
         progress: prog,
+        progressSeconds: item.progress,
+        playedAt: item.viewAt,
         aid: aid,
         cid: item.history.cid,
       );
@@ -127,6 +141,7 @@ class VideoCardData {
         mid: item.upper?.mid,
         playCount: item.cntInfo?.play,
         danmakuCount: item.cntInfo?.danmaku,
+        publishedAt: item.pubtime,
         aid: aid,
       );
     }
@@ -165,6 +180,8 @@ class VideoCardData {
         playCount: item.stat?.view,
         danmakuCount: item.stat?.danmaku,
         progress: prog,
+        progressSeconds: item.progress,
+        publishedAt: item.pubdate,
         aid: aid,
         cid: item.cid,
       );
@@ -204,6 +221,12 @@ class VideoCardData {
       final cid = (item['cid'] as num?)?.toInt();
       final param = (item['param'] as num?)?.toInt();
       final goto = item['goto']?.toString();
+      final progressSeconds = (item['progress'] as num?)?.toInt();
+      final publishedAt =
+          ((item['pubtime'] ?? item['pubdate'] ?? item['pub_ts'] ?? item['created'])
+                  as num?)
+              ?.toInt();
+      final playedAt = (item['view_at'] as num?)?.toInt();
 
       return VideoCardData(
         bvid: bvid,
@@ -217,6 +240,9 @@ class VideoCardData {
         rcmdReason: item['rcmd_reason']?.toString(),
         isFollowed: item['is_followed'] == true,
         progress: prog,
+        progressSeconds: progressSeconds,
+        publishedAt: publishedAt,
+        playedAt: playedAt,
         aid: aid,
         cid: cid,
         goto: goto,
@@ -247,6 +273,12 @@ class VideoCardData {
       final int? cid = _tryVal<int?>(() => dyn.cid as int?);
       final String? goto = _tryVal<String?>(() => dyn.goto?.toString());
       final int? param = _tryVal<int?>(() => dyn.param as int?);
+      final int? progressSeconds = _tryVal<int?>(() => (dyn.progress as num?)?.toInt());
+      final int? publishedAt = _tryVal<int?>(
+        () => ((dyn.pubtime ?? dyn.pubdate ?? dyn.pub_ts ?? dyn.created) as num?)
+            ?.toInt(),
+      );
+      final int? playedAt = _tryVal<int?>(() => (dyn.viewAt ?? dyn.view_at) as int?);
       final ThreePoint? threePoint = _tryVal<ThreePoint?>(() => dyn.threePoint as ThreePoint?);
       return VideoCardData(
         bvid: bvid,
@@ -259,6 +291,9 @@ class VideoCardData {
         danmakuCount: danmakuCount,
         rcmdReason: rcmdReason,
         isFollowed: isFollowed,
+        progressSeconds: progressSeconds,
+        publishedAt: publishedAt,
+        playedAt: playedAt,
         aid: aid,
         cid: cid,
         goto: goto,

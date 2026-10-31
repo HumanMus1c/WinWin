@@ -23,6 +23,8 @@ import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/common/widgets/miuix_popup_menu.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
+import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
+import 'package:winwin/common/widgets/video_card/video_card_v.dart';
 import 'package:winwin/common/widgets/demo_editable.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/core/account/accounts.dart';
@@ -51,7 +53,6 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/date_utils.dart';
-import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
@@ -2194,109 +2195,30 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   }
 
   Widget _buildVideoCard(MemberVideoItem item) {
-    final tokens = AppThemeHost.of(context);
-    final shapes = tokens.shapes;
-    final radius = shapes.medium;
     final bvid = item.bvid;
-
-    return MiuixCard(
-      child: MiuixPressable(
-        feedbackType: MiuixPressFeedbackType.sink,
-        sinkAmount: 0.98,
-        onPressed: bvid == null
-            ? null
-            : () => Navigator.push(
-                  context,
-                  AppRoute(
-                    builder: (_) => VideoDetailPage(bvid: bvid, cover: item.pic),
-                  ),
-                ),
-        borderRadius: BorderRadius.all(radius),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 16 / 10,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetworkImgLayer(
-                    src: item.pic,
-                    width: double.infinity,
-                    height: double.infinity,
-                    borderRadius: BorderRadius.vertical(top: radius),
-                  ),
-                  if ((item.duration ?? 0) > 0)
-                    Positioned(
-                      right: 6,
-                      bottom: 6,
-                      child: PBadge(
-                        text: DurationUtils.formatDuration(item.duration),
-                        type: PBadgeType.duration,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title ?? '',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(height: 1.35),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      AppIcon(AppIcons.viewCount(),
-                        size: 13,
-                        color: tokens.colors.outline.withValues(alpha: 0.8),
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        NumUtils.formatNum(item.play),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: tokens.colors.outline.withValues(alpha: 0.8),
-                        ),
-                      ),
-                      if (item.danmaku != null) ...[
-                        const SizedBox(width: 6),
-                        AppIcon(AppIcons.danmakuCount(),
-                          size: 13,
-                          color: tokens.colors.outline.withValues(alpha: 0.8),
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          NumUtils.formatNum(item.danmaku),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: tokens.colors.outline.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                      if (item.pubdate != null) ...[
-                        const Spacer(),
-                        Text(
-                          DateFormatUtils.dateFormat(item.pubdate!),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: tokens.colors.outline.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+    return VideoCardV(
+      videoItem: VideoCardData(
+        bvid: bvid,
+        cover: item.pic,
+        title: item.title ?? '',
+        duration: item.duration ?? 0,
+        playCount: item.play,
+        danmakuCount: item.danmaku,
+        publishedAt: item.pubdate,
+        aid: item.aid,
       ),
+      showOwner: false,
+      showMenu: false,
+      showPublishTime: true,
+      enableContextMenu: false,
+      onTap: bvid == null
+          ? null
+          : () => Navigator.push(
+                context,
+                AppRoute(
+                  builder: (_) => VideoDetailPage(bvid: bvid, cover: item.pic),
+                ),
+              ),
     );
   }
 

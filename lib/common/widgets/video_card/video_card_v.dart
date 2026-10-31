@@ -6,6 +6,7 @@ import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
+import 'package:winwin/common/widgets/video_card/video_card_info.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
@@ -28,6 +29,11 @@ class VideoCardV extends StatelessWidget {
     this.onTap,
     this.heroTag,
     this.onRemove,
+    this.showOwner = true,
+    this.showMenu = true,
+    this.showStat = true,
+    this.showPublishTime = false,
+    this.enableContextMenu = true,
   });
 
   final dynamic videoItem;
@@ -38,6 +44,21 @@ class VideoCardV extends StatelessWidget {
 
   /// 卡片移除回调（如不感兴趣、拉黑 UP 主后触发列表局部移除）。
   final VoidCallback? onRemove;
+
+  /// 是否展示底部 UP 胶囊（用户空间内可关闭，避免重复展示空间主人）。
+  final bool showOwner;
+
+  /// 是否展示右下角「更多」菜单。
+  final bool showMenu;
+
+  /// 是否在封面左下角展示播放 / 弹幕数角标。
+  final bool showStat;
+
+  /// 是否在底栏展示发布时间（用户空间投稿 / 点赞场景）。
+  final bool showPublishTime;
+
+  /// 是否响应右键 / 长按卡片菜单（用户空间等无操作场景可关闭）。
+  final bool enableContextMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -52,24 +73,28 @@ class VideoCardV extends StatelessWidget {
       builder: (context, demo, _) => RepaintBoundary(
         child: MiuixCard(
           child: GestureDetector(
-            onSecondaryTapUp: (details) {
-              showVideoContextMenu(
-                context: context,
-                position: details.globalPosition,
-                data: data,
-                videoItem: videoItem,
-                onRemove: onRemove,
-              );
-            },
-            onLongPressStart: (details) {
-              showVideoContextMenu(
-                context: context,
-                position: details.globalPosition,
-                data: data,
-                videoItem: videoItem,
-                onRemove: onRemove,
-              );
-            },
+            onSecondaryTapUp: enableContextMenu
+                ? (details) {
+                    showVideoContextMenu(
+                      context: context,
+                      position: details.globalPosition,
+                      data: data,
+                      videoItem: videoItem,
+                      onRemove: onRemove,
+                    );
+                  }
+                : null,
+            onLongPressStart: enableContextMenu
+                ? (details) {
+                    showVideoContextMenu(
+                      context: context,
+                      position: details.globalPosition,
+                      data: data,
+                      videoItem: videoItem,
+                      onRemove: onRemove,
+                    );
+                  }
+                : null,
             child: MiuixPressable(
             feedbackType: MiuixPressFeedbackType.sink,
             sinkAmount: 0.98,
@@ -113,10 +138,11 @@ class VideoCardV extends StatelessWidget {
                                 type: PBadgeType.duration,
                               ),
                             ),
-                          Positioned(
-                            left: 7,
-                            bottom: 6,
-                            child: VideoCoverStatBadge(
+                          if (demo || showStat)
+                            Positioned(
+                              left: 7,
+                              bottom: 6,
+                              child: VideoCoverStatBadge(
                               playCount: demo
                                   ? DemoOverrides.count(
                                       'demo.vplay.${data.bvid ?? ''}',
@@ -202,50 +228,60 @@ class VideoCardV extends StatelessWidget {
                         Random((data.bvid ?? '').hashCode ^ 5).nextInt(4)],
                     type: PBadgeType.highlight,
                   ),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: tokens.colors.secondaryContainer
-                              .withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(100),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AppIcon(
-                              AppIcons.profile(),
-                              size: appRowIconSizeInherited(context),
-                              color: tokens.colors.outline,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              kDemoDisplayName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                height: 1.5,
-                                fontSize:
-                                    tokens.text.labelMedium?.fontSize,
+                  if (showOwner)
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: tokens.colors.secondaryContainer
+                                .withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AppIcon(
+                                AppIcons.profile(),
+                                size: appRowIconSizeInherited(context),
                                 color: tokens.colors.outline,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 3),
+                              Text(
+                                kDemoDisplayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  height: 1.5,
+                                  fontSize:
+                                      tokens.text.labelMedium?.fontSize,
+                                  color: tokens.colors.outline,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    )
+                  else
+                    const Spacer(),
                 ] else ...[
                   if (rcmdReason != null && rcmdReason.isNotEmpty)
                     PBadge(text: rcmdReason, type: PBadgeType.highlight),
                   if (isFollowed)
                     const PBadge(text: '已关注', type: PBadgeType.status),
-                  if (ownerName.isNotEmpty)
+                  if (showPublishTime && data.publishedAt != null)
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _publishTimePill(context, tokens, data),
+                      ),
+                    )
+                  else if (showOwner && ownerName.isNotEmpty)
                     Expanded(
                       child: Align(
                         alignment: Alignment.centerLeft,
@@ -288,15 +324,56 @@ class VideoCardV extends StatelessWidget {
                   else
                     const Spacer(),
                 ],
-                VideoPopupMenu(
-                  data: data,
-                  videoItem: videoItem,
-                  onRemove: onRemove,
-                ),
+                if (showMenu)
+                  VideoPopupMenu(
+                    data: data,
+                    videoItem: videoItem,
+                    onRemove: onRemove,
+                  ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 用户空间底栏发布时间胶囊：与 UP 胶囊同壳，仅换日历图标 + 时间文案。
+  Widget _publishTimePill(
+    BuildContext context,
+    AppTokens tokens,
+    VideoCardData data,
+  ) {
+    final text = VideoCardInfoText.publishedAt(data.publishedAt);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: tokens.colors.secondaryContainer.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppIcon(
+            AppIcons.calendar(),
+            size: appRowIconSizeInherited(context),
+            color: tokens.colors.outline,
+          ),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              semanticsLabel: text,
+              style: TextStyle(
+                height: 1.5,
+                fontSize: tokens.text.labelMedium?.fontSize,
+                color: tokens.colors.outline,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
