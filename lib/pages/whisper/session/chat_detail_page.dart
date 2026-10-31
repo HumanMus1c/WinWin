@@ -619,8 +619,10 @@ class _ChatBubble extends StatelessWidget {
         (json['duration'] as num?)?.toInt() ??
         0;
     return Container(
-      color: tokens.colors.surfaceContainerHighest,
       clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: tokens.colors.surfaceContainerHighest,
+      ),
       child: MiuixPressable(
         feedbackType: MiuixPressFeedbackType.sink,
         sinkAmount: 0.98,
@@ -656,7 +658,7 @@ class _ChatBubble extends StatelessWidget {
                 title.isEmpty ? '[视频]' : title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(height: 1.38),
+                style: tokens.text.bodyMedium?.copyWith(height: 1.35),
               ),
             ),
           ],

@@ -23,11 +23,13 @@ import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/video/detail_page.dart';
+import 'package:winwin/services/history_recovery.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -318,8 +320,19 @@ class _HistoryPageState extends State<HistoryPage> {
   /// - `live` → 直播间（未开播则提示）；
   /// - `article`/`article-list` → 专栏/文集文章页；
   /// - `cheese`（课程）→ 暂不支持（WinWin 尚无课程落地页）。
-  void _openItem(HistoryItem item) {
+  Future<void> _openItem(HistoryItem item) async {
     final business = item.history.business ?? 'archive';
+
+    // 失效稿件（标题为空）：先尝试恢复档案，再决定打开还是展示不可见详情。
+    if (item.isUnavailable && (business == 'archive' || business.isEmpty)) {
+      final info = HistoryRecoveryService.cached(item.history.oid) ??
+          await HistoryRecoveryService.lookup(item);
+      if (!mounted) return;
+      if (info?.accessible != true) {
+        await _showUnavailableDialog(item, info);
+        return;
+      }
+    }
 
     // 专栏 / 文集
     if (business.contains('article')) {
@@ -397,6 +410,49 @@ class _HistoryPageState extends State<HistoryPage> {
           cover: item.coverUrl,
           heroTag: 'history_$bvid',
         ),
+      ),
+    );
+  }
+
+  /// 失效稿件详情弹窗：展示状态、UP、播放时间、恢复的简介，并支持复制 AV 号。
+  Future<void> _showUnavailableDialog(
+    HistoryItem item,
+    HistoryRecoveryInfo? info,
+  ) async {
+    final title = info?.title?.isNotEmpty == true
+        ? info!.title!
+        : (item.title?.isNotEmpty == true ? item.title! : '稿件不可见');
+    final reason = info?.reason ?? '该稿件当前不可访问';
+    final aid = item.history.oid;
+    final buffer = StringBuffer()
+      ..write('状态：$reason')
+      ..write('\nUP 主：${(item.authorName ?? '').isEmpty ? '未知' : item.authorName}')
+      ..write('\n播放时间：${VideoCardInfoText.playedAt(item.viewAt)}');
+    if (info?.description?.isNotEmpty == true) {
+      buffer
+        ..write('\n\n简介：')
+        ..write(info!.description);
+    }
+
+    await showAppDialog<void>(
+      context: context,
+      builder: (ctx) => AppAlertDialog(
+        title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
+        content: SingleChildScrollView(
+          child: Text(buffer.toString(), style: const TextStyle(height: 1.5)),
+        ),
+        actions: [
+          MiuixTextButton('关闭', onPressed: () => Navigator.pop(ctx)),
+          if (aid != null && aid > 0)
+            AppPrimaryButton(
+              onPressed: () {
+                Utils.copyText('av$aid');
+                Navigator.pop(ctx);
+                showToast(context, '已复制 AV 号：av$aid');
+              },
+              child: const Text('复制 AV 号'),
+            ),
+        ],
       ),
     );
   }
@@ -653,8 +709,11 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 }
 
-/// 历史记录多列横向卡片（对齐 PiliPlus 与 BiliPai 历史卡片规范）。
-class _HistoryCard extends StatelessWidget {
+/// 历史记录多列横向卡片（统一历史 / 收藏夹 / 稍后再看的信息布局规范）。
+///
+/// 标题为空的历史项视为失效稿件：先按 aid 尝试 BiliPlus 档案恢复，
+/// 卡片显示恢复标题 / 封面与状态角标；点击弹「不可见详情」而非进入详情页。
+class _HistoryCard extends StatefulWidget {
   const _HistoryCard({required this.item, required this.onDelete, this.onTap});
 
   final HistoryItem item;
@@ -662,7 +721,57 @@ class _HistoryCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
+  State<_HistoryCard> createState() => _HistoryCardState();
+}
+
+class _HistoryCardState extends State<_HistoryCard> {
+  HistoryRecoveryInfo? _recovery;
+  bool _recovering = false;
+
+  bool get _titleMissing => widget.item.isUnavailable;
+
+  @override
+  void initState() {
+    super.initState();
+    _recovery = HistoryRecoveryService.cached(widget.item.history.oid);
+    _maybeRecover();
+  }
+
+  @override
+  void didUpdateWidget(covariant _HistoryCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.history.oid != widget.item.history.oid) {
+      _recovery = HistoryRecoveryService.cached(widget.item.history.oid);
+      _recovering = false;
+      _maybeRecover();
+    }
+  }
+
+  void _maybeRecover() {
+    if (!_titleMissing || Pref.demoMode || _recovery != null) return;
+    _recovering = true;
+    HistoryRecoveryService.lookup(widget.item).then((info) {
+      if (!mounted) return;
+      setState(() {
+        _recovery = info;
+        _recovering = false;
+      });
+    });
+  }
+
+  String _unavailableBadge(String? reason) {
+    if (reason == null || reason.isEmpty) return '已失效';
+    if (reason.contains('仅作者')) return '仅作者可见';
+    if (reason.contains('删除')) return '已删除';
+    if (reason.contains('下架')) return '已下架';
+    if (reason.contains('审核')) return '审核中';
+    if (reason.contains('无权')) return '无权访问';
+    return '已失效';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final shapes = tokens.shapes;
@@ -673,10 +782,22 @@ class _HistoryCard extends StatelessWidget {
     final authorName = item.authorName ?? '';
     final authorMid = item.authorMid ?? 0;
 
-    // 类型角标：已收藏优先，否则用服务端 badge（如「番剧」「直播」）。
-    final badgeText = item.isFav == 1
-        ? '已收藏'
-        : (item.badge?.isNotEmpty == true ? item.badge : null);
+    final recovery = _recovery;
+    final unavailable = _titleMissing && !(recovery?.accessible ?? false);
+    final recoveredTitle = recovery?.title?.isNotEmpty == true
+        ? recovery!.title!
+        : null;
+    final effectiveTitle = unavailable
+        ? (recoveredTitle ?? '稿件不可见')
+        : (_titleMissing ? (recoveredTitle ?? '') : (item.title ?? ''));
+    final effectiveCover = item.coverUrl ?? recovery?.cover;
+
+    // 类型角标：失效状态优先，其次已收藏 / 服务端 badge（如「番剧」「直播」）。
+    final badgeText = unavailable
+        ? (_recovering ? '恢复中…' : _unavailableBadge(recovery?.reason))
+        : item.isFav == 1
+            ? '已收藏'
+            : (item.badge?.isNotEmpty == true ? item.badge : null);
 
     double progressFraction = 0.0;
     if (progress > 0 && duration > 0) {
@@ -689,7 +810,7 @@ class _HistoryCard extends StatelessWidget {
       child: MiuixPressable(
         feedbackType: MiuixPressFeedbackType.sink,
         sinkAmount: 0.98,
-        onPressed: onTap,
+        onPressed: widget.onTap,
         borderRadius: BorderRadius.all(radius),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -709,11 +830,13 @@ class _HistoryCard extends StatelessWidget {
                         children: [
                           Positioned.fill(
                             child: NetworkImgLayer(
-                              src: item.coverUrl,
+                              src: effectiveCover,
                               width: 140,
                               height: 140 * 9 / 16,
                               borderRadius: BorderRadius.all(radius),
-                              heroTag: bvid != null && bvid.isNotEmpty
+                              heroTag: !unavailable &&
+                                      bvid != null &&
+                                      bvid.isNotEmpty
                                   ? 'history_$bvid'
                                   : null,
                             ),
@@ -724,9 +847,11 @@ class _HistoryCard extends StatelessWidget {
                               top: 4,
                               child: PBadge(
                                 text: badgeText,
-                                type: item.isFav == 1
-                                    ? PBadgeType.status
-                                    : PBadgeType.primary,
+                                type: unavailable
+                                    ? PBadgeType.badge
+                                    : item.isFav == 1
+                                        ? PBadgeType.status
+                                        : PBadgeType.primary,
                               ),
                             ),
                           if (duration > 0 || Pref.demoMode)
@@ -753,9 +878,13 @@ class _HistoryCard extends StatelessWidget {
                   // 右侧描述（统一信息列：标题 → UP/时间 → 进度/动作）
                   Expanded(
                     child: VideoCardInfoColumn(
-                      title: item.title ?? '',
+                      title: effectiveTitle,
                       ownerName: authorName,
                       demo: Pref.demoMode,
+                      titleColor: unavailable ? cs.outline : null,
+                      titleDecoration: unavailable && recoveredTitle != null
+                          ? TextDecoration.lineThrough
+                          : null,
                       timeText:
                           Pref.demoMode ? '' : VideoCardInfoText.playedAt(item.viewAt),
                       progressText: Pref.demoMode
@@ -778,7 +907,7 @@ class _HistoryCard extends StatelessWidget {
                       // 与右/下边框保留安全空间，杜绝溢出导致不可点。
                       trailing: MiuixPressable(
                         borderRadius: BorderRadius.circular(6),
-                        onPressed: onDelete,
+                        onPressed: widget.onDelete,
                         child: AppTooltip(
                           message: '删除此记录',
                           child: Padding(

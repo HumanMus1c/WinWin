@@ -104,6 +104,13 @@ class HistoryItem {
     return p == -1 ? 0 : p * Duration.millisecondsPerSecond;
   }
 
+  /// 是否为失效稿件：无标题，或服务端角标已标记失效。
+  ///
+  /// 历史接口对「仅作者可见 / 下架 / 删除」的稿件通常不下发 `title`，
+  /// 部分场景会下发「已失效」类 `badge`；两者都按失效处理。
+  bool get isUnavailable =>
+      (title?.trim().isEmpty ?? true) || (badge?.contains('失效') ?? false);
+
   /// 删除时拼接的 kid：`business_kid`。
   String get delKid {
     final k = kid?.toString() ?? history.oid?.toString() ?? '';

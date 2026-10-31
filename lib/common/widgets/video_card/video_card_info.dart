@@ -57,6 +57,7 @@ class VideoCardInfoColumn extends StatelessWidget {
     this.trailing,
     this.demo = false,
     this.titleColor,
+    this.titleDecoration,
   });
 
   final String title;
@@ -78,33 +79,53 @@ class VideoCardInfoColumn extends StatelessWidget {
   /// 标题颜色覆盖（如收藏夹失效稿件置灰）。
   final Color? titleColor;
 
+  /// 标题装饰（失效稿件可用删除线表示档案恢复）。
+  final TextDecoration? titleDecoration;
+
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final effectiveOwner = demo ? kDemoDisplayName : ownerName;
 
+    // 标题固定预留两行高度：单行标题不再让 UP / 时间 / 进度行整体上移，
+    // 保证同一网格行内的卡片信息行纵向对齐（一行与两行标题处理一致）。
+    final double titleSlotHeight = MediaQuery.textScalerOf(context).scale(
+          (tokens.text.bodyMedium?.fontSize ?? 14) * 1.35,
+        ) *
+        2;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         if (demo)
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SkeletonLine(width: double.infinity, height: 13),
-              SizedBox(height: 6),
-              SkeletonLine(width: 150, height: 13),
-            ],
+          ConstrainedBox(
+            constraints: BoxConstraints(minHeight: titleSlotHeight),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLine(width: double.infinity, height: 13),
+                SizedBox(height: 6),
+                SkeletonLine(width: 150, height: 13),
+              ],
+            ),
           )
         else
-          Text(
-            title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: tokens.text.bodyMedium?.copyWith(
-              height: 1.35,
-              color: titleColor,
+          ConstrainedBox(
+            constraints: BoxConstraints(minHeight: titleSlotHeight),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: tokens.text.bodyMedium?.copyWith(
+                  height: 1.35,
+                  color: titleColor,
+                  decoration: titleDecoration,
+                ),
+              ),
             ),
           ),
         Column(
