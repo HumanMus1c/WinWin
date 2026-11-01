@@ -5,6 +5,27 @@
 /// 2. 分页重复——按 talker_id+session_type 等键去重，合并页时过滤已存在会话；
 /// 3. 边界重复页——end_ts 游标严格递减，整页重复时用更早的游标自动重试。
 abstract final class SessionPaginationPolicy {
+  /// 服务端「全部」筛选类型（消息中心默认分类）。
+  static const int allSessionType = 4;
+
+  /// 「全部」分类的服务端单批上限。
+  ///
+  /// 实测（2026-11-01 本机账号）：`size=200/300/500` 均只回 100 条。
+  static const int allSessionFetchSize = 100;
+
+  /// 该分类是否支持服务端游标分页。
+  ///
+  /// 实测（2026-11-01）：`session_type=4` 下 `end_ts`（微秒-1 / 微秒 / 毫秒 /
+  /// 秒四种口径）与 `pn=2` 全部被服务端忽略，任何游标都从最新开始返回同一段；
+  /// 该分类只能「一次取满 [allSessionFetchSize] 条 + 判定没有更多」。
+  /// 特别关注同样走 `session_type=4` 拉取，故一并视为不支持。
+  /// 其余分类（私信/关注/未关注/陌生人/粉丝团/拦截/系统）游标分页正常。
+  static bool supportsCursorPaging({
+    required bool specialMode,
+    required int sessionType,
+  }) =>
+      !specialMode && sessionType != allSessionType;
+
   /// 会话唯一键：talker_id 优先，异常会话用 last_msg 兜底。
   static String sessionKey(Map<String, dynamic> session) {
     final talkerId = (session['talker_id'] as num?)?.toInt() ?? 0;

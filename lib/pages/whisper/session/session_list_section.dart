@@ -71,8 +71,32 @@ class SessionListSectionState extends State<SessionListSection> {
   String? _error;
   bool _isLoadingMore = false;
 
+  /// 在途请求世代号：下拉刷新会**抢占**在途补批，旧请求返回后按世代号丢弃
+  /// （否则「补批在途时刷新」会被 `_isLoadingMore` 拦截，刷新静默无效）。
+  int _requestId = 0;
+
+  /// 服务端「全部」分类的单批上限（实测值，见 [_serverSupportsCursor]）。
+  static const int _allSessionFetchSize =
+      SessionPaginationPolicy.allSessionFetchSize;
+
   bool get _isSpecialMode =>
       widget.sessionType == kSpecialSessionFilterType;
+
+  /// 当前分类是否支持服务端游标分页。
+  ///
+  /// `session_type=4`（全部；特别关注也走同一接口）**不支持游标翻页**：
+  /// 2026-11-01 实测 `end_ts`（微秒-1 / 微秒 / 毫秒 / 秒四种口径）与 `pn=2`
+  /// 全部被服务端忽略，任何游标都从最新开始返回同一段（第二批 11/11 重复）；
+  /// 且单批上限恒为 100（size=200/300/500 均只回 100）。该分类只能
+  /// 「一次取满 100 条 + 判定没有更多」——继续带游标请求只会拿到重复页，
+  /// 三轮重试后 `hasMore=false`，表现为滚到底不再出现新会话。
+  /// 其余分类（私信/关注/未关注/陌生人/粉丝团/拦截/系统）游标分页正常
+  /// （实测第二批 overlap=0）。
+  bool get _serverSupportsCursor =>
+      SessionPaginationPolicy.supportsCursorPaging(
+        specialMode: _isSpecialMode,
+        sessionType: widget.sessionType,
+      );
 
   /// 演示模式：本地追加的会话行数（滚动每次仅 +1 行）。
   int _demoExtra = 0;
@@ -168,6 +192,7 @@ class SessionListSectionState extends State<SessionListSection> {
     // 启动时本页可能先于 bootstrap 完成前构建（main 不阻塞 runApp），
     // 须先等 Dio 初始化，否则 Request.dio LateInitializationError 导致白屏。
     await ensureBootstrap();
+    if (!mounted) return;
     if (!AccountService().isLogin) {
       setState(() {
         _loading = false;
@@ -184,94 +209,116 @@ class SessionListSectionState extends State<SessionListSection> {
       // B7 反馈轮#2：刷新期间保留现有列表（不再清空置 _loading —— 消除与
       // Miuix 下拉指示器同屏的居中加载环）；成功路径（merged.sessions）
       // 仍整体替换列表内容。
+    } else if (!_hasMore || _isLoadingMore) {
+      return;
     }
-    if (!_hasMore || _isLoadingMore) return;
+    // 刷新优先：世代号递增后，在途补批的结果按世代号丢弃，刷新照常发出。
+    final requestId = ++_requestId;
     _isLoadingMore = true;
     final requestedEndTs = _endTs;
-    // 特别关注筛选依赖分组 mid 全集，先拉取（进程内缓存）。
-    if (_isSpecialMode && _specialMids == null) {
-      _specialMids = await SessionAccountResolver.fetchSpecialMids() ?? {};
-      if (!mounted) {
-        _isLoadingMore = false;
-        return;
+    try {
+      // 特别关注筛选依赖分组 mid 全集，先拉取（进程内缓存）。
+      if (_isSpecialMode && _specialMids == null) {
+        _specialMids = await SessionAccountResolver.fetchSpecialMids() ?? {};
+        if (!mounted || requestId != _requestId) return;
       }
-    }
-    // 视口预算：冷启动首批最多 2 屏、滚动补批最多 1 屏，避免一次拉回
-    // 远超一屏的会话；置顶重复页由 SessionPaginationPolicy 兜底。
-    final visibleRows = ViewportLoadBudget.visibleRows(
-      viewportExtent: ViewportLoadBudget.viewportExtentOf(
-        _scrollCtrl,
-        reservedHeight: 150,
-      ),
-      rowExtent: 72,
-    );
-    final pageSize = ViewportLoadBudget.capRequestItems(
-      fallback: 100,
-      visibleItems: visibleRows,
-      firstPage: refresh || _endTs == 0,
-    );
-    final res = await MsgHttp.sessionList(
-      sessionType: _isSpecialMode ? 4 : widget.sessionType,
-      size: pageSize,
-      endTs: requestedEndTs > 0 ? requestedEndTs : null,
-    );
-    _isLoadingMore = false;
-    if (!mounted) return;
-    switch (res) {
-      case Success(:final response):
-        final incoming =
-            (response['session_list'] as List?)
-                ?.map((e) => (e as Map).cast<String, dynamic>())
-                .toList() ??
-            const [];
-        // mergePage：置顶优先排序 + 按会话键去重 + 严格递减游标。
-        final merged = SessionPaginationPolicy.mergePage(
-          existing: refresh ? const [] : _mergedAll,
-          incoming: incoming,
-          responseHasMore: response['has_more'] == 1,
-          requestedEndTs: requestedEndTs,
-          canRetryDuplicatePage: dupRetry < 3,
-        );
+      // 视口预算：冷启动首批最多 2 屏、滚动补批最多 1 屏，避免一次拉回
+      // 远超一屏的会话；置顶重复页由 SessionPaginationPolicy 兜底。
+      // 「全部」分类例外：服务端不认游标且单批上限 100，只能一次取满
+      // （见 [_serverSupportsCursor]），否则滚到底永远拿不到新会话。
+      final pageSize = _serverSupportsCursor
+          ? ViewportLoadBudget.capRequestItems(
+              fallback: 100,
+              visibleItems: ViewportLoadBudget.visibleRows(
+                viewportExtent: ViewportLoadBudget.viewportExtentOf(
+                  _scrollCtrl,
+                  reservedHeight: 150,
+                ),
+                rowExtent: 72,
+              ),
+              firstPage: refresh || _endTs == 0,
+            )
+          : _allSessionFetchSize;
+      final res = await MsgHttp.sessionList(
+        sessionType: _isSpecialMode ? 4 : widget.sessionType,
+        size: pageSize,
+        endTs: requestedEndTs > 0 ? requestedEndTs : null,
+      );
+      if (!mounted || requestId != _requestId) return;
+      switch (res) {
+        case Success(:final response):
+          final incoming =
+              (response['session_list'] as List?)
+                  ?.map((e) => (e as Map).cast<String, dynamic>())
+                  .toList() ??
+              const [];
+          // mergePage：置顶优先排序 + 按会话键去重 + 严格递减游标。
+          // 「全部」分类服务端不认游标（`has_more` 恒为 1 但翻不动），
+          // 必须按「没有更多」处理，避免整页重复的无效重试。
+          final merged = SessionPaginationPolicy.mergePage(
+            existing: refresh ? const [] : _mergedAll,
+            incoming: incoming,
+            responseHasMore:
+                _serverSupportsCursor && response['has_more'] == 1,
+            requestedEndTs: requestedEndTs,
+            canRetryDuplicatePage: dupRetry < 3,
+          );
+          setState(() {
+            _loading = false;
+            _error = null;
+            _mergedAll
+              ..clear()
+              ..addAll(merged.sessions);
+            _sessions
+              ..clear()
+              ..addAll(
+                _isSpecialMode
+                    ? _mergedAll.where(_isSpecialSession)
+                    : merged.sessions,
+              );
+            _hasMore = merged.hasMore;
+            _endTs = merged.nextEndTs;
+          });
+          // 整页重复时用更早的游标自动重试（对齐 BiliPai 分页策略）。
+          if (merged.shouldRetry) {
+            _load(dupRetry: dupRetry + 1);
+            return;
+          }
+          // 加载成功后通知父组件清零私信未读角标
+          if (refresh && merged.newCount > 0) {
+            widget.onRefreshUnread?.call();
+          }
+          // 异步补全会话用户信息（get_sessions 通常不带 account_info）
+          final filled = await SessionAccountResolver.fillSessionAccounts(
+            merged.sessions,
+          );
+          final specialUpdated = await SessionAccountResolver
+              .fillSpecialFollows(merged.sessions);
+          if (mounted &&
+              requestId == _requestId &&
+              (filled || specialUpdated)) {
+            setState(() {});
+          }
+        case Error(:final errMsg):
+          setState(() {
+            _loading = false;
+            _error = errMsg ?? '加载失败';
+          });
+        case Loading():
+          break;
+      }
+    } catch (_) {
+      // 网络/解析异常不能让 `_isLoadingMore` 永久卡 true（否则此后刷新与
+      // 补批全部失效，只能退出页面重进）。
+      if (mounted && requestId == _requestId) {
         setState(() {
           _loading = false;
-          _error = null;
-          _mergedAll
-            ..clear()
-            ..addAll(merged.sessions);
-          _sessions
-            ..clear()
-            ..addAll(
-              _isSpecialMode
-                  ? _mergedAll.where(_isSpecialSession)
-                  : merged.sessions,
-            );
-          _hasMore = merged.hasMore;
-          _endTs = merged.nextEndTs;
+          _error = '加载失败';
         });
-        // 整页重复时用更早的游标自动重试（对齐 BiliPai 分页策略）。
-        if (merged.shouldRetry) {
-          _load(dupRetry: dupRetry + 1);
-          return;
-        }
-        // 加载成功后通知父组件清零私信未读角标
-        if (refresh && merged.newCount > 0) {
-          widget.onRefreshUnread?.call();
-        }
-        // 异步补全会话用户信息（get_sessions 通常不带 account_info）
-        final filled = await SessionAccountResolver.fillSessionAccounts(
-          merged.sessions,
-        );
-        final specialUpdated = await SessionAccountResolver.fillSpecialFollows(
-          merged.sessions,
-        );
-        if (mounted && (filled || specialUpdated)) setState(() {});
-      case Error(:final errMsg):
-        setState(() {
-          _loading = false;
-          _error = errMsg ?? '加载失败';
-        });
-      case Loading():
-        break;
+      }
+    } finally {
+      // 只有当前世代才复位：被刷新抢占的旧请求不能清掉新请求的标志。
+      if (requestId == _requestId) _isLoadingMore = false;
     }
   }
 
