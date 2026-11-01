@@ -145,6 +145,13 @@ class RcmdVideoItemAppModel extends BaseRcmdVideoItemModel {
     // 由于app端api并不会直接返回与owner的关注状态
     // 所以借用推荐原因是否为“已关注”、“新关注”判别关注状态，从而与web端接口等效
     isFollowed = const {'已关注', '新关注'}.contains(rcmdReason);
+    // 推荐理由里有时直接带点赞数（App 流没有 stat.like）：解析后作为点赞数来源，
+    // 卡片统一在底部点赞胶囊展示，封面不再重复显示「X万点赞」。
+    if (rcmdReason != null && rcmdReason!.contains('赞')) {
+      stat.like ??= _parseCount(
+        rcmdReason!.replaceAll('点赞', '').replaceAll('赞', ''),
+      );
+    }
     // 如果是，就无需再显示推荐原因，交由view统一处理即可
     if (isFollowed) rcmdReason = null;
 

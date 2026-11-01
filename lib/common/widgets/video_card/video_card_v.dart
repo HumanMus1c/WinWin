@@ -159,8 +159,7 @@ class VideoCardV extends StatelessWidget {
                                 type: PBadgeType.highlight,
                               ),
                             )
-                          else if (data.rcmdReason != null &&
-                              data.rcmdReason!.isNotEmpty)
+                          else if (_showReasonOnCover(data.rcmdReason))
                             Positioned(
                               left: 7,
                               top: 6,
@@ -213,7 +212,6 @@ class VideoCardV extends StatelessWidget {
   }) {
     final tokens = AppThemeHost.of(context);
     final String title = data.title;
-    final String? rcmdReason = data.rcmdReason;
     final bool isFollowed = data.isFollowed;
     final String ownerName = data.ownerName;
     final int? mid = data.mid;
@@ -363,9 +361,7 @@ class VideoCardV extends StatelessWidget {
             ))}点赞',
             type: PBadgeType.highlight,
           )
-        else if (likeCount != null &&
-            likeCount > 0 &&
-            !(rcmdReason?.contains('赞') ?? false))
+        else if (likeCount != null && likeCount > 0)
           PBadge(
             text: '${NumUtils.formatNum(likeCount)}点赞',
             type: PBadgeType.highlight,
@@ -398,5 +394,16 @@ class VideoCardV extends StatelessWidget {
     );
 
     return shrinkWrap ? info : Expanded(child: info);
+  }
+
+  /// 封面左上角只放**定性**推荐理由（热门 / 高播放 …）。
+  ///
+  /// 点赞量理由（如「3万点赞」）改由底部点赞胶囊展示（数据源改用 `stat.like`
+  /// 的精确值），关注态理由由 UP 行的「已关注」徽章展示——同一信息只在
+  /// 一个位置出现，避免一张卡上两处都在报点赞量。
+  static bool _showReasonOnCover(String? reason) {
+    if (reason == null || reason.isEmpty) return false;
+    if (reason.contains('赞')) return false;
+    return !const {'已关注', '新关注'}.contains(reason);
   }
 }

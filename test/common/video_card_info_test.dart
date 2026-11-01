@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_card_info.dart';
+import 'package:winwin/models/video/rec_video_item.dart';
 
 void main() {
   group('VideoCardInfoText', () {
@@ -47,6 +48,24 @@ void main() {
       expect(data.publishedAt, 1700000000);
       expect(data.playCount, 26000);
       expect(data.ownerName, 'UP');
+    });
+
+    test('App 推荐流的「X万点赞」推荐理由转为点赞数', () {
+      final item = RcmdVideoItemAppModel.fromJson({
+        'goto': 'av',
+        'bvid': 'BV1test',
+        'title': '测试',
+        'duration': 100,
+        'rcmd_reason': '3万点赞',
+        'args': {'up_id': 1, 'up_name': 'UP'},
+        'player_args': {'aid': 123, 'cid': 456, 'duration': 100},
+        'cover_left_text_1': '85.2万',
+        'cover_left_text_2': '3427',
+      });
+      // App 流没有 stat.like，点赞数从推荐理由里解析。
+      expect(item.stat.like, 30000);
+      expect(item.rcmdReason, '3万点赞');
+      expect(VideoCardData.from(item).likeCount, 30000);
     });
   });
 }

@@ -185,4 +185,71 @@ void main() {
     // RenderParagraph 的默认 clip 拦腰截断（2026-11-01 实机现象）。
     expect(paragraph.size.height, greaterThanOrEqualTo(38.0));
   });
+
+  testWidgets('点赞理由只出现在底部胶囊，封面不再重复', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      appTestHost(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 240,
+            child: VideoCardV(
+              videoItem: const VideoCardData(
+                bvid: 'BV1like',
+                title: '点赞理由测试',
+                duration: 96,
+                ownerName: '测试UP主',
+                likeCount: 32000,
+                rcmdReason: '3万点赞',
+              ),
+              shrinkWrap: true,
+              showMenu: false,
+              enableContextMenu: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 推荐理由本身是点赞数时不上封面，改用 stat.like 的精确值放底部胶囊。
+    expect(find.text('3万点赞'), findsNothing);
+    expect(find.text('3.2万点赞'), findsOneWidget);
+  });
+
+  testWidgets('定性推荐理由上封面，点赞仍只在底部', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      appTestHost(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 240,
+            child: VideoCardV(
+              videoItem: const VideoCardData(
+                bvid: 'BV1hot',
+                title: '热门理由测试',
+                duration: 96,
+                ownerName: '测试UP主',
+                likeCount: 32000,
+                rcmdReason: '热门',
+              ),
+              shrinkWrap: true,
+              showMenu: false,
+              enableContextMenu: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('热门'), findsOneWidget);
+    expect(find.text('3.2万点赞'), findsOneWidget);
+  });
 }
