@@ -4,12 +4,14 @@ import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/skeleton/video_card_v.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
+import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_card_v.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/rcmd/controller.dart';
 import 'package:winwin/pages/video/detail_page.dart';
+import 'package:winwin/services/video_card_meta_service.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
@@ -193,8 +195,8 @@ class _RcmdPageState extends State<RcmdPage>
           controller.onLoadMore();
         }
         final item = response[itemIndex];
-        return VideoCardV(
-          videoItem: item,
+        return _RcmdVideoCard(
+          item: item,
           heroTag: 'rcmd_${item.bvid}',
           onTap: () {
             // 推荐流同时可能是 App 模型或 Web 模型，二者均继承
@@ -283,6 +285,66 @@ class _RcmdPageState extends State<RcmdPage>
           MiuixButton(onPressed: controller.onReload, child: const Text('点击重试')),
         ],
       ),
+    );
+  }
+}
+
+/// 首页推荐卡：App 推荐流不下发 `pubdate`，卡片可见时按 bvid 懒补一次详情元数据。
+///
+/// 只补齐缺失的发布时间 / 点赞等字段；Web 推荐流已有 `pubdate`，不会发请求。
+/// 详情元数据按 bvid 在 [VideoCardMetaService] 内缓存，滚动回来不重复请求。
+class _RcmdVideoCard extends StatefulWidget {
+  const _RcmdVideoCard({
+    required this.item,
+    this.heroTag,
+    this.onTap,
+    this.onRemove,
+  });
+
+  final BaseRcmdVideoItemModel item;
+  final Object? heroTag;
+  final VoidCallback? onTap;
+  final VoidCallback? onRemove;
+
+  @override
+  State<_RcmdVideoCard> createState() => _RcmdVideoCardState();
+}
+
+class _RcmdVideoCardState extends State<_RcmdVideoCard> {
+  late VideoCardData _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _data = VideoCardData.from(widget.item);
+    _enrich();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RcmdVideoCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.bvid != widget.item.bvid) {
+      _data = VideoCardData.from(widget.item);
+      _enrich();
+    }
+  }
+
+  void _enrich() {
+    final bvid = _data.bvid;
+    if (bvid == null || bvid.isEmpty || _data.publishedAt != null) return;
+    VideoCardMetaService.enrich(_data).then((data) {
+      if (!mounted || data.bvid != widget.item.bvid) return;
+      if (!identical(data, _data)) setState(() => _data = data);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return VideoCardV(
+      videoItem: _data,
+      heroTag: widget.heroTag,
+      onTap: widget.onTap,
+      onRemove: widget.onRemove,
     );
   }
 }

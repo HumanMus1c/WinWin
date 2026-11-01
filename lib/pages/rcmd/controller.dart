@@ -32,8 +32,8 @@ class RcmdController extends CommonListController {
   /// App 推荐接口单批原始条数的保守估计（去重后通常更少）。
   static const int _assumedBatchSize = 8;
 
-  /// 推荐流网格：单行高度（卡片 90 + 间距 8）与单卡宽度上限。
-  static const double _gridRowExtent = 98;
+  /// 推荐流网格：单行高度（卡片信息区 100 + 间距 8）与单卡宽度上限。
+  static const double _gridRowExtent = 108;
   static const double _gridMaxCrossAxisExtent = 240;
 
   // Endless feed: never mark as ended.

@@ -10,7 +10,7 @@ abstract final class Grid {
   /// 纵向卡片网格代理（如推荐流/热门流/关注流/动态视频流），适用于 [VideoCardV]。
   static SliverGridDelegateWithExtentAndRatio videoCardVDelegate({
     double maxCrossAxisExtent = 240.0,
-    double mainAxisExtent = 90.0,
+    double mainAxisExtent = 100.0,
     double childAspectRatio = Style.aspectRatio,
     double mainAxisSpacing = Style.cardSpace,
     double crossAxisSpacing = Style.cardSpace,

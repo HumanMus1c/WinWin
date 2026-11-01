@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart'
     show MiuixCard, MiuixPressFeedbackType, MiuixPressable;
@@ -113,7 +114,6 @@ void main() {
               shrinkWrap: true,
               showMenu: false,
               enableContextMenu: false,
-              showOnlineCount: false,
             ),
           ),
         ),
@@ -131,6 +131,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    const longTitle = '幼儿吃银鳕鱼致血汞异常！银鳕鱼等海鱼都不能吃？?这是一段更长的标题继续测试第二行右侧是否裁切';
     await tester.pumpWidget(
       appTestHost(
         Align(
@@ -145,13 +146,13 @@ void main() {
                   sliver: SliverGrid.builder(
                     gridDelegate: Grid.videoCardVDelegate(
                       maxCrossAxisExtent: 240.0,
-                      mainAxisExtent: 90.0,
+                      mainAxisExtent: 100.0,
                     ),
                     itemCount: 1,
                     itemBuilder: (context, index) => VideoCardV(
                       videoItem: VideoCardData(
                         bvid: 'BV1home',
-                        title: '首页两行标题这是一段足够长的标题用来占满第二行',
+                        title: longTitle,
                         duration: 96,
                         ownerName: '测试UP主',
                         mid: 123,
@@ -161,7 +162,6 @@ void main() {
                         isFollowed: true,
                         publishedAt: now - 3 * 24 * 3600,
                       ),
-                      showOnlineCount: false,
                     ),
                   ),
                 ),
@@ -175,5 +175,12 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(tester.getSize(find.byType(VideoCardV)).height, greaterThan(200));
+
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.text(longTitle),
+    );
+    expect(paragraph.didExceedMaxLines, isTrue);
+    expect(paragraph.size.width, lessThanOrEqualTo(226.0));
+    expect(paragraph.size.height, greaterThan(30.0));
   });
 }

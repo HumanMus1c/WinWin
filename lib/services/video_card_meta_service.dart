@@ -61,14 +61,33 @@ abstract final class VideoCardMetaService {
             duration: fallback.duration > 0
                 ? fallback.duration
                 : ((data['duration'] as num?)?.toInt() ?? 0),
-            ownerName: owner is Map ? (owner['name']?.toString() ?? '') : '',
-            mid: owner is Map ? (owner['mid'] as num?)?.toInt() : null,
-            playCount: stat is Map ? (stat['view'] as num?)?.toInt() : null,
-            danmakuCount: stat is Map ? (stat['danmaku'] as num?)?.toInt() : null,
-            likeCount: stat is Map ? (stat['like'] as num?)?.toInt() : null,
-            publishedAt: (data['pubdate'] as num?)?.toInt(),
+            ownerName: owner is Map && (owner['name']?.toString() ?? '').isNotEmpty
+                ? owner['name'].toString()
+                : fallback.ownerName,
+            mid: owner is Map
+                ? (owner['mid'] as num?)?.toInt()
+                : fallback.mid,
+            playCount: stat is Map
+                ? ((stat['view'] as num?)?.toInt() ?? fallback.playCount)
+                : fallback.playCount,
+            danmakuCount: stat is Map
+                ? ((stat['danmaku'] as num?)?.toInt() ?? fallback.danmakuCount)
+                : fallback.danmakuCount,
+            likeCount: stat is Map
+                ? ((stat['like'] as num?)?.toInt() ?? fallback.likeCount)
+                : fallback.likeCount,
+            publishedAt:
+                (data['pubdate'] as num?)?.toInt() ?? fallback.publishedAt,
+            rcmdReason: fallback.rcmdReason,
+            isFollowed: fallback.isFollowed,
+            progress: fallback.progress,
+            progressSeconds: fallback.progressSeconds,
+            playedAt: fallback.playedAt,
             aid: (data['aid'] as num?)?.toInt() ?? fallback.aid,
             cid: (data['cid'] as num?)?.toInt() ?? fallback.cid,
+            goto: fallback.goto,
+            param: fallback.param,
+            threePoint: fallback.threePoint,
           );
         }
         _cache[bvid] = merged;

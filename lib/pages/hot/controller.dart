@@ -22,7 +22,7 @@ class HotController extends CommonListController {
     final visible = ViewportLoadBudget.visibleGridItems(
       viewportExtent: ViewportLoadBudget.viewportExtentOf(scrollController) - 220,
       viewportWidth: ViewportLoadBudget.windowLogicalWidth - 104,
-      rowExtent: 98,
+      rowExtent: 108,
       maxCrossAxisExtent: 240,
     );
     final ps = ViewportLoadBudget.capRequestItems(

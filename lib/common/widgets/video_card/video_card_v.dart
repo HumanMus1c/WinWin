@@ -9,7 +9,6 @@ import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_card_info.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
-import 'package:winwin/common/widgets/video_card/video_online_badge.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
@@ -37,7 +36,6 @@ class VideoCardV extends StatelessWidget {
     this.showPublishTime = true,
     this.enableContextMenu = true,
     this.shrinkWrap = false,
-    this.showOnlineCount,
   });
 
   final dynamic videoItem;
@@ -70,15 +68,11 @@ class VideoCardV extends StatelessWidget {
   /// 自由高度宿主为 true：整卡按封面 + 标题 + 底栏自然高度排列。
   final bool shrinkWrap;
 
-  /// 是否展示封面「XX人正在看」角标；null = 跟随「显示在线人数」设置。
-  final bool? showOnlineCount;
-
   @override
   Widget build(BuildContext context) {
     final data = VideoCardData.from(videoItem);
     final shapes = AppThemeHost.of(context).shapes;
     final radius = shapes.medium;
-    final bool onlineEnabled = showOnlineCount ?? Pref.enableOnlineTotal;
 
     // 演示模式：卡片保留完整交互（左键进入详情 / 右键菜单），
     // 文本与封面角标换为静态占位（无云端数据）。
@@ -153,17 +147,26 @@ class VideoCardV extends StatelessWidget {
                                 type: PBadgeType.duration,
                               ),
                             ),
-                          // 「XX人正在看」：仅设置开启时挂载；无数据自动隐藏。
-                          if (onlineEnabled)
+                          // 热门理由徽章：置于封面左上角（替代原「正在看」胶囊）。
+                          if (demo)
                             Positioned(
                               left: 7,
                               top: 6,
-                              child: VideoOnlineBadge(
-                                aid: data.aid ?? 0,
-                                cid: data.cid,
-                                bvid: data.bvid,
-                                demo: demo,
-                                seed: data.bvid,
+                              child: PBadge(
+                                text: const ['热门', '高播放', '宝藏新作'][
+                                    Random((data.bvid ?? '').hashCode ^ 5)
+                                        .nextInt(3)],
+                                type: PBadgeType.highlight,
+                              ),
+                            )
+                          else if (data.rcmdReason != null &&
+                              data.rcmdReason!.isNotEmpty)
+                            Positioned(
+                              left: 7,
+                              top: 6,
+                              child: PBadge(
+                                text: data.rcmdReason!,
+                                type: PBadgeType.highlight,
                               ),
                             ),
                           if (demo || showStat)
@@ -230,7 +233,9 @@ class VideoCardV extends StatelessWidget {
         : Text(
             title,
             maxLines: 2,
+            softWrap: true,
             overflow: TextOverflow.ellipsis,
+            textWidthBasis: TextWidthBasis.parent,
             style: const TextStyle(height: 1.38),
           );
 
@@ -345,18 +350,10 @@ class VideoCardV extends StatelessWidget {
       );
     }
 
-    // 热门行：rcmd 理由 + 点赞胶囊（播放量保留在封面角标，不重复）。
+    // 热门行：点赞胶囊 + 更多（rcmd 理由已移到封面左上角）。
     final Widget hotRow = Row(
       spacing: 2,
       children: [
-        if (demo)
-          PBadge(
-            text: const ['高播放', '1万点赞', '热门', '宝藏新作'][
-                Random((data.bvid ?? '').hashCode ^ 5).nextInt(4)],
-            type: PBadgeType.highlight,
-          )
-        else if (rcmdReason != null && rcmdReason.isNotEmpty)
-          PBadge(text: rcmdReason, type: PBadgeType.highlight),
         if (demo)
           PBadge(
             text: '${NumUtils.formatNum(DemoOverrides.count(
@@ -366,7 +363,9 @@ class VideoCardV extends StatelessWidget {
             ))}点赞',
             type: PBadgeType.highlight,
           )
-        else if (likeCount != null && likeCount > 0)
+        else if (likeCount != null &&
+            likeCount > 0 &&
+            !(rcmdReason?.contains('赞') ?? false))
           PBadge(
             text: '${NumUtils.formatNum(likeCount)}点赞',
             type: PBadgeType.highlight,
@@ -382,7 +381,7 @@ class VideoCardV extends StatelessWidget {
     );
 
     final Widget info = Padding(
-      padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+      padding: const EdgeInsets.fromLTRB(6, 5, 8, 5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
