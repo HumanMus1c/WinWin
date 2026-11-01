@@ -7,10 +7,18 @@ import 'package:winwin/theme/style.dart';
 abstract final class Grid {
   static const double smallCardWidth = 240.0;
 
+  /// 竖卡信息区高度（封面之外的部分）。
+  ///
+  /// 实测构成（228.8 宽卡片）：标题两行 38.7 + UP 行 19.6 + 间距 2 +
+  /// 热门行 26（更多按钮 26 撑起）+ 上下内边距 10 = 96.3；
+  /// 取 100 留约 4px 余量，避免 `Expanded` 拿到的标题槽不足两行而被裁切
+  /// （2026-11-01 反馈轮：90/98 均出现过第二行下半截断）。
+  static const double videoCardVInfoExtent = 100.0;
+
   /// 纵向卡片网格代理（如推荐流/热门流/关注流/动态视频流），适用于 [VideoCardV]。
   static SliverGridDelegateWithExtentAndRatio videoCardVDelegate({
     double maxCrossAxisExtent = 240.0,
-    double mainAxisExtent = 100.0,
+    double mainAxisExtent = videoCardVInfoExtent,
     double childAspectRatio = Style.aspectRatio,
     double mainAxisSpacing = Style.cardSpace,
     double crossAxisSpacing = Style.cardSpace,

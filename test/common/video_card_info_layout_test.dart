@@ -126,7 +126,7 @@ void main() {
     expect(size.height, lessThan(320));
   });
 
-  testWidgets('首页竖卡在 90px 信息区内不溢出', (tester) async {
+  testWidgets('首页竖卡信息区容得下完整两行标题', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1000, 600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -146,7 +146,7 @@ void main() {
                   sliver: SliverGrid.builder(
                     gridDelegate: Grid.videoCardVDelegate(
                       maxCrossAxisExtent: 240.0,
-                      mainAxisExtent: 100.0,
+                      mainAxisExtent: Grid.videoCardVInfoExtent,
                     ),
                     itemCount: 1,
                     itemBuilder: (context, index) => VideoCardV(
@@ -181,6 +181,8 @@ void main() {
     );
     expect(paragraph.didExceedMaxLines, isTrue);
     expect(paragraph.size.width, lessThanOrEqualTo(226.0));
-    expect(paragraph.size.height, greaterThan(30.0));
+    // 标题槽必须容得下完整两行（14px × 1.38 × 2 ≈ 38.7），否则第二行会被
+    // RenderParagraph 的默认 clip 拦腰截断（2026-11-01 实机现象）。
+    expect(paragraph.size.height, greaterThanOrEqualTo(38.0));
   });
 }

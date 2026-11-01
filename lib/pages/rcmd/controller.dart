@@ -8,8 +8,21 @@ import 'package:winwin/utils/viewport_load_budget.dart';
 class RcmdController extends CommonListController {
   // Simplified from Pref.enableSaveLastData; keeps last data on error/refresh.
   late bool enableSaveLastData = true;
-  // Use the app recommend API by default (Pref.appRcmd equivalent).
-  final bool appRcmd = true;
+
+  /// 是否使用 App 推荐流（`/x/v2/feed/index`）。
+  ///
+  /// 默认改用 Web 推荐流：App 流不下发 `pubdate` 与 `stat.like`，卡片只能
+  /// 逐张请求 `/x/web-interface/view` 补发布时间与点赞（首页一屏就是十几次
+  /// 请求，且点赞数会在卡片上一个个「蹦」出来）；Web 流单次列表请求即带
+  /// 发布时间 / 播放 / 弹幕 / 点赞 / 推荐理由 / 关注态，零额外请求。
+  static const bool appRcmd = false;
+
+  /// Web 推荐流单页条数。
+  static const int _webPageSize = 20;
+
+  /// 首屏决定数据源后固定下来：两类模型是不同运行时类型，混进同一列表会在
+  /// 追加时抛类型错误（Web 流失败时才回退 App 流，且只回退一次）。
+  bool? _useWebFeed;
 
   int? lastRefreshAt;
   late bool savedRcmdTip = true;
@@ -32,6 +45,9 @@ class RcmdController extends CommonListController {
   /// App 推荐接口单批原始条数的保守估计（去重后通常更少）。
   static const int _assumedBatchSize = 8;
 
+  /// 当前数据源单批目标条数：Web 流按 [ps] 返回，App 流按保守估计。
+  int get _batchSize => (_useWebFeed ?? !appRcmd) ? _webPageSize : _assumedBatchSize;
+
   /// 推荐流网格：单行高度（卡片信息区 100 + 间距 8）与单卡宽度上限。
   static const double _gridRowExtent = 108;
   static const double _gridMaxCrossAxisExtent = 240;
@@ -52,9 +68,27 @@ class RcmdController extends CommonListController {
     // main() kicks this off without awaiting so the window can render;
     // wait for storage/accounts/Dio before the first request goes out.
     await ensureBootstrap();
-    return appRcmd
-        ? VideoHttp.rcmdVideoListApp(freshIdx: page)
-        : VideoHttp.rcmdVideoList(freshIdx: page, ps: 20);
+    return _fetchPage(page);
+  }
+
+  /// 拉取单页推荐：Web 流优先（自带发布时间 / 点赞），失败时回退 App 流。
+  Future<LoadingState<List<BaseRcmdVideoItemModel>>> _fetchPage(int idx) async {
+    final bool useWeb = _useWebFeed ?? !appRcmd;
+    if (useWeb) {
+      final web = await VideoHttp.rcmdVideoList(
+        freshIdx: idx,
+        ps: _webPageSize,
+      );
+      if (web case Success()) {
+        _useWebFeed = true;
+        return web;
+      }
+      // 已确定走 Web 流后不再回退，避免两类模型混进同一列表。
+      if (_useWebFeed == true) return web;
+    }
+    final app = await VideoHttp.rcmdVideoListApp(freshIdx: idx);
+    if (app case Success()) _useWebFeed = false;
+    return app;
   }
 
   /// 条目唯一键：App 接口的 av 卡由 aid 反推 bvid；其余卡片（直播/番剧等）
@@ -129,10 +163,9 @@ class RcmdController extends CommonListController {
       isLoading = true;
       try {
         var nextIdx = page;
-        // 列表运行时类型是 List<RcmdVideoItemAppModel>，追加列表必须同型；
-        // 用 List<dynamic> 调 addAll 会在运行时抛
-        // "List<dynamic> is not a subtype of Iterable<RcmdVideoItemAppModel>"。
-        final added = <RcmdVideoItemAppModel>[];
+        // 列表运行时元素类型随数据源固定（Web / App 各一套模型），追加列表
+        // 必须同为基类集合；用具体模型类型会在切换数据源时抛运行时类型错误。
+        final added = <BaseRcmdVideoItemModel>[];
         // 服务端偶发整轮都只回送已看过的卡片（实测连续 7 批新增 0~1 条），
         // 空手而归时再补一轮，避免滚到底毫无反应。两轮合计仍受
         // [_maxPrefetchBatches] 封顶，不会因重试放大拉取量。
@@ -186,19 +219,19 @@ class RcmdController extends CommonListController {
   /// 本轮补货批次数：只补足「一屏」额度，最多 [_maxPrefetchBatches]。
   int get _prefetchBatchCount {
     final target = ViewportLoadBudget.capRequestItems(
-      fallback: _maxPrefetchBatches * _assumedBatchSize,
+      fallback: _maxPrefetchBatches * _batchSize,
       visibleItems: _viewportCardCapacity,
       firstPage: false,
     );
-    final count = (target / _assumedBatchSize).ceil();
+    final count = (target / _batchSize).ceil();
     if (count < 1) return 1;
     return count > _maxPrefetchBatches ? _maxPrefetchBatches : count;
   }
 
-  Future<List<RcmdVideoItemAppModel>> _fetchBatch(int idx) async {
+  Future<List<BaseRcmdVideoItemModel>> _fetchBatch(int idx) async {
     await ensureBootstrap();
     try {
-      final res = await VideoHttp.rcmdVideoListApp(freshIdx: idx);
+      final res = await _fetchPage(idx);
       if (res case Success(:final response)) return response;
     } catch (_) {
       // 追加失败不打断当前列表，下一次滚动会重试。

@@ -140,7 +140,8 @@ class _FollowPageState extends State<FollowPage>
   }
 
   late final gridDelegate = Grid.videoCardVDelegate(
-    mainAxisExtent: MediaQuery.textScalerOf(context).scale(90),
+    mainAxisExtent: MediaQuery.textScalerOf(context)
+        .scale(Grid.videoCardVInfoExtent),
   );
 
   Widget _buildBody(
