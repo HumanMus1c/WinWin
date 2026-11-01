@@ -113,6 +113,7 @@ void main() {
               shrinkWrap: true,
               showMenu: false,
               enableContextMenu: false,
+              showOnlineCount: false,
             ),
           ),
         ),
@@ -123,5 +124,56 @@ void main() {
     final size = tester.getSize(find.byType(VideoCardV));
     expect(size.width, 320);
     expect(size.height, lessThan(320));
+  });
+
+  testWidgets('首页竖卡在 90px 信息区内不溢出', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    await tester.pumpWidget(
+      appTestHost(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 1000,
+            height: 600,
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.all(12),
+                  sliver: SliverGrid.builder(
+                    gridDelegate: Grid.videoCardVDelegate(
+                      maxCrossAxisExtent: 240.0,
+                      mainAxisExtent: 90.0,
+                    ),
+                    itemCount: 1,
+                    itemBuilder: (context, index) => VideoCardV(
+                      videoItem: VideoCardData(
+                        bvid: 'BV1home',
+                        title: '首页两行标题这是一段足够长的标题用来占满第二行',
+                        duration: 96,
+                        ownerName: '测试UP主',
+                        mid: 123,
+                        playCount: 26000,
+                        danmakuCount: 129,
+                        likeCount: 12000,
+                        isFollowed: true,
+                        publishedAt: now - 3 * 24 * 3600,
+                      ),
+                      showOnlineCount: false,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(tester.getSize(find.byType(VideoCardV)).height, greaterThan(200));
   });
 }

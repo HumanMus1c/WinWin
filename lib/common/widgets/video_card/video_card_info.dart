@@ -27,6 +27,12 @@ abstract final class VideoCardInfoText {
     return '发布于 ${DateFormatUtils.dateFormat(pubdate)}';
   }
 
+  /// 卡片信息行的短发布时间（不带「发布于」前缀，配合日历图标使用）。
+  static String publishedShort(int? pubdate) {
+    if (pubdate == null || pubdate <= 0) return '';
+    return DateFormatUtils.dateFormat(pubdate);
+  }
+
   /// 播放进度文案：`已看 12:34 / 29:00`；`-1` 表示已看完。
   static String progress(int? progressSeconds, int? durationSeconds) {
     final p = progressSeconds;

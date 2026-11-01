@@ -9,11 +9,13 @@ import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_card_info.dart';
 import 'package:winwin/common/widgets/video_card/video_context_menu.dart';
 import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
+import 'package:winwin/common/widgets/video_card/video_online_badge.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/utils/duration_utils.dart';
+import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 
@@ -32,9 +34,10 @@ class VideoCardV extends StatelessWidget {
     this.showOwner = true,
     this.showMenu = true,
     this.showStat = true,
-    this.showPublishTime = false,
+    this.showPublishTime = true,
     this.enableContextMenu = true,
     this.shrinkWrap = false,
+    this.showOnlineCount,
   });
 
   final dynamic videoItem;
@@ -55,7 +58,7 @@ class VideoCardV extends StatelessWidget {
   /// 是否在封面左下角展示播放 / 弹幕数角标。
   final bool showStat;
 
-  /// 是否在底栏展示发布时间（用户空间投稿 / 点赞场景）。
+  /// 是否在 UP 行右侧展示发布时间（`showOwner` 关闭时仅显示时间）。
   final bool showPublishTime;
 
   /// 是否响应右键 / 长按卡片菜单（用户空间等无操作场景可关闭）。
@@ -67,11 +70,15 @@ class VideoCardV extends StatelessWidget {
   /// 自由高度宿主为 true：整卡按封面 + 标题 + 底栏自然高度排列。
   final bool shrinkWrap;
 
+  /// 是否展示封面「XX人正在看」角标；null = 跟随「显示在线人数」设置。
+  final bool? showOnlineCount;
+
   @override
   Widget build(BuildContext context) {
     final data = VideoCardData.from(videoItem);
     final shapes = AppThemeHost.of(context).shapes;
     final radius = shapes.medium;
+    final bool onlineEnabled = showOnlineCount ?? Pref.enableOnlineTotal;
 
     // 演示模式：卡片保留完整交互（左键进入详情 / 右键菜单），
     // 文本与封面角标换为静态占位（无云端数据）。
@@ -146,6 +153,19 @@ class VideoCardV extends StatelessWidget {
                                 type: PBadgeType.duration,
                               ),
                             ),
+                          // 「XX人正在看」：仅设置开启时挂载；无数据自动隐藏。
+                          if (onlineEnabled)
+                            Positioned(
+                              left: 7,
+                              top: 6,
+                              child: VideoOnlineBadge(
+                                aid: data.aid ?? 0,
+                                cid: data.cid,
+                                bvid: data.bvid,
+                                demo: demo,
+                                seed: data.bvid,
+                              ),
+                            ),
                           if (demo || showStat)
                             Positioned(
                               left: 7,
@@ -214,6 +234,153 @@ class VideoCardV extends StatelessWidget {
             style: const TextStyle(height: 1.38),
           );
 
+    final String publishedText =
+        VideoCardInfoText.publishedShort(data.publishedAt);
+    final int? likeCount = data.likeCount;
+
+    // UP 行：UP + 已关注 + 发布时间（发布日期不再占独立整行）。
+    final Widget ownerRow;
+    if (demo) {
+      ownerRow = Row(
+        children: [
+          if (showOwner) ...[
+            AppIcon(
+              AppIcons.profile(),
+              size: appRowIconSizeInherited(context),
+              color: tokens.colors.outline,
+            ),
+            const SizedBox(width: 3),
+            Flexible(
+              child: Text(
+                kDemoDisplayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: tokens.text.labelSmall?.copyWith(
+                  color: tokens.colors.outline,
+                ),
+              ),
+            ),
+            if (Random((data.bvid ?? '').hashCode).nextBool()) ...[
+              const SizedBox(width: 4),
+              const PBadge(text: '已关注', type: PBadgeType.status),
+            ],
+          ] else
+            const Spacer(),
+          if (showPublishTime) ...[
+            const SizedBox(width: 6),
+            const SkeletonLine(width: 36, height: 10),
+          ],
+        ],
+      );
+    } else {
+      ownerRow = Row(
+        children: [
+          if (showOwner && ownerName.isNotEmpty)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  if (mid != null && mid > 0) {
+                    Navigator.push(
+                      context,
+                      AppRoute(
+                        builder: (_) => MemberSpacePage(mid: mid),
+                      ),
+                    );
+                  }
+                },
+                child: Row(
+                  children: [
+                    AppIcon(
+                      AppIcons.profile(),
+                      size: appRowIconSizeInherited(context),
+                      color: tokens.colors.outline,
+                    ),
+                    const SizedBox(width: 3),
+                    Flexible(
+                      child: Text(
+                        ownerName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        semanticsLabel: 'UP：$ownerName',
+                        style: tokens.text.labelSmall?.copyWith(
+                          color: tokens.colors.outline,
+                        ),
+                      ),
+                    ),
+                    if (isFollowed) ...[
+                      const SizedBox(width: 4),
+                      const PBadge(text: '已关注', type: PBadgeType.status),
+                    ],
+                  ],
+                ),
+              ),
+            )
+          else
+            const Spacer(),
+          if (showPublishTime && publishedText.isNotEmpty) ...[
+            const SizedBox(width: 6),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppIcon(
+                  AppIcons.calendar(),
+                  size: 11,
+                  color: tokens.colors.outline,
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  publishedText,
+                  maxLines: 1,
+                  style: tokens.text.labelSmall?.copyWith(
+                    color: tokens.colors.outline,
+                    fontSize: 11,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      );
+    }
+
+    // 热门行：rcmd 理由 + 点赞胶囊（播放量保留在封面角标，不重复）。
+    final Widget hotRow = Row(
+      spacing: 2,
+      children: [
+        if (demo)
+          PBadge(
+            text: const ['高播放', '1万点赞', '热门', '宝藏新作'][
+                Random((data.bvid ?? '').hashCode ^ 5).nextInt(4)],
+            type: PBadgeType.highlight,
+          )
+        else if (rcmdReason != null && rcmdReason.isNotEmpty)
+          PBadge(text: rcmdReason, type: PBadgeType.highlight),
+        if (demo)
+          PBadge(
+            text: '${NumUtils.formatNum(DemoOverrides.count(
+              'demo.vlike.${data.bvid ?? ''}',
+              min: 1000,
+              max: 99999,
+            ))}点赞',
+            type: PBadgeType.highlight,
+          )
+        else if (likeCount != null && likeCount > 0)
+          PBadge(
+            text: '${NumUtils.formatNum(likeCount)}点赞',
+            type: PBadgeType.highlight,
+          ),
+        const Spacer(),
+        if (showMenu)
+          VideoPopupMenu(
+            data: data,
+            videoItem: videoItem,
+            onRemove: onRemove,
+          ),
+      ],
+    );
+
     final Widget info = Padding(
       padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
       child: Column(
@@ -224,169 +391,13 @@ class VideoCardV extends StatelessWidget {
             titleWidget
           else
             Expanded(child: titleWidget),
-          Row(
-              spacing: 2,
-              children: [
-                if (demo) ...[
-                  // 与正常模式一致：仅"已关注"时显示该胶囊（不存在"未关注"胶囊）。
-                  if (Random((data.bvid ?? '').hashCode).nextBool())
-                    const PBadge(
-                      text: '已关注',
-                      type: PBadgeType.status,
-                    ),
-                  PBadge(
-                    text: const ['高播放', '1万点赞', '热门', '宝藏新作'][
-                        Random((data.bvid ?? '').hashCode ^ 5).nextInt(4)],
-                    type: PBadgeType.highlight,
-                  ),
-                  if (showOwner)
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: tokens.colors.secondaryContainer
-                                .withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AppIcon(
-                                AppIcons.profile(),
-                                size: appRowIconSizeInherited(context),
-                                color: tokens.colors.outline,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                kDemoDisplayName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  height: 1.5,
-                                  fontSize:
-                                      tokens.text.labelMedium?.fontSize,
-                                  color: tokens.colors.outline,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    const Spacer(),
-                ] else ...[
-                  if (rcmdReason != null && rcmdReason.isNotEmpty)
-                    PBadge(text: rcmdReason, type: PBadgeType.highlight),
-                  if (isFollowed)
-                    const PBadge(text: '已关注', type: PBadgeType.status),
-                  if (showPublishTime && data.publishedAt != null)
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: _publishTimePill(context, tokens, data),
-                      ),
-                    )
-                  else if (showOwner && ownerName.isNotEmpty)
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: GestureDetector(
-                          onTap: () {
-                            if (mid != null && mid > 0) {
-                              Navigator.push(
-                                context,
-                                AppRoute(
-                                  builder: (_) => MemberSpacePage(mid: mid),
-                                ),
-                              );
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: tokens.colors.secondaryContainer
-                                  .withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(100),
-                            ),
-                            child: Text(
-                              ownerName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              semanticsLabel: 'UP：$ownerName',
-                              style: TextStyle(
-                                height: 1.5,
-                                fontSize: tokens.text.labelMedium?.fontSize,
-                                color: tokens.colors.outline,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    const Spacer(),
-                ],
-                if (showMenu)
-                  VideoPopupMenu(
-                    data: data,
-                    videoItem: videoItem,
-                    onRemove: onRemove,
-                  ),
-              ],
-            ),
-          ],
-        ),
-      );
-
-    return shrinkWrap ? info : Expanded(child: info);
-  }
-
-  /// 用户空间底栏发布时间胶囊：与 UP 胶囊同壳，仅换日历图标 + 时间文案。
-  Widget _publishTimePill(
-    BuildContext context,
-    AppTokens tokens,
-    VideoCardData data,
-  ) {
-    final text = VideoCardInfoText.publishedAt(data.publishedAt);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(
-        color: tokens.colors.secondaryContainer.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(100),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppIcon(
-            AppIcons.calendar(),
-            size: appRowIconSizeInherited(context),
-            color: tokens.colors.outline,
-          ),
-          const SizedBox(width: 3),
-          Flexible(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              semanticsLabel: text,
-              style: TextStyle(
-                height: 1.5,
-                fontSize: tokens.text.labelMedium?.fontSize,
-                color: tokens.colors.outline,
-              ),
-            ),
-          ),
+          ownerRow,
+          const SizedBox(height: 2),
+          hotRow,
         ],
       ),
     );
+
+    return shrinkWrap ? info : Expanded(child: info);
   }
 }

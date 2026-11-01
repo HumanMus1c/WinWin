@@ -20,6 +20,9 @@ class VideoCardData {
   final int? mid;
   final int? playCount;
   final int? danmakuCount;
+
+  /// 点赞数（`stat.like`）；部分 App 推荐流不下发。
+  final int? likeCount;
   final String? rcmdReason;
   final bool isFollowed;
   final double? progress; // 0.0 ~ 1.0 归一化进度
@@ -47,6 +50,7 @@ class VideoCardData {
     this.mid,
     this.playCount,
     this.danmakuCount,
+    this.likeCount,
     this.rcmdReason,
     this.isFollowed = false,
     this.progress,
@@ -79,8 +83,10 @@ class VideoCardData {
         mid: item.owner.mid,
         playCount: item.stat.view,
         danmakuCount: item.stat.danmu,
+        likeCount: item.stat.like,
         rcmdReason: item.rcmdReason,
         isFollowed: item.isFollowed,
+        publishedAt: item is RcmdVideoItemModel ? item.pubdate : null,
         aid: aid,
         cid: item.cid,
         goto: item.goto,
@@ -207,9 +213,11 @@ class VideoCardData {
       final stat = item['stat'] ?? item['cnt_info'] ?? item['cntInfo'];
       int? playCount;
       int? danmakuCount;
+      int? likeCount;
       if (stat is Map) {
         playCount = (stat['view'] ?? stat['play']) as int?;
         danmakuCount = (stat['danmu'] ?? stat['danmaku']) as int?;
+        likeCount = (stat['like'] as num?)?.toInt();
       } else {
         playCount = (item['play'] ?? item['view']) as int?;
         danmakuCount = (item['danmu'] ?? item['danmaku']) as int?;
@@ -237,6 +245,7 @@ class VideoCardData {
         mid: mid,
         playCount: playCount,
         danmakuCount: danmakuCount,
+        likeCount: likeCount,
         rcmdReason: item['rcmd_reason']?.toString(),
         isFollowed: item['is_followed'] == true,
         progress: prog,
@@ -266,6 +275,7 @@ class VideoCardData {
       final dynamic stat = _tryVal<dynamic>(() => dyn.stat ?? dyn.cntInfo);
       final int? playCount = _tryVal<int?>(() => (stat?.view ?? stat?.play ?? dyn.play) as int?);
       final int? danmakuCount = _tryVal<int?>(() => (stat?.danmu ?? stat?.danmaku ?? dyn.danmaku) as int?);
+      final int? likeCount = _tryVal<int?>(() => (stat?.like as num?)?.toInt());
       final String? rcmdReason = _tryVal<String?>(() => dyn.rcmdReason?.toString());
       final bool isFollowed = _tryVal<bool?>(() => dyn.isFollowed == true) ?? false;
       final int? aid = _tryVal<int?>(() => (dyn.aid ?? dyn.id ?? dyn.param) as int?) ??
@@ -289,6 +299,7 @@ class VideoCardData {
         mid: mid,
         playCount: playCount,
         danmakuCount: danmakuCount,
+        likeCount: likeCount,
         rcmdReason: rcmdReason,
         isFollowed: isFollowed,
         progressSeconds: progressSeconds,

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_card_info.dart';
 
 void main() {
@@ -30,6 +31,22 @@ void main() {
       expect(VideoCardInfoText.progress(-1, 1740), '已看完');
       expect(VideoCardInfoText.progress(754, 1740), '已看 12:34 / 29:00');
       expect(VideoCardInfoText.progress(754, 0), '已看 12:34');
+    });
+
+    test('Map 卡片数据解析点赞与发布时间', () {
+      final data = VideoCardData.from({
+        'bvid': 'BV1test',
+        'aid': 123,
+        'title': '测试',
+        'duration': 100,
+        'owner': {'name': 'UP', 'mid': 123},
+        'stat': {'view': 26000, 'danmaku': 129, 'like': 12000},
+        'pubdate': 1700000000,
+      });
+      expect(data.likeCount, 12000);
+      expect(data.publishedAt, 1700000000);
+      expect(data.playCount, 26000);
+      expect(data.ownerName, 'UP');
     });
   });
 }

@@ -65,6 +65,7 @@ abstract final class VideoCardMetaService {
             mid: owner is Map ? (owner['mid'] as num?)?.toInt() : null,
             playCount: stat is Map ? (stat['view'] as num?)?.toInt() : null,
             danmakuCount: stat is Map ? (stat['danmaku'] as num?)?.toInt() : null,
+            likeCount: stat is Map ? (stat['like'] as num?)?.toInt() : null,
             publishedAt: (data['pubdate'] as num?)?.toInt(),
             aid: (data['aid'] as num?)?.toInt() ?? fallback.aid,
             cid: (data['cid'] as num?)?.toInt() ?? fallback.cid,
