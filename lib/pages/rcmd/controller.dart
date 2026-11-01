@@ -144,9 +144,15 @@ class RcmdController extends CommonListController {
       _addUnique(merged, seen, dataList);
       final newCount = merged.length;
       _addUnique(merged, seen, old);
-      dataList
-        ..clear()
-        ..addAll(merged);
+      // 不能 `addAll(merged)`：`dataList` 运行时是具体模型列表
+      // （`List<RcmdVideoItemModel>` / `List<RcmdVideoItemAppModel>`），而
+      // `merged` 是 `List<dynamic>`；`addAll` 校验的是**参数迭代器的泛型**，
+      // 必抛 "List<dynamic> is not a subtype of Iterable<…>"。逐条 `add`
+      // 走元素级校验，元素实例本身就是列表元素类型 ⇒ 安全。
+      dataList.clear();
+      for (final item in merged) {
+        dataList.add(item);
+      }
       if (savedRcmdTip && newCount < dataList.length) {
         lastRefreshAt = newCount;
       }
@@ -195,7 +201,13 @@ class RcmdController extends CommonListController {
         page = nextIdx;
         // 两轮都被去重掉时不刷新 UI，避免空重建。
         if (added.isEmpty) return;
-        list.addAll(added);
+        // 不能 `addAll(added)`：`list` 运行时是具体模型列表，而 `added` 是
+        // 基类集合；`addAll` 校验的是**参数迭代器的泛型**，基类迭代器不是具体
+        // 模型的子类型 ⇒ 必抛 TypeError，请求成功但一条都进不了列表（表现为
+        // 「滚到底永远不出新内容」）。逐条 `add` 只按元素实例类型校验。
+        for (final item in added) {
+          list.add(item);
+        }
         loadingState.refresh();
       } finally {
         isLoading = false;
