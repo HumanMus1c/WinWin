@@ -318,8 +318,10 @@ class GlobalBackButton extends StatelessWidget {
 ///
 /// 凡是在自绘顶栏里给全局返回按钮配「同行的动作按钮」（分享/更多等），都应
 /// 使用本组件：同一材质（`AppTopBarSurface` 同源 `surface×0.72` + σ20 模糊 +
-/// `MiuixFrostedSurface` 的边缘无渐变）、同一 42×42 外框、同一伪粗体叠绘字形。
-/// 此前各页各自实现「半透明黑圆底」，会与返回按钮的毛玻璃观感割裂。
+/// `MiuixFrostedSurface` 的边缘无渐变）、同一悬浮投影
+/// （[AppTopBarSurface.floatingShadow]，与聊天页毛玻璃顶栏同档）、同一 42×42
+/// 外框、同一伪粗体叠绘字形。此前各页各自实现「半透明黑圆底」，会与返回按钮的
+/// 毛玻璃观感割裂。
 ///
 /// [onPressed] 为 null 时仅作**视觉载体**（如挂在 [MiuixPopupMenu] 上的触发控件，
 /// 点击交由外层手势处理），此时不提供 hover/按压反馈。
@@ -356,26 +358,36 @@ class FrostedCircleIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final Color effectiveColor = color ?? tokens.colors.onSurfaceVariant;
-    return MiuixFrostedSurface(
-      // 与「首页顶栏」同源材质；圆形裁剪半径 = 外框一半（42 / 2）。
-      color: AppTopBarSurface.barColor(tokens.colors.surface),
-      blurSigma: AppTopBarSurface.blurSigma,
-      borderRadius: GlobalBackButton.boxSize / 2,
-      outline: false,
-      shadow: false,
-      child: MiuixIconButton(
-        minWidth: GlobalBackButton.boxSize,
-        minHeight: GlobalBackButton.boxSize,
-        backgroundColor: AppColors.transparent,
-        onPressed: onPressed,
-        child: AppTooltip(
-          message: tooltip,
-          child: _PseudoBoldGlyph(
-            child: AppIcon(
-              icon,
-              size: iconSize,
-              color: effectiveColor,
-              shadows: shadows,
+    final double radius = GlobalBackButton.boxSize / 2;
+    return DecoratedBox(
+      // 悬浮投影画在毛玻璃**裁剪层之外**（与聊天页顶栏同一构造）：组件内建
+      // 4px 下投影会被 BackdropFilter 模糊核采样成边缘浸润带，故这里用
+      // 四向等量辐射的同档投影，沿圆形轮廓向外浮起。
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [AppTopBarSurface.floatingShadow(isDark: tokens.isDark)],
+      ),
+      child: MiuixFrostedSurface(
+        // 与「首页顶栏」同源材质；圆形裁剪半径 = 外框一半（42 / 2）。
+        color: AppTopBarSurface.barColor(tokens.colors.surface),
+        blurSigma: AppTopBarSurface.blurSigma,
+        borderRadius: radius,
+        outline: false,
+        shadow: false,
+        child: MiuixIconButton(
+          minWidth: GlobalBackButton.boxSize,
+          minHeight: GlobalBackButton.boxSize,
+          backgroundColor: AppColors.transparent,
+          onPressed: onPressed,
+          child: AppTooltip(
+            message: tooltip,
+            child: _PseudoBoldGlyph(
+              child: AppIcon(
+                icon,
+                size: iconSize,
+                color: effectiveColor,
+                shadows: shadows,
+              ),
             ),
           ),
         ),
