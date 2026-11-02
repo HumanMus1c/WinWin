@@ -15,14 +15,62 @@ abstract final class VideoCardMetaService {
   static final Map<String, VideoCardData> _cache = {};
   static final Map<String, Future<VideoCardData>> _inFlight = {};
 
-  /// 最多 2 个并发，避免聊天里连续多张视频卡同时打接口。
-  static const int _maxConcurrent = 2;
+  /// 最多 6 个并发：首页 App 兜底按整页批量补全，聊天里连续多张视频卡
+  /// 也不会一次打满接口。
+  static const int _maxConcurrent = 6;
   static int _active = 0;
   static final List<Completer<void>> _waiters = [];
 
   static VideoCardData? cached(String? bvid) {
     if (bvid == null || bvid.isEmpty) return null;
     return _cache[bvid];
+  }
+
+  /// 用已缓存统计覆盖当前条目的本地字段（推荐理由 / 关注态 / 进度保持原样）。
+  ///
+  /// 与 [enrich] 不同，这里不发起网络请求：缓存命中时让首页卡片首帧就带
+  /// 点赞与发布时间，避免「先渲染未补全卡片、下一帧再回填」的逐个跳动。
+  static VideoCardData applyCached(VideoCardData fallback) {
+    final hit = cached(fallback.bvid);
+    if (hit == null) return fallback;
+    return VideoCardData(
+      bvid: fallback.bvid,
+      cover: fallback.cover?.isNotEmpty == true ? fallback.cover : hit.cover,
+      title: fallback.title.isNotEmpty ? fallback.title : hit.title,
+      duration: fallback.duration > 0 ? fallback.duration : hit.duration,
+      ownerName: fallback.ownerName.isNotEmpty
+          ? fallback.ownerName
+          : hit.ownerName,
+      mid: fallback.mid ?? hit.mid,
+      playCount: hit.playCount ?? fallback.playCount,
+      danmakuCount: hit.danmakuCount ?? fallback.danmakuCount,
+      likeCount: hit.likeCount ?? fallback.likeCount,
+      publishedAt: hit.publishedAt ?? fallback.publishedAt,
+      rcmdReason: fallback.rcmdReason,
+      isFollowed: fallback.isFollowed,
+      progress: fallback.progress,
+      progressSeconds: fallback.progressSeconds,
+      playedAt: fallback.playedAt,
+      aid: fallback.aid ?? hit.aid,
+      cid: fallback.cid ?? hit.cid,
+      goto: fallback.goto,
+      param: fallback.param,
+      threePoint: fallback.threePoint,
+    );
+  }
+
+  /// 整页批量补全：首页 App 兜底流没有 `stat.like/pubdate`，在返回列表前
+  /// 并发补齐，随后 [applyCached] 让整页点赞一次性出现。
+  static Future<void> prefetch(Iterable<VideoCardData> items) {
+    final seen = <String>{};
+    final pending = <Future<VideoCardData>>[];
+    for (final item in items) {
+      final bvid = item.bvid;
+      if (bvid == null || bvid.isEmpty || !seen.add(bvid)) continue;
+      if (_cache.containsKey(bvid)) continue;
+      pending.add(enrich(item));
+    }
+    return Future.wait(pending).then((_) {});
   }
 
   static Future<VideoCardData> enrich(VideoCardData fallback) {

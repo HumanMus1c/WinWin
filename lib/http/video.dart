@@ -100,9 +100,14 @@ abstract final class VideoHttp {
   }
 
   // 首页推荐视频 WEB端
+  //
+  // [anonymous] 为 true 时使用匿名账号发请求（不带登录 Cookie）：
+  // 登录态被风控拒绝时仍能拿到带 `stat.like/pubdate` 的 Web 流，
+  // 避免回退到不含点赞字段的 App 流。
   static Future<LoadingState<List<RcmdVideoItemModel>>> rcmdVideoList({
     required int ps,
     required int freshIdx,
+    bool anonymous = false,
   }) async {
     final res = await Request().get(
       Api.recommendListWeb,
@@ -115,6 +120,9 @@ abstract final class VideoHttp {
         'brush': freshIdx,
         'fresh_type': 4,
       }),
+      options: anonymous
+          ? Options(extra: {'account': AnonymousAccount()})
+          : null,
     );
     if (res.data['code'] == 0) {
       List<RcmdVideoItemModel> list = <RcmdVideoItemModel>[];

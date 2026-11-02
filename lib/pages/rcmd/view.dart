@@ -317,17 +317,24 @@ class _RcmdVideoCardState extends State<_RcmdVideoCard> {
   @override
   void initState() {
     super.initState();
-    _data = VideoCardData.from(widget.item);
-    _enrich();
+    _load();
   }
 
   @override
   void didUpdateWidget(covariant _RcmdVideoCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.item.bvid != widget.item.bvid) {
-      _data = VideoCardData.from(widget.item);
-      _enrich();
-    }
+    if (oldWidget.item.bvid != widget.item.bvid) _load();
+  }
+
+  /// 首帧就叠加已缓存统计：App 兜底流在控制器侧已整页补全，
+  /// 这里同步命中缓存后点赞与发布时间不会再晚一帧「蹦」出来。
+  void _load() {
+    final base = VideoCardData.from(widget.item);
+    // Web 流自身已带完整统计，不用旧缓存覆盖；只有缺发布时间的 App 流才叠加。
+    _data = base.publishedAt == null
+        ? VideoCardMetaService.applyCached(base)
+        : base;
+    _enrich();
   }
 
   void _enrich() {

@@ -1,28 +1,26 @@
+import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/core/bootstrap.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/common/common_list_controller.dart';
+import 'package:winwin/services/video_card_meta_service.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 
 class RcmdController extends CommonListController {
   // Simplified from Pref.enableSaveLastData; keeps last data on error/refresh.
   late bool enableSaveLastData = true;
 
-  /// 是否使用 App 推荐流（`/x/v2/feed/index`）。
-  ///
-  /// 默认改用 Web 推荐流：App 流不下发 `pubdate` 与 `stat.like`，卡片只能
-  /// 逐张请求 `/x/web-interface/view` 补发布时间与点赞（首页一屏就是十几次
-  /// 请求，且点赞数会在卡片上一个个「蹦」出来）；Web 流单次列表请求即带
-  /// 发布时间 / 播放 / 弹幕 / 点赞 / 推荐理由 / 关注态，零额外请求。
-  static const bool appRcmd = false;
-
   /// Web 推荐流单页条数。
   static const int _webPageSize = 20;
 
-  /// 首屏决定数据源后固定下来：两类模型是不同运行时类型，混进同一列表会在
-  /// 追加时抛类型错误（Web 流失败时才回退 App 流，且只回退一次）。
-  bool? _useWebFeed;
+  /// 最近一次成功的数据源是否为 Web 流（仅用于估算补货批大小）。
+  ///
+  /// 数据源不再「首屏定死」：每次拉取都按「登录态 Web → 匿名 Web → App」
+  /// 依次尝试。Web 流单次列表请求即带 `pubdate/stat.like`，App 流没有点赞
+  /// 字段，只能整页补详情；一次 Web 失败不再让整个会话都落到 App 流。
+  bool _lastSourceWeb = true;
 
   int? lastRefreshAt;
   late bool savedRcmdTip = true;
@@ -46,7 +44,7 @@ class RcmdController extends CommonListController {
   static const int _assumedBatchSize = 8;
 
   /// 当前数据源单批目标条数：Web 流按 [ps] 返回，App 流按保守估计。
-  int get _batchSize => (_useWebFeed ?? !appRcmd) ? _webPageSize : _assumedBatchSize;
+  int get _batchSize => _lastSourceWeb ? _webPageSize : _assumedBatchSize;
 
   /// 推荐流网格：单行高度（卡片信息区 100 + 间距 8）与单卡宽度上限。
   static const double _gridRowExtent = 108;
@@ -71,25 +69,62 @@ class RcmdController extends CommonListController {
     return _fetchPage(page);
   }
 
-  /// 拉取单页推荐：Web 流优先（自带发布时间 / 点赞），失败时回退 App 流。
+  /// 拉取单页推荐：登录态 Web → 匿名 Web → App，三级回退。
+  ///
+  /// 登录态 Web 流可能因风控/超时偶发失败；匿名 Web 流仍带 `pubdate` 与
+  /// `stat.like`，优先于 App 流。只有两者都失败才回退 App，并在返回前整页
+  /// 批量补全详情，避免卡片渲染后点赞逐张回填。
   Future<LoadingState<List<BaseRcmdVideoItemModel>>> _fetchPage(int idx) async {
-    final bool useWeb = _useWebFeed ?? !appRcmd;
-    if (useWeb) {
-      final web = await VideoHttp.rcmdVideoList(
-        freshIdx: idx,
-        ps: _webPageSize,
-      );
-      if (web case Success()) {
-        _useWebFeed = true;
-        return web;
-      }
-      // 已确定走 Web 流后不再回退，避免两类模型混进同一列表。
-      if (_useWebFeed == true) return web;
+    final web = await VideoHttp.rcmdVideoList(
+      freshIdx: idx,
+      ps: _webPageSize,
+    );
+    if (web case Success(:final response)) {
+      _lastSourceWeb = true;
+      return Success(_toBaseList(response));
     }
+
+    AppLogger.w('Rcmd', 'web feed idx=$idx failed: ${web is Error ? web.errMsg : web}');
+
+    final anonWeb = await VideoHttp.rcmdVideoList(
+      freshIdx: idx,
+      ps: _webPageSize,
+      anonymous: true,
+    );
+    if (anonWeb case Success(:final response)) {
+      AppLogger.w('Rcmd', 'web feed idx=$idx recovered by anonymous account');
+      _lastSourceWeb = true;
+      return Success(_toBaseList(response));
+    }
+
     final app = await VideoHttp.rcmdVideoListApp(freshIdx: idx);
-    if (app case Success()) _useWebFeed = false;
-    return app;
+    if (app case Success(:final response)) {
+      AppLogger.w(
+        'Rcmd',
+        'web+anonymous failed, fallback app feed idx=$idx '
+        '(anonymous error: ${anonWeb is Error ? anonWeb.errMsg : anonWeb})',
+      );
+      _lastSourceWeb = false;
+      final list = _toBaseList(response);
+      await VideoCardMetaService.prefetch(
+        list.map((item) => VideoCardData.from(item)),
+      );
+      return Success(list);
+    }
+
+    // 全部失败：优先透出登录态 Web 的错误信息（更贴近用户实际网络）。
+    if (web is Error) return Error(web.errMsg, code: web.code);
+    if (anonWeb is Error) return Error(anonWeb.errMsg, code: anonWeb.code);
+    if (app is Error) return Error(app.errMsg, code: app.code);
+    return const Error('推荐流加载失败');
   }
+
+  /// 统一装箱为基类列表：Web / App 两类模型的运行时类型不同，
+  /// 固定基类容器后，刷新合并与下滚追加都不会再因泛型不匹配抛 TypeError。
+  static List<BaseRcmdVideoItemModel> _toBaseList(
+    Iterable<BaseRcmdVideoItemModel> items,
+  ) =>
+      <BaseRcmdVideoItemModel>[...items];
 
   /// 条目唯一键：App 接口的 av 卡由 aid 反推 bvid；其余卡片（直播/番剧等）
   /// 用 goto + param 区分，避免跨类型撞号。
@@ -144,11 +179,8 @@ class RcmdController extends CommonListController {
       _addUnique(merged, seen, dataList);
       final newCount = merged.length;
       _addUnique(merged, seen, old);
-      // 不能 `addAll(merged)`：`dataList` 运行时是具体模型列表
-      // （`List<RcmdVideoItemModel>` / `List<RcmdVideoItemAppModel>`），而
-      // `merged` 是 `List<dynamic>`；`addAll` 校验的是**参数迭代器的泛型**，
-      // 必抛 "List<dynamic> is not a subtype of Iterable<…>"。逐条 `add`
-      // 走元素级校验，元素实例本身就是列表元素类型 ⇒ 安全。
+      // `dataList` 已由 `_fetchPage` 统一装箱为基类列表；仍逐条 `add`，
+      // 避免将来改回具体模型列表时再次踩 `addAll` 的迭代器泛型校验坑。
       dataList.clear();
       for (final item in merged) {
         dataList.add(item);
@@ -169,8 +201,7 @@ class RcmdController extends CommonListController {
       isLoading = true;
       try {
         var nextIdx = page;
-        // 列表运行时元素类型随数据源固定（Web / App 各一套模型），追加列表
-        // 必须同为基类集合；用具体模型类型会在切换数据源时抛运行时类型错误。
+        // 列表与追加项统一为基类集合，Web / App 混合追加不会触发泛型校验。
         final added = <BaseRcmdVideoItemModel>[];
         // 服务端偶发整轮都只回送已看过的卡片（实测连续 7 批新增 0~1 条），
         // 空手而归时再补一轮，避免滚到底毫无反应。两轮合计仍受
@@ -201,10 +232,8 @@ class RcmdController extends CommonListController {
         page = nextIdx;
         // 两轮都被去重掉时不刷新 UI，避免空重建。
         if (added.isEmpty) return;
-        // 不能 `addAll(added)`：`list` 运行时是具体模型列表，而 `added` 是
-        // 基类集合；`addAll` 校验的是**参数迭代器的泛型**，基类迭代器不是具体
-        // 模型的子类型 ⇒ 必抛 TypeError，请求成功但一条都进不了列表（表现为
-        // 「滚到底永远不出新内容」）。逐条 `add` 只按元素实例类型校验。
+        // 列表与 `added` 均已是基类集合；沿用逐条 `add`，只按元素实例校验，
+        // 不依赖迭代器泛型，后续再换数据源也不会重演泛型 TypeError。
         for (final item in added) {
           list.add(item);
         }
