@@ -107,6 +107,13 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
   /// "setState during build"），后者才 `setState`。
   bool _built = false;
 
+  /// 首帧 build 前是否已拿到热搜数据（启动预取命中）。
+  ///
+  /// 为 true 时**进场展开动画期间直接渲染真实网格**：数据与行数都已就绪，
+  /// 不存在"骨架（矮）→ 内容（高）"的跳变，无需再用骨架占位；否则每次进搜索态
+  /// 都会平白闪一次骨架（2026-11-02 CVO 反馈）。
+  bool _trendingReadyAtFirstFrame = false;
+
   /// 展开动画期间的骨架行数：**首次取值即锁定**（数据若在动画途中到达也不改
   /// 行数），避免行数变化导致面板高度跳变、`AnimatedSize` 从 0 重跑。
   int? _skeletonPin;
@@ -181,6 +188,8 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
     if (!_built) {
       _trending = list;
       _trendingLoading = false;
+      // 数据在首帧前就绪（启动预取命中）→ 展开动画期间也直接显示真身。
+      _trendingReadyAtFirstFrame = true;
       return;
     }
     if (!mounted) return;
@@ -523,7 +532,8 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
         ],
       );
     }
-    if (_trendingLoading || !widget.contentReady) {
+    if (_trendingLoading ||
+        (!widget.contentReady && !_trendingReadyAtFirstFrame)) {
       // 数据真的为空（拉取失败/无内容）时整块省略，不留空占位。
       if (!_trendingLoading && _trending.isEmpty) return const SizedBox.shrink();
       // **等高骨架**：与已加载的网格同几何（行数取真实条数，未知时按接口上限 20）。
