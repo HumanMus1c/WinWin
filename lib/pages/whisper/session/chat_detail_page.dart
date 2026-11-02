@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/app_top_bar_surface.dart';
+import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
@@ -95,37 +96,17 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _sending = false;
   String? _error;
 
-  final GlobalKey _headerKey = GlobalKey();
-
-  /// 浮动顶栏的**实测**高度（＝消息列表的顶部避让量）。
+  /// 顶栏左缘 = 壳层返回按钮右缘（[GlobalBackButton.defaultLeft] +
+  /// [GlobalBackButton.boxSize]）+ [Style.sm] 安全间隙（= 58）。
   ///
-  /// 顶栏高度由内容自撑（字号/文本缩放会改变高度），首帧用预算常量兜底，
-  /// 实测回填后列表避让量随之收敛（对齐消息页合并栏的做法）。
-  double? _headerHeight;
+  /// 与按钮**并列**而非压在其上：二者同一高度带、同一毛玻璃材质、同一圆角半径。
+  static const double _headerLeft =
+      GlobalBackButton.defaultLeft + GlobalBackButton.boxSize + Style.sm;
 
-  /// 顶栏**首帧**避让回退值：外壳纵向外距 [Style.sm]×2 + 内容纵向内距
-  /// [Style.xs]×2 + 头像 32。
-  static const double _headerReserve = Style.sm * 2 + Style.xs * 2 + 32;
-
-  /// 顶栏内容左缘 = 外壳内距 [Style.lg] + 内容内距 [Style.md]。
-  static const double _headerContentLeft = Style.lg + Style.md;
-
-  /// 顶栏内为壳层返回按钮（左 [GlobalBackButton.defaultLeft] + 宽
-  /// [GlobalBackButton.boxSize]）预留的空槽宽度：使头像左缘落在按钮右缘后
-  /// [Style.sm]（= 8 + 42 − 28 + 8 = 30）。
-  static const double _backButtonSlot =
-      GlobalBackButton.defaultLeft +
-      GlobalBackButton.boxSize -
-      _headerContentLeft +
-      Style.sm;
-
-  void _measureHeader() {
-    final box = _headerKey.currentContext?.findRenderObject() as RenderBox?;
-    if (!mounted || box == null || !box.hasSize) return;
-    final height = box.size.height;
-    if (height == _headerHeight) return;
-    setState(() => _headerHeight = height);
-  }
+  /// 顶栏下沿（= 返回按钮同带：`defaultTop` + `boxSize` = 46），作消息列表的
+  /// 顶部避让基准（顶栏高度恒为 [GlobalBackButton.boxSize]，无需实测）。
+  static const double _headerBottom =
+      GlobalBackButton.defaultTop + GlobalBackButton.boxSize;
 
   /// 顶栏兜底解析用的最小会话 Map（命中 [SessionAccountResolver] 进程内缓存）。
   Map<String, dynamic> get _peerSession => {
@@ -287,9 +268,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
-    // 顶栏高度由内容自撑，首帧后用实测值回填列表避让量（收敛后不再重建）。
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measureHeader());
-    final headerHeight = _headerHeight ?? _headerReserve;
     return AppScaffold(
       // 顶栏自绘（浮动毛玻璃，消息可从顶栏**后方**穿过 → 模糊透出对话内容）；
       // 返回键由壳层单实例承担（固定位），故不预留顶部安全行。
@@ -299,29 +277,19 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           Positioned.fill(
             child: Column(
               children: [
-                Expanded(child: _buildMessages(headerHeight)),
+                Expanded(child: _buildMessages()),
                 _buildInputBar(tokens),
               ],
             ),
           ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: RepaintBoundary(
-              child: SizedBox(
-                key: _headerKey,
-                child: _buildFrostedHeader(tokens),
-              ),
-            ),
-          ),
+          _buildFrostedHeader(tokens),
         ],
       ),
     );
   }
 
   /// 消息区（占满顶栏之后到输入条之前的全部空间）。
-  Widget _buildMessages(double headerHeight) {
+  Widget _buildMessages() {
     if (_loading && _messages.isEmpty) {
       return const Center(child: AppProgressIndicator(color: biliPink));
     }
@@ -350,7 +318,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       // 滚到最旧端时首条消息停在顶栏下沿。
       padding: EdgeInsets.fromLTRB(
         Style.safeSpace,
-        headerHeight + Style.sm,
+        _headerBottom + Style.sm,
         Style.safeSpace,
         Style.sm,
       ),
@@ -384,37 +352,50 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   /// 页内浮动毛玻璃顶栏：复用会话行的头像 + 对方昵称。
   ///
-  /// 材质与消息页合并栏 / 首页顶栏**同源**（[AppTopBarSurface]：`surface` α0.72 +
-  /// σ20 模糊 + 容器圆角 + 悬浮投影），消息从其后穿过时可见模糊透出。
+  /// 与壳层返回按钮**并列的同一行**（非叠加）：左缘落在按钮右缘 + [Style.sm]
+  /// （[GlobalBackButton.boxSize] 42，即与按钮同高同圆角），右缘随窗口宽度伸缩
+  /// （[Positioned] 只给 left/right ⇒ 窄屏自动收窄，昵称单行省略）。
+  ///
+  /// 材质与壳层返回按钮**逐项同源**（[MiuixFrostedSurface] 即 `FrostedCircleIconButton`
+  /// 内部所用组件：同底色 [AppTopBarSurface.barColor]、同 [AppTopBarSurface.blurSigma]
+  /// 模糊、无描边无投影），二者观感同一层级；消息从其后穿过时可见模糊透出。
   Widget _buildFrostedHeader(AppTokens tokens) {
-    return AppTopBarSurface(
-      shadow: [AppTopBarSurface.floatingShadow(isDark: tokens.isDark)],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Style.md,
-          vertical: Style.xs,
-        ),
-        child: Row(
-          children: [
-            // 壳层返回按钮的固定位（left 8 + 42 宽）：内容左缘 28，故留
-            // [_backButtonSlot] 后头像才落位，避免被按钮压住。
-            const SizedBox(width: _backButtonSlot),
-            MsgFeedAvatar(src: _peerAvatar, size: 32),
-            const SizedBox(width: Style.sm),
-            Flexible(
-              child: Pref.demoMode
-                  ? const SkeletonLine(width: 120, height: 14)
-                  : Text(
-                      _peerName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: tokens.text.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: tokens.colors.onSurface,
-                      ),
-                    ),
+    return Positioned(
+      top: GlobalBackButton.defaultTop,
+      left: _headerLeft,
+      right: Style.lg,
+      height: GlobalBackButton.boxSize,
+      child: RepaintBoundary(
+        child: MiuixFrostedSurface(
+          color: AppTopBarSurface.barColor(tokens.colors.surface),
+          blurSigma: AppTopBarSurface.blurSigma,
+          borderRadius: GlobalBackButton.boxSize / 2,
+          outline: false,
+          shadow: false,
+          child: SizedBox.expand(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Style.md),
+              child: Row(
+                children: [
+                  MsgFeedAvatar(src: _peerAvatar, size: 32),
+                  const SizedBox(width: Style.sm),
+                  Flexible(
+                    child: Pref.demoMode
+                        ? const SkeletonLine(width: 120, height: 14)
+                        : Text(
+                            _peerName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: tokens.text.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: tokens.colors.onSurface,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
