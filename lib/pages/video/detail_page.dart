@@ -253,6 +253,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   final ScrollController scrollController = ScrollController();
   WinWinPlayerController? playerController;
 
+  /// 播放器二级弹层可见性（章节面板 / 音量 / 菜单 / 设置对话框 / 截图预览）：
+  /// 任一弹层打开期间锁定左栏滚动，防止滚轮/拖动把弹层背后的列表带走。
+  bool _playerPopupLocked = false;
+
   LoadingState<VideoDetailData> _detailState = LoadingState.loading();
   LoadingState<List<RelatedVideoItem>> _relatedState = LoadingState.loading();
 
@@ -1165,6 +1169,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     onToggleFullscreen: _toggleFullscreen,
                     onToggleInAppFullscreen: _toggleInAppFullscreen,
                     onEscape: _handleEscape,
+                    onPopupOpenChanged: _onPlayerPopupOpenChanged,
                   ),
                 ),
               ],
@@ -1225,6 +1230,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   // ─────────────────────────── 左栏 ───────────────────────────
 
+  /// 播放器任一二级弹层打开/全部关闭 → 锁定/解锁左栏滚动。
+  void _onPlayerPopupOpenChanged(bool open) {
+    if (!mounted || _playerPopupLocked == open) return;
+    setState(() => _playerPopupLocked = open);
+  }
+
   /// 左栏：CustomScrollView + VideoHeader(pin 播放器) + slivers(信息/简介/评论)。
   /// 2026-10-21 R3：原「顶部叠加渐变工具栏（含 UP 名文本）」已移除，该位置只保留
   /// 壳层全局返回按钮（见 global_back_button.dart）。
@@ -1259,6 +1270,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
                   return CustomScrollView(
                     controller: scrollController,
+                    // 播放器任一二级弹层打开时锁定左栏：禁止滚轮/拖动把
+                    // 弹层背后的信息流带走（弹层自身列表不受影响）。
+                    physics: _playerPopupLocked
+                        ? const NeverScrollableScrollPhysics()
+                        : null,
                     slivers: [
                       // 视频与弹幕条共用同一水平内边距，右侧留出滚动条通道，
                       // 不再贴左栏/窗口边缘，也不被滚动条覆盖。
@@ -1562,6 +1578,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       onToggleFullscreen: _toggleFullscreen,
       onToggleInAppFullscreen: _toggleInAppFullscreen,
       onEscape: _handleEscape,
+      onPopupOpenChanged: _onPlayerPopupOpenChanged,
     );
   }
 

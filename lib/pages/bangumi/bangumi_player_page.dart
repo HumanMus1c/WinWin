@@ -97,6 +97,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   final ScrollController _scrollController = ScrollController();
   bool _autoPausedByCollapse = false;
 
+  /// 播放器二级弹层可见性：任一弹层打开期间锁定左栏滚动，
+  /// 防止滚轮/拖动把弹层背后的信息流带走。
+  bool _playerPopupLocked = false;
+
   // 选集排序与状态
   late bool _episodesDescending;
 
@@ -866,6 +870,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                           onToggleFullscreen: _toggleFullscreen,
                           onToggleInAppFullscreen: _toggleInAppFullscreen,
                           onEscape: _handleEscape,
+                          onPopupOpenChanged: _onPlayerPopupOpenChanged,
                         )
                       : const Center(child: AppProgressIndicator()),
                 ),
@@ -931,10 +936,17 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 onToggleFullscreen: _toggleFullscreen,
                 onToggleInAppFullscreen: _toggleInAppFullscreen,
                 onEscape: _handleEscape,
+                onPopupOpenChanged: _onPlayerPopupOpenChanged,
               )
             : const Center(child: AppProgressIndicator()),
       ),
     );
+  }
+
+  /// 播放器任一二级弹层打开/全部关闭 → 锁定/解锁左栏滚动。
+  void _onPlayerPopupOpenChanged(bool open) {
+    if (!mounted || _playerPopupLocked == open) return;
+    setState(() => _playerPopupLocked = open);
   }
 
   /// 演示模式：本地演示播放器（灰画面 + 全要素控制栏 + 本地播放状态；不加载媒体）。
@@ -1132,6 +1144,10 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                   final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
                   return CustomScrollView(
                     controller: _scrollController,
+                    // 播放器任一二级弹层打开时锁定左栏滚动（同视频详情页）。
+                    physics: _playerPopupLocked
+                        ? const NeverScrollableScrollPhysics()
+                        : null,
                     slivers: [
                       VideoHeader(
                         maxExtent: maxExtent,

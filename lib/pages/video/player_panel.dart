@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter_miuix/miuix.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
@@ -50,6 +52,10 @@ Duration _clampDuration(Duration value, Duration min, Duration max) {
 const double _kVolumeBarMinHeight = 14.0;
 const double _kVolumeBarMaxHeight = 28.0;
 
+/// 章节条目视效缩放（2026-11-02 反馈：条目内全部信息按当前的 1.6 倍放大）。
+/// 缩略图高度、字号、间距均以此为准；面板最小宽度同步抬高以保留标题可读宽度。
+const double _kChapterItemScale = 1.6;
+
 /// BiliPai 风格的播放器面板。
 ///
 /// 主体为 mdk 注册的 Flutter `Texture`（黑色背景、按视频帧宽高比居中，
@@ -65,6 +71,7 @@ class PlayerPanel extends StatefulWidget {
     this.onToggleFullscreen,
     this.onToggleInAppFullscreen,
     this.onEscape,
+    this.onPopupOpenChanged,
   });
 
   final WinWinPlayerController controller;
@@ -78,6 +85,11 @@ class PlayerPanel extends StatefulWidget {
 
   /// Esc 键回调（固定语义：返回上一级）。
   final VoidCallback? onEscape;
+
+  /// 任意二级弹层（章节面板 / 音量 / 画质·音轨·倍速菜单 / 弹幕·字幕设置 /
+  /// 截图预览）可见性变化回调：`true` = 至少一个弹层已打开，`false` = 全部关闭。
+  /// 页面据此在弹层打开期间锁定底层左栏滚动（禁止背景列表跟着滚轮移动）。
+  final ValueChanged<bool>? onPopupOpenChanged;
 
   @override
   State<PlayerPanel> createState() => _PlayerPanelState();
@@ -217,19 +229,26 @@ class _PlayerPanelState extends State<PlayerPanel> {
   }
 
   /// 挂起控制条自动隐藏（弹层打开时调用）：计数 +1、取消隐藏计时并保持显示。
+  /// 首个弹层打开时向页面广播「锁定底层视图滚动」。
   void _beginPopupSuspend() {
+    final firstPopup = _popupSuspend == 0;
     _popupSuspend++;
     _hideTimer?.cancel();
     _controlsVisible.value = true;
+    if (firstPopup) widget.onPopupOpenChanged?.call(true);
   }
 
   /// 恢复控制条自动隐藏（弹层关闭时调用）：计数归零后重置隐藏计时器
   /// （控制条当前可见才重置；已被隐藏时不再强行弹出）。
+  /// 最后一个弹层关闭时向页面广播「解除底层视图滚动锁」。
   void _endPopupSuspend() {
     if (_popupSuspend == 0) return;
     _popupSuspend--;
-    if (_popupSuspend == 0 && _controlsVisible.value) {
-      _resetHideTimer();
+    if (_popupSuspend == 0) {
+      widget.onPopupOpenChanged?.call(false);
+      if (_controlsVisible.value) {
+        _resetHideTimer();
+      }
     }
   }
 
@@ -316,9 +335,13 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   /// Phase 4.6：截图预览对话框 — 显示截图 + 保存按钮。
   void _showScreenshotPreview(Uint8List png) {
-    showAppDialog<void>(
-      context: context,
-      builder: (context) => _ScreenshotPreviewDialog(png: png),
+    // 截图预览同属播放器弹层：纳入 `_popupSuspend` 计数，打开期间
+    // 控制条常显且页面左栏保持滚动锁定。
+    _openSuspending(
+      () => showAppDialog<void>(
+        context: context,
+        builder: (context) => _ScreenshotPreviewDialog(png: png),
+      ),
     );
   }
 
@@ -547,7 +570,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
           color: AppColors.black,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final panelWidth = (constraints.maxWidth / 3).clamp(240.0, 560.0);
+              // 章节条目按 1.6x 放大后，面板最小宽度抬到 320，
+              // 保证「序号 + 原比例缩略图 + 两行标题/时间」不被裁切；
+              // 宽屏仍维持原 1/3 比例（上限 560）。
+              final panelWidth = (constraints.maxWidth / 3).clamp(320.0, 560.0);
               return Stack(
                 fit: StackFit.expand,
                 children: [
@@ -1973,7 +1999,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
                           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: const Color(0xF2141414), // 黑色高质感毛玻璃半透明
+                              // 2026-11-02 反馈：背景不透明度降到 0.6（原 0xF2≈0.95），
+                              // 让底层画面经毛玻璃更自然透出。
+                              color: const Color(0x99141414),
                               borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(Style.radiusMd),
                                 bottomLeft: Radius.circular(Style.radiusMd),
@@ -2057,8 +2085,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                           .toDouble();
                                       return ListView.builder(
                                         padding: const EdgeInsets.symmetric(
-                                          vertical: Style.xs,
-                                          horizontal: Style.xs,
+                                          vertical: Style.xs * _kChapterItemScale,
+                                          horizontal: Style.xs * _kChapterItemScale,
                                         ),
                                         itemCount: chapters.length,
                                         itemBuilder: (context, index) {
@@ -2074,9 +2102,24 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                               DurationUtils.formatDuration(
                                                 vp.to.toInt(),
                                               );
+                                          // 缩略图按「原画面比例」展示：宽高比取自
+                                          // 真实视频帧（videoSize 未就绪时回退 16:9），
+                                          // 并取消圆角。
+                                          final videoSize = c.videoSize.value;
+                                          final thumbRatio =
+                                              (videoSize != null &&
+                                                  videoSize.width > 0 &&
+                                                  videoSize.height > 0)
+                                              ? videoSize.width /
+                                                    videoSize.height
+                                              : 16 / 9;
+                                          const thumbHeight =
+                                              25.0 * _kChapterItemScale;
+                                          final thumbWidth =
+                                              thumbHeight * thumbRatio;
                                           return Padding(
                                             padding: const EdgeInsets.symmetric(
-                                              vertical: 2,
+                                              vertical: 2 * _kChapterItemScale,
                                             ),
                                             child: HoverContainer(
                                               onTap: () {
@@ -2089,8 +2132,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                               borderRadius: Style.radiusSm,
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                    horizontal: Style.sm,
-                                                    vertical: Style.sm,
+                                                    horizontal:
+                                                        Style.sm *
+                                                        _kChapterItemScale,
+                                                    vertical:
+                                                        Style.sm *
+                                                        _kChapterItemScale,
                                                   ),
                                               color: isCurrent
                                                   ? biliBlue.withValues(
@@ -2108,16 +2155,14 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.center,
                                                 children: [
-                                                  // 播放状态指示或序号
+                                                  // 当前小节：动态循环均衡条；其余：序号
                                                   SizedBox(
-                                                    width: 22,
+                                                    width: 22 * _kChapterItemScale,
                                                     child: isCurrent
-                                                        ? AppIcon(
-                                                            AppIcons.play(
-                                                              active: true,
-                                                            ),
-                                                            color: biliBlue,
-                                                            size: 18,
+                                                        ? _ChapterPlayingIndicator(
+                                                            playing: c.playing,
+                                                            active:
+                                                                _chapterPanelOpen,
                                                           )
                                                         : Text(
                                                             '${index + 1}'
@@ -2131,7 +2176,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                                   .withValues(
                                                                     alpha: 0.35,
                                                                   ),
-                                                              fontSize: 12,
+                                                              fontSize:
+                                                                  12 *
+                                                                  _kChapterItemScale,
                                                               fontWeight:
                                                                   FontWeight
                                                                       .w500,
@@ -2139,88 +2186,117 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                           ),
                                                   ),
                                                   if (vp.imgUrl != null &&
-                                                      vp
-                                                          .imgUrl!
-                                                          .isNotEmpty) ...[
-                                                    ClipRRect(
+                                                      vp.imgUrl!.isNotEmpty) ...[
+                                                    NetworkImgLayer(
+                                                      src: vp.imgUrl,
+                                                      width: thumbWidth,
+                                                      height: thumbHeight,
                                                       borderRadius:
-                                                          BorderRadius.circular(
-                                                            4,
-                                                          ),
-                                                      child: NetworkImgLayer(
-                                                        src: vp.imgUrl,
-                                                        width: 44,
-                                                        height: 25,
-                                                      ),
+                                                          BorderRadius.zero,
                                                     ),
                                                     const SizedBox(
-                                                      width: Style.xs,
+                                                      width:
+                                                          Style.xs *
+                                                          _kChapterItemScale,
                                                     ),
                                                   ],
-                                                  // 时间节点范围
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 6,
-                                                          vertical: 2,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color: isCurrent
-                                                          ? biliBlue.withValues(
-                                                              alpha: 0.22,
-                                                            )
-                                                          : AppColors.white
-                                                                .withValues(
-                                                                  alpha: 0.06,
-                                                                ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            4,
-                                                          ),
-                                                    ),
-                                                    child: Text(
-                                                      '$fromStr - $toStr',
-                                                      style: TextStyle(
-                                                        color: isCurrent
-                                                            ? biliBlue
-                                                            : AppColors.white
-                                                                  .withValues(
-                                                                    alpha: 0.8,
-                                                                  ),
-                                                        fontSize: 11,
-                                                        fontWeight: isCurrent
-                                                            ? FontWeight.w600
-                                                            : FontWeight.normal,
-                                                        fontFeatures: const [
-                                                          FontFeature.tabularFigures(),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(
-                                                    width: Style.sm,
-                                                  ),
-                                                  // 章节标题
+                                                  // 标题 + 时间范围（1.6x 后单行会挤压
+                                                  // 标题，改为「标题在上、时间胶囊在下」
+                                                  // 两行结构，对齐 PiliPlus ViewPointsPage）
                                                   Expanded(
-                                                    child: Text(
-                                                      vp.title.isEmpty
-                                                          ? '章节 ${index + 1}'
-                                                          : vp.title,
-                                                      style: TextStyle(
-                                                        color: isCurrent
-                                                            ? AppColors.white
-                                                            : AppColors.white
-                                                                  .withValues(
-                                                                    alpha: 0.9,
-                                                                  ),
-                                                        fontSize: 13,
-                                                        fontWeight: isCurrent
-                                                            ? FontWeight.w600
-                                                            : FontWeight.normal,
-                                                      ),
-                                                      maxLines: 2,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          vp.title.isEmpty
+                                                              ? '章节 ${index + 1}'
+                                                              : vp.title,
+                                                          style: TextStyle(
+                                                            color: isCurrent
+                                                                ? AppColors.white
+                                                                : AppColors
+                                                                      .white
+                                                                      .withValues(
+                                                                        alpha:
+                                                                            0.9,
+                                                                      ),
+                                                            fontSize:
+                                                                13 *
+                                                                _kChapterItemScale,
+                                                            fontWeight:
+                                                                isCurrent
+                                                                ? FontWeight
+                                                                      .w600
+                                                                : FontWeight
+                                                                      .normal,
+                                                          ),
+                                                          maxLines: 2,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                        const SizedBox(
+                                                          height:
+                                                              2 *
+                                                              _kChapterItemScale,
+                                                        ),
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal:
+                                                                    6 *
+                                                                    _kChapterItemScale,
+                                                                vertical:
+                                                                    2 *
+                                                                    _kChapterItemScale,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: isCurrent
+                                                                ? biliBlue.withValues(
+                                                                    alpha: 0.22,
+                                                                  )
+                                                                : AppColors
+                                                                      .white
+                                                                      .withValues(
+                                                                        alpha:
+                                                                            0.06,
+                                                                      ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  4 *
+                                                                      _kChapterItemScale,
+                                                                ),
+                                                          ),
+                                                          child: Text(
+                                                            '$fromStr - $toStr',
+                                                            style: TextStyle(
+                                                              color: isCurrent
+                                                                  ? biliBlue
+                                                                  : AppColors
+                                                                        .white
+                                                                        .withValues(
+                                                                          alpha:
+                                                                              0.8,
+                                                                        ),
+                                                              fontSize:
+                                                                  11 *
+                                                                  _kChapterItemScale,
+                                                              fontWeight:
+                                                                  isCurrent
+                                                                  ? FontWeight
+                                                                        .w600
+                                                                  : FontWeight
+                                                                        .normal,
+                                                              fontFeatures: const [
+                                                                FontFeature.tabularFigures(),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
                                                   ),
                                                 ],
@@ -2421,6 +2497,93 @@ class _PlayerPanelState extends State<PlayerPanel> {
         consumeOutsideTaps: true,
         onTapOutside: (_) => _setVolumePopupOpen(false),
         child: panel,
+      ),
+    );
+  }
+}
+
+/// 章节面板「当前小节」的播放指示器：
+/// 三根均衡器竖条按不同相位循环起伏，替代原静态播放三角，直观传达
+/// 「这一段正在播放」；仅当面板可见且确实处于播放态时循环，暂停或
+/// 面板收起时停帧，避免无意义动画空转占用帧预算。
+class _ChapterPlayingIndicator extends StatefulWidget {
+  const _ChapterPlayingIndicator({required this.playing, required this.active});
+
+  /// 播放器播放态（监听其变化，精确启停循环）。
+  final ValueListenable<bool> playing;
+
+  /// 面板是否可见（收起时停帧）。
+  final bool active;
+
+  @override
+  State<_ChapterPlayingIndicator> createState() =>
+      _ChapterPlayingIndicatorState();
+}
+
+class _ChapterPlayingIndicatorState extends State<_ChapterPlayingIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    widget.playing.addListener(_syncAnimation);
+    _syncAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ChapterPlayingIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.playing != widget.playing) {
+      oldWidget.playing.removeListener(_syncAnimation);
+      widget.playing.addListener(_syncAnimation);
+    }
+    _syncAnimation();
+  }
+
+  void _syncAnimation() {
+    final shouldPlay = widget.active && widget.playing.value;
+    if (shouldPlay) {
+      if (!_controller.isAnimating) _controller.repeat();
+    } else if (_controller.isAnimating) {
+      _controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.playing.removeListener(_syncAnimation);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final phase = _controller.value * 2 * math.pi;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(width: 2),
+                Container(
+                  width: 5,
+                  height: 8 + 18 * (0.5 + 0.5 * math.sin(phase + i * 2.1)),
+                  decoration: BoxDecoration(
+                    color: biliBlue,
+                    borderRadius: BorderRadius.circular(2.5),
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
