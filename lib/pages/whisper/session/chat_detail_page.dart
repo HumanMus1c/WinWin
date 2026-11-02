@@ -358,41 +358,52 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   ///
   /// 材质与壳层返回按钮**逐项同源**（[MiuixFrostedSurface] 即 `FrostedCircleIconButton`
   /// 内部所用组件：同底色 [AppTopBarSurface.barColor]、同 [AppTopBarSurface.blurSigma]
-  /// 模糊、无描边无投影），二者观感同一层级；消息从其后穿过时可见模糊透出。
+  /// 模糊、无描边），二者观感同一层级；消息从其后穿过时可见模糊透出。
+  ///
+  /// 「整体悬浮」投影与消息页合并栏同档（[AppTopBarSurface.floatingShadow]，含深色
+  /// 分档）：画在毛玻璃**裁剪层之外**的 `DecoratedBox` 上（与 [AppTopBarSurface]
+  /// 同一构造），沿胶囊轮廓四向辐射，不会被栏体自身半透明底吃掉。
   Widget _buildFrostedHeader(AppTokens tokens) {
+    final radius = GlobalBackButton.boxSize / 2;
     return Positioned(
       top: GlobalBackButton.defaultTop,
       left: _headerLeft,
       right: Style.lg,
       height: GlobalBackButton.boxSize,
       child: RepaintBoundary(
-        child: MiuixFrostedSurface(
-          color: AppTopBarSurface.barColor(tokens.colors.surface),
-          blurSigma: AppTopBarSurface.blurSigma,
-          borderRadius: GlobalBackButton.boxSize / 2,
-          outline: false,
-          shadow: false,
-          child: SizedBox.expand(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Style.md),
-              child: Row(
-                children: [
-                  MsgFeedAvatar(src: _peerAvatar, size: 32),
-                  const SizedBox(width: Style.sm),
-                  Flexible(
-                    child: Pref.demoMode
-                        ? const SkeletonLine(width: 120, height: 14)
-                        : Text(
-                            _peerName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: tokens.text.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: tokens.colors.onSurface,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            boxShadow: [AppTopBarSurface.floatingShadow(isDark: tokens.isDark)],
+          ),
+          child: MiuixFrostedSurface(
+            color: AppTopBarSurface.barColor(tokens.colors.surface),
+            blurSigma: AppTopBarSurface.blurSigma,
+            borderRadius: radius,
+            outline: false,
+            shadow: false,
+            child: SizedBox.expand(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Style.md),
+                child: Row(
+                  children: [
+                    MsgFeedAvatar(src: _peerAvatar, size: 32),
+                    const SizedBox(width: Style.sm),
+                    Flexible(
+                      child: Pref.demoMode
+                          ? const SkeletonLine(width: 120, height: 14)
+                          : Text(
+                              _peerName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: tokens.text.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: tokens.colors.onSurface,
+                              ),
                             ),
-                          ),
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
