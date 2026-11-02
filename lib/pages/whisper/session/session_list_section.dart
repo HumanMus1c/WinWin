@@ -4,6 +4,7 @@ import 'package:flutter_miuix/miuix.dart'
         MiuixCardDefaults,
         MiuixPressFeedbackType,
         MiuixPressable,
+        MiuixSquircleBorder,
         MiuixTextButton;
 import 'package:flutter/widgets.dart';
 
@@ -580,6 +581,11 @@ class _SessionTile extends StatelessWidget {
     // 此前用无背景的 `MiuixBasicComponent`（透明行，靠 12px 内距分隔），观感是
     // 无缝列表；改为卡片后：左右 12px 出血边距 + 卡间纵向 4px 外距（视觉 8px），
     // 内容内距 12×8，squircle 圆角走库默认 [MiuixCardDefaults.cornerRadius]。
+    //
+    // 悬停/按压反馈包裹**整张卡片**（而非卡内内容）：`MiuixPressable` 在
+    // `MiuixCard` **外侧**，遮罩铺满卡面全宽全高、sink 缩放的是卡片本体；
+    // 此前反向嵌套（Pressable 在 Card 内）时反馈只落在 12×8 内距里的子容器上，
+    // 卡底与出血区不响应 hover/press（2026-11-02 CVO 反馈）。
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: Style.md,
@@ -588,22 +594,27 @@ class _SessionTile extends StatelessWidget {
       child: GestureDetector(
         onSecondaryTapUp: (details) =>
             _openMoreMenu(context, details.globalPosition),
-        child: MiuixCard(
-          insideMargin: const EdgeInsets.symmetric(
-            horizontal: Style.md,
-            vertical: Style.sm,
+        child: MiuixPressable(
+          onPressed: () => showChatDetailPage(
+            context,
+            talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
+            sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
+            // 头像/昵称下传聊天页顶栏（复用列表已解析好的同一份数据）。
+            peerName: _name,
+            peerAvatar: _avatar,
           ),
-          child: MiuixPressable(
-            onPressed: () => showChatDetailPage(
-              context,
-              talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
-              sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
-            ),
-            // 整卡轻下沉微缩（项目既定点击反馈），替代整卡变暗/波纹。
-            feedbackType: MiuixPressFeedbackType.sink,
-            sinkAmount: 0.98,
-            borderRadius: BorderRadius.circular(
-              MiuixCardDefaults.cornerRadius,
+          // 整卡轻下沉微缩（项目既定点击反馈），替代整卡变暗/波纹。
+          feedbackType: MiuixPressFeedbackType.sink,
+          sinkAmount: 0.98,
+          // 遮罩/裁剪形状与卡片同源（squircle 16，非圆弧），否则悬停遮罩
+          // 会在卡片四角露出圆角矩形边缘。
+          shape: const MiuixSquircleBorder(
+            cornerRadius: MiuixCardDefaults.cornerRadius,
+          ),
+          child: MiuixCard(
+            insideMargin: const EdgeInsets.symmetric(
+              horizontal: Style.md,
+              vertical: Style.sm,
             ),
             child: Row(
               children: [

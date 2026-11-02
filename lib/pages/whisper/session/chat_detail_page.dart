@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/widgets/app_top_bar_surface.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
@@ -17,6 +18,7 @@ import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/msg.dart';
 import 'package:winwin/pages/video/detail_page.dart';
+import 'package:winwin/pages/whisper/msg_feed/msg_feed_page.dart' show MsgFeedAvatar;
 import 'package:winwin/pages/whisper/session/message_preview_parser.dart';
 import 'package:winwin/pages/whisper/session/session_account_resolver.dart';
 import 'package:winwin/services/video_card_meta_service.dart';
@@ -29,6 +31,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
+import 'package:winwin/core/shell/global_back_button.dart';
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
@@ -44,12 +47,16 @@ void showChatDetailPage(
   BuildContext context, {
   required int talkerId,
   int sessionType = 1,
+  String? peerName,
+  String? peerAvatar,
 }) {
   Navigator.of(context).push(
     AppRoute<void>(
       builder: (_) => ChatDetailPage(
         talkerId: talkerId,
         sessionType: sessionType,
+        peerName: peerName,
+        peerAvatar: peerAvatar,
       ),
     ),
   );
@@ -60,10 +67,18 @@ class ChatDetailPage extends StatefulWidget {
     super.key,
     required this.talkerId,
     this.sessionType = 1,
+    this.peerName,
+    this.peerAvatar,
   });
 
   final int talkerId;
   final int sessionType;
+
+  /// 对方昵称 / 头像（会话列表行透传，供页内顶栏复用）。
+  ///
+  /// 为空时回退到 [SessionAccountResolver] 的进程内缓存（同一份解析结果）。
+  final String? peerName;
+  final String? peerAvatar;
 
   @override
   State<ChatDetailPage> createState() => _ChatDetailPageState();
@@ -79,6 +94,56 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _loadingMore = false;
   bool _sending = false;
   String? _error;
+
+  final GlobalKey _headerKey = GlobalKey();
+
+  /// 浮动顶栏的**实测**高度（＝消息列表的顶部避让量）。
+  ///
+  /// 顶栏高度由内容自撑（字号/文本缩放会改变高度），首帧用预算常量兜底，
+  /// 实测回填后列表避让量随之收敛（对齐消息页合并栏的做法）。
+  double? _headerHeight;
+
+  /// 顶栏**首帧**避让回退值：外壳纵向外距 [Style.sm]×2 + 内容纵向内距
+  /// [Style.xs]×2 + 头像 32。
+  static const double _headerReserve = Style.sm * 2 + Style.xs * 2 + 32;
+
+  /// 顶栏内容左缘 = 外壳内距 [Style.lg] + 内容内距 [Style.md]。
+  static const double _headerContentLeft = Style.lg + Style.md;
+
+  /// 顶栏内为壳层返回按钮（左 [GlobalBackButton.defaultLeft] + 宽
+  /// [GlobalBackButton.boxSize]）预留的空槽宽度：使头像左缘落在按钮右缘后
+  /// [Style.sm]（= 8 + 42 − 28 + 8 = 30）。
+  static const double _backButtonSlot =
+      GlobalBackButton.defaultLeft +
+      GlobalBackButton.boxSize -
+      _headerContentLeft +
+      Style.sm;
+
+  void _measureHeader() {
+    final box = _headerKey.currentContext?.findRenderObject() as RenderBox?;
+    if (!mounted || box == null || !box.hasSize) return;
+    final height = box.size.height;
+    if (height == _headerHeight) return;
+    setState(() => _headerHeight = height);
+  }
+
+  /// 顶栏兜底解析用的最小会话 Map（命中 [SessionAccountResolver] 进程内缓存）。
+  Map<String, dynamic> get _peerSession => {
+        'talker_id': widget.talkerId,
+        'session_type': widget.sessionType,
+      };
+
+  String get _peerName {
+    final name = widget.peerName?.trim() ?? '';
+    if (name.isNotEmpty) return name;
+    return SessionAccountResolver.displayName(_peerSession);
+  }
+
+  String get _peerAvatar {
+    final avatar = widget.peerAvatar ?? '';
+    if (avatar.isNotEmpty) return avatar;
+    return SessionAccountResolver.displayAvatar(_peerSession);
+  }
 
   @override
   void initState() {
@@ -222,59 +287,135 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
+    // 顶栏高度由内容自撑，首帧后用实测值回填列表避让量（收敛后不再重建）。
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureHeader());
+    final headerHeight = _headerHeight ?? _headerReserve;
     return AppScaffold(
-      body: Column(
+      // 顶栏自绘（浮动毛玻璃，消息可从顶栏**后方**穿过 → 模糊透出对话内容）；
+      // 返回键由壳层单实例承担（固定位），故不预留顶部安全行。
+      reserveTopStrip: false,
+      body: Stack(
         children: [
-          Expanded(
-            child: _loading && _messages.isEmpty
-                ? const Center(child: AppProgressIndicator(color: biliPink))
-                : _error != null && _messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(_error!),
-                            const SizedBox(height: Style.md),
-                            AppPrimaryButton(onPressed: () => _load(refresh: true), child: const Text('重试')),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollCtrl,
-                        // reverse：最新在底部（pixels=0），首屏天然定位到最新
-                        // 消息，不依赖 post-frame jumpTo 的时序。
-                        reverse: true,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: Style.safeSpace, vertical: Style.sm),
-                        itemCount: _messages.length + (_hasMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          // reverse 列表：index 0 = 最新消息；
-                          // 最末项（最旧端）为加载指示器。
-                          if (_hasMore && index == _messages.length) {
-                            return const Padding(
-                              padding: EdgeInsets.all(Style.sm),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: AppProgressIndicator(strokeWidth: 2, color: biliPink),
-                                ),
-                              ),
-                            );
-                          }
-                          final msgIndex = _messages.length - 1 - index;
-                          if (msgIndex < 0 || msgIndex >= _messages.length) {
-                            return const SizedBox.shrink();
-                          }
-                          return _ChatBubble(
-                            msg: _messages[msgIndex],
-                            isMe: _isMe(_messages[msgIndex]),
-                          );
-                        },
-                      ),
+          Positioned.fill(
+            child: Column(
+              children: [
+                Expanded(child: _buildMessages(headerHeight)),
+                _buildInputBar(tokens),
+              ],
+            ),
           ),
-          _buildInputBar(tokens),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: RepaintBoundary(
+              child: SizedBox(
+                key: _headerKey,
+                child: _buildFrostedHeader(tokens),
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  /// 消息区（占满顶栏之后到输入条之前的全部空间）。
+  Widget _buildMessages(double headerHeight) {
+    if (_loading && _messages.isEmpty) {
+      return const Center(child: AppProgressIndicator(color: biliPink));
+    }
+    if (_error != null && _messages.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(_error!),
+            const SizedBox(height: Style.md),
+            AppPrimaryButton(
+              onPressed: () => _load(refresh: true),
+              child: const Text('重试'),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      controller: _scrollCtrl,
+      // reverse：最新在底部（pixels=0），首屏天然定位到最新
+      // 消息，不依赖 post-frame jumpTo 的时序。
+      reverse: true,
+      // reverse 列表里 `top` 仍是**视觉顶部**（RenderSliverPadding 把 top
+      // 记为 afterPadding）：内容从顶栏后方穿过（毛玻璃因此可见），
+      // 滚到最旧端时首条消息停在顶栏下沿。
+      padding: EdgeInsets.fromLTRB(
+        Style.safeSpace,
+        headerHeight + Style.sm,
+        Style.safeSpace,
+        Style.sm,
+      ),
+      itemCount: _messages.length + (_hasMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        // reverse 列表：index 0 = 最新消息；
+        // 最末项（最旧端）为加载指示器。
+        if (_hasMore && index == _messages.length) {
+          return const Padding(
+            padding: EdgeInsets.all(Style.sm),
+            child: Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: AppProgressIndicator(strokeWidth: 2, color: biliPink),
+              ),
+            ),
+          );
+        }
+        final msgIndex = _messages.length - 1 - index;
+        if (msgIndex < 0 || msgIndex >= _messages.length) {
+          return const SizedBox.shrink();
+        }
+        return _ChatBubble(
+          msg: _messages[msgIndex],
+          isMe: _isMe(_messages[msgIndex]),
+        );
+      },
+    );
+  }
+
+  /// 页内浮动毛玻璃顶栏：复用会话行的头像 + 对方昵称。
+  ///
+  /// 材质与消息页合并栏 / 首页顶栏**同源**（[AppTopBarSurface]：`surface` α0.72 +
+  /// σ20 模糊 + 容器圆角 + 悬浮投影），消息从其后穿过时可见模糊透出。
+  Widget _buildFrostedHeader(AppTokens tokens) {
+    return AppTopBarSurface(
+      shadow: [AppTopBarSurface.floatingShadow(isDark: tokens.isDark)],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Style.md,
+          vertical: Style.xs,
+        ),
+        child: Row(
+          children: [
+            // 壳层返回按钮的固定位（left 8 + 42 宽）：内容左缘 28，故留
+            // [_backButtonSlot] 后头像才落位，避免被按钮压住。
+            const SizedBox(width: _backButtonSlot),
+            MsgFeedAvatar(src: _peerAvatar, size: 32),
+            const SizedBox(width: Style.sm),
+            Flexible(
+              child: Pref.demoMode
+                  ? const SkeletonLine(width: 120, height: 14)
+                  : Text(
+                      _peerName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tokens.text.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: tokens.colors.onSurface,
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

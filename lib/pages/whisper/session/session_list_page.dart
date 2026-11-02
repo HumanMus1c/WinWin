@@ -403,6 +403,8 @@ class _SessionTile extends StatelessWidget {
         context,
         talkerId: (session['talker_id'] as num?)?.toInt() ?? 0,
         sessionType: (session['session_type'] as num?)?.toInt() ?? 1,
+        peerName: _name,
+        peerAvatar: _avatar,
       ),
       startAction: Stack(
         clipBehavior: Clip.none,
