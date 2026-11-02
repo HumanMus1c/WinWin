@@ -268,6 +268,8 @@ class _DynTabPageState extends State<_DynTabPage>
         return false;
       },
       child: AppRefreshIndicator(
+        // 指示环避开浮动态 Tab 栏（栏浮在内容之上，环落 0 位置会被整块遮住）。
+        edgeOffset: AppTabView.floatingTopReserve,
         onRefresh: () => _load(refresh: true),
         child: switch (_state) {
           Loading() => _buildSkeleton(),

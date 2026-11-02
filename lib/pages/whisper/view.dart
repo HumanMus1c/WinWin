@@ -160,6 +160,10 @@ class _WhisperPageState extends State<WhisperPage>
             // 换回 AppRefreshIndicator；处理器仍保持「不清列表」，故反馈轮#2
             // 的「居中加载环与下拉指示器叠加」不会回退。
             child: AppRefreshIndicator(
+              // 指示环避开顶部浮动合并栏（面板是 Positioned 叠层、绘制在内容
+              // 之上；环落在 0 位置会被整块面板遮住 ⇒ 下拉时看不到任何反馈，
+              // 实机表现为「无法触发刷新」）。避让量取面板**实测**高度。
+              edgeOffset: _headerHeight ?? _headerReserve,
               onRefresh: () async {
                 await Future.wait([
                   _load(),

@@ -1165,15 +1165,18 @@ class _AppTabBodyState extends State<AppTabBody> {
 
   @override
   Widget build(BuildContext context) {
-    final page = PageView(
+    // 宽屏（≥ [kAppTabBreakpoint]）关闭**鼠标拖动**翻页（桌面以点选为主）。
+    //
+    // ⚠️ 必须经 `PageView.scrollBehavior` 传入 —— 它只作用于**本 PageView 自身**
+    // 的 `Scrollable`。不可用 `ScrollConfiguration` 包住整个 PageView：
+    // `dragDevices` 是**继承**属性，会一并作用到各 tab 子页里的滚动视图，使子页内
+    // 鼠标拖拽（含下拉刷新）全部失效（2026-11-02「动态页无法下拉刷新」实机反馈）。
+    final bool wide = MediaQuery.sizeOf(context).width >= kAppTabBreakpoint;
+    return PageView(
       controller: _pageController,
       onPageChanged: _onPageChanged,
+      scrollBehavior: wide ? const _AppTabPageScrollBehavior() : null,
       children: widget.children,
-    );
-    if (MediaQuery.sizeOf(context).width < kAppTabBreakpoint) return page;
-    return ScrollConfiguration(
-      behavior: const _AppTabPageScrollBehavior(),
-      child: page,
     );
   }
 }

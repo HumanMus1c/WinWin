@@ -4,26 +4,6 @@ import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/widgets.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 
-/// 关闭**框架自动滚动条**的滚动行为。
-///
-/// Flutter SDK 的 `ScrollBehavior.buildScrollbar` 在桌面平台（windows/macos/linux）
-/// 默认返回 `RawScrollbar` —— 即每个 `Scrollable` 都会自动挂一条框架滚动条，与项目
-/// 自有的 [AppScrollBar] 叠加即形成「双滚动条」，且其位置取决于滚动视图（常被页内
-/// padding 内缩）而非窗口边缘。
-///
-/// 本行为在 [AppScrollBar] 子树内返回 `child`，抑制框架条，只保留自有实现。
-class _NoFrameworkScrollBar extends ScrollBehavior {
-  const _NoFrameworkScrollBar();
-
-  @override
-  Widget buildScrollbar(
-    BuildContext context,
-    Widget child,
-    ScrollableDetails details,
-  ) =>
-      child;
-}
-
 /// 项目自有滚动条（零 material、零 flutter_miuix 依赖，自绘 painter）。
 ///
 /// 布局：为滚动条**预留独立通道**（[_laneThickness] 12px），内容经 `Expanded` 让位，
@@ -140,8 +120,8 @@ class AppScrollBar extends StatefulWidget {
   /// - 横向 `Scrollable` 返回 `child`（与框架一致，不预留通道，避免列表页面
   ///   底部凭空多出 12px 空白）；
   /// - `details.controller` 为空（理论上不会，框架有非空断言）时返回 `child`，保守降级；
-  /// - 竖向则套 [AppScrollBar]；其内部 [AppScrollBar._NoFrameworkScrollBar] 会抑制
-  ///   嵌套 `Scrollable` 的重复挂载 ⇒ 每个滚动视图只保留**一条**项目滚动条。
+  /// - 竖向则套 [AppScrollBar]；其内部会关闭嵌套滚动视图的框架条 ⇒ 每个滚动视图只
+  ///   保留**一条**项目滚动条。
   static Widget attach({
     required Widget child,
     required ScrollableDetails details,
@@ -312,7 +292,7 @@ class _AppScrollBarState extends State<AppScrollBar>
             : constraints.hasBoundedHeight;
         // 约束不定（例如本滚动视图嵌在横向滚动列表中）⇒ 不预留通道，原样返回：
         // 否则 `Expanded` 会在无界约束下断言失败（全局挂载后此类场景可达）。
-        if (!bounded) return _suppressFrameworkBar(widget.child);
+        if (!bounded) return _suppressFrameworkBar(context, widget.child);
 
         // 仅「页面级」滚动视图预留通道。弹层 / 面板 / 局部小列表的主轴向尺寸远小于
         // 窗口，预留通道会抢布局（用户实测：视频卡片「更多操作」弹层布局被破坏）。
@@ -326,7 +306,7 @@ class _AppScrollBarState extends State<AppScrollBar>
         if (!widget.forceLane &&
             (!mainExtent.isFinite ||
                 mainExtent < windowMain * AppScrollBar.pageLevelExtentRatio)) {
-          return _suppressFrameworkBar(widget.child);
+          return _suppressFrameworkBar(context, widget.child);
         }
         return _buildLane(context, vertical);
       },
@@ -335,8 +315,14 @@ class _AppScrollBarState extends State<AppScrollBar>
 
   /// 不预留通道、仅关闭框架方角硬条（`RawScrollbar` 的 `radius`/`trackRadius`
   /// 默认 null ⇒ `drawRect`，即用户多轮反馈的「直角硬矩形条」）。
-  Widget _suppressFrameworkBar(Widget child) => ScrollConfiguration(
-        behavior: const _NoFrameworkScrollBar(),
+  ///
+  /// 必须 `copyWith` 自**环境**行为：若换成新建的 `ScrollBehavior()` 实例，
+  /// 其 `dragDevices` 只含触摸类设备（**不含鼠标**）、`getScrollPhysics` 也回落到
+  /// 平台默认 —— 子树里的滚动视图会因此无法用鼠标拖拽（下拉刷新随之失效，
+  /// 2026-11-02 首页/热门/关注/番剧实机反馈）。`copyWith` 只关框架条，其余全部委托。
+  Widget _suppressFrameworkBar(BuildContext context, Widget child) =>
+      ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
         child: child,
       );
 
@@ -453,7 +439,9 @@ class _AppScrollBarState extends State<AppScrollBar>
     // ② 不存在独立通道 ⇒ 也不会再有「轨道默认占位显示为灰色直角矩形」。
     // 页面普遍已有等宽内边距，覆盖带落在留白上，观感等同「内容区与窗口边缘之间」。
     return ScrollConfiguration(
-      behavior: const _NoFrameworkScrollBar(),
+      // 同 [_suppressFrameworkBar]：只关框架条，dragDevices / physics 委托环境行为
+      // （否则本滚动条子树内的滚动视图会失去鼠标拖拽能力）。
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
       child: NotificationListener<ScrollNotification>(
         onNotification: _onScrollNotification,
         child: Stack(

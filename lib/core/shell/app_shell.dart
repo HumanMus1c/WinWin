@@ -41,8 +41,9 @@ class AppScrollBehavior extends ScrollBehavior {
   /// 两侧内容区域滚动条初始默认态是硬矩形条」的根因。
   ///
   /// 现统一改为项目自有 [AppScrollBar]：一处收口，全应用竖向滚动视图自动获得
-  /// 一致样式；[AppScrollBar] 内部的 `_NoFrameworkScrollBar` 会抑制嵌套滚动视图的
-  /// 重复挂载，已手动包裹的页面（番剧详情/热门/关注/推荐）不会出现双条。
+  /// 一致样式；[AppScrollBar] 内部会关闭嵌套滚动视图的框架条（只 `copyWith`
+  /// `scrollbars: false`，其余行为委托环境，故子树仍保留鼠标拖拽），已手动包裹的
+  /// 页面（番剧详情/热门/关注/推荐）不会出现双条。
   @override
   Widget buildScrollbar(
     BuildContext context,
