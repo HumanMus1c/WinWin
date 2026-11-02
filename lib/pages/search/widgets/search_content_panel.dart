@@ -163,7 +163,8 @@ class _SearchContentPanelState extends State<SearchContentPanel> {
   Future<void> _loadTrending() async {
     // 演示模式：不跑真实热搜（骨架占位由构建期分支给出）。
     if (Pref.demoMode) return;
-    // 命中缓存（含首页首帧预取）→ 直接就绪，避免"加载态 → 内容态"高度跳变。
+    // 已有缓存（启动预取 / 上次进入时拉过）→ 直接就绪，不再联网；只有从未
+    // 拉到数据（如启动时预取失败）才补拉一次，避免"加载态 → 内容态"高度跳变。
     final cached = SearchTrendingCache.instance.peek();
     if (cached != null) {
       _applyTrending(cached);

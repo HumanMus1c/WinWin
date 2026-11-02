@@ -115,8 +115,8 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _searchFocusNode.addListener(_onSearchFocusChanged);
-    // 首页首帧静默预取热搜（命中缓存即跳过）：用户点搜索框时数据多已就绪，
-    // 减少"加载态 → 内容态"高度跳变落在展开动画窗口内的竞态（顿挫根因）。
+    // 首页首帧静默预取热搜 = 全应用唯一一次自动拉取（命中缓存即跳过）；之后
+    // 进出搜索态都复用该缓存、不重复联网，只有「刷新」按钮会强制重拉。
     SearchTrendingCache.instance.prefetch();
   }
 
