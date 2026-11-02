@@ -52,9 +52,9 @@ Duration _clampDuration(Duration value, Duration min, Duration max) {
 const double _kVolumeBarMinHeight = 14.0;
 const double _kVolumeBarMaxHeight = 28.0;
 
-/// 章节条目视效缩放（2026-11-02 反馈：条目内全部信息按当前的 1.6 倍放大）。
+/// 章节条目视效缩放（2026-11-02 反馈：条目内全部信息按改动前的 1.3 倍放大）。
 /// 缩略图高度、字号、间距均以此为准；面板最小宽度同步抬高以保留标题可读宽度。
-const double _kChapterItemScale = 1.6;
+const double _kChapterItemScale = 1.3;
 
 /// BiliPai 风格的播放器面板。
 ///
@@ -570,7 +570,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
           color: AppColors.black,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // 章节条目按 1.6x 放大后，面板最小宽度抬到 320，
+              // 章节条目按 1.3x 放大并采用两行结构，面板最小宽度抬到 320，
               // 保证「序号 + 原比例缩略图 + 两行标题/时间」不被裁切；
               // 宽屏仍维持原 1/3 比例（上限 560）。
               final panelWidth = (constraints.maxWidth / 3).clamp(320.0, 560.0);
@@ -2567,17 +2567,23 @@ class _ChapterPlayingIndicatorState extends State<_ChapterPlayingIndicator>
         animation: _controller,
         builder: (context, _) {
           final phase = _controller.value * 2 * math.pi;
+          // 尺寸沿用 1.6x 设计稿，按当前条目倍率等比缩放。
+          final scale = _kChapterItemScale / 1.6;
+          final barWidth = 5 * scale;
+          final gap = 2 * scale;
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               for (var i = 0; i < 3; i++) ...[
-                if (i > 0) const SizedBox(width: 2),
+                if (i > 0) SizedBox(width: gap),
                 Container(
-                  width: 5,
-                  height: 8 + 18 * (0.5 + 0.5 * math.sin(phase + i * 2.1)),
+                  width: barWidth,
+                  height:
+                      (8 + 18 * (0.5 + 0.5 * math.sin(phase + i * 2.1))) *
+                      scale,
                   decoration: BoxDecoration(
                     color: biliBlue,
-                    borderRadius: BorderRadius.circular(2.5),
+                    borderRadius: BorderRadius.circular(barWidth / 2),
                   ),
                 ),
               ],
