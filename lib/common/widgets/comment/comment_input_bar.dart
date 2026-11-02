@@ -39,6 +39,7 @@ class CommentInputBar extends StatelessWidget {
     this.fillColor,
     this.trailing,
     this.sendButton,
+    this.borderRadius,
   });
 
   /// 输入控制器。
@@ -98,6 +99,12 @@ class CommentInputBar extends StatelessWidget {
 
   /// 发送按钮整体覆盖（如需图标式发送键）；为空则用标准文本发送键。
   final Widget? sendButton;
+
+  /// 容器圆角；为空时保持原「顶部 0.5 描边」的贴底条形态。
+  ///
+  /// 指定后容器按卡片口径圆角化，并去掉顶部描边——非均匀边框
+  /// （仅 top）与圆角组合会被 Flutter 断言拒绝。
+  final BorderRadiusGeometry? borderRadius;
 
   Widget? _buildSuffix() {
     final parts = <Widget>[];
@@ -168,12 +175,15 @@ class CommentInputBar extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: tokens.colors.surface,
-        border: Border(
-          top: BorderSide(
-            color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-        ),
+        borderRadius: borderRadius,
+        border: borderRadius == null
+            ? Border(
+                top: BorderSide(
+                  color: tokens.colors.outlineVariant.withValues(alpha: 0.3),
+                  width: 0.5,
+                ),
+              )
+            : null,
       ),
       child: SafeArea(
         top: false,

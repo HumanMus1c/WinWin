@@ -10,6 +10,7 @@ import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/ui/components/app_tab_view.dart';
+import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
@@ -65,6 +66,19 @@ import 'package:winwin/ui/components/app_tooltip.dart';
 /// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
 const double kDetailNarrowBreakpoint = 900;
+
+/// 左栏滚动条独立通道宽度：滚动条独占该宽度的右侧条带，不覆盖任何内容。
+const double kDetailScrollBarLane = AppScrollBar.laneThickness + Style.xs;
+
+/// 宽屏双栏之间的隔离带宽（左栏滚动条通道之外再留一段空白）。
+const double kDetailColumnGutter = Style.sm;
+
+/// 左栏内容（视频 / 弹幕条 / 信息卡片）的统一水平内边距：
+/// 左与卡片基线一致，右为滚动条通道让位。
+const EdgeInsets kDetailContentPadding = EdgeInsets.only(
+  left: Style.safeSpace,
+  right: kDetailScrollBarLane,
+);
 
 /// 视频详情页 — 桌面宽屏双栏布局（对标 BiliPai TabletVideoLayout）。
 ///
@@ -292,7 +306,6 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   bool _fullscreen = false;
   bool _inAppFullscreen = false;
-  bool _descExpanded = false;
 
   @override
   int? get interactionAid => _detailState.dataOrNull?.aid;
@@ -1167,6 +1180,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                 return Row(
                   children: [
                     Expanded(flex: 65, child: _buildLeftColumn()),
+                    // 左右两栏隔离带：左栏滚动条独占自身通道后，再留一段
+                    // 空白，避免滚动条视觉上贴住右栏内容。
+                    const SizedBox(width: kDetailColumnGutter),
                     Expanded(flex: 35, child: _buildRightColumn()),
                   ],
                 );
@@ -1235,31 +1251,42 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             children: [
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final maxExtent = constraints.maxWidth * 9 / 16;
+                  // 播放器宽度 = 左栏宽度 - 内容水平内边距（右侧含滚动条通道）。
+                  final playerWidth =
+                      constraints.maxWidth - kDetailContentPadding.horizontal;
+                  final maxExtent = playerWidth > 0
+                      ? playerWidth * 9 / 16
+                      : 0.0;
                   final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
                   return CustomScrollView(
                     controller: scrollController,
                     slivers: [
-                      VideoHeader(
-                        maxExtent: maxExtent,
-                        minExtent: minExtent,
-                        onScrollRatioChange: _handleCollapseAutoPause,
-                        child: _buildPlayerContent(response),
+                      // 视频与弹幕条共用同一水平内边距，右侧留出滚动条通道，
+                      // 不再贴左栏/窗口边缘，也不被滚动条覆盖。
+                      SliverPadding(
+                        padding: kDetailContentPadding,
+                        sliver: VideoHeader(
+                          maxExtent: maxExtent,
+                          minExtent: minExtent,
+                          onScrollRatioChange: _handleCollapseAutoPause,
+                          child: _buildPlayerContent(response),
+                        ),
                       ),
-                      // 弹幕发送栏：紧贴视频下方，宽度与视频一致
-                      //（Sliver 横向撑满左栏 = 播放器宽度）。
                       if (playerController != null)
-                        SliverToBoxAdapter(
-                          child: SendDanmakuPanel(
-                            controller: playerController!,
-                            inline: true,
+                        SliverPadding(
+                          padding: kDetailContentPadding,
+                          sliver: SliverToBoxAdapter(
+                            child: SendDanmakuPanel(
+                              controller: playerController!,
+                              inline: true,
+                            ),
                           ),
                         ),
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(
                           Style.safeSpace,
                           Style.sm,
-                          Style.cardSpace,
+                          kDetailScrollBarLane,
                           Style.xxl * 2,
                         ),
                         sliver: SliverList(
@@ -1351,6 +1378,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             disabledHint: isLoading
                 ? (Pref.demoMode ? '演示模式' : '正在加载视频...')
                 : null,
+            padding: const EdgeInsets.fromLTRB(
+              Style.safeSpace,
+              0,
+              kDetailScrollBarLane,
+              0,
+            ),
           ),
       ],
     );
@@ -1370,22 +1403,29 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             children: [
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final maxExtent = constraints.maxWidth * 9 / 16;
+                  final playerWidth =
+                      constraints.maxWidth - kDetailContentPadding.horizontal;
+                  final maxExtent = playerWidth > 0
+                      ? playerWidth * 9 / 16
+                      : 0.0;
                   final minExtent = (maxExtent * 0.56).clamp(180.0, 240.0);
                   return CustomScrollView(
                     controller: scrollController,
                     slivers: [
-                      VideoHeader(
-                        maxExtent: maxExtent,
-                        minExtent: minExtent,
-                        onScrollRatioChange: _handleCollapseAutoPause,
-                        child: _buildPlayerError(code, errMsg),
+                      SliverPadding(
+                        padding: kDetailContentPadding,
+                        sliver: VideoHeader(
+                          maxExtent: maxExtent,
+                          minExtent: minExtent,
+                          onScrollRatioChange: _handleCollapseAutoPause,
+                          child: _buildPlayerError(code, errMsg),
+                        ),
                       ),
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(
                           Style.safeSpace,
                           Style.sm,
-                          Style.cardSpace,
+                          kDetailScrollBarLane,
                           Style.xxl * 2,
                         ),
                         sliver: SliverList(
@@ -1403,7 +1443,16 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         ),
         // 错误态无 aid：评论发送不可用，输入栏置灰展示。
         // 宽屏布局评论区在右栏，错误态右栏不展示输入栏（见 _buildRightColumn）。
-        if (narrow) _buildCommentInputBar(enabled: false),
+        if (narrow)
+          _buildCommentInputBar(
+            enabled: false,
+            padding: const EdgeInsets.fromLTRB(
+              Style.safeSpace,
+              0,
+              kDetailScrollBarLane,
+              0,
+            ),
+          ),
       ],
     );
   }
@@ -1637,44 +1686,19 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     );
   }
 
-  /// 简介卡片：默认 3 行，可展开/收起。
+  /// 简介卡片：完整展开显示（已禁用点击展开/收起，也不再提供展开按钮）。
   Widget _buildDescSection(VideoDetailData data) {
     final tokens = AppThemeHost.of(context);
     final desc = (data.desc ?? '').trim();
     return _card(
       margin: const EdgeInsets.only(top: Style.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          MiuixPressable(
-            feedbackType: MiuixPressFeedbackType.sink,
-            sinkAmount: 0.98,
-            onPressed: desc.isEmpty
-                ? null
-                : () => setState(() => _descExpanded = !_descExpanded),
-            borderRadius: BorderRadius.circular(Style.radiusSm),
-            child: Text(
-              desc.isEmpty ? '简介为空' : desc,
-              maxLines: _descExpanded ? null : 3,
-              overflow: _descExpanded
-                  ? TextOverflow.visible
-                  : TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.5,
-                color: tokens.colors.onSurfaceVariant,
-              ),
-            ),
-          ),
-          if (desc.isNotEmpty)
-            Align(
-              alignment: Alignment.centerRight,
-              child: MiuixTextButton(
-                _descExpanded ? '收起' : '展开',
-                onPressed: () => setState(() => _descExpanded = !_descExpanded),
-              ),
-            ),
-        ],
+      child: Text(
+        desc.isEmpty ? '简介为空' : desc,
+        style: TextStyle(
+          fontSize: 13,
+          height: 1.5,
+          color: tokens.colors.onSurfaceVariant,
+        ),
       ),
     );
   }
@@ -2247,30 +2271,41 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     );
   }
 
-  /// 评论输入栏（固定在左栏底部，默认给当前稿件发布一级评论；
-  /// 水平内边距与评论区 SliverPadding 一致，宽度对齐评论区容器）。
+  /// 评论输入栏（默认给当前稿件发布一级评论）。
+  /// [padding] 与所在列表的左右内边距一致，使输入栏宽度与评论卡片对齐；
+  /// 顶部两角随卡片口径圆角化。
   /// [enabled]=false 时置灰（稿件信息加载中或失败态，无 aid 不可发评论）。
-  Widget _buildCommentInputBar({bool enabled = true, String? disabledHint}) {
+  Widget _buildCommentInputBar({
+    bool enabled = true,
+    String? disabledHint,
+    EdgeInsetsGeometry padding = EdgeInsets.zero,
+  }) {
     // B7 输入统一批：容器与骨架收敛到共享 CommentInputBar，此处仅做本页参数适配。
-    return CommentInputBar(
-      controller: _commentCtrl,
-      focusNode: _commentFocus,
-      sending: _sendingComment,
-      enabled: enabled,
-      onPressed: () async {
-        // 点击输入框时检查登录态。
-        if (!await LoginGuard.requireLogin(context)) return;
-      },
-      hintText: enabled
-          ? (_replyHint ?? '发一条友善的评论吧~')
-          : (disabledHint ?? '稿件不可用，暂无法评论'),
-      suffix: _replyRoot != null
-          ? MiuixIconButton(
-              onPressed: _clearReplyTarget,
-              child: AppIcon(AppIcons.clear(), size: 16),
-            )
-          : null,
-      onSend: () => _sendComment(),
+    return Padding(
+      padding: padding,
+      child: CommentInputBar(
+        controller: _commentCtrl,
+        focusNode: _commentFocus,
+        sending: _sendingComment,
+        enabled: enabled,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(Style.mdRadius),
+        ),
+        onPressed: () async {
+          // 点击输入框时检查登录态。
+          if (!await LoginGuard.requireLogin(context)) return;
+        },
+        hintText: enabled
+            ? (_replyHint ?? '发一条友善的评论吧~')
+            : (disabledHint ?? '稿件不可用，暂无法评论'),
+        suffix: _replyRoot != null
+            ? MiuixIconButton(
+                onPressed: _clearReplyTarget,
+                child: AppIcon(AppIcons.clear(), size: 16),
+              )
+            : null,
+        onSend: () => _sendComment(),
+      ),
     );
   }
 
@@ -2396,6 +2431,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             _buildCommentInputBar(
               enabled: false,
               disabledHint: Pref.demoMode ? '演示模式' : '正在加载评论...',
+              padding: const EdgeInsets.fromLTRB(
+                Style.cardSpace,
+                0,
+                Style.safeSpace,
+                0,
+              ),
             ),
           ],
         );
@@ -2421,7 +2462,14 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             child: _buildReplyListView(),
           ),
         ),
-        _buildCommentInputBar(),
+        _buildCommentInputBar(
+          padding: const EdgeInsets.fromLTRB(
+            Style.cardSpace,
+            0,
+            Style.safeSpace,
+            0,
+          ),
+        ),
       ],
     );
   }
