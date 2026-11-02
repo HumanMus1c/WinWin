@@ -118,6 +118,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
   /// 由 `TapRegion` 统一关闭弹层；分组内（按钮 / 弹层面板）不触发。
   final Object _volumeTapGroup = Object();
 
+  /// 章节面板的全局点击分组：面板打开时，点击播放器内外任意非面板区域
+  /// 都由同一 `TapRegion` 关闭（不再局限于播放器内的遮罩）。
+  final Object _chapterTapGroup = Object();
+
   /// 二级浮层的 Esc 登记注销回调（章节面板 / 音量弹层）。
   VoidCallback? _chapterEscUnregister;
   VoidCallback? _volumeEscUnregister;
@@ -1904,7 +1908,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// 章节悬浮面板 — 覆盖在播放器控件之上的高层控件，覆盖右侧 1/3 区域，点击外部视频区域可 Dismiss 关闭。
+  /// 章节悬浮面板 — 覆盖在播放器控件之上的高层控件，覆盖右侧 1/3 区域；
+  /// 点击播放器内外任意非面板区域均可 Dismiss 关闭。
   Widget _buildChapterPanel(double panelWidth) {
     final c = widget.controller;
     return ValueListenableBuilder<List<ViewPoint>>(
@@ -1912,10 +1917,19 @@ class _PlayerPanelState extends State<PlayerPanel> {
       builder: (context, chapters, _) {
         if (chapters.isEmpty) return const SizedBox.shrink();
         return Positioned.fill(
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // 1. 面板外区域 Dismiss 遮罩（点击面板以外的任意视频/底栏区域 dismiss 关闭章节面板）
+          child: TapRegion(
+            groupId: _chapterTapGroup,
+            enabled: _chapterPanelOpen,
+            consumeOutsideTaps: true,
+            onTapOutside: (_) {
+              _setChapterPanelOpen(false);
+              _onPointerActivity();
+            },
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+              // 1. 面板外区域 Dismiss 遮罩（播放器内点击任意非面板区域关闭；
+              //    播放器外由外层 `TapRegion` 的 onTapOutside 关闭）
               Positioned.fill(
                 child: IgnorePointer(
                   ignoring: !_chapterPanelOpen,
@@ -2227,7 +2241,8 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         );
       },
