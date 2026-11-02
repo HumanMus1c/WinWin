@@ -14,6 +14,7 @@ import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
+import 'package:winwin/common/widgets/comment/comment_action_pill.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
 import 'package:winwin/common/widgets/comment/reply_content_view.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
@@ -66,6 +67,11 @@ import 'package:winwin/ui/components/app_tooltip.dart';
 /// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
 const double kDetailNarrowBreakpoint = 900;
+
+/// 评论互动胶囊的字号口径 = 评论正文行高的 70%：
+/// 主评论 14.5 × 1.55 × 0.7 ≈ 15.7；楼中楼 13.5 × 1.5 × 0.7 ≈ 14.2。
+const double _kReplyActionFontSize = 14.5 * 1.55 * 0.7;
+const double _kSubReplyActionFontSize = 13.5 * 1.5 * 0.7;
 
 /// 左栏滚动条独立通道宽度：滚动条独占该宽度的右侧条带，不覆盖任何内容。
 const double kDetailScrollBarLane = AppScrollBar.laneThickness + Style.xs;
@@ -123,7 +129,6 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final outline = tokens.colors.onSurfaceVariant;
-    final grayStyle = TextStyle(fontSize: 12, color: outline);
     final key = 'demo.reply.${widget.bvid}.${widget.seed}';
     final subCount = DemoOverrides.count('$key.sub', min: 0, max: 5);
     return Container(
@@ -154,84 +159,64 @@ class _DemoReplyTileState extends State<_DemoReplyTile> {
                 const SizedBox(height: 6),
                 const SkeletonLine(width: 200, height: 12),
                 const SizedBox(height: Style.sm),
-                Row(
-                  spacing: Style.lg,
+                Wrap(
+                  spacing: Style.sm,
+                  runSpacing: Style.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: () => setState(() {
+                    CommentActionPill(
+                      icon: AppIcons.like(active: _liked),
+                      labelWidget: DemoInlineEditNumber(
+                        overrideKey: '$key.like',
+                        value: DemoOverrides.count(
+                          '$key.like',
+                          min: 10,
+                          max: 99999,
+                        ),
+                        builder: (context, v) => Text(
+                          NumUtils.formatNum(v?.toInt()),
+                          style: TextStyle(
+                            fontSize: _kReplyActionFontSize,
+                            color: _liked ? biliPink : outline,
+                          ),
+                        ),
+                      ),
+                      fontSize: _kReplyActionFontSize,
+                      color: _liked ? biliPink : outline,
+                      onPressed: () => setState(() {
                         _liked = !_liked;
                         if (_liked) _disliked = false;
                       }),
-                      child: Row(
-                        spacing: 4,
-                        children: [
-                          AppIcon(
-                            AppIcons.like(active: _liked),
-                            size: appRowIconSize(context, 12),
-                            color: _liked ? biliPink : outline,
-                          ),
-                          DemoInlineEditNumber(
-                            overrideKey: '$key.like',
-                            value: DemoOverrides.count(
-                              '$key.like',
-                              min: 10,
-                              max: 99999,
-                            ),
-                            builder: (context, v) => Text(
-                              NumUtils.formatNum(v?.toInt()),
-                              style: grayStyle.copyWith(
-                                fontSize: 12,
-                                color: _liked ? biliPink : outline,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
-                    GestureDetector(
-                      onTap: () => setState(() {
+                    CommentActionPill(
+                      icon: AppIcons.dislike(active: _disliked),
+                      fontSize: _kReplyActionFontSize,
+                      color: _disliked ? biliPink : outline,
+                      onPressed: () => setState(() {
                         _disliked = !_disliked;
                         if (_disliked) _liked = false;
                       }),
-                      child: AppIcon(
-                        AppIcons.dislike(active: _disliked),
-                        size: appRowIconSize(context, 12),
-                        color: _disliked ? biliPink : outline,
-                      ),
                     ),
-                    GestureDetector(
-                      onTap: () {},
-                      child: Row(
-                        spacing: 3,
-                        children: [
-                          AppIcon(AppIcons.reply(), size: appRowIconSize(context, 12), color: outline),
-                          Text('回复', style: grayStyle.copyWith(fontSize: 12)),
-                        ],
-                      ),
+                    CommentActionPill(
+                      icon: AppIcons.reply(),
+                      label: '回复',
+                      fontSize: _kReplyActionFontSize,
+                      color: outline,
+                      onPressed: () {},
                     ),
                     if (subCount > 0)
-                      GestureDetector(
-                        onTap: () => setState(() => _expanded = !_expanded),
-                        child: Row(
-                          spacing: 2,
-                          children: [
-                            Text(
-                              _expanded ? '收起 $subCount条回复' : '展开 $subCount条回复',
-                              style: grayStyle.copyWith(
-                                fontSize: 12,
-                                color: tokens.colors.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            AppIcon(
-                              _expanded
-                                  ? AppIcons.chevronUp()
-                                  : AppIcons.expandMore(),
-                              size: appRowIconSize(context, 12),
-                              color: tokens.colors.primary,
-                            ),
-                          ],
-                        ),
+                      CommentActionPill(
+                        label: _expanded
+                            ? '收起 $subCount条回复'
+                            : '展开 $subCount条回复',
+                        trailingIcon: _expanded
+                            ? AppIcons.chevronUp()
+                            : AppIcons.expandMore(),
+                        fontSize: _kReplyActionFontSize,
+                        color: tokens.colors.primary,
+                        fontWeight: FontWeight.w500,
+                        onPressed: () =>
+                            setState(() => _expanded = !_expanded),
                       ),
                   ],
                 ),
@@ -987,6 +972,18 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     await _loadSubReplies(reply);
   }
 
+  /// 一次性收起当前根评论下已展开的全部楼中楼（不清除一级评论）。
+  void _collapseSubReplies(ReplyItemModel reply) {
+    final rpid = reply.rpid;
+    if (rpid == null || !_subReplies.containsKey(rpid)) return;
+    setState(() {
+      _subReplies.remove(rpid);
+      _subPage.remove(rpid);
+      _subEnd.remove(rpid);
+      _subLoading.remove(rpid);
+    });
+  }
+
   Future<void> _loadSubReplies(ReplyItemModel reply) async {
     final aid = _detailState.dataOrNull?.aid;
     final rpid = reply.rpid;
@@ -1004,6 +1001,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       ),
     );
     if (!mounted) return;
+    // 加载期间已「收起回复」（整串移除）时丢弃本次响应，避免收起后又被回复数据撑开。
+    if (!_subReplies.containsKey(rpid)) return;
     switch (res) {
       case Success(:final response):
         // 楼中楼为页码分页：请求成功后页码 +1，由 page.num/size/count 判定末页。
@@ -1895,43 +1894,30 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       ),
                     ),
                     const SizedBox(height: Style.sm),
-                    // 操作行：点赞 + 点踩 + UP主赞 + 回复 + 展开折叠
-                    Row(
-                      spacing: Style.lg,
+                    // 操作行：点赞 + 点踩 + UP主赞 + 回复 + 展开折叠。
+                    // 互动入口统一套 Miuix 胶囊容器（整块可点击），图标/文本
+                    // 字号 = 评论正文行高的 70%（14.5 × 1.55 × 0.7 ≈ 15.7）。
+                    Wrap(
+                      spacing: Style.sm,
+                      runSpacing: Style.xs,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        GestureDetector(
-                          onTap: () => _toggleLikeReply(reply),
-                          child: Row(
-                            spacing: 4,
-                            children: [
-                              AppIcon(
-                                AppIcons.like(active: reply.isLiked),
-                                size: appRowIconSize(context, 12),
-                                color: reply.isLiked
-                                    ? biliPink
-                                    : tokens.colors.onSurfaceVariant,
-                              ),
-                              Text(
-                                NumUtils.formatNum(reply.like),
-                                style: grayStyle.copyWith(
-                                  fontSize: 12,
-                                  color: reply.isLiked
-                                      ? biliPink
-                                      : tokens.colors.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
+                        CommentActionPill(
+                          icon: AppIcons.like(active: reply.isLiked),
+                          label: NumUtils.formatNum(reply.like),
+                          fontSize: _kReplyActionFontSize,
+                          color: reply.isLiked
+                              ? biliPink
+                              : tokens.colors.onSurfaceVariant,
+                          onPressed: () => _toggleLikeReply(reply),
                         ),
-                        GestureDetector(
-                          onTap: () => _toggleDislikeReply(reply),
-                          child: AppIcon(
-                            AppIcons.dislike(active: reply.isDisliked),
-                            size: appRowIconSize(context, 12),
-                            color: reply.isDisliked
-                                ? biliPink
-                                : tokens.colors.onSurfaceVariant,
-                          ),
+                        CommentActionPill(
+                          icon: AppIcons.dislike(active: reply.isDisliked),
+                          fontSize: _kReplyActionFontSize,
+                          color: reply.isDisliked
+                              ? biliPink
+                              : tokens.colors.onSurfaceVariant,
+                          onPressed: () => _toggleDislikeReply(reply),
                         ),
                         if (reply.upAction?.like == true)
                           Container(
@@ -1953,48 +1939,25 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                               ),
                             ),
                           ),
-                        GestureDetector(
-                          onTap: () => _setReplyTarget(reply),
-                          child: Row(
-                            spacing: 3,
-                            children: [
-                              AppIcon(
-                                AppIcons.reply(),
-                                size: appRowIconSize(context, 12),
-                                color: tokens.colors.onSurfaceVariant,
-                              ),
-                              Text(
-                                '回复',
-                                style: grayStyle.copyWith(fontSize: 12),
-                              ),
-                            ],
-                          ),
+                        CommentActionPill(
+                          icon: AppIcons.reply(),
+                          label: '回复',
+                          fontSize: _kReplyActionFontSize,
+                          color: tokens.colors.onSurfaceVariant,
+                          onPressed: () => _setReplyTarget(reply),
                         ),
                         if ((reply.rcount ?? 0) > 0)
-                          GestureDetector(
-                            onTap: () => _toggleSubReplies(reply),
-                            child: Row(
-                              spacing: 2,
-                              children: [
-                                Text(
-                                  subReplies != null
-                                      ? '收起 ${reply.rcount}条回复'
-                                      : '展开 ${reply.rcount}条回复',
-                                  style: grayStyle.copyWith(
-                                    fontSize: 12,
-                                    color: tokens.colors.primary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                AppIcon(
-                                  subReplies != null
-                                      ? AppIcons.chevronUp()
-                                      : AppIcons.expandMore(),
-                                  size: appRowIconSize(context, 12),
-                                  color: tokens.colors.primary,
-                                ),
-                              ],
-                            ),
+                          CommentActionPill(
+                            label: subReplies != null
+                                ? '收起 ${reply.rcount}条回复'
+                                : '展开 ${reply.rcount}条回复',
+                            trailingIcon: subReplies != null
+                                ? AppIcons.chevronUp()
+                                : AppIcons.expandMore(),
+                            fontSize: _kReplyActionFontSize,
+                            color: tokens.colors.primary,
+                            fontWeight: FontWeight.w500,
+                            onPressed: () => _toggleSubReplies(reply),
                           ),
                       ],
                     ),
@@ -2032,7 +1995,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       ),
                       const SizedBox(height: Style.xs),
                     ],
-                    _buildSubReplyTile(subReplies[i], reply, upMid: upMid),
+                    _buildSubReplyTile(
+                      subReplies[i],
+                      reply,
+                      upMid: upMid,
+                      isLast: i == subReplies.length - 1,
+                    ),
                   ],
                   if (subLoading)
                     const Padding(
@@ -2067,11 +2035,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     ReplyItemModel sub,
     ReplyItemModel root, {
     int? upMid,
+    bool isLast = false,
   }) {
     final tokens = AppThemeHost.of(context);
     final isSubUp =
         upMid != null && (sub.mid == upMid || sub.member?.mid == upMid);
     final subMember = sub.member;
+    final rootRpid = root.rpid;
+    final subEnd = rootRpid != null && (_subEnd[rootRpid] ?? false);
+    final subLoading = rootRpid != null && (_subLoading[rootRpid] ?? false);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
@@ -2182,45 +2154,32 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
             ),
           ),
-          // 第 3 行：操作栏（点赞 + 回复）
+          // 第 3 行：操作栏（点赞 + 点踩 + UP主赞 + 回复 + 展开/收起回复）。
+          // 末条回复在「回复」右侧补「展开回复 / 收起回复」：未加载完时两者并存，
+          // 收起一次性折叠整串楼中楼；展开沿用现有分批加载能力。
           Padding(
             padding: const EdgeInsets.only(left: 36, bottom: 2),
-            child: Row(
-              spacing: Style.md,
+            child: Wrap(
+              spacing: Style.sm,
+              runSpacing: Style.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                GestureDetector(
-                  onTap: () => _toggleLikeReply(sub),
-                  child: Row(
-                    spacing: 3,
-                    children: [
-                      AppIcon(
-                        AppIcons.like(active: sub.isLiked),
-                        size: appRowIconSize(context, 11.5),
-                        color: sub.isLiked
-                            ? biliPink
-                            : tokens.colors.onSurfaceVariant,
-                      ),
-                      Text(
-                        NumUtils.formatNum(sub.like),
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: sub.isLiked
-                              ? biliPink
-                              : tokens.colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
+                CommentActionPill(
+                  icon: AppIcons.like(active: sub.isLiked),
+                  label: NumUtils.formatNum(sub.like),
+                  fontSize: _kSubReplyActionFontSize,
+                  color: sub.isLiked
+                      ? biliPink
+                      : tokens.colors.onSurfaceVariant,
+                  onPressed: () => _toggleLikeReply(sub),
                 ),
-                GestureDetector(
-                  onTap: () => _toggleDislikeReply(sub),
-                  child: AppIcon(
-                    AppIcons.dislike(active: sub.isDisliked),
-                    size: appRowIconSize(context, 11.5),
-                    color: sub.isDisliked
-                        ? biliPink
-                        : tokens.colors.onSurfaceVariant,
-                  ),
+                CommentActionPill(
+                  icon: AppIcons.dislike(active: sub.isDisliked),
+                  fontSize: _kSubReplyActionFontSize,
+                  color: sub.isDisliked
+                      ? biliPink
+                      : tokens.colors.onSurfaceVariant,
+                  onPressed: () => _toggleDislikeReply(sub),
                 ),
                 if (sub.upAction?.like == true)
                   Container(
@@ -2242,27 +2201,33 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                       ),
                     ),
                   ),
-                GestureDetector(
-                  onTap: () =>
+                CommentActionPill(
+                  icon: AppIcons.reply(),
+                  label: '回复',
+                  fontSize: _kSubReplyActionFontSize,
+                  color: tokens.colors.onSurfaceVariant,
+                  onPressed: () =>
                       _setReplyTarget(root, targetName: subMember?.uname),
-                  child: Row(
-                    spacing: 2,
-                    children: [
-                      AppIcon(
-                        AppIcons.reply(),
-                        size: appRowIconSize(context, 11.5),
-                        color: tokens.colors.onSurfaceVariant,
-                      ),
-                      Text(
-                        '回复',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: tokens.colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
+                if (isLast && !subEnd)
+                  CommentActionPill(
+                    label: '展开回复',
+                    trailingIcon: AppIcons.expandMore(),
+                    fontSize: _kSubReplyActionFontSize,
+                    color: tokens.colors.primary,
+                    fontWeight: FontWeight.w500,
+                    loading: subLoading,
+                    onPressed: subLoading ? null : () => _loadSubReplies(root),
+                  ),
+                if (isLast)
+                  CommentActionPill(
+                    label: '收起回复',
+                    trailingIcon: AppIcons.chevronUp(),
+                    fontSize: _kSubReplyActionFontSize,
+                    color: tokens.colors.primary,
+                    fontWeight: FontWeight.w500,
+                    onPressed: () => _collapseSubReplies(root),
+                  ),
               ],
             ),
           ),

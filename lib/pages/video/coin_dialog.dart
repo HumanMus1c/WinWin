@@ -32,6 +32,9 @@ Future<void> showCoinDialog(
   return showAppDialog<void>(
     context: context,
     barrierColor: AppColors.transparent,
+    // 路由级缩放为"整页中心缩放"，会让浮层相对投币按钮斜向漂移；
+    // 关闭它，由浮层自身以正下方底边中心为原点做对角线缩放。
+    enableScale: false,
     builder: (dialogContext) => StatefulBuilder(
       builder: (context, setState) => _CoinPopup(
         anchor: anchor,
@@ -112,14 +115,30 @@ class _CoinPopup extends StatelessWidget {
     // 面板遂被拉成整页宽。必须由外层限定宽度，使面板收缩为内容宽：
     // 264 = 内容 232 + 左右内边距 16×2。
     final panel = SizedBox(width: 264, child: content);
+    // 动画原点 = 浮层自身正下方底边中心（贴投币按钮一侧）：
+    // 展开时自底边中心向上放大，收起时缩回该点；路由级缩放已关闭。
+    final routeAnimation = ModalRoute.of(context)?.animation;
+    final animatedPanel = routeAnimation == null
+        ? panel
+        : ScaleTransition(
+            scale: Tween<double>(begin: 0.94, end: 1.0).animate(
+              CurvedAnimation(
+                parent: routeAnimation,
+                curve: MiuixMotion.standardDecelerate,
+                reverseCurve: MiuixMotion.standardAccelerate,
+              ),
+            ),
+            alignment: Alignment.bottomCenter,
+            child: panel,
+          );
     final a = anchor;
     return Stack(
       children: [
         if (a != null)
-          AppAnchoredPopup(anchor: a, child: panel)
+          AppAnchoredPopup(anchor: a, child: animatedPanel)
         else
           // 锚点不可得（极端情况）退化为居中浮层，不阻塞投币流程。
-          Positioned.fill(child: Center(child: panel)),
+          Positioned.fill(child: Center(child: animatedPanel)),
       ],
     );
   }

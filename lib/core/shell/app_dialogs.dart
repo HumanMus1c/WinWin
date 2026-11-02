@@ -20,10 +20,15 @@ class AppDialogRoute<T> extends PopupRoute<T> {
     this.barrierDismissible = true,
     this.barrierColor = const Color(0x8A000000),
     this.barrierLabel = '关闭',
+    this.enableScale = true,
     super.settings,
   });
 
   final WidgetBuilder builder;
+
+  /// 是否使用路由级「全屏中心缩放」。锚定浮层（如投币浮层）需要以浮层自身
+  /// 底边中心为缩放原点时置 false，由内容侧自行驱动 `ScaleTransition`。
+  final bool enableScale;
 
   @override
   final bool barrierDismissible;
@@ -68,6 +73,9 @@ class AppDialogRoute<T> extends PopupRoute<T> {
       curve: MiuixMotion.standardDecelerate,
       reverseCurve: MiuixMotion.standardAccelerate,
     );
+    if (!enableScale) {
+      return FadeTransition(opacity: curved, child: child);
+    }
     return FadeTransition(
       opacity: curved,
       child: ScaleTransition(
@@ -181,6 +189,7 @@ Future<T?> showAppDialog<T>({
   bool barrierDismissible = true,
   Color? barrierColor,
   String? barrierLabel,
+  bool enableScale = true,
   bool useRootNavigator = true,
 }) {
   return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(
@@ -189,6 +198,7 @@ Future<T?> showAppDialog<T>({
       barrierDismissible: barrierDismissible,
       barrierColor: barrierColor ?? const Color(0x8A000000),
       barrierLabel: barrierLabel ?? '关闭',
+      enableScale: enableScale,
     ),
   );
 }

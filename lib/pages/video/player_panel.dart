@@ -272,9 +272,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   /// 切换控制条锁定。
   void _toggleLock() {
+    final locking = !_locked;
+    // 锁定会整体移除控制栏，先关闭锚定其上的音量弹层，避免弹层悬空。
+    if (locking && _volumePopupOpen) _setVolumePopupOpen(false);
     setState(() {
-      _locked = !_locked;
-      if (_locked) {
+      _locked = locking;
+      if (locking) {
         _hideControlsNow();
       } else {
         _showControlsTemporarily();
@@ -361,13 +364,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   void _hideControlsNow() {
     _hideTimer?.cancel();
-    // 其它设置弹层（弹幕/字幕设置、发弹幕、画质·音轨·倍速菜单）打开期间保持显示；
-    // 音量弹层自身除外——鼠标移出播放器时仍需随控制条一并收起。
-    if (_popupSuspend > 0 && !_volumePopupOpen) return;
+    // 任一二级弹层（音量 / 章节 / 弹幕·字幕设置 / 发弹幕 / 画质·音轨·倍速）
+    // 打开期间保持控制栏显示与弹层开启——鼠标移出播放器时不再特判音量弹层，
+    // 口径与其它控件弹层一致；弹层关闭后由 `_endPopupSuspend` 重置隐藏计时。
+    if (_popupSuspend > 0) return;
     _controlsVisible.value = false;
-    if (_volumePopupOpen) {
-      _setVolumePopupOpen(false);
-    }
   }
 
   // ── 交互 ──
@@ -517,14 +518,18 @@ class _PlayerPanelState extends State<PlayerPanel> {
       onToggleInAppFullscreen: widget.onToggleInAppFullscreen,
       onEscape: _handleEscape,
       onToggleDanmaku: _toggleDanmaku,
-      onLockToggle: (locked) => setState(() {
-        _locked = locked;
-        if (_locked) {
-          _hideControlsNow();
-        } else {
-          _showControlsTemporarily();
-        }
-      }),
+      onLockToggle: (locked) {
+        // 锁定会整体移除控制栏，先关闭锚定其上的音量弹层，避免弹层悬空。
+        if (locked && _volumePopupOpen) _setVolumePopupOpen(false);
+        setState(() {
+          _locked = locked;
+          if (locked) {
+            _hideControlsNow();
+          } else {
+            _showControlsTemporarily();
+          }
+        });
+      },
       onScreenshot: () => _takeScreenshot(),
       child: MouseRegion(
         onHover: (_) => _onPointerActivity(),
@@ -608,6 +613,18 @@ class _PlayerPanelState extends State<PlayerPanel> {
                   // 全屏浮层返回键自 2026-10-21 起改由**壳层全局返回按钮**承担
                   // （页面经 BackButtonSpec 声明退出全屏副作用，外观走壳层默认毛玻璃），
                   // 本播放器不再自绘——消除「视频播放页未共享全局返回按钮」的最后一处。
+                  // 音量弹层打开时的外部点击关闭层（与章节面板/菜单同口径：
+                  // 只关闭弹层、不触发底层播放器手势；弹层面板本体在其上层）。
+                  if (_volumePopupOpen)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          _setVolumePopupOpen(false);
+                          _onPointerActivity();
+                        },
+                      ),
+                    ),
                   // 常驻子树（不再 `if (_volumePopupOpen)` 条件挂载）：
                   // 展开/收起两段动画均由 `_volumePopupOpen` 驱动，
                   // 收起时由 `MiuixAnchoredPopup` 播完动画自行卸载为空。
