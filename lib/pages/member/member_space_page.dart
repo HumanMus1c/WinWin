@@ -946,21 +946,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             )
           : content,
     );
-    // 返回按钮由壳层单实例承担（覆盖在头图上 → 白色字形 + 半透明黑圆底）。
-    return BackButtonOwner(
-      controller: appBackButtonController,
-      specBuilder: () => _backButtonSpec,
-      child: scaffold,
-    );
+    // 返回按钮由壳层单实例承担，本页**不再声明外观覆盖**——走壳层默认
+    // （首页顶栏同源毛玻璃圆底 + 主题可读字形 + 伪粗体），与视频/番剧等页一致。
+    return scaffold;
   }
-
-  /// 全局返回按钮规格：本页返回键覆盖在头图上 → 白色字形 + 半透明黑圆底。
-  static const BackButtonSpec _backButtonSpec = BackButtonSpec(
-    color: AppColors.white,
-    background: Color(0x59000000),
-    iconSize: 20,
-    tooltip: '返回',
-  );
 
   Widget _buildSpaceContent(MemberSpaceData? data) {
     final card = data?.card;
@@ -1084,30 +1073,24 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     child: SizedBox.expand(),
                   ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: Style.sm),
+                  // 上下 4/10：按钮行实际高 42，行中心 = 4 + 21 = 25，与壳层返回
+                  // 按钮（top 4、外框 42）严格同高；左右 8 与页面留白一致。
+                  padding: const EdgeInsets.fromLTRB(Style.sm, 4, Style.sm, 10),
                   child: Row(
                     children: [
-                      // 返回键由壳层单实例承担（白字 + 黑圆底，见 _backButtonSpec）。
+                      // 返回键由壳层单实例承担（默认毛玻璃圆底）；本行右侧动作按钮
+                      // 复用同一外观（FrostedCircleIconButton），不再各画黑圆底。
                       const Spacer(),
                       if (!isOwner)
-                        MiuixIconButton(
+                        FrostedCircleIconButton(
+                          icon: AppIcons.share(),
+                          tooltip: '分享主页',
                           onPressed: () => _copyToClipboard(
                             'https://space.bilibili.com/${widget.mid}',
                             '主页链接已复制',
                           ),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.black.withValues(alpha: 0.35),
-                              shape: BoxShape.circle,
-                            ),
-                            child: AppIcon(
-                              AppIcons.share(),
-                              color: AppColors.white,
-                              size: 20,
-                            ),
-                          ),
                         ),
+                      if (!isOwner) const SizedBox(width: Style.sm),
                       // 阶段5d-L1：M3 冻结分支已移除
                       MiuixPopupMenu(
                         title: '更多选项',
@@ -1136,20 +1119,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                             ],
                           ),
                         ],
-                        child: AppTooltip(
-                          message: '更多选项',
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.black.withValues(alpha: 0.35),
-                              shape: BoxShape.circle,
-                            ),
-                            child: AppIcon(
-                              AppIcons.more(),
-                              color: AppColors.white,
-                              size: 20,
-                            ),
-                          ),
+                        // 触发控件仅是视觉载体（点击由外层 MiuixPopupMenu 手势处理）：
+                        // 不传 onPressed，外观仍与返回按钮同一毛玻璃圆底。
+                        child: FrostedCircleIconButton(
+                          icon: AppIcons.more(),
+                          tooltip: '更多选项',
                         ),
                       ),
                     ],

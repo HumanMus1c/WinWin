@@ -258,46 +258,46 @@ class GlobalBackButton extends StatelessWidget {
           // 背景是否为**默认**（首页顶栏同源毛玻璃）；显式底色则按声明渲染。
           final bool frosted = spec.background == null;
 
-          Widget core = MiuixIconButton(
-            onPressed: () {
-              if (spec.onPressed != null) {
-                spec.onPressed!();
-                return;
-              }
-              spec.onBeforePop?.call();
-              controller.navigator?.maybePop();
-            },
-            minWidth: boxSize,
-            minHeight: boxSize,
-            backgroundColor: spec.background ?? AppColors.transparent,
-            child: AppTooltip(
-              message: tooltip,
-              // 字形加粗：图标字体无 w700 粗体面，用同字形**错位叠绘**一次等效加粗，
-              // 补偿背景由不透明改为半透明后的可读性下降。
-              child: _PseudoBoldGlyph(
-                child: AppIcon(
-                  iconData,
-                  size: spec.iconSize,
-                  color: color,
-                  shadows: spec.shadows,
-                ),
-              ),
-            ),
-          );
-
-          if (frosted) {
-            // 与「首页顶栏」**同源材质**（AppTopBarSurface：surface×0.72 + σ20 模糊）；
-            // 复用 MiuixFrostedSurface 的「边缘无渐变」实现——小圆按钮的模糊核大于
-            // 本体，不外扩搬运则四边会被夹断成一圈软边渐变。圆形裁剪 = 半径 21。
-            core = MiuixFrostedSurface(
-              color: AppTopBarSurface.barColor(tokens.colors.surface),
-              blurSigma: AppTopBarSurface.blurSigma,
-              borderRadius: boxSize / 2,
-              outline: false,
-              shadow: false,
-              child: core,
-            );
+          void handlePressed() {
+            if (spec.onPressed != null) {
+              spec.onPressed!();
+              return;
+            }
+            spec.onBeforePop?.call();
+            controller.navigator?.maybePop();
           }
+
+          // 默认形态与浮在头图/媒体上的同类动作按钮共用
+          // [FrostedCircleIconButton]（同一材质/外框/伪粗体字形，样式只有一处实现）；
+          // 显式底色规格仍走自绘分支，供确需自有底色的页面使用。
+          final Widget core = frosted
+              ? FrostedCircleIconButton(
+                  icon: iconData,
+                  tooltip: tooltip,
+                  color: color,
+                  iconSize: spec.iconSize,
+                  shadows: spec.shadows,
+                  onPressed: handlePressed,
+                )
+              : MiuixIconButton(
+                  onPressed: handlePressed,
+                  minWidth: boxSize,
+                  minHeight: boxSize,
+                  backgroundColor: spec.background,
+                  child: AppTooltip(
+                    message: tooltip,
+                    // 字形加粗：图标字体无 w700 粗体面，用同字形**错位叠绘**一次
+                    // 等效加粗，补偿背景由不透明改为半透明后的可读性下降。
+                    child: _PseudoBoldGlyph(
+                      child: AppIcon(
+                        iconData,
+                        size: spec.iconSize,
+                        color: color,
+                        shadows: spec.shadows,
+                      ),
+                    ),
+                  ),
+                );
 
           return AnimatedOpacity(
             opacity: visible ? 1.0 : 0.0,
@@ -309,6 +309,76 @@ class GlobalBackButton extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// 与 [GlobalBackButton] 默认形态**同源**的圆形毛玻璃动作按钮。
+///
+/// 凡是在自绘顶栏里给全局返回按钮配「同行的动作按钮」（分享/更多等），都应
+/// 使用本组件：同一材质（`AppTopBarSurface` 同源 `surface×0.72` + σ20 模糊 +
+/// `MiuixFrostedSurface` 的边缘无渐变）、同一 42×42 外框、同一伪粗体叠绘字形。
+/// 此前各页各自实现「半透明黑圆底」，会与返回按钮的毛玻璃观感割裂。
+///
+/// [onPressed] 为 null 时仅作**视觉载体**（如挂在 [MiuixPopupMenu] 上的触发控件，
+/// 点击交由外层手势处理），此时不提供 hover/按压反馈。
+class FrostedCircleIconButton extends StatelessWidget {
+  const FrostedCircleIconButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    this.onPressed,
+    this.color,
+    this.iconSize = 20,
+    this.shadows,
+  });
+
+  /// 字形。
+  final IconData icon;
+
+  /// 悬浮提示。
+  final String tooltip;
+
+  /// 点击回调；null = 仅视觉载体（由外层手势处理点击）。
+  final VoidCallback? onPressed;
+
+  /// 字形颜色；null = 当前 Token 的 `onSurfaceVariant`。
+  final Color? color;
+
+  /// 字形尺寸（外框恒 42，与壳层返回按钮一致）。
+  final double iconSize;
+
+  /// 字形对比度阴影（覆盖在高亮媒体上时使用）。
+  final List<Shadow>? shadows;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = AppThemeHost.of(context);
+    final Color effectiveColor = color ?? tokens.colors.onSurfaceVariant;
+    return MiuixFrostedSurface(
+      // 与「首页顶栏」同源材质；圆形裁剪半径 = 外框一半（42 / 2）。
+      color: AppTopBarSurface.barColor(tokens.colors.surface),
+      blurSigma: AppTopBarSurface.blurSigma,
+      borderRadius: GlobalBackButton.boxSize / 2,
+      outline: false,
+      shadow: false,
+      child: MiuixIconButton(
+        minWidth: GlobalBackButton.boxSize,
+        minHeight: GlobalBackButton.boxSize,
+        backgroundColor: AppColors.transparent,
+        onPressed: onPressed,
+        child: AppTooltip(
+          message: tooltip,
+          child: _PseudoBoldGlyph(
+            child: AppIcon(
+              icon,
+              size: iconSize,
+              color: effectiveColor,
+              shadows: shadows,
+            ),
+          ),
+        ),
       ),
     );
   }

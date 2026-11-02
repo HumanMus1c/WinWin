@@ -606,7 +606,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                       ),
                     ),
                   // 全屏浮层返回键自 2026-10-21 起改由**壳层全局返回按钮**承担
-                  // （页面经 BackButtonSpec 声明白色字形 + 退出全屏副作用），
+                  // （页面经 BackButtonSpec 声明退出全屏副作用，外观走壳层默认毛玻璃），
                   // 本播放器不再自绘——消除「视频播放页未共享全局返回按钮」的最后一处。
                   // 常驻子树（不再 `if (_volumePopupOpen)` 条件挂载）：
                   // 展开/收起两段动画均由 `_volumePopupOpen` 驱动，

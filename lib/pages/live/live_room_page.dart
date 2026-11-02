@@ -801,7 +801,8 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
   @override
   Widget build(BuildContext context) => BackButtonOwner(
-        // 返回按钮由壳层单实例承担（普通窗口标准观感；全屏覆盖在视频上 → 白字 + 黑圆底）。
+        // 返回按钮由壳层单实例承担：普通窗口与全屏均为**标准毛玻璃观感**，
+        // 全屏仅覆盖「点击退出全屏」语义（见 _backButtonSpec）。
         controller: appBackButtonController,
         specBuilder: () => _backButtonSpec(_fullscreen || _inAppFullscreen),
         child: _buildRoom(context),
@@ -1021,14 +1022,12 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
     );
   }
 
-  /// 全局返回按钮规格：普通窗口用标准观感；全屏覆盖在视频上 → 白字 + 半透明黑圆底，
-  /// 点击退出全屏（对齐全屏栏原返回键语义）。
+  /// 全局返回按钮规格：普通窗口与全屏**一律走壳层默认外观**（首页顶栏同源
+  /// 毛玻璃圆底 + 主题色字形 + 伪粗体），与视频/番剧的全屏返回键一致；
+  /// 全屏只覆盖语义：点击退出全屏（对齐全屏栏原返回键语义）。
   BackButtonSpec _backButtonSpec(bool isFillWindow) {
     if (!isFillWindow) return BackButtonSpec.standard;
     return BackButtonSpec(
-      color: AppColors.white,
-      background: const Color(0x59000000),
-      iconSize: 22,
       tooltip: '退出全屏 (Esc)',
       onPressed: _handleEscape,
     );
