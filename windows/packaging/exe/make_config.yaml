@@ -6,7 +6,9 @@ publisher: HumanMus1c
 publisher_url: https://github.com/HumanMus1c/WinWin
 display_name: WinWin
 # See: https://jrsoftware.org/ishelp/index.php?topic=setup_defaultdirname
-# install_dir_name: "C:\\WinWin"
+# 默认安装目录显式指定为 WinWin（首字母大写）；不指定时 fastforge 会回退为
+# {autopf64}\<pubspec name>（即小写 winwin）。
+install_dir_name: "{autopf64}\\WinWin"
 setup_icon_file: windows\runner\resources\app_icon.ico
 locales:
   - en
