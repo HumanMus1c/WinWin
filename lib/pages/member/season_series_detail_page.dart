@@ -21,6 +21,7 @@ import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/ui/components/app_progress.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 
 /// 用户合集/系列视频列表详情页面。
 class SeasonSeriesDetailPage extends StatefulWidget {
@@ -154,43 +155,45 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
                         const SizedBox(width: Style.md),
                       ],
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                PBadge(
-                                  text: widget.isSeason ? '合集' : '系列',
-                                  type: PBadgeType.badge,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    widget.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: tokens.text.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
+                        child: AppSelectionArea(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  PBadge(
+                                    text: widget.isSeason ? '合集' : '系列',
+                                    type: PBadgeType.badge,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      widget.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: tokens.text.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '共 ${widget.total ?? _videos.length} 支视频',
-                              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                            ),
-                            if (widget.description?.isNotEmpty ?? false) ...[
+                                ],
+                              ),
                               const SizedBox(height: 4),
                               Text(
-                                widget.description!,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 11, color: cs.outline),
+                                '共 ${widget.total ?? _videos.length} 支视频',
+                                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                               ),
+                              if (widget.description?.isNotEmpty ?? false) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  widget.description!,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 11, color: cs.outline),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                     ],

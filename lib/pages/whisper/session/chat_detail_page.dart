@@ -29,6 +29,7 @@ import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
@@ -538,9 +539,11 @@ class _ChatBubble extends StatelessWidget {
                   bottomRight: Radius.circular(isMe ? 4 : 16),
                 ),
               ),
-              child: Text(
-                text.isEmpty ? '[消息]' : text,
-                style: tokens.text.bodyMedium?.copyWith(color: textColor),
+              child: AppSelectionArea(
+                child: Text(
+                  text.isEmpty ? '[消息]' : text,
+                  style: tokens.text.bodyMedium?.copyWith(color: textColor),
+                ),
               ),
             ),
           ),
@@ -766,9 +769,11 @@ class _ChatBubble extends StatelessWidget {
     return Container(
       color: tokens.colors.surfaceContainerHighest,
       padding: const EdgeInsets.symmetric(horizontal: Style.md, vertical: Style.sm),
-      child: Text(
-        text.isEmpty ? '[消息]' : text,
-        style: tokens.text.bodyMedium,
+      child: AppSelectionArea(
+        child: Text(
+          text.isEmpty ? '[消息]' : text,
+          style: tokens.text.bodyMedium,
+        ),
       ),
     );
   }

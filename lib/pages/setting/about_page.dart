@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:winwin/pages/onboarding/user_agreement_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
@@ -49,44 +50,46 @@ class AboutPage extends StatelessWidget {
 
   Widget _buildHeader(AppTokens tokens) {
     return Center(
-      child: Column(
-        children: [
-          // 程序品牌 logo：直接展示官方**双色**标志。
-          // 2026-10-23 用户定：去掉原 88×88 圆角底色容器（彩色标志压在主题色块上、
-          // 尤其深色模式不协调）；同时把显示尺寸由 48 提到 64 —— 无底色块承托后
-          // 48 显得偏小。若需回到 48 或进一步放大，改此两处数值即可。
-          Image.asset(
-            'assets/flutter_logo.png',
-            width: 64,
-            height: 64,
-            filterQuality: FilterQuality.high,
-            semanticLabel: 'Flutter 官方 Logo',
-          ),
-          const SizedBox(height: Style.md),
-          Text(
-            'WinWin',
-            style: tokens.text.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
+      child: AppSelectionArea(
+        child: Column(
+          children: [
+            // 程序品牌 logo：直接展示官方**双色**标志。
+            // 2026-10-23 用户定：去掉原 88×88 圆角底色容器（彩色标志压在主题色块上、
+            // 尤其深色模式不协调）；同时把显示尺寸由 48 提到 64 —— 无底色块承托后
+            // 48 显得偏小。若需回到 48 或进一步放大，改此两处数值即可。
+            Image.asset(
+              'assets/flutter_logo.png',
+              width: 64,
+              height: 64,
+              filterQuality: FilterQuality.high,
+              semanticLabel: 'Flutter 官方 Logo',
             ),
-          ),
-          const SizedBox(height: Style.xs),
-          Text(
-            'PiliPlus + BiliPai',
-            style: tokens.text.bodySmall?.copyWith(
-              color: tokens.colors.outline,
+            const SizedBox(height: Style.md),
+            Text(
+              'WinWin',
+              style: tokens.text.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: Style.sm),
-          FutureBuilder<PackageInfo>(
-            future: _packageInfo,
-            builder: (context, snapshot) => Text(
-              _formatVersion(snapshot.data),
+            const SizedBox(height: Style.xs),
+            Text(
+              'PiliPlus + BiliPai',
               style: tokens.text.bodySmall?.copyWith(
                 color: tokens.colors.outline,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: Style.sm),
+            FutureBuilder<PackageInfo>(
+              future: _packageInfo,
+              builder: (context, snapshot) => Text(
+                _formatVersion(snapshot.data),
+                style: tokens.text.bodySmall?.copyWith(
+                  color: tokens.colors.outline,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

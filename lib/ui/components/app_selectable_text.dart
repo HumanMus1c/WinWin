@@ -4,6 +4,29 @@ import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
 
+/// 区域级可选中容器（取代 material `SelectionArea`）。
+///
+/// 用于包裹「一段连续纯展示文本」的共同父级：子树内所有 [Text] 纳入同一个
+/// 选择区域，支持跨文本连选；单段文本直接用 [AppSelectableText]。
+/// 与 [AppSelectableText] 共用桌面 Handle 选择控件与 Miuix 右键菜单。
+///
+/// 约束：只包裹无交互的展示区域；按钮/卡片/可点击行等交互容器不要包，
+/// 否则拖选会与点击竞争。已含 [AppSelectableText] 的区域不要重复包裹。
+class AppSelectionArea extends StatelessWidget {
+  const AppSelectionArea({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SelectableRegion(
+      selectionControls: cupertinoDesktopTextSelectionHandleControls,
+      contextMenuBuilder: buildMiuixTextSelectionContextMenu,
+      child: child,
+    );
+  }
+}
+
 /// 可选中文本替身（取代 material `SelectableText`）。
 ///
 /// 以 widgets 层 [SelectableRegion] 承载：桌面 Handle 选择控件（混入

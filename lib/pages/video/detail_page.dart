@@ -55,6 +55,7 @@ import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/num_utils.dart';
@@ -1504,32 +1505,34 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Widget _buildDetailErrorCard(int? code, String? errMsg) {
     final tokens = AppThemeHost.of(context);
     return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.bvid,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: tokens.text.headlineSmall,
-          ),
-          const SizedBox(height: Style.sm),
-          Text(
-            _friendlyVideoError(code, errMsg),
-            style: TextStyle(
-              fontSize: 13,
-              color: tokens.colors.onSurfaceVariant,
+      child: AppSelectionArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.bvid,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: tokens.text.headlineSmall,
             ),
-          ),
-          const SizedBox(height: Style.sm),
-          Text(
-            '稿件信息加载失败，评论与互动暂不可用',
-            style: TextStyle(
-              fontSize: 12,
-              color: tokens.colors.onSurfaceVariant.withValues(alpha: 0.7),
+            const SizedBox(height: Style.sm),
+            Text(
+              _friendlyVideoError(code, errMsg),
+              style: TextStyle(
+                fontSize: 13,
+                color: tokens.colors.onSurfaceVariant,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: Style.sm),
+            Text(
+              '稿件信息加载失败，评论与互动暂不可用',
+              style: TextStyle(
+                fontSize: 12,
+                color: tokens.colors.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1595,47 +1598,54 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            data.title ?? widget.bvid,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: tokens.text.titleMedium?.copyWith(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              height: 1.35,
+          AppSelectionArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  data.title ?? widget.bvid,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.text.titleMedium?.copyWith(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: Style.sm),
+                Row(
+                  spacing: Style.md,
+                  children: [
+                    AppIcon(
+                      AppIcons.viewCount(),
+                      size: appRowIconSize(context, 12),
+                      color: tokens.colors.onSurfaceVariant,
+                    ),
+                    Text(NumUtils.formatNum(stat?.view), style: grayStyle),
+                    AppIcon(
+                      AppIcons.danmakuCount(),
+                      size: appRowIconSize(context, 12),
+                      color: tokens.colors.onSurfaceVariant,
+                    ),
+                    Text(NumUtils.formatNum(stat?.danmaku), style: grayStyle),
+                    AppIcon(
+                      AppIcons.duration(),
+                      size: appRowIconSize(context, 12),
+                      color: tokens.colors.onSurfaceVariant,
+                    ),
+                    Text(
+                      DurationUtils.formatDuration(data.duration),
+                      style: grayStyle,
+                    ),
+                    if (data.pubdate != null)
+                      Text(_formatDate(data.pubdate), style: grayStyle),
+                    // 「显示在线人数」：开启且有数据时展示实时在看人数。
+                    if (Pref.enableOnlineTotal && _onlineTotal != null)
+                      Text('$_onlineTotal 人在看', style: grayStyle),
+                  ],
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: Style.sm),
-          Row(
-            spacing: Style.md,
-            children: [
-              AppIcon(
-                AppIcons.viewCount(),
-                size: appRowIconSize(context, 12),
-                color: tokens.colors.onSurfaceVariant,
-              ),
-              Text(NumUtils.formatNum(stat?.view), style: grayStyle),
-              AppIcon(
-                AppIcons.danmakuCount(),
-                size: appRowIconSize(context, 12),
-                color: tokens.colors.onSurfaceVariant,
-              ),
-              Text(NumUtils.formatNum(stat?.danmaku), style: grayStyle),
-              AppIcon(
-                AppIcons.duration(),
-                size: appRowIconSize(context, 12),
-                color: tokens.colors.onSurfaceVariant,
-              ),
-              Text(
-                DurationUtils.formatDuration(data.duration),
-                style: grayStyle,
-              ),
-              if (data.pubdate != null)
-                Text(_formatDate(data.pubdate), style: grayStyle),
-              // 「显示在线人数」：开启且有数据时展示实时在看人数。
-              if (Pref.enableOnlineTotal && _onlineTotal != null)
-                Text('$_onlineTotal 人在看', style: grayStyle),
-            ],
           ),
           const SizedBox(height: Style.md),
           Row(
@@ -1708,12 +1718,14 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     final desc = (data.desc ?? '').trim();
     return _card(
       margin: const EdgeInsets.only(top: Style.md),
-      child: Text(
-        desc.isEmpty ? '简介为空' : desc,
-        style: TextStyle(
-          fontSize: 13,
-          height: 1.5,
-          color: tokens.colors.onSurfaceVariant,
+      child: AppSelectionArea(
+        child: Text(
+          desc.isEmpty ? '简介为空' : desc,
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.5,
+            color: tokens.colors.onSurfaceVariant,
+          ),
         ),
       ),
     );
