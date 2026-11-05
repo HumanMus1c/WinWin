@@ -13,8 +13,8 @@ import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/utils/duration_utils.dart';
-import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 
@@ -130,49 +130,14 @@ class VideoCardV extends StatelessWidget {
                             ),
                             heroTag: heroTag,
                           ),
-                          if (demo || data.duration > 0)
-                            Positioned(
-                              right: 7,
-                              bottom: 6,
-                              child: PBadge(
-                                text: demo
-                                    ? DurationUtils.formatDuration(
-                                        DemoOverrides.durationSeconds(
-                                          'demo.vcard.${data.bvid ?? ''}',
-                                        ),
-                                      )
-                                    : DurationUtils.formatDuration(
-                                        data.duration,
-                                      ),
-                                type: PBadgeType.duration,
-                              ),
-                            ),
-                          // 热门理由徽章：置于封面左上角（替代原「正在看」胶囊）。
-                          if (demo)
-                            Positioned(
-                              left: 7,
-                              top: 6,
-                              child: PBadge(
-                                text: const ['热门', '高播放', '宝藏新作'][
-                                    Random((data.bvid ?? '').hashCode ^ 5)
-                                        .nextInt(3)],
-                                type: PBadgeType.highlight,
-                              ),
-                            )
-                          else if (_showReasonOnCover(data.rcmdReason))
-                            Positioned(
-                              left: 7,
-                              top: 6,
-                              child: PBadge(
-                                text: data.rcmdReason!,
-                                type: PBadgeType.highlight,
-                              ),
-                            ),
-                          if (demo || showStat)
-                            Positioned(
-                              left: 7,
-                              bottom: 6,
-                              child: VideoCoverStatBadge(
+                          // 封面底部：播放 / 弹幕 / 点赞三合胶囊 + 时长胶囊。
+                          // 两枚胶囊按标题字号渲染，放不下时自动回落字号避让。
+                          Positioned(
+                            left: 7,
+                            right: 7,
+                            bottom: 6,
+                            child: VideoCoverStatBar(
+                              showStat: demo || showStat,
                               playCount: demo
                                   ? DemoOverrides.count(
                                       'demo.vplay.${data.bvid ?? ''}',
@@ -183,12 +148,38 @@ class VideoCardV extends StatelessWidget {
                               danmakuCount: demo
                                   ? DemoOverrides.count(
                                       'demo.vdm.${data.bvid ?? ''}',
-                                      min: 10,
-                                      max: 99999,
+                                      min: 1000,
+                                      max: 9999,
                                     )
                                   : data.danmakuCount,
+                              likeCount: demo
+                                  ? DemoOverrides.count(
+                                      'demo.vlike.${data.bvid ?? ''}',
+                                      min: 1000,
+                                      max: 99999,
+                                    )
+                                  : data.likeCount,
+                              durationText: demo || data.duration > 0
+                                  ? DurationUtils.formatDuration(
+                                      demo
+                                          ? DemoOverrides.durationSeconds(
+                                              'demo.vcard.${data.bvid ?? ''}',
+                                            )
+                                          : data.duration,
+                                    )
+                                  : '',
                             ),
                           ),
+                          // 「热门」官方章现在交给底部信息行；封面只留其他定性理由。
+                          if (_showReasonOnCover(_reasonOf(data, demo)))
+                            Positioned(
+                              left: 7,
+                              top: 6,
+                              child: PBadge(
+                                text: _reasonOf(data, demo)!,
+                                type: PBadgeType.highlight,
+                              ),
+                            ),
                         ],
                       );
                     },
@@ -216,6 +207,11 @@ class VideoCardV extends StatelessWidget {
     final String ownerName = data.ownerName;
     final int? mid = data.mid;
 
+    /// 与标题同源的名义字号（标题自身不设 fontSize，随基底继承）。
+    final double titleFontSize =
+        DefaultTextStyle.of(context).style.fontSize ?? appBaseFontSize;
+    final String? officialReason = _reasonOf(data, demo);
+
     final Widget titleWidget = demo
         ? const Align(
             alignment: Alignment.topLeft,
@@ -239,7 +235,6 @@ class VideoCardV extends StatelessWidget {
 
     final String publishedText =
         VideoCardInfoText.publishedShort(data.publishedAt);
-    final int? likeCount = data.likeCount;
 
     // UP 行：UP + 已关注 + 发布时间（发布日期不再占独立整行）。
     final Widget ownerRow;
@@ -265,7 +260,7 @@ class VideoCardV extends StatelessWidget {
             ),
             if (Random((data.bvid ?? '').hashCode).nextBool()) ...[
               const SizedBox(width: 4),
-              const PBadge(text: '已关注', type: PBadgeType.status),
+              const PBadge(text: '已关注', type: PBadgeType.followed),
             ],
           ] else
             const Spacer(),
@@ -313,7 +308,7 @@ class VideoCardV extends StatelessWidget {
                     ),
                     if (isFollowed) ...[
                       const SizedBox(width: 4),
-                      const PBadge(text: '已关注', type: PBadgeType.status),
+                      const PBadge(text: '已关注', type: PBadgeType.followed),
                     ],
                   ],
                 ),
@@ -348,23 +343,20 @@ class VideoCardV extends StatelessWidget {
       );
     }
 
-    // 热门行：点赞胶囊 + 更多（rcmd 理由已移到封面左上角）。
+    // 热门行：官方「热门」章（仅 rcmd_reason 明确为「热门」时显示）+ 更多。
+    // 点赞量已并入封面统计胶囊，这里不再重复。
     final Widget hotRow = Row(
       spacing: 2,
       children: [
-        if (demo)
+        if (_isOfficialHotReason(officialReason))
           PBadge(
-            text: '${NumUtils.formatNum(DemoOverrides.count(
-              'demo.vlike.${data.bvid ?? ''}',
-              min: 1000,
-              max: 99999,
-            ))}点赞',
+            text: '热门',
             type: PBadgeType.highlight,
-          )
-        else if (likeCount != null && likeCount > 0)
-          PBadge(
-            text: '${NumUtils.formatNum(likeCount)}点赞',
-            type: PBadgeType.highlight,
+            fontSize: titleFontSize,
+            padding: EdgeInsets.symmetric(
+              horizontal: titleFontSize * 0.42,
+              vertical: titleFontSize * 0.14,
+            ),
           ),
         const Spacer(),
         if (showMenu)
@@ -396,13 +388,27 @@ class VideoCardV extends StatelessWidget {
     return shrinkWrap ? info : Expanded(child: info);
   }
 
-  /// 封面左上角只放**定性**推荐理由（热门 / 高播放 …）。
+  /// 卡片展示用的推荐理由：演示模式取稳定随机占位，真实数据取接口原值。
+  static String? _reasonOf(VideoCardData data, bool demo) => demo
+      ? const ['热门', '高播放', '宝藏新作'][
+          Random((data.bvid ?? '').hashCode ^ 5).nextInt(3)]
+      : data.rcmdReason;
+
+  /// 是否官方接口明确打上「热门」章。
   ///
-  /// 点赞量理由（如「3万点赞」）改由底部点赞胶囊展示（数据源改用 `stat.like`
-  /// 的精确值），关注态理由由 UP 行的「已关注」徽章展示——同一信息只在
-  /// 一个位置出现，避免一张卡上两处都在报点赞量。
+  /// 仅认 `rcmd_reason` 原值为「热门」；「百万播放 / 人气飙升 / 高播放」等
+  /// 其他定性理由仍留在封面左上角，不在底部重复。
+  static bool _isOfficialHotReason(String? reason) =>
+      reason != null && reason.trim() == '热门';
+
+  /// 封面左上角只放**定性**推荐理由（高播放 / 百万播放 …）。
+  ///
+  /// 点赞量理由（如「3万点赞」）改由封面统计胶囊展示（数据源改用 `stat.like`
+  /// 的精确值）；关注态理由由 UP 行的「已关注」徽章展示；「热门」章移到
+  /// 底部官方章位置——同一信息只在卡上出现一次。
   static bool _showReasonOnCover(String? reason) {
     if (reason == null || reason.isEmpty) return false;
+    if (_isOfficialHotReason(reason)) return false;
     if (reason.contains('赞')) return false;
     return !const {'已关注', '新关注'}.contains(reason);
   }

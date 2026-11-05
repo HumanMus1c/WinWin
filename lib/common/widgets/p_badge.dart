@@ -9,7 +9,8 @@ import 'package:winwin/core/shell/app_theme_host.dart';
 /// 支持多种语义化标签：
 /// - [PBadgeType.duration]：黑底半透明白字时长角标（视频封面右下角）。
 /// - [PBadgeType.highlight]：哔哩哔哩官方活力暖橙底白字（高播放量 / 高点赞 / 热门推荐）。
-/// - [PBadgeType.status]：低饱和弱化中性灰底（已关注等辅助状态）。
+/// - [PBadgeType.status]：低饱和弱化中性灰底（辅助状态）。
+/// - [PBadgeType.followed]：浅粉胶囊（已关注，恢复官方网页同款粉色语义）。
 /// - [PBadgeType.primary]：官方品牌粉红底白字（置顶 / 精选 / 重要通知）。
 /// - [PBadgeType.vip]：官方大会员粉红底白字（大会员 / 年度大会员）。
 /// - [PBadgeType.linePrimary]：透明底，品牌粉红细边框与文字（番剧独家 / 完结）。
@@ -21,6 +22,7 @@ enum PBadgeType {
   duration,
   highlight,
   status,
+  followed,
   primary,
   vip,
   linePrimary,
@@ -118,7 +120,7 @@ class PBadge extends StatelessWidget {
 
   static PBadgeType _inferBadgeType(String text) {
     if (text == '已关注' || text == '新关注') {
-      return PBadgeType.status;
+      return PBadgeType.followed;
     }
     if (text.contains('会员') || text.contains('大会员') || text.contains('专享')) {
       return PBadgeType.vip;
@@ -234,7 +236,9 @@ class _ThemedBadge extends StatelessWidget {
     // 官方规范颜色取值（对标 PiliPlus 与官方 App）：
     // - highlight（高光推荐）：官方亮橙色 #FF7F24（浅色）/ #D66011（深色）
     // - vip / primary（官方粉红）：#FA7298 / #FB7299
-    // - status（辅状态已关注）：浅灰透明底 + 弱中性文字
+    // - followed（已关注）：恢复 Miuix 迁移前的 MD3 浅粉胶囊（迁移后
+    //   secondaryContainer 变为中性灰，已关注标签因此失去粉色语义）
+    // - status（辅状态）：浅灰透明底 + 弱中性文字
     // - error（警示）：红底白字
     final Color bgColor;
     final Color fgColor;
@@ -244,6 +248,10 @@ class _ThemedBadge extends StatelessWidget {
       case PBadgeType.highlight:
         bgColor = isDark ? const Color(0xFFD66011) : const Color(0xFFFF7F24);
         fgColor = AppColors.white;
+        break;
+      case PBadgeType.followed:
+        bgColor = isDark ? const Color(0xFF5D3F3F) : const Color(0xFFFFDADA);
+        fgColor = isDark ? const Color(0xFFFFDADA) : const Color(0xFF5F1212);
         break;
       case PBadgeType.status:
         bgColor = cs.secondaryContainer.withValues(alpha: isDark ? 0.55 : 0.45);

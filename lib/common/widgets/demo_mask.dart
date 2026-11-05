@@ -11,6 +11,7 @@ import 'package:winwin/common/widgets/video_card/video_cover_stat_badge.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/theme/app_icons.dart';
+import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -150,8 +151,12 @@ class DemoVideoCard extends StatelessWidget {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
     final followed = Random(seed).nextBool();
-    final hotLabel =
-        const ['高播放', '1万点赞', '热门', '宝藏新作'][Random(seed ^ 5).nextInt(4)];
+    // 与正常模式一致：官方「热门」章只出现在底部章位，其余定性理由上封面。
+    final reason =
+        const ['热门', '高播放', '宝藏新作'][Random(seed ^ 5).nextInt(3)];
+    final bool isHot = reason == '热门';
+    final double titleFontSize =
+        DefaultTextStyle.of(context).style.fontSize ?? appBaseFontSize;
     final durationText = DurationUtils.formatDuration(
       DemoOverrides.durationSeconds('demo.card.$seed'),
     );
@@ -185,18 +190,20 @@ class DemoVideoCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Positioned(
-                      right: 7,
-                      bottom: 6,
-                      child: PBadge(
-                        text: durationText,
-                        type: PBadgeType.duration,
+                    if (!isHot)
+                      Positioned(
+                        left: 7,
+                        top: 6,
+                        child: PBadge(
+                          text: reason,
+                          type: PBadgeType.highlight,
+                        ),
                       ),
-                    ),
                     Positioned(
                       left: 7,
+                      right: 7,
                       bottom: 6,
-                      child: VideoCoverStatBadge(
+                      child: VideoCoverStatBar(
                         playCount: DemoOverrides.count(
                           'demo.play.$seed',
                           min: 1000,
@@ -204,9 +211,15 @@ class DemoVideoCard extends StatelessWidget {
                         ),
                         danmakuCount: DemoOverrides.count(
                           'demo.dm.$seed',
-                          min: 10,
+                          min: 1000,
+                          max: 9999,
+                        ),
+                        likeCount: DemoOverrides.count(
+                          'demo.like.$seed',
+                          min: 1000,
                           max: 99999,
                         ),
+                        durationText: durationText,
                       ),
                     ),
                   ],
@@ -238,12 +251,19 @@ class DemoVideoCard extends StatelessWidget {
                           if (followed)
                             const PBadge(
                               text: '已关注',
-                              type: PBadgeType.status,
+                              type: PBadgeType.followed,
                             ),
-                          PBadge(
-                            text: hotLabel,
-                            type: PBadgeType.highlight,
-                          ),
+                          // 与正常模式一致：官方「热门」章占底部章位。
+                          if (isHot)
+                            PBadge(
+                              text: '热门',
+                              type: PBadgeType.highlight,
+                              fontSize: titleFontSize,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: titleFontSize * 0.42,
+                                vertical: titleFontSize * 0.14,
+                              ),
+                            ),
                           Expanded(
                             child: Align(
                               alignment: Alignment.centerLeft,

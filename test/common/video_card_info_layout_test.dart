@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart'
     show MiuixCard, MiuixPressFeedbackType, MiuixPressable;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_card_info.dart';
 import 'package:winwin/common/widgets/video_card/video_card_v.dart';
@@ -186,7 +187,7 @@ void main() {
     expect(paragraph.size.height, greaterThanOrEqualTo(38.0));
   });
 
-  testWidgets('点赞理由只出现在底部胶囊，封面不再重复', (tester) async {
+  testWidgets('点赞量并入封面统计胶囊，点赞理由不再重复', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -215,12 +216,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // 推荐理由本身是点赞数时不上封面，改用 stat.like 的精确值放底部胶囊。
+    // 推荐理由本身是点赞数时不上封面，也不在底部信息行重复；
+    // 点赞量以封面统计胶囊内的精确值出现（不带「点赞」文案）。
     expect(find.text('3万点赞'), findsNothing);
-    expect(find.text('3.2万点赞'), findsOneWidget);
+    expect(find.text('3.2万'), findsOneWidget);
   });
 
-  testWidgets('定性推荐理由上封面，点赞仍只在底部', (tester) async {
+  testWidgets('官方「热门」章占原点赞位，尺寸对齐标题字号', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -250,6 +252,113 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('热门'), findsOneWidget);
-    expect(find.text('3.2万点赞'), findsOneWidget);
+    expect(find.text('3.2万'), findsOneWidget);
+    final PBadge hot = tester.widget<PBadge>(find.widgetWithText(PBadge, '热门'));
+    expect(hot.fontSize, 14);
+  });
+
+  testWidgets('非「热门」的官方定性理由仍留在封面左上角', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      appTestHost(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 240,
+            child: VideoCardV(
+              videoItem: const VideoCardData(
+                bvid: 'BV1million',
+                title: '百万播放测试',
+                duration: 96,
+                ownerName: '测试UP主',
+                playCount: 1200000,
+                danmakuCount: 3000,
+                likeCount: 32000,
+                rcmdReason: '百万播放',
+              ),
+              shrinkWrap: true,
+              showMenu: false,
+              enableContextMenu: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('百万播放'), findsOneWidget);
+    expect(find.text('热门'), findsNothing);
+  });
+
+  testWidgets('已关注标签使用浅粉胶囊', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      appTestHost(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 240,
+            child: VideoCardV(
+              videoItem: const VideoCardData(
+                bvid: 'BV1follow',
+                title: '已关注配色测试',
+                duration: 96,
+                ownerName: '测试UP主',
+                isFollowed: true,
+              ),
+              shrinkWrap: true,
+              showMenu: false,
+              enableContextMenu: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final PBadge badge =
+        tester.widget<PBadge>(find.widgetWithText(PBadge, '已关注'));
+    expect(badge.type, PBadgeType.followed);
+  });
+
+  testWidgets('窄卡三数据胶囊过长时自动回落字号且不溢出', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      appTestHost(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 150,
+            child: VideoCardV(
+              videoItem: const VideoCardData(
+                bvid: 'BV1narrow',
+                title: '窄卡回落测试',
+                duration: 3599,
+                ownerName: '测试UP主',
+                playCount: 123456789,
+                danmakuCount: 9876543,
+                likeCount: 87654321,
+              ),
+              shrinkWrap: true,
+              showMenu: false,
+              enableContextMenu: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('1.2亿'), findsOneWidget);
+    expect(find.text('987.7万'), findsOneWidget);
+    expect(find.text('8765.4万'), findsOneWidget);
+    expect(find.text('59:59'), findsOneWidget);
   });
 }
