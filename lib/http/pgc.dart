@@ -474,6 +474,11 @@ abstract final class PgcHttp {
           final model = PlayUrlModel.fromJson(Map<String, dynamic>.from(videoInfo));
           return Success(model);
         }
+        // DRM 版权内容不会下发 video_info，给出明确提示而不是笼统的解析失败。
+        final arc = result is Map ? result['arc'] : null;
+        if (arc is Map && arc['is_drm'] == true) {
+          return const Error('该内容受 DRM 版权保护，当前版本暂不支持播放');
+        }
       }
       return Error(res.data['message']?.toString() ?? '获取播放地址失败');
     } catch (e, s) {

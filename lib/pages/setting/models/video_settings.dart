@@ -181,18 +181,21 @@ List<SettingsModel> get videoSettings => [
 // ── 画质/音质常量 ──
 
 const List<(int, String)> _videoQualityValues = [
+  (129, 'HDR Vivid'),
   (127, '8K 超高清'),
   (126, '杜比视界'),
   (125, 'HDR 真彩'),
   (120, '4K 超清'),
   (116, '1080P 高帧率'),
   (112, '1080P+ 高码率'),
+  (100, '智能修复'),
   (80, '1080P 高清'),
   (74, '720P 高帧率'),
   (64, '720P 高清'),
   (48, '480P 清晰'),
   (32, '360P 流畅'),
   (16, '360P 流畅（低码率）'),
+  (6, '240P 极速'),
 ];
 
 String _videoQualityDesc(int code) {

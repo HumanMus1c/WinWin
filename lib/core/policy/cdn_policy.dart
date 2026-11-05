@@ -76,6 +76,17 @@ abstract final class CdnPolicy {
       return urls.where((u) => u.isNotEmpty).toList();
     }
 
+    // Akamai 播放地址自带签名（如 hdnts），改写为其它宿主会保留错误签名导致 403。
+    // 选择 Akamai 时保留 API 下发的原始 URL（含编码后的查询串），不做宿主改写。
+    if (service == CDNService.akamai && !(isAudio && Pref.disableAudioCDN)) {
+      final akamaiUrls = [
+        for (final url in urls)
+          if (Uri.tryParse(url)?.host == CDNService.akamai.host) url,
+      ];
+      if (akamaiUrls.isNotEmpty) return akamaiUrls;
+      return urls.where((u) => u.isNotEmpty).toList();
+    }
+
     final result = <String>[];
     final seen = <String>{};
 

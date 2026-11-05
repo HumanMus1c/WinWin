@@ -605,6 +605,11 @@ abstract final class VideoHttp {
     int? seasonId,
     int? subType,
     VideoType videoType = VideoType.ugc,
+    int? startTsSec,
+    int? videoDurationSec,
+    int? lastProgressSec,
+    int? maxProgressSec,
+    String? session,
   }) async {
     final account = Accounts.history;
     if (!account.isLogin) return const Error('未登录');
@@ -624,7 +629,15 @@ abstract final class VideoHttp {
           'played_time': progressSec,
           'real_time': progressSec < 0 ? 0 : progressSec,
         },
-        'start_ts': now,
+        // 对齐官方心跳：缺失时长/进度字段时服务端只能算 VV，统计不到观看进度。
+        if (videoDurationSec != null && videoDurationSec > 0)
+          'video_duration': videoDurationSec,
+        if (lastProgressSec != null && lastProgressSec > 0)
+          'last_play_progress_time': lastProgressSec,
+        if (maxProgressSec != null && maxProgressSec > 0)
+          'max_play_progress_time': maxProgressSec,
+        if (session != null && session.isNotEmpty) 'session': session,
+        'start_ts': startTsSec ?? now,
         'play_type': playType,
         'did': LoginHttp.buvid,
         's_locale': 'zh-CN',
@@ -644,21 +657,38 @@ abstract final class VideoHttp {
 
   /// 历史进度上报（`/x/v2/history/report`）。
   ///
-  /// 用于在退出/切换视频时上报最终观看进度。
-  /// [aid] 稿件 avid，[cid] 分 P cid，[progressSec] 当前进度（秒）。
+  /// 推荐系统判断「已看过」的主信号（对齐官方客户端）：暂停/离开/切集/切后台时上报，
+  /// 无最小时长门槛；剩最后 5 秒即视为看完，`progress` 上报 -1。
+  /// 时长未知时跳过，避免服务端误判「一点就看完」。
+  /// [aid] 稿件 avid，[cid] 分 P cid，[progressMs] 当前进度（毫秒），
+  /// [durationMs] 视频总时长（毫秒），[startTsSec] 本次播放会话起始时间戳。
   static Future<LoadingState> reportHistory({
     required int aid,
     required int cid,
-    int? progressSec,
+    required int progressMs,
+    required int durationMs,
+    int? startTsSec,
+    String scene = 'front',
   }) async {
     final account = Accounts.main;
     if (!account.isLogin) return const Error('未登录');
+    final durationSec = durationMs ~/ 1000;
+    if (durationSec <= 0) return const Success(null);
+    final safePosMs = progressMs < 0 ? 0 : progressMs;
+    final finished = safePosMs + 5000 >= durationMs;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final res = await Request().post(
       Api.historyReport,
       data: {
         'aid': aid,
         'cid': cid,
-        'progress': progressSec ?? 0,
+        'source': 'player-old',
+        'duration': durationSec,
+        'progress': finished ? -1 : safePosMs ~/ 1000,
+        'type': 3,
+        'device_ts': now,
+        'start_ts': startTsSec ?? now,
+        'scene': scene,
         'csrf': account.csrf,
       },
       options: Options(

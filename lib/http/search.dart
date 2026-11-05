@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import 'package:winwin/http/api.dart';
+import 'package:winwin/http/browser_ua.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/search/result.dart';
@@ -61,6 +62,8 @@ abstract final class SearchHttp {
           'origin': 'https://search.bilibili.com',
           'referer':
               'https://search.bilibili.com/${searchType.name}?keyword=${Uri.encodeFull(keyword)}',
+          // 对齐上游：搜索接口需带 PC UA，缺失时更易触发风控。
+          'user-agent': BrowserUa.pc,
         },
       ),
     );
@@ -70,6 +73,10 @@ abstract final class SearchHttp {
         final dataData = resData['data'];
         if (dataData == null) {
           return const Error('没有相关数据');
+        }
+        // v_voucher 出现即代表服务端下发风控验证，直接给出可读提示。
+        if (dataData is Map && dataData['v_voucher'] != null) {
+          return const Error('触发风控，请稍后重试');
         }
         try {
           final SearchNumData data;

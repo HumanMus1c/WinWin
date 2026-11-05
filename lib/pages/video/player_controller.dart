@@ -572,6 +572,18 @@ class WinWinPlayerController {
   /// 是否已上报过结束（play_type=3/progressSec=-1），避免重复。
   bool _reportedEnd = false;
 
+  /// 本次播放会话起始时间戳（秒），作为心跳 start_ts / session 上报。
+  int _heartbeatSessionStartTs = 0;
+
+  /// 本次会话达到过的最大播放进度（秒），官方心跳 max_play_progress_time。
+  int _maxPlayProgressSec = 0;
+
+  /// 最近一次成功上报的观看进度（毫秒）：-1=尚未上报，-2=已上报「看完」。
+  int _lastReportedHistoryMs = -1;
+
+  /// 是否已上报「看完」，避免重复请求。
+  bool _historyReportFinished = false;
+
   /// 清晰度标签列表（PlayUrlModel.acceptDescription）。
   List<String> get qualityLabels => _playUrl?.acceptDescription ?? const [];
 
@@ -2148,6 +2160,15 @@ class WinWinPlayerController {
         videoType: videoType,
         playType: playType,
         progressSec: progressSec,
+        startTsSec: _heartbeatSessionStartTs > 0 ? _heartbeatSessionStartTs : null,
+        videoDurationSec: duration.value.inSeconds > 0
+            ? duration.value.inSeconds
+            : null,
+        lastProgressSec: progressSec > 0 ? progressSec : null,
+        maxProgressSec: _maxPlayProgressSec > 0 ? _maxPlayProgressSec : null,
+        session: _heartbeatSessionStartTs > 0
+            ? '$_heartbeatSessionStartTs'
+            : null,
       );
       if (kDebugMode) {
         if (res case Error(:final errMsg)) {
@@ -2169,12 +2190,20 @@ class WinWinPlayerController {
     _lastHeartBeatPlaying = null;
     _lastHeartBeatPosSec = -1;
     _reportedEnd = false;
+    _maxPlayProgressSec = 0;
+    _lastReportedHistoryMs = -1;
+    _historyReportFinished = false;
+    _heartbeatSessionStartTs =
+        DateTime.now().millisecondsSinceEpoch ~/ 1000;
     _heartBeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (_disposed) return;
       // 未登录或用户关闭历史记录时不报。
       if (!Accounts.history.isLogin || Pref.historyPause) return;
       final isPlaying = playing.value;
       final currentPosSec = position.value.inSeconds;
+      if (currentPosSec > _maxPlayProgressSec) {
+        _maxPlayProgressSec = currentPosSec;
+      }
 
       if (isPlaying) {
         _playingAccumSec += 5;
@@ -2187,6 +2216,8 @@ class WinWinPlayerController {
             : (isPlaying ? 2 : 1);
         _lastHeartBeatPlaying = isPlaying;
         unawaited(makeHeartBeat(currentPosSec, playType: playType));
+        // 暂停时同步上报观看进度：官方在此事件上报 history/report（推荐「已看过」主信号）。
+        if (!isPlaying) unawaited(_reportHistoryProgress());
         return;
       }
 
@@ -2211,12 +2242,7 @@ class WinWinPlayerController {
         (dur.inMilliseconds - pos.inMilliseconds) <= 1500) {
       _reportedEnd = true;
       unawaited(makeHeartBeat(-1, playType: 3, isManual: true));
-      final effectiveAid = aid;
-      if (effectiveAid != null && effectiveAid > 0) {
-        unawaited(
-          VideoHttp.reportHistory(aid: effectiveAid, cid: cid, progressSec: 0),
-        );
-      }
+      unawaited(_reportHistoryProgress(force: true));
     }
   }
 
@@ -2234,17 +2260,54 @@ class WinWinPlayerController {
       isManual: true,
     );
 
-    // 2. 额外上报历史进度接口（若有有效 aid）
+    // 2. 额外上报历史进度接口（推荐系统「已看过」主信号）
+    await _reportHistoryProgress();
+  }
+
+  /// 上报观看进度（`/x/v2/history/report`）。
+  ///
+  /// 对齐官方客户端：看完（剩最后 5 秒）上报 -1；进度变化 ≤1 秒不重复上报；
+  /// 时长未知时不报，避免服务端误判。
+  Future<void> _reportHistoryProgress({
+    bool force = false,
+    String scene = 'front',
+  }) async {
+    if (!Accounts.main.isLogin || Pref.historyPause) return;
     final effectiveAid = aid;
-    if (effectiveAid != null && effectiveAid > 0) {
-      try {
-        await VideoHttp.reportHistory(
-          aid: effectiveAid,
-          cid: cid,
-          progressSec: completed.value ? 0 : posSec,
-        );
-      } catch (_) {}
+    if (effectiveAid == null || effectiveAid <= 0) return;
+    final durationMs = duration.value.inMilliseconds;
+    if (durationMs <= 0) return;
+    if (_historyReportFinished) return;
+    final rawPosMs = position.value.inMilliseconds;
+    final positionMs = completed.value
+        ? durationMs
+        : (rawPosMs <= 0
+              ? 0
+              : (rawPosMs > durationMs ? durationMs : rawPosMs));
+    final previous = _lastReportedHistoryMs;
+    final finished = positionMs + 5000 >= durationMs;
+    if (!force &&
+        !finished &&
+        previous >= 0 &&
+        (positionMs - previous).abs() <= 1000) {
+      return;
     }
+    try {
+      final res = await VideoHttp.reportHistory(
+        aid: effectiveAid,
+        cid: cid,
+        progressMs: positionMs,
+        durationMs: durationMs,
+        startTsSec: _heartbeatSessionStartTs > 0
+            ? _heartbeatSessionStartTs
+            : null,
+        scene: scene,
+      );
+      if (res is Success) {
+        _lastReportedHistoryMs = finished ? -2 : positionMs;
+        if (finished) _historyReportFinished = true;
+      }
+    } catch (_) {}
   }
 
   /// 拉取 DASH、选流（StreamSelectionPolicy）、挂载外部音轨打开。
