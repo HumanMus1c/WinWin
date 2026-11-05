@@ -615,6 +615,40 @@ abstract final class MsgHttp {
     }
   }
 
+  /// 会话/消息读接口统一入口：WBI 签名 + 限流退避重试。
+  ///
+  /// 对齐 PiliPlus 早期 Web 实现：session_svr 的读接口需要 WBI 签名，
+  /// 裸参数直连容易被判为异常请求并返回「请求过于频繁」。
+  /// 命中 -509/-412 时延迟 2 秒重签一次；仍失败则给出可读文案。
+  static Future<LoadingState<Map<String, dynamic>>> _sessionGet(
+    String api,
+    Future<Map<String, Object>> Function() buildParams,
+  ) async {
+    for (var attempt = 0; ; attempt++) {
+      final params = await buildParams();
+      final res = await Request().get(api, queryParameters: params);
+      final data = res.data;
+      if (data is! Map) return const Error('服务器错误');
+      final code = (data['code'] as num?)?.toInt();
+      if (code == 0) {
+        return Success(
+          (data['data'] as Map?)?.cast<String, dynamic>() ?? {},
+        );
+      }
+      final message = data['message']?.toString() ?? '';
+      if (attempt == 0 && _rateLimitCodes.contains(code)) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        continue;
+      }
+      return Error(
+        _rateLimitCodes.contains(code) ? '请求过于频繁，请稍后重试' : message,
+      );
+    }
+  }
+
+  /// 限流类业务码（-509 请求过于频繁 / -412 请求被拦截）。
+  static const Set<int> _rateLimitCodes = {-509, -412};
+
   /// 私信会话列表（get_sessions）。
   ///
   /// session_type：1=用户与系统 2=未关注 3=粉丝团 4=全部 5=拦截
@@ -625,10 +659,10 @@ abstract final class MsgHttp {
     int size = 20,
     int pn = 1,
     int? endTs,
-  }) async {
-    final res = await Request().get(
+  }) {
+    return _sessionGet(
       Api.sessionList,
-      queryParameters: {
+      () => WbiSign.makSign({
         'session_type': sessionType,
         'group_fold': 1,
         'unfollow_fold': 0,
@@ -639,15 +673,8 @@ abstract final class MsgHttp {
         'build': 0,
         'mobi_app': 'web',
         'web_location': 333.999,
-      },
+      }),
     );
-    if (res.data['code'] == 0) {
-      return Success(
-        (res.data['data'] as Map?)?.cast<String, dynamic>() ?? {},
-      );
-    } else {
-      return Error(res.data['message']?.toString() ?? '');
-    }
   }
 
   /// 私信消息记录（fetch_session_msgs，聊天历史）。
@@ -660,10 +687,10 @@ abstract final class MsgHttp {
     int size = 20,
     int? beginSeqno,
     int? endSeqno,
-  }) async {
-    final res = await Request().get(
+  }) {
+    return _sessionGet(
       Api.sessionMsg,
-      queryParameters: {
+      () => WbiSign.makSign({
         'talker_id': talkerId,
         'session_type': sessionType,
         'size': size,
@@ -672,15 +699,8 @@ abstract final class MsgHttp {
         if (endSeqno != null && endSeqno > 0) 'end_seqno': endSeqno,
         'build': 0,
         'mobi_app': 'web',
-      },
+      }),
     );
-    if (res.data['code'] == 0) {
-      return Success(
-        (res.data['data'] as Map?)?.cast<String, dynamic>() ?? {},
-      );
-    } else {
-      return Error(res.data['message']?.toString() ?? '');
-    }
   }
 
   /// 批量获取私信用户卡片（account/v1/user/cards）。

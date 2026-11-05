@@ -79,7 +79,16 @@ class AccountManager extends Interceptor {
       return handler.next(options);
     } else {
       options.headers['user-agent'] ??= BrowserUa.pc;
-      options.headers['referer'] ??= HttpString.baseUrl;
+      // 消息中心网页端（api.vc.bilibili.com / msgfeed / im）来源统一用 message.bilibili.com，
+      // 与网页端一致，降低「请求过于频繁」类风控误判。
+      final isMessageApi = options.uri.host == 'api.vc.bilibili.com' ||
+          path.startsWith('/x/msgfeed') ||
+          path.startsWith('/x/im/');
+      options.headers['referer'] ??=
+          isMessageApi ? HttpString.messageBaseUrl : HttpString.baseUrl;
+      if (isMessageApi) {
+        options.headers['origin'] ??= HttpString.messageBaseUrl;
+      }
       // 移植自 BiliPai AppSessionCookieJar：除 loadForRequest 外，
       // 还从 LoginAccount.keyCookies 直接注入 SESSDATA/bili_jct/
       // DedeUserID 等关键 cookie，绕过 cookie_jar 的域名匹配。
