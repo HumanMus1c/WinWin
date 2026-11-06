@@ -327,12 +327,21 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 稿件标签（对标 BiliPai videoTags，`/x/tag/archive/tags`）。
   List<VideoTag> _tags = const [];
 
+  /// 打开到首帧的计时（排查「点击卡片进入播放页慢」）。
+  final Stopwatch _openSw = Stopwatch()..start();
+
   @override
   void initState() {
     super.initState();
     _rightTabCtrl = AppTabController(length: 2);
     windowManager.addListener(this);
     initInteractionEventBus();
+    AppLogger.w('DetailPage', 'open bvid=${widget.bvid}');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppLogger.w('DetailPage', 'first frame ${_openSw.elapsedMilliseconds}ms');
+      }
+    });
     _loadDetail();
     _loadRelated();
     _loadTags();
@@ -544,7 +553,12 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     // 演示模式：不拉取云端数据（与正常模式完全隔离）。
     if (Pref.demoMode) return;
     setState(() => _detailState = LoadingState.loading());
+    final sw = Stopwatch()..start();
     final res = await VideoHttp.videoIntro(bvid: widget.bvid);
+    AppLogger.w(
+      'DetailPage',
+      'videoIntro ${res is Success ? 'ok' : 'fail'} in ${sw.elapsedMilliseconds}ms',
+    );
     if (!mounted) return;
     switch (res) {
       case Success(:final response):

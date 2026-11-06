@@ -2637,7 +2637,11 @@ class WinWinPlayerController {
       PlayUrlModel? playUrl =
           playUrlCache.get(cacheKey, cid, requestedQuality: qn)
               as PlayUrlModel?;
+      if (playUrl != null) {
+        AppLogger.w('PlayerController', 'playurl cache hit qn=$qn');
+      }
       if (playUrl == null) {
+        final sw = Stopwatch()..start();
         LoadingState<PlayUrlModel> result;
         if (epId != null && epId! > 0) {
           result = await PgcHttp.pgcPlayUrl(
@@ -2666,6 +2670,11 @@ class WinWinPlayerController {
         }
         if (_disposed) return;
         playUrl = result.dataOrNull;
+        AppLogger.w(
+          'PlayerController',
+          'playurl ${playUrl == null ? 'fail' : 'ok'} '
+          'in ${sw.elapsedMilliseconds}ms qn=$qn',
+        );
         if (playUrl == null) {
           error.value = '获取播放地址失败';
           _loadFailureRetryable = true; // 网络类失败：自动重试

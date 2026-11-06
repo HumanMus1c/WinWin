@@ -7,6 +7,7 @@ import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_card_v.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/rcmd/controller.dart';
@@ -205,6 +206,7 @@ class _RcmdPageState extends State<RcmdPage>
             if (item is! BaseRcmdVideoItemModel) return;
             final bvid = item.bvid;
             if (bvid == null) return;
+            AppLogger.w('Nav', 'tap rcmd bvid=$bvid');
             Navigator.push(
               context,
               AppRoute(
