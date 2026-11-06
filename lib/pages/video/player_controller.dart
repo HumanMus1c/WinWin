@@ -2210,6 +2210,12 @@ class WinWinPlayerController {
     _heartbeatLogged = false;
     _heartbeatSessionStartTs =
         DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    // 记录上报门禁状态：未登录或「暂停观看历史」开启时心跳/进度都会静默跳过。
+    AppLogger.d(
+      'HeartBeat',
+      'session start login=${Accounts.history.isLogin} '
+      'pause=${Pref.historyPause} bvid=$bvid cid=$cid',
+    );
     _heartBeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (_disposed) return;
       // 未登录或用户关闭历史记录时不报。
