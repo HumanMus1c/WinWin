@@ -83,6 +83,14 @@ void main() async {
   Timer.periodic(const Duration(seconds: 2), (_) {
     SyncTrace.log('UiTick', 'alive');
   });
+  // 冻结诊断：强制调度一帧并记录完成情况（区分「UI 线程活着但不产帧」与「输入未送达」）。
+  Timer.periodic(const Duration(seconds: 2), (_) {
+    SyncTrace.log('FrameTick', 'schedule');
+    WidgetsBinding.instance.scheduleFrame();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SyncTrace.log('FrameTick', 'painted');
+    });
+  });
   SyncTrace.log('main', 'app starting, pid=$pid');
 
   // 深度网络黑箱（仅 debug）：完整请求/响应链路（Cookie 脱敏）落盘供排障；
@@ -199,7 +207,11 @@ void main() async {
     ConsoleHandler(),
   ];
   Catcher2(
-    rootWidget: WinWinApp(bootstrapError: bootstrapError),
+    rootWidget: Listener(
+      onPointerDown: (event) =>
+          SyncTrace.log('Pointer', 'down ${event.position}'),
+      child: WinWinApp(bootstrapError: bootstrapError),
+    ),
     debugConfig: Catcher2Options(SilentReportMode(), handlers),
     releaseConfig: Catcher2Options(SilentReportMode(), handlers),
   );
