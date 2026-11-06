@@ -584,6 +584,9 @@ class WinWinPlayerController {
   /// 是否已上报「看完」，避免重复请求。
   bool _historyReportFinished = false;
 
+  /// 是否已记录过首条心跳成功日志（周期心跳不刷屏）。
+  bool _heartbeatLogged = false;
+
   /// 清晰度标签列表（PlayUrlModel.acceptDescription）。
   List<String> get qualityLabels => _playUrl?.acceptDescription ?? const [];
 
@@ -2170,15 +2173,26 @@ class WinWinPlayerController {
             ? '$_heartbeatSessionStartTs'
             : null,
       );
-      if (kDebugMode) {
-        if (res case Error(:final errMsg)) {
-          debugPrint('HeartBeat: report failed: $errMsg');
+      if (res case Success()) {
+        // 首次成功、状态变化与非周期上报各记录一次，便于实机核对心跳链路；
+        // 周期心跳（playType=0）不落日志，避免每 5 秒刷屏。
+        if (!_heartbeatLogged || playType != 0 || isManual) {
+          _heartbeatLogged = true;
+          AppLogger.d(
+            'HeartBeat',
+            'ok aid=${aid ?? 0} cid=$cid progress=${progressSec}s '
+            'playType=$playType duration=${duration.value.inSeconds}s '
+            'max=$_maxPlayProgressSec s session=$_heartbeatSessionStartTs',
+          );
         }
+      } else if (res case Error(:final errMsg)) {
+        AppLogger.w(
+          'HeartBeat',
+          'failed aid=${aid ?? 0} cid=$cid progress=${progressSec}s err=$errMsg',
+        );
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('HeartBeat: report exception: $e');
-      }
+      AppLogger.w('HeartBeat', 'exception aid=${aid ?? 0} cid=$cid err=$e');
     }
   }
 
@@ -2193,6 +2207,7 @@ class WinWinPlayerController {
     _maxPlayProgressSec = 0;
     _lastReportedHistoryMs = -1;
     _historyReportFinished = false;
+    _heartbeatLogged = false;
     _heartbeatSessionStartTs =
         DateTime.now().millisecondsSinceEpoch ~/ 1000;
     _heartBeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -2306,8 +2321,23 @@ class WinWinPlayerController {
       if (res is Success) {
         _lastReportedHistoryMs = finished ? -2 : positionMs;
         if (finished) _historyReportFinished = true;
+        AppLogger.d(
+          'HistoryReport',
+          'ok aid=$effectiveAid cid=$cid progress=${positionMs ~/ 1000}s '
+          'duration=${durationMs ~/ 1000}s finished=$finished scene=$scene',
+        );
+      } else if (res is Error) {
+        AppLogger.w(
+          'HistoryReport',
+          'failed aid=$effectiveAid cid=$cid err=${res.errMsg}',
+        );
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.w(
+        'HistoryReport',
+        'exception aid=$effectiveAid cid=$cid err=$e',
+      );
+    }
   }
 
   /// 拉取 DASH、选流（StreamSelectionPolicy）、挂载外部音轨打开。
