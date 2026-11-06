@@ -2178,7 +2178,8 @@ class WinWinPlayerController {
         // 周期心跳（playType=0）不落日志，避免每 5 秒刷屏。
         if (!_heartbeatLogged || playType != 0 || isManual) {
           _heartbeatLogged = true;
-          AppLogger.d(
+          // AppLogger.d 在 Release 被 kDebugMode 门控，排查需要 Release 也可见 → 用 w。
+          AppLogger.w(
             'HeartBeat',
             'ok aid=${aid ?? 0} cid=$cid progress=${progressSec}s '
             'playType=$playType duration=${duration.value.inSeconds}s '
@@ -2211,7 +2212,7 @@ class WinWinPlayerController {
     _heartbeatSessionStartTs =
         DateTime.now().millisecondsSinceEpoch ~/ 1000;
     // 记录上报门禁状态：未登录或「暂停观看历史」开启时心跳/进度都会静默跳过。
-    AppLogger.d(
+    AppLogger.w(
       'HeartBeat',
       'session start login=${Accounts.history.isLogin} '
       'pause=${Pref.historyPause} bvid=$bvid cid=$cid',
@@ -2327,7 +2328,7 @@ class WinWinPlayerController {
       if (res is Success) {
         _lastReportedHistoryMs = finished ? -2 : positionMs;
         if (finished) _historyReportFinished = true;
-        AppLogger.d(
+        AppLogger.w(
           'HistoryReport',
           'ok aid=$effectiveAid cid=$cid progress=${positionMs ~/ 1000}s '
           'duration=${durationMs ~/ 1000}s finished=$finished scene=$scene',
