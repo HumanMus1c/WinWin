@@ -8,6 +8,7 @@ import 'package:winwin/common/widgets/video_card/video_card_adapter.dart';
 import 'package:winwin/common/widgets/video_card/video_card_v.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/services/video_intro_prefetch.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/rcmd/controller.dart';
@@ -210,6 +211,8 @@ class _RcmdPageState extends State<RcmdPage>
             Navigator.push(
               context,
               AppRoute(
+                // 详情页转场从 300ms 缩短到 180ms，改善「进入播放页」主观速度。
+                transitionDuration: const Duration(milliseconds: 180),
                 builder: (_) => VideoDetailPage(
                   bvid: bvid,
                   cover: item.cover,
@@ -350,11 +353,18 @@ class _RcmdVideoCardState extends State<_RcmdVideoCard> {
 
   @override
   Widget build(BuildContext context) {
-    return VideoCardV(
+    final bvid = _data.bvid;
+    final card = VideoCardV(
       videoItem: _data,
       heroTag: widget.heroTag,
       onTap: widget.onTap,
       onRemove: widget.onRemove,
+    );
+    if (bvid == null || bvid.isEmpty) return card;
+    // 鼠标悬停即预取详情：点击进入详情页时直接复用，省一次接口往返。
+    return MouseRegion(
+      onHover: (_) => VideoIntroPrefetch.prefetch(bvid),
+      child: card,
     );
   }
 }

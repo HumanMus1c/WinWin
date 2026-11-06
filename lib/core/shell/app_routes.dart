@@ -16,6 +16,7 @@ class AppRoute<T> extends PageRouteBuilder<T> {
     super.settings,
     super.fullscreenDialog,
     this.title,
+    Duration? transitionDuration,
   }) : super(
           pageBuilder: (BuildContext context, Animation<double> animation,
                   Animation<double> secondaryAnimation) =>
@@ -28,11 +29,13 @@ class AppRoute<T> extends PageRouteBuilder<T> {
               MiuixPageTransition(
             animation: animation,
             label: settings?.name ?? 'AppRoute',
-            configuredMs: kMiuixTransitionDuration.inMilliseconds,
+            configuredMs:
+                (transitionDuration ?? kMiuixTransitionDuration).inMilliseconds,
             child: child,
           ),
-          transitionDuration: kMiuixTransitionDuration,
-          reverseTransitionDuration: kMiuixTransitionDuration,
+          transitionDuration: transitionDuration ?? kMiuixTransitionDuration,
+          reverseTransitionDuration:
+              transitionDuration ?? kMiuixTransitionDuration,
         );
 
   /// 页面标题（供无障碍/调试；不参与渲染）。
