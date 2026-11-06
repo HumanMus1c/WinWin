@@ -1,4 +1,4 @@
-import 'dart:async' show unawaited;
+import 'dart:async' show Timer, unawaited;
 import 'dart:io' show Platform, pid;
 
 import 'package:catcher_2/catcher_2.dart';
@@ -78,6 +78,11 @@ void main() async {
 
   // 同步崩溃安全追踪（诊断用）：关键生命周期埋点，瞬死不丢尾部。
   unawaited(SyncTrace.init());
+  // 冻结诊断：UI isolate 心跳（同步落 trace.log）。复现「整窗无响应」时，
+  // 若心跳持续说明 Dart 主线程未停摆（问题在渲染/输入层）；若心跳中断则为主线程阻塞。
+  Timer.periodic(const Duration(seconds: 2), (_) {
+    SyncTrace.log('UiTick', 'alive');
+  });
   SyncTrace.log('main', 'app starting, pid=$pid');
 
   // 深度网络黑箱（仅 debug）：完整请求/响应链路（Cookie 脱敏）落盘供排障；

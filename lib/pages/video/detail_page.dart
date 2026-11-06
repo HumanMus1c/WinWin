@@ -40,7 +40,6 @@ import 'package:winwin/main.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
-import 'package:winwin/services/video_intro_prefetch.dart';
 import 'package:winwin/models/video/video_tag.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/search/search_result_page.dart';
@@ -555,12 +554,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     if (Pref.demoMode) return;
     setState(() => _detailState = LoadingState.loading());
     final sw = Stopwatch()..start();
-    final prefetched = VideoIntroPrefetch.hasFresh(widget.bvid);
-    final res = await VideoIntroPrefetch.fetch(widget.bvid);
+    final res = await VideoHttp.videoIntro(bvid: widget.bvid);
     AppLogger.w(
       'DetailPage',
-      'videoIntro ${res is Success ? 'ok' : 'fail'} in ${sw.elapsedMilliseconds}ms'
-      '${prefetched ? ' (prefetched)' : ''}',
+      'videoIntro ${res is Success ? 'ok' : 'fail'} in ${sw.elapsedMilliseconds}ms',
     );
     if (!mounted) return;
     switch (res) {
