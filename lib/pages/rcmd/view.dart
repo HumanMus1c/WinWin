@@ -211,8 +211,6 @@ class _RcmdPageState extends State<RcmdPage>
             Navigator.push(
               context,
               AppRoute(
-                // 详情页转场从 300ms 缩短到 180ms，改善「进入播放页」主观速度。
-                transitionDuration: const Duration(milliseconds: 180),
                 builder: (_) => VideoDetailPage(
                   bvid: bvid,
                   cover: item.cover,
