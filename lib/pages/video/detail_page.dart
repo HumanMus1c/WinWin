@@ -1609,10 +1609,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          AppSelectableText(
             data.title ?? widget.bvid,
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: tokens.text.titleMedium?.copyWith(
               fontSize: 17,
               fontWeight: FontWeight.w600,

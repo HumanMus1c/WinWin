@@ -37,6 +37,7 @@ import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 
 /// 聊天详情入口（阶段 D）。
 ///
@@ -538,7 +539,7 @@ class _ChatBubble extends StatelessWidget {
                   bottomRight: Radius.circular(isMe ? 4 : 16),
                 ),
               ),
-              child: Text(
+              child: AppSelectableText(
                 text.isEmpty ? '[消息]' : text,
                 style: tokens.text.bodyMedium?.copyWith(color: textColor),
               ),
@@ -766,7 +767,7 @@ class _ChatBubble extends StatelessWidget {
     return Container(
       color: tokens.colors.surfaceContainerHighest,
       padding: const EdgeInsets.symmetric(horizontal: Style.md, vertical: Style.sm),
-      child: Text(
+      child: AppSelectableText(
         text.isEmpty ? '[消息]' : text,
         style: tokens.text.bodyMedium,
       ),

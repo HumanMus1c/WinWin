@@ -199,6 +199,16 @@ class _ClauseTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = AppThemeHost.of(context);
     final cs = tokens.colors;
+    final titleStyle = tokens.text.titleSmall?.copyWith(
+      fontWeight: FontWeight.w600,
+    );
+    final descStyle = tokens.text.bodySmall?.copyWith(
+      color: cs.onSurfaceVariant,
+      height: 1.4,
+    );
+    // 只读浏览（无点击回调）时条款文案可选中；勾选流程整行可点，
+    // 属交互容器，文案保持普通 Text 以免选择手势抢占点击。
+    final selectable = onTap == null;
 
     return MiuixPressable(
       feedbackType: MiuixPressFeedbackType.sink,
@@ -228,20 +238,15 @@ class _ClauseTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    clause.title,
-                    style: tokens.text.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    clause.desc,
-                    style: tokens.text.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
+                  if (selectable) ...[
+                    AppSelectableText(clause.title, style: titleStyle),
+                    const SizedBox(height: 4),
+                    AppSelectableText(clause.desc, style: descStyle),
+                  ] else ...[
+                    Text(clause.title, style: titleStyle),
+                    const SizedBox(height: 4),
+                    Text(clause.desc, style: descStyle),
+                  ],
                 ],
               ),
             ),
