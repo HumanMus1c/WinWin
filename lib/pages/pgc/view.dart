@@ -51,7 +51,6 @@ class PgcPage extends StatefulWidget {
 class _PgcPageState extends State<PgcPage>
     with AutomaticKeepAliveClientMixin {
   late PgcSubTab _selectedSubTab;
-  late final Set<PgcSubTab> _visitedTabs;
 
   @override
   bool get wantKeepAlive => true;
@@ -63,16 +62,12 @@ class _PgcPageState extends State<PgcPage>
     _selectedSubTab = AccountService().isLogin
         ? PgcSubTab.myFollow
         : PgcSubTab.hot;
-    _visitedTabs = {_selectedSubTab};
   }
 
   /// 切换二级分类（点击分类条与左右滑动共用的唯一入口）。
   void _selectSubTab(PgcSubTab tab) {
     if (_selectedSubTab == tab) return;
-    setState(() {
-      _selectedSubTab = tab;
-      _visitedTabs.add(tab);
-    });
+    setState(() => _selectedSubTab = tab);
   }
 
   @override
@@ -104,25 +99,17 @@ class _PgcPageState extends State<PgcPage>
               surface: true,
             ),
           ),
-          // 分类内容区（懒加载 IndexedStack 保留各自滚动位置与状态）
+          // 分类内容区：跟手翻页，每类保活（滚动位置与数据切走后保留）
           Expanded(
-            // 左右滑动内容区切换二级分类（与分类条点击同源）。
-            child: AppTabSwipeArea(
+            child: AppTabPager(
               index: _selectedSubTab.index,
-              count: PgcSubTab.values.length,
-              onSelected: (index) => _selectSubTab(PgcSubTab.values[index]),
-              child: IndexedStack(
-                index: _selectedSubTab.index,
-                children: PgcSubTab.values.map((tab) {
-                  if (!_visitedTabs.contains(tab)) {
-                    return const SizedBox.shrink();
-                  }
-                  return switch (tab) {
-                    PgcSubTab.myFollow => const _MyFollowBangumiView(),
-                    PgcSubTab.hot => const _HotBangumiView(),
-                  };
-                }).toList(),
-              ),
+              pageCount: PgcSubTab.values.length,
+              onChanged: (index) => _selectSubTab(PgcSubTab.values[index]),
+              pageKey: (index) => PgcSubTab.values[index],
+              builder: (context, index) => switch (PgcSubTab.values[index]) {
+                PgcSubTab.myFollow => const _MyFollowBangumiView(),
+                PgcSubTab.hot => const _HotBangumiView(),
+              },
             ),
           ),
         ],

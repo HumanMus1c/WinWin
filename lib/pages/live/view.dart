@@ -57,7 +57,6 @@ class _LivePageState extends State<LivePage>
     with AutomaticKeepAliveClientMixin {
   late List<LiveCategoryTab> _tabs;
   int _selectedIndex = 0;
-  final Set<int> _visitedIndices = {0};
 
   @override
   bool get wantKeepAlive => true;
@@ -99,7 +98,6 @@ class _LivePageState extends State<LivePage>
         setState(() {
           _tabs = newTabs;
           _selectedIndex = newIndex;
-          _visitedIndices.add(newIndex);
         });
       }
     }
@@ -108,10 +106,7 @@ class _LivePageState extends State<LivePage>
   /// 切换二级分类（点击分类条与左右滑动共用的唯一入口）。
   void _selectTab(int index) {
     if (_selectedIndex == index) return;
-    setState(() {
-      _selectedIndex = index;
-      _visitedIndices.add(index);
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
@@ -128,29 +123,23 @@ class _LivePageState extends State<LivePage>
         children: [
           // 二级分类器胶囊栏（固定吸顶、容器随标签收缩）
           _buildSubTabBar(),
-          // 分类内容区（懒加载 IndexedStack 保留各自滚动位置与状态）
+          // 分类内容区：跟手翻页，每类保活（滚动位置与数据切走后保留）
           Expanded(
-            // 左右滑动内容区切换二级分类（与分类条点击同源）。
-            child: AppTabSwipeArea(
+            child: AppTabPager(
               index: _selectedIndex,
-              count: _tabs.length,
-              onSelected: _selectTab,
-              child: IndexedStack(
-                index: _selectedIndex,
-                children: List.generate(_tabs.length, (i) {
-                  if (!_visitedIndices.contains(i)) {
-                    return const SizedBox.shrink();
-                  }
-                  final tab = _tabs[i];
-                  if (tab.isFollow) {
-                    return const _LiveFollowSubView();
-                  }
-                  return _LiveAreaSubView(
-                    key: ValueKey(tab.id),
-                    parentAreaId: tab.id,
-                  );
-                }),
-              ),
+              pageCount: _tabs.length,
+              onChanged: _selectTab,
+              pageKey: (index) => _tabs[index].id,
+              builder: (context, index) {
+                final tab = _tabs[index];
+                if (tab.isFollow) {
+                  return const _LiveFollowSubView();
+                }
+                return _LiveAreaSubView(
+                  key: ValueKey(tab.id),
+                  parentAreaId: tab.id,
+                );
+              },
             ),
           ),
         ],

@@ -1168,78 +1168,137 @@ class _AppTabBodyState extends State<AppTabBody> {
   }
 }
 
-/// 分类型 TAB 页的左右滑动切换手势。
+/// 分类型 TAB 页的跟手翻页容器（`PageView.builder` + 页面保活）。
 ///
-/// 与 [AppTabBody] 的分工：这类页面的分类由服务端下发或数量会变，内容区是
-/// 单个 `IndexedStack` / 按分类重新请求的列表，无法直接换成 PageView；本组件
-/// 在内容区外层监听水平拖动，滑过阈值（或甩动速度达标）即切到相邻分类。
+/// 用于分类数量/顺序可变、内容按分类单独构建的页面（首页、历史、直播、
+/// 番剧首页、消息中心）。与 [AppTabBody] 的差异：
+/// - 页面按需构建（[builder]），滑到相邻分类时才实例化并保留状态；
+/// - 点击跨越多页时直接跳转，不经过中间页（避免连带构建与请求）。
 ///
-/// 手势只注册在本层，不改变子树的 `ScrollBehavior`：内容区内部若有横向滚动
-/// 视图（横滑卡片列表等），内层会先赢得手势竞技，本组件不会抢走它们。
-class AppTabSwipeArea extends StatefulWidget {
-  const AppTabSwipeArea({
+/// 手势翻页由 [PageView] 原生承担（跟手平移，与 [AppTabBody] 同款转场）；
+/// 每页用 [AutomaticKeepAliveClientMixin] 包装，滑出视口后不销毁，
+/// 滚动位置与已加载数据保留，回滑时无重建闪烁。
+class AppTabPager extends StatefulWidget {
+  const AppTabPager({
     super.key,
     required this.index,
-    required this.count,
-    required this.onSelected,
-    required this.child,
+    required this.pageCount,
+    required this.onChanged,
+    required this.builder,
+    this.pageKey,
   });
 
   /// 当前选中索引。
   final int index;
 
-  /// 分类总数。
-  final int count;
+  /// 页面总数。
+  final int pageCount;
 
-  /// 切到相邻分类时回调目标索引。
-  final ValueChanged<int> onSelected;
+  /// 手势滑过半页时回报目标索引（点击/程序化切换不会回调）。
+  final ValueChanged<int> onChanged;
 
-  /// 内容区。
-  final Widget child;
+  /// 每页内容构建器。
+  final Widget Function(BuildContext context, int index) builder;
 
-  /// 触发切换所需的水平拖动距离（逻辑像素）。
-  static const double swipeDistance = 70;
-
-  /// 触发切换所需的水平甩动速度（逻辑像素/秒）。
-  static const double swipeVelocity = 320;
+  /// 每页稳定标识（用于保活包装的 Key）。
+  ///
+  /// 分类顺序可能变化（直播分区热更新、历史服务端下发），按业务键而非
+  /// index 绑定页面状态，避免状态错位。
+  final Object Function(int index)? pageKey;
 
   @override
-  State<AppTabSwipeArea> createState() => _AppTabSwipeAreaState();
+  State<AppTabPager> createState() => _AppTabPagerState();
 }
 
-class _AppTabSwipeAreaState extends State<AppTabSwipeArea> {
-  /// 本次水平拖动累计位移（向右为正）。
-  double _dx = 0;
+class _AppTabPagerState extends State<AppTabPager> {
+  static const Duration _switchDuration = Duration(milliseconds: 250);
 
-  void _onDragStart(DragStartDetails _) => _dx = 0;
+  late final PageController _controller;
+  late int _page;
 
-  void _onDragUpdate(DragUpdateDetails details) => _dx += details.delta.dx;
+  /// 程序化切页动画进行中：忽略 [PageView.onPageChanged] 的中间页回报。
+  bool _animating = false;
 
-  void _onDragEnd(DragEndDetails details) {
-    final dx = _dx;
-    final velocity = details.primaryVelocity ?? 0;
-    _dx = 0;
-    final hasDistance = dx.abs() >= AppTabSwipeArea.swipeDistance;
-    final hasVelocity = velocity.abs() >= AppTabSwipeArea.swipeVelocity;
-    if (!hasDistance && !hasVelocity) return;
-    // 向右拖 → 上一项；向左拖 → 下一项（与 PageView 的翻页方向一致）。
-    final delta = (hasDistance ? dx : velocity) < 0 ? 1 : -1;
-    final target = widget.index + delta;
-    if (target < 0 || target >= widget.count) return;
-    widget.onSelected(target);
+  @override
+  void initState() {
+    super.initState();
+    _page = _clamp(widget.index);
+    _controller = PageController(initialPage: _page);
+  }
+
+  @override
+  void didUpdateWidget(covariant AppTabPager oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final target = _clamp(widget.index);
+    if (target == _page) return;
+    final distance = (target - _page).abs();
+    _page = target;
+    if (!_controller.hasClients) return;
+    if (distance > 1) {
+      // 跨多页：直接跳转，不经过中间页（避免连带构建与请求）。
+      _controller.jumpToPage(target);
+      return;
+    }
+    _animating = true;
+    _controller
+        .animateToPage(
+          target,
+          duration: _switchDuration,
+          curve: Curves.easeOutCubic,
+        )
+        .whenComplete(() => _animating = false);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  int _clamp(int index) {
+    if (widget.pageCount <= 0) return 0;
+    return index.clamp(0, widget.pageCount - 1);
+  }
+
+  void _onPageChanged(int index) {
+    if (_animating) return;
+    _page = index;
+    widget.onChanged(index);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.count <= 1) return widget.child;
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onHorizontalDragStart: _onDragStart,
-      onHorizontalDragUpdate: _onDragUpdate,
-      onHorizontalDragEnd: _onDragEnd,
-      onHorizontalDragCancel: () => _dx = 0,
-      child: widget.child,
+    return PageView.builder(
+      controller: _controller,
+      onPageChanged: _onPageChanged,
+      itemCount: widget.pageCount,
+      itemBuilder: (context, index) => _AppTabPageKeepAlive(
+        key: ValueKey(widget.pageKey?.call(index) ?? index),
+        child: widget.builder(context, index),
+      ),
     );
+  }
+}
+
+/// PageView 子页保活包装：滑出视口后不销毁页面 State。
+class _AppTabPageKeepAlive extends StatefulWidget {
+  const _AppTabPageKeepAlive({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<_AppTabPageKeepAlive> createState() => _AppTabPageKeepAliveState();
+}
+
+class _AppTabPageKeepAliveState extends State<_AppTabPageKeepAlive>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
 

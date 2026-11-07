@@ -495,7 +495,7 @@ class SessionFilterCategory {
 /// 会话分类（顺序即分类栏顺序）。
 ///
 /// 公开给宿主页用：左右滑动切换分类时需按 [type] ↔ 索引换算
-/// （见 [SessionFilterBar] 与消息页的 [AppTabSwipeArea] 接线）。
+/// （见 [SessionFilterBar] 与消息页的 [AppTabPager] 接线）。
 const kSessionFilterCategories = <SessionFilterCategory>[
   SessionFilterCategory('全部', 4),
   SessionFilterCategory('特别关注', kSpecialSessionFilterType),

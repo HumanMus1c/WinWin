@@ -97,10 +97,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedCategory = 0;
 
-  /// 已访问过的 tab 索引集合 — 懒加载：首次切到某 tab 才创建其 Widget，
-  /// 避免启动时一次性触发所有 tab 的 HTTP 请求。
-  final Set<int> _visitedTabs = {0};
-
   /// 是否处于「顶栏就地扩充」的搜索态。
   bool _searchMode = false;
 
@@ -235,36 +231,25 @@ class _HomePageState extends State<HomePage> {
   /// 切换一级分类（点击分类条与左右滑动共用的唯一入口）。
   void _selectCategory(int index) {
     if (_selectedCategory == index) return;
-    setState(() {
-      _selectedCategory = index;
-      _visitedTabs.add(index);
-    });
+    setState(() => _selectedCategory = index);
   }
 
-  /// 按当前选中的分类 tab 渲染内容。使用 [IndexedStack] 保留各 tab 的滚动位置与已加载数据。
-  /// 未访问过的 tab 返回 [SizedBox.shrink] 占位，首次切到时才实例化对应页面。
+  /// 按当前选中的分类 tab 渲染内容。使用 [AppTabPager] 按需构建各分类页：
+  /// 首次滑到某分类时才实例化（避免启动时一次性触发所有分类的 HTTP 请求），
+  /// 页面保活后滚动位置与已加载数据在切走后保留。
   Widget _buildContent() {
-    final content = IndexedStack(
+    return AppTabPager(
       index: _selectedCategory,
-      children: List.generate(HomeTabType.defaultOrder.length, (i) {
-        if (!_visitedTabs.contains(i)) {
-          return const SizedBox.shrink();
-        }
-        return switch (HomeTabType.defaultOrder[i]) {
-          HomeTabType.recommend => const RcmdPage(),
-          HomeTabType.follow => const FollowPage(),
-          HomeTabType.hot => const HotPage(),
-          HomeTabType.bangumi => const PgcPage(),
-          HomeTabType.live => const LivePage(),
-        };
-      }),
-    );
-    // 左右滑动内容区切换一级分类（与分类条点击同源，保留各分类滚动状态）。
-    return AppTabSwipeArea(
-      index: _selectedCategory,
-      count: HomeTabType.defaultOrder.length,
-      onSelected: _selectCategory,
-      child: content,
+      pageCount: HomeTabType.defaultOrder.length,
+      onChanged: _selectCategory,
+      pageKey: (index) => HomeTabType.defaultOrder[index],
+      builder: (context, index) => switch (HomeTabType.defaultOrder[index]) {
+        HomeTabType.recommend => const RcmdPage(),
+        HomeTabType.follow => const FollowPage(),
+        HomeTabType.hot => const HotPage(),
+        HomeTabType.bangumi => const PgcPage(),
+        HomeTabType.live => const LivePage(),
+      },
     );
   }
 

@@ -67,6 +67,9 @@ class _HistoryTabState {
 
   /// 是否已完成过一次**成功**加载（切回该分类时据此判断是否需重新请求）。
   bool loaded = false;
+
+  /// 该分类页是否已发起过一次加载（[AppTabPager] 首次构建该页时触发）。
+  bool started = false;
 }
 
 class HistoryPage extends StatefulWidget {
@@ -77,7 +80,8 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  final ScrollController _scrollController = ScrollController();
+  /// 各分类独立的滚动控制器（[AppTabPager] 每页保活，滚动位置互不影响）。
+  final Map<String, ScrollController> _scrollControllers = {};
 
   /// 当前分类（官方 `type`：all/archive/live/article）。
   String _type = 'all';
@@ -94,15 +98,24 @@ class _HistoryPageState extends State<HistoryPage> {
   /// 演示模式：上次追加行的滚动位置（需继续滚动约半屏后才再追加）。
   double _demoLastAppendAt = double.negativeInfinity;
 
-  _HistoryTabState get _state =>
-      _tabStates.putIfAbsent(_type, _HistoryTabState.new);
+  _HistoryTabState get _state => _stateOf(_type);
+
+  _HistoryTabState _stateOf(String type) =>
+      _tabStates.putIfAbsent(type, _HistoryTabState.new);
+
+  /// 分类对应的滚动控制器（首次取用时创建并挂载滚动监听）。
+  ScrollController _scrollControllerFor(String type) =>
+      _scrollControllers.putIfAbsent(type, () {
+        final controller = ScrollController();
+        controller.addListener(() => _onScroll(type));
+        return controller;
+      });
 
   @override
   void initState() {
     super.initState();
     AccountService().addListener(_onAccountChanged);
-    _scrollController.addListener(_onScroll);
-    _load(refresh: true);
+    _load('all', refresh: true);
     // 演示模式切换时重建（骨架即时生效）。
     Pref.demoModeNotifier.addListener(_onDemoChanged);
   }
@@ -111,7 +124,7 @@ class _HistoryPageState extends State<HistoryPage> {
     if (!mounted) return;
     setState(() {});
     if (!Pref.demoMode && _state.items.isEmpty) {
-      _load(refresh: true);
+      _load(_type, refresh: true);
     }
   }
 
@@ -119,15 +132,16 @@ class _HistoryPageState extends State<HistoryPage> {
   void dispose() {
     AccountService().removeListener(_onAccountChanged);
     Pref.demoModeNotifier.removeListener(_onDemoChanged);
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
+    for (final controller in _scrollControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   void _onAccountChanged() {
     if (!mounted) return;
     if (AccountService().isLogin) {
-      _load(refresh: true);
+      _load(_type, refresh: true);
     } else {
       setState(() {
         _tabStates.clear();
@@ -140,35 +154,31 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  /// 切换分类：命中缓存则直接展示，否则首次拉取。
+  /// 切换分类（内容由 [AppTabPager] 承载；首次进入该分类页时才请求数据）。
   void _switchType(String type) {
     if (_type == type) return;
     setState(() => _type = type);
-    final s = _state;
-    if (!s.loaded) {
-      _load(refresh: true);
-    } else {
-      _checkAutoLoad();
-    }
   }
 
-  void _checkAutoLoad() {
+  void _checkAutoLoad(String type) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final s = _state;
+      final s = _stateOf(type);
       if (!s.hasMore || s.loading || s.isLoadingMore) return;
-      if (_scrollController.hasClients &&
-          _scrollController.position.hasContentDimensions) {
-        final pos = _scrollController.position;
+      final controller = _scrollControllerFor(type);
+      if (controller.hasClients &&
+          controller.position.hasContentDimensions) {
+        final pos = controller.position;
         if (pos.maxScrollExtent <= 0) {
-          _load();
+          _load(type);
         }
       }
     });
   }
 
-  Future<void> _load({bool refresh = false}) async {
-    final s = _state;
+  Future<void> _load(String type, {bool refresh = false}) async {
+    final s = _stateOf(type);
+    s.started = true;
     // 演示模式：不拉取云端列表（滚动追加在 _onScroll 中本地处理）。
     if (Pref.demoMode) {
       s.loading = false;
@@ -205,13 +215,13 @@ class _HistoryPageState extends State<HistoryPage> {
 
     AppLogger.d(
       'HistoryPage',
-      'Loading history type: $_type max: ${s.max}, viewAt: ${s.viewAt}',
+      'Loading history type: $type max: ${s.max}, viewAt: ${s.viewAt}',
     );
     // 视口预算：历史卡片为 VideoCardH 宫格，冷启动首批最多 2 屏、
     // 滚动补批最多 1 屏；小窗口下自动收紧每页条数。
     final visibleItems = ViewportLoadBudget.visibleGridItems(
       viewportExtent: ViewportLoadBudget.viewportExtentOf(
-        _scrollController,
+        _scrollControllerFor(type),
         reservedHeight: 160,
       ),
       viewportWidth: ViewportLoadBudget.windowLogicalWidth - 24,
@@ -224,7 +234,7 @@ class _HistoryPageState extends State<HistoryPage> {
       firstPage: refresh || s.max == null,
     );
     final res = await HistoryHttp.historyList(
-      type: _type,
+      type: type,
       max: s.max,
       viewAt: s.viewAt,
       ps: pageSize,
@@ -242,7 +252,7 @@ class _HistoryPageState extends State<HistoryPage> {
           if (response.list != null) s.items.addAll(response.list!);
           // 分类栏仅由 `all` 首次刷新时捕获（官方仅在默认分类下发 tab）。
           if (refresh &&
-              _type == 'all' &&
+              type == 'all' &&
               response.tab != null &&
               response.tab!.isNotEmpty) {
             _tabs = response.tab!;
@@ -263,7 +273,7 @@ class _HistoryPageState extends State<HistoryPage> {
             s.hasMore = false;
           }
         });
-        _checkAutoLoad();
+        _checkAutoLoad(type);
       case Error(:final errMsg):
         AppLogger.e('HistoryPage', 'Load failed: $errMsg');
         setState(() {
@@ -278,12 +288,12 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  void _onScroll() {
-    final s = _state;
+  void _onScroll(String type) {
+    final s = _stateOf(type);
     if (!s.hasMore || s.loading || s.isLoadingMore) return;
-    if (_scrollController.hasClients &&
-        _scrollController.position.hasContentDimensions) {
-      final pos = _scrollController.position;
+    final controller = _scrollControllerFor(type);
+    if (controller.hasClients && controller.position.hasContentDimensions) {
+      final pos = controller.position;
       if (pos.pixels >= pos.maxScrollExtent - 300) {
         // 演示模式：滚动仅本地追加"一行"（数量=视口列数），不请求云端。
         if (Pref.demoMode) {
@@ -295,7 +305,7 @@ class _HistoryPageState extends State<HistoryPage> {
           setState(() => _demoExtra += perRow);
           return;
         }
-        _load();
+        _load(type);
       }
     }
   }
@@ -519,36 +529,47 @@ class _HistoryPageState extends State<HistoryPage> {
 
   /// 正文：分类栏 + 内容区（分类未下发或演示模式下退化为纯内容）。
   Widget _buildContent(BuildContext context) {
-    final content = _state.loading && _state.items.isEmpty
-        ? _buildSkeleton()
-        : _state.error != null && _state.items.isEmpty
-        ? _buildError()
-        : _state.items.isEmpty
-        ? AppEmptyState(
-            icon: AppIcon(AppIcons.history(selected: false)),
-            title: '暂无观看记录',
-            subtitle: '看过的视频会出现在这里',
-          )
-        : _buildList();
-
     final entries = _tabEntries;
-    if (entries.isEmpty) return content;
+    if (entries.isEmpty) return _buildTabPage('all');
     final selected = entries.indexWhere((entry) => entry.type == _type);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTabBar(context, entries),
         Expanded(
-          // 左右滑动内容区切换分类（与分类条点击同源）。
-          child: AppTabSwipeArea(
+          // 跟手翻页：每类独立页面并保活，转场与评论区/相关推荐一致。
+          child: AppTabPager(
             index: selected < 0 ? 0 : selected,
-            count: entries.length,
-            onSelected: (index) => _switchType(entries[index].type),
-            child: content,
+            pageCount: entries.length,
+            onChanged: (index) => _switchType(entries[index].type),
+            pageKey: (index) => entries[index].type,
+            builder: (context, index) => _buildTabPage(entries[index].type),
           ),
         ),
       ],
     );
+  }
+
+  /// 单个分类页内容（[AppTabPager] 首次构建该页时发起首屏请求）。
+  Widget _buildTabPage(String type) {
+    final s = _stateOf(type);
+    if (!s.started) {
+      // 页面首次滑入：标记并在本帧后发请求（不阻塞首帧布局）。
+      s.started = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _load(type, refresh: true);
+      });
+    }
+    if (s.loading && s.items.isEmpty) return _buildSkeleton(type);
+    if (s.error != null && s.items.isEmpty) return _buildError(type, s);
+    if (s.items.isEmpty) {
+      return AppEmptyState(
+        icon: AppIcon(AppIcons.history(selected: false)),
+        title: '暂无观看记录',
+        subtitle: '看过的视频会出现在这里',
+      );
+    }
+    return _buildList(type, s);
   }
 
   /// 分类胶囊栏：`全部` + 服务端下发分类（对齐上游 PiliPlus）。
@@ -576,13 +597,12 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  /// 内容列表（当前分类）。
-  Widget _buildList() {
-    final s = _state;
+  /// 内容列表（指定分类）。
+  Widget _buildList(String type, _HistoryTabState s) {
     return NotificationListener<ScrollNotification>(
       onNotification: (n) {
         if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
-          _onScroll();
+          _onScroll(type);
         }
         return false;
       },
@@ -590,9 +610,9 @@ class _HistoryPageState extends State<HistoryPage> {
         displacement: 40.0,
         strokeWidth: 2.5,
         color: biliPink,
-        onRefresh: () => _load(refresh: true),
+        onRefresh: () => _load(type, refresh: true),
         child: CustomScrollView(
-          controller: _scrollController,
+          controller: _scrollControllerFor(type),
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverPadding(
@@ -653,7 +673,7 @@ class _HistoryPageState extends State<HistoryPage> {
         .ceil()
         .clamp(3, 12);
     return CustomScrollView(
-      controller: _scrollController,
+      controller: _scrollControllerFor('all'),
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverPadding(
@@ -682,13 +702,14 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  Widget _buildSkeleton() {
+  Widget _buildSkeleton(String type) {
     return AppRefreshIndicator(
       displacement: 40.0,
       strokeWidth: 2.5,
       color: biliPink,
-      onRefresh: () => _load(refresh: true),
+      onRefresh: () => _load(type, refresh: true),
       child: CustomScrollView(
+        controller: _scrollControllerFor(type),
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverPadding(
@@ -709,8 +730,8 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   /// 错误/未登录态：未登录用语义空态，其余用统一错误态（含重试）。
-  Widget _buildError() {
-    final err = _state.error;
+  Widget _buildError(String type, _HistoryTabState s) {
+    final err = s.error;
     if (err == '请先登录') {
       return AppEmptyState(
         icon: AppIcon(AppIcons.profile()),
@@ -720,7 +741,7 @@ class _HistoryPageState extends State<HistoryPage> {
     }
     return AppErrorState(
       message: err ?? '加载失败',
-      onRetry: () => _load(refresh: true),
+      onRetry: () => _load(type, refresh: true),
     );
   }
 }

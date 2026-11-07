@@ -36,13 +36,19 @@ class WhisperPage extends StatefulWidget {
 
 class _WhisperPageState extends State<WhisperPage>
     with AutomaticKeepAliveClientMixin {
-  final GlobalKey<SessionListSectionState> _sessionListKey =
-      GlobalKey<SessionListSectionState>();
+  /// 各分类会话列表的 Key（[AppTabPager] 每页一个独立列表实例）。
+  final Map<int, GlobalKey<SessionListSectionState>> _sessionListKeys = {};
   LoadingState<Map<String, dynamic>> _unreadState = LoadingState.loading();
   bool _loading = false;
 
   /// 会话筛选类型（服务端 `session_type`）——由顶部「分类栏」选定，下传列表区。
   int _sessionType = 4;
+
+  GlobalKey<SessionListSectionState> _sessionKeyFor(int type) =>
+      _sessionListKeys.putIfAbsent(
+        type,
+        () => GlobalKey<SessionListSectionState>(),
+      );
 
   @override
   bool get wantKeepAlive => true;
@@ -169,22 +175,27 @@ class _WhisperPageState extends State<WhisperPage>
               onRefresh: () async {
                 await Future.wait([
                   _load(),
-                  _sessionListKey.currentState?.reload() ?? Future.value(),
+                  _sessionKeyFor(_sessionType).currentState?.reload() ??
+                      Future.value(),
                 ]);
               },
-              // 左右滑动会话列表切换分类（与分类条点击同源）。
-              child: AppTabSwipeArea(
+              // 跟手翻页：每类会话列表独立实例并保活（转场与评论区/相关推荐一致）。
+              child: AppTabPager(
                 index: selectedFilter < 0 ? 0 : selectedFilter,
-                count: kSessionFilterCategories.length,
-                onSelected: (index) => _selectSessionType(
+                pageCount: kSessionFilterCategories.length,
+                onChanged: (index) => _selectSessionType(
                   kSessionFilterCategories[index].type,
                 ),
-                child: SessionListSection(
-                  key: _sessionListKey,
-                  sessionType: _sessionType,
-                  topInset: _headerHeight ?? _headerReserve,
-                  onRefreshUnread: () => _clearDmUnread(),
-                ),
+                pageKey: (index) => kSessionFilterCategories[index].type,
+                builder: (context, index) {
+                  final category = kSessionFilterCategories[index];
+                  return SessionListSection(
+                    key: _sessionKeyFor(category.type),
+                    sessionType: category.type,
+                    topInset: _headerHeight ?? _headerReserve,
+                    onRefreshUnread: () => _clearDmUnread(),
+                  );
+                },
               ),
             ),
           ),
