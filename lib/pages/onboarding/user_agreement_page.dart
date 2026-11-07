@@ -7,6 +7,7 @@ import 'package:winwin/ui/components/app_components.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 
 /// 用户协议门禁页（移植自 BiliPai v0.2.3-beta.3 `OnboardingScreen`）。
 ///
@@ -63,7 +64,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                     color: cs.primary,
                   ),
                   const SizedBox(height: 12),
-                  Text(
+                  AppSelectableText(
                     '欢迎使用 WinWin',
                     textAlign: TextAlign.center,
                     style: tokens.text.headlineSmall?.copyWith(
@@ -71,7 +72,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  AppSelectableText(
                     '开始之前，请阅读并确认以下条款',
                     textAlign: TextAlign.center,
                     style: tokens.text.bodyMedium?.copyWith(
@@ -117,7 +118,7 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Text(
+                  AppSelectableText(
                     '未勾选全部条款时无法继续；选择「我不同意」将退出应用。',
                     textAlign: TextAlign.center,
                     style: tokens.text.labelSmall?.copyWith(

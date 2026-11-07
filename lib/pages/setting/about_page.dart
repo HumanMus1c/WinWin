@@ -11,6 +11,7 @@ import 'package:winwin/common/widgets/app_dialog_shell.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 
 /// 关于页面。
 ///
@@ -63,14 +64,14 @@ class AboutPage extends StatelessWidget {
             semanticLabel: 'Flutter 官方 Logo',
           ),
           const SizedBox(height: Style.md),
-          Text(
+          AppSelectableText(
             'WinWin',
             style: tokens.text.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: Style.xs),
-          Text(
+          AppSelectableText(
             'PiliPlus + BiliPai',
             style: tokens.text.bodySmall?.copyWith(
               color: tokens.colors.outline,
@@ -79,7 +80,7 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: Style.sm),
           FutureBuilder<PackageInfo>(
             future: _packageInfo,
-            builder: (context, snapshot) => Text(
+            builder: (context, snapshot) => AppSelectableText(
               _formatVersion(snapshot.data),
               style: tokens.text.bodySmall?.copyWith(
                 color: tokens.colors.outline,

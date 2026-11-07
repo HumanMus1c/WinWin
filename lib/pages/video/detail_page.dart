@@ -63,6 +63,7 @@ import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 
 /// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
@@ -1521,14 +1522,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          AppSelectableText(
             widget.bvid,
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: tokens.text.headlineSmall,
           ),
           const SizedBox(height: Style.sm),
-          Text(
+          AppSelectableText(
             _friendlyVideoError(code, errMsg),
             style: TextStyle(
               fontSize: 13,
@@ -1536,7 +1536,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
             ),
           ),
           const SizedBox(height: Style.sm),
-          Text(
+          AppSelectableText(
             '稿件信息加载失败，评论与互动暂不可用',
             style: TextStyle(
               fontSize: 12,
@@ -1722,7 +1722,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     final desc = (data.desc ?? '').trim();
     return _card(
       margin: const EdgeInsets.only(top: Style.md),
-      child: Text(
+      child: AppSelectableText(
         desc.isEmpty ? '简介为空' : desc,
         style: TextStyle(
           fontSize: 13,

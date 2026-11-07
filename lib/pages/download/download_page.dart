@@ -19,6 +19,7 @@ import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
+import 'package:winwin/ui/components/app_selectable_text.dart';
 
 /// 打开离线缓存页面。
 void showDownloadPage(BuildContext context) {
@@ -173,7 +174,7 @@ class _DownloadPageState extends State<DownloadPage> {
                           ],
                         ),
                         const SizedBox(height: 10),
-                        Text(
+                        AppSelectableText(
                           '当前占用：$_cacheSizeStr',
                           style: tokens.text.bodyMedium?.copyWith(
                             color: cs.onSurface,
@@ -181,13 +182,12 @@ class _DownloadPageState extends State<DownloadPage> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
+                        AppSelectableText(
                           '存放路径：$_cachePath',
                           style: tokens.text.bodySmall?.copyWith(
                             color: cs.outline,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
