@@ -145,6 +145,8 @@ class _WhisperPageState extends State<WhisperPage>
   Widget build(BuildContext context) {
     super.build(context);
     final tokens = AppThemeHost.of(context);
+    final selectedFilter =
+        kSessionFilterCategories.indexWhere((c) => c.type == _sessionType);
     // 面板高度由内容自撑，用预算常量估高/估矮都会露馅：首帧后实测回填
     // （回调内 setState 仅在高度变化时触发，收敛后不再重建）。
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureHeader());
@@ -170,11 +172,19 @@ class _WhisperPageState extends State<WhisperPage>
                   _sessionListKey.currentState?.reload() ?? Future.value(),
                 ]);
               },
-              child: SessionListSection(
-                key: _sessionListKey,
-                sessionType: _sessionType,
-                topInset: _headerHeight ?? _headerReserve,
-                onRefreshUnread: () => _clearDmUnread(),
+              // 左右滑动会话列表切换分类（与分类条点击同源）。
+              child: AppTabSwipeArea(
+                index: selectedFilter < 0 ? 0 : selectedFilter,
+                count: kSessionFilterCategories.length,
+                onSelected: (index) => _selectSessionType(
+                  kSessionFilterCategories[index].type,
+                ),
+                child: SessionListSection(
+                  key: _sessionListKey,
+                  sessionType: _sessionType,
+                  topInset: _headerHeight ?? _headerReserve,
+                  onRefreshUnread: () => _clearDmUnread(),
+                ),
               ),
             ),
           ),

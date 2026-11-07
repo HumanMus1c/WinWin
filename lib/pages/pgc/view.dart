@@ -66,6 +66,15 @@ class _PgcPageState extends State<PgcPage>
     _visitedTabs = {_selectedSubTab};
   }
 
+  /// 切换二级分类（点击分类条与左右滑动共用的唯一入口）。
+  void _selectSubTab(PgcSubTab tab) {
+    if (_selectedSubTab == tab) return;
+    setState(() {
+      _selectedSubTab = tab;
+      _visitedTabs.add(tab);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -87,14 +96,8 @@ class _PgcPageState extends State<PgcPage>
             child: AppTabStrip(
               tabs: [for (final tab in PgcSubTab.values) tab.label],
               selectedIndex: _selectedSubTab.index,
-              onSelected: (index) {
-                final tab = PgcSubTab.values[index];
-                if (_selectedSubTab == tab) return;
-                setState(() {
-                  _selectedSubTab = tab;
-                  _visitedTabs.add(tab);
-                });
-              },
+              onSelected: (index) =>
+                  _selectSubTab(PgcSubTab.values[index]),
               // 外框总高 = 34 + 4×2 = 42，与动态页 / 历史页 TAB 栏同高同材质。
               railHeight: 34,
               wideHeight: 34,
@@ -103,17 +106,23 @@ class _PgcPageState extends State<PgcPage>
           ),
           // 分类内容区（懒加载 IndexedStack 保留各自滚动位置与状态）
           Expanded(
-            child: IndexedStack(
+            // 左右滑动内容区切换二级分类（与分类条点击同源）。
+            child: AppTabSwipeArea(
               index: _selectedSubTab.index,
-              children: PgcSubTab.values.map((tab) {
-                if (!_visitedTabs.contains(tab)) {
-                  return const SizedBox.shrink();
-                }
-                return switch (tab) {
-                  PgcSubTab.myFollow => const _MyFollowBangumiView(),
-                  PgcSubTab.hot => const _HotBangumiView(),
-                };
-              }).toList(),
+              count: PgcSubTab.values.length,
+              onSelected: (index) => _selectSubTab(PgcSubTab.values[index]),
+              child: IndexedStack(
+                index: _selectedSubTab.index,
+                children: PgcSubTab.values.map((tab) {
+                  if (!_visitedTabs.contains(tab)) {
+                    return const SizedBox.shrink();
+                  }
+                  return switch (tab) {
+                    PgcSubTab.myFollow => const _MyFollowBangumiView(),
+                    PgcSubTab.hot => const _HotBangumiView(),
+                  };
+                }).toList(),
+              ),
             ),
           ),
         ],

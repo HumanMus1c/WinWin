@@ -484,6 +484,29 @@ class SessionListSectionState extends State<SessionListSection> {
 /// 特别关注筛选类的客户端标记（非服务端 session_type）。
 const kSpecialSessionFilterType = -10;
 
+/// 会话分类项（顺序即分类栏顺序）。
+class SessionFilterCategory {
+  const SessionFilterCategory(this.label, this.type);
+
+  final String label;
+  final int type;
+}
+
+/// 会话分类（顺序即分类栏顺序）。
+///
+/// 公开给宿主页用：左右滑动切换分类时需按 [type] ↔ 索引换算
+/// （见 [SessionFilterBar] 与消息页的 [AppTabSwipeArea] 接线）。
+const kSessionFilterCategories = <SessionFilterCategory>[
+  SessionFilterCategory('全部', 4),
+  SessionFilterCategory('特别关注', kSpecialSessionFilterType),
+  SessionFilterCategory('关注', 9),
+  SessionFilterCategory('未关注', 2),
+  SessionFilterCategory('陌生人', 8),
+  SessionFilterCategory('粉丝团', 3),
+  SessionFilterCategory('拦截', 5),
+  SessionFilterCategory('系统', 7),
+];
+
 /// 会话分类栏（筛选 chips）。
 ///
 /// 由宿主页（消息页）的**浮动毛玻璃合并栏**承载，故本身不持有筛选状态：
@@ -501,7 +524,8 @@ class SessionFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selected = _categories.indexWhere((c) => c.type == selectedType);
+    final selected =
+        kSessionFilterCategories.indexWhere((c) => c.type == selectedType);
     return Align(
       // 胶囊容器随标签收缩，统一左对齐落位。
       alignment: AlignmentDirectional.centerStart,
@@ -509,9 +533,10 @@ class SessionFilterBar extends StatelessWidget {
         // 与合并栏内互动入口行的水平内距同源（Style.md），两行左缘对齐。
         padding: const EdgeInsets.symmetric(horizontal: Style.md),
         child: AppTabStrip(
-          tabs: [for (final c in _categories) c.label],
+          tabs: [for (final c in kSessionFilterCategories) c.label],
           selectedIndex: selected < 0 ? 0 : selected,
-          onSelected: (index) => onSelected(_categories[index].type),
+          onSelected: (index) =>
+              onSelected(kSessionFilterCategories[index].type),
           // 分类条已并入宿主合并栏：不再自绘悬浮容器（无独立描边与投影），
           // 整块面板只有一层轮廓/一层阴影。
           railHeight: 34,
@@ -521,23 +546,6 @@ class SessionFilterBar extends StatelessWidget {
       ),
     );
   }
-}
-
-const _categories = <_Category>[
-  _Category('全部', 4),
-  _Category('特别关注', kSpecialSessionFilterType),
-  _Category('关注', 9),
-  _Category('未关注', 2),
-  _Category('陌生人', 8),
-  _Category('粉丝团', 3),
-  _Category('拦截', 5),
-  _Category('系统', 7),
-];
-
-class _Category {
-  const _Category(this.label, this.type);
-  final String label;
-  final int type;
 }
 
 /// 会话列表项。

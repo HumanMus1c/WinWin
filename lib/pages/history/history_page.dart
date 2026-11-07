@@ -508,6 +508,15 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
+  /// 分类项：`全部` + 服务端下发分类（顺序与分类条一致）。
+  List<({String type, String label})> get _tabEntries =>
+      <({String type, String label})>[
+        (type: 'all', label: '全部'),
+        for (final t in _tabs)
+          if (t.type != null && t.type!.isNotEmpty && t.name != null)
+            (type: t.type!, label: t.name!),
+      ];
+
   /// 正文：分类栏 + 内容区（分类未下发或演示模式下退化为纯内容）。
   Widget _buildContent(BuildContext context) {
     final content = _state.loading && _state.items.isEmpty
@@ -522,12 +531,22 @@ class _HistoryPageState extends State<HistoryPage> {
           )
         : _buildList();
 
-    if (_tabs.isEmpty) return content;
+    final entries = _tabEntries;
+    if (entries.isEmpty) return content;
+    final selected = entries.indexWhere((entry) => entry.type == _type);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildTabBar(context),
-        Expanded(child: content),
+        _buildTabBar(context, entries),
+        Expanded(
+          // 左右滑动内容区切换分类（与分类条点击同源）。
+          child: AppTabSwipeArea(
+            index: selected < 0 ? 0 : selected,
+            count: entries.length,
+            onSelected: (index) => _switchType(entries[index].type),
+            child: content,
+          ),
+        ),
       ],
     );
   }
@@ -538,13 +557,10 @@ class _HistoryPageState extends State<HistoryPage> {
   /// hover / 手型光标 / 滚轮横滚），窄屏为 42 高宽体页签（手指优先）。
   /// 分类数量由服务端下发、会变化，故走 `selectedIndex / onSelected`
   /// 而不是 [AppTabController]（后者长度为 final）。
-  Widget _buildTabBar(BuildContext context) {
-    final entries = <({String type, String label})>[
-      (type: 'all', label: '全部'),
-      for (final t in _tabs)
-        if (t.type != null && t.type!.isNotEmpty && t.name != null)
-          (type: t.type!, label: t.name!),
-    ];
+  Widget _buildTabBar(
+    BuildContext context,
+    List<({String type, String label})> entries,
+  ) {
     final selected = entries.indexWhere((entry) => entry.type == _type);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),

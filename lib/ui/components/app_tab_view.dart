@@ -1064,8 +1064,11 @@ class AppTabBar extends StatelessWidget {
 
 /// Tab 主体内容：[PageView] 的薄封装，与 [AppTabBar] 共享 [controller]。
 ///
-/// 宽屏（≥ [kAppTabBreakpoint]）关闭**鼠标拖动**翻页（桌面以点选为主），
-/// 触摸 / 触控笔仍可左右滑；窄屏保持全设备可滑。
+/// 全设备（含鼠标）都可左右拖动翻页：`dragDevices` 直接继承全局滚动行为，
+/// 本组件不覆盖。仅供本 PageView 使用的 `PageView.scrollBehavior` 一旦剔除
+/// 鼠标，宽屏下整页就彻底滑不动（播放页右栏评论/相关推荐即因此失效）；
+/// 同时禁止改用 `ScrollConfiguration` 包裹 —— `dragDevices` 是继承属性，
+/// 会连带禁用子页内滚动视图（2026-11-02「动态页无法下拉刷新」的根因）。
 class AppTabBody extends StatefulWidget {
   const AppTabBody({
     super.key,
@@ -1081,17 +1084,6 @@ class AppTabBody extends StatefulWidget {
 
   @override
   State<AppTabBody> createState() => _AppTabBodyState();
-}
-
-/// 宽屏下剔除鼠标拖拽的滚动行为：两指滚动/滚轮不受影响，只是不允许“按住拖动翻页”。
-class _AppTabPageScrollBehavior extends ScrollBehavior {
-  const _AppTabPageScrollBehavior();
-
-  @override
-  Set<PointerDeviceKind> get dragDevices => const <PointerDeviceKind>{
-        PointerDeviceKind.touch,
-        PointerDeviceKind.stylus,
-      };
 }
 
 class _AppTabBodyState extends State<AppTabBody> {
@@ -1165,18 +1157,88 @@ class _AppTabBodyState extends State<AppTabBody> {
 
   @override
   Widget build(BuildContext context) {
-    // 宽屏（≥ [kAppTabBreakpoint]）关闭**鼠标拖动**翻页（桌面以点选为主）。
-    //
-    // ⚠️ 必须经 `PageView.scrollBehavior` 传入 —— 它只作用于**本 PageView 自身**
-    // 的 `Scrollable`。不可用 `ScrollConfiguration` 包住整个 PageView：
-    // `dragDevices` 是**继承**属性，会一并作用到各 tab 子页里的滚动视图，使子页内
-    // 鼠标拖拽（含下拉刷新）全部失效（2026-11-02「动态页无法下拉刷新」实机反馈）。
-    final bool wide = MediaQuery.sizeOf(context).width >= kAppTabBreakpoint;
+    // 不传 scrollBehavior：沿用全局滚动行为（鼠标/触摸/触控板均可拖动）。
+    // 也**不可**改用 `ScrollConfiguration` 包住整个 PageView —— `dragDevices`
+    // 是继承属性，会连带禁用各 tab 子页内滚动视图的鼠标拖拽（含下拉刷新）。
     return PageView(
       controller: _pageController,
       onPageChanged: _onPageChanged,
-      scrollBehavior: wide ? const _AppTabPageScrollBehavior() : null,
       children: widget.children,
+    );
+  }
+}
+
+/// 分类型 TAB 页的左右滑动切换手势。
+///
+/// 与 [AppTabBody] 的分工：这类页面的分类由服务端下发或数量会变，内容区是
+/// 单个 `IndexedStack` / 按分类重新请求的列表，无法直接换成 PageView；本组件
+/// 在内容区外层监听水平拖动，滑过阈值（或甩动速度达标）即切到相邻分类。
+///
+/// 手势只注册在本层，不改变子树的 `ScrollBehavior`：内容区内部若有横向滚动
+/// 视图（横滑卡片列表等），内层会先赢得手势竞技，本组件不会抢走它们。
+class AppTabSwipeArea extends StatefulWidget {
+  const AppTabSwipeArea({
+    super.key,
+    required this.index,
+    required this.count,
+    required this.onSelected,
+    required this.child,
+  });
+
+  /// 当前选中索引。
+  final int index;
+
+  /// 分类总数。
+  final int count;
+
+  /// 切到相邻分类时回调目标索引。
+  final ValueChanged<int> onSelected;
+
+  /// 内容区。
+  final Widget child;
+
+  /// 触发切换所需的水平拖动距离（逻辑像素）。
+  static const double swipeDistance = 70;
+
+  /// 触发切换所需的水平甩动速度（逻辑像素/秒）。
+  static const double swipeVelocity = 320;
+
+  @override
+  State<AppTabSwipeArea> createState() => _AppTabSwipeAreaState();
+}
+
+class _AppTabSwipeAreaState extends State<AppTabSwipeArea> {
+  /// 本次水平拖动累计位移（向右为正）。
+  double _dx = 0;
+
+  void _onDragStart(DragStartDetails _) => _dx = 0;
+
+  void _onDragUpdate(DragUpdateDetails details) => _dx += details.delta.dx;
+
+  void _onDragEnd(DragEndDetails details) {
+    final dx = _dx;
+    final velocity = details.primaryVelocity ?? 0;
+    _dx = 0;
+    final hasDistance = dx.abs() >= AppTabSwipeArea.swipeDistance;
+    final hasVelocity = velocity.abs() >= AppTabSwipeArea.swipeVelocity;
+    if (!hasDistance && !hasVelocity) return;
+    // 向右拖 → 上一项；向左拖 → 下一项（与 PageView 的翻页方向一致）。
+    final delta = (hasDistance ? dx : velocity) < 0 ? 1 : -1;
+    final target = widget.index + delta;
+    if (target < 0 || target >= widget.count) return;
+    widget.onSelected(target);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.count <= 1) return widget.child;
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: _onDragStart,
+      onHorizontalDragUpdate: _onDragUpdate,
+      onHorizontalDragEnd: _onDragEnd,
+      onHorizontalDragCancel: () => _dx = 0,
+      child: widget.child,
     );
   }
 }

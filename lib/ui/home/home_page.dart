@@ -232,10 +232,19 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// 切换一级分类（点击分类条与左右滑动共用的唯一入口）。
+  void _selectCategory(int index) {
+    if (_selectedCategory == index) return;
+    setState(() {
+      _selectedCategory = index;
+      _visitedTabs.add(index);
+    });
+  }
+
   /// 按当前选中的分类 tab 渲染内容。使用 [IndexedStack] 保留各 tab 的滚动位置与已加载数据。
   /// 未访问过的 tab 返回 [SizedBox.shrink] 占位，首次切到时才实例化对应页面。
   Widget _buildContent() {
-    return IndexedStack(
+    final content = IndexedStack(
       index: _selectedCategory,
       children: List.generate(HomeTabType.defaultOrder.length, (i) {
         if (!_visitedTabs.contains(i)) {
@@ -249,6 +258,13 @@ class _HomePageState extends State<HomePage> {
           HomeTabType.live => const LivePage(),
         };
       }),
+    );
+    // 左右滑动内容区切换一级分类（与分类条点击同源，保留各分类滚动状态）。
+    return AppTabSwipeArea(
+      index: _selectedCategory,
+      count: HomeTabType.defaultOrder.length,
+      onSelected: _selectCategory,
+      child: content,
     );
   }
 
@@ -298,10 +314,7 @@ class _HomePageState extends State<HomePage> {
                 // 搜索态已登记进全局 Esc 路由器，见 _enterSearch。
                 child: _HomeHeader(
                   selectedCategory: _selectedCategory,
-                  onSelectCategory: (i) => setState(() {
-                    _selectedCategory = i;
-                    _visitedTabs.add(i);
-                  }),
+                  onSelectCategory: _selectCategory,
                   searchMode: _searchMode,
                   searchController: _searchController,
                   searchFocusNode: _searchFocusNode,

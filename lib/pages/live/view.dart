@@ -105,6 +105,15 @@ class _LivePageState extends State<LivePage>
     }
   }
 
+  /// 切换二级分类（点击分类条与左右滑动共用的唯一入口）。
+  void _selectTab(int index) {
+    if (_selectedIndex == index) return;
+    setState(() {
+      _selectedIndex = index;
+      _visitedIndices.add(index);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -121,21 +130,27 @@ class _LivePageState extends State<LivePage>
           _buildSubTabBar(),
           // 分类内容区（懒加载 IndexedStack 保留各自滚动位置与状态）
           Expanded(
-            child: IndexedStack(
+            // 左右滑动内容区切换二级分类（与分类条点击同源）。
+            child: AppTabSwipeArea(
               index: _selectedIndex,
-              children: List.generate(_tabs.length, (i) {
-                if (!_visitedIndices.contains(i)) {
-                  return const SizedBox.shrink();
-                }
-                final tab = _tabs[i];
-                if (tab.isFollow) {
-                  return const _LiveFollowSubView();
-                }
-                return _LiveAreaSubView(
-                  key: ValueKey(tab.id),
-                  parentAreaId: tab.id,
-                );
-              }),
+              count: _tabs.length,
+              onSelected: _selectTab,
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: List.generate(_tabs.length, (i) {
+                  if (!_visitedIndices.contains(i)) {
+                    return const SizedBox.shrink();
+                  }
+                  final tab = _tabs[i];
+                  if (tab.isFollow) {
+                    return const _LiveFollowSubView();
+                  }
+                  return _LiveAreaSubView(
+                    key: ValueKey(tab.id),
+                    parentAreaId: tab.id,
+                  );
+                }),
+              ),
             ),
           ),
         ],
@@ -149,13 +164,7 @@ class _LivePageState extends State<LivePage>
       child: AppTabStrip(
         tabs: [for (final tab in _tabs) tab.label],
         selectedIndex: _selectedIndex,
-        onSelected: (index) {
-          if (_selectedIndex == index) return;
-          setState(() {
-            _selectedIndex = index;
-            _visitedIndices.add(index);
-          });
-        },
+        onSelected: _selectTab,
         // 外框总高 = 34 + 4×2 = 42，与动态页 / 历史页 TAB 栏同高同材质。
         railHeight: 34,
         wideHeight: 34,
