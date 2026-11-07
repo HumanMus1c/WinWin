@@ -42,7 +42,6 @@ import 'package:winwin/core/shell/app_dialogs.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_components.dart';
-import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
 
 /// 桌面原生直播间播放页面。
@@ -1758,65 +1757,63 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
           ),
           const SizedBox(width: Style.sm),
           Expanded(
-            child: AppSelectionArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    hostName,
-                    style: tokens.text.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hostName,
+                  style: tokens.text.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        roomIdText,
-                        style:
-                            tokens.text.bodySmall?.copyWith(color: cs.outline),
-                      ),
-                      if (areaName != null && areaName.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: cs.secondaryContainer,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            areaName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: cs.onSecondaryContainer,
-                            ),
-                          ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      roomIdText,
+                      style:
+                          tokens.text.bodySmall?.copyWith(color: cs.outline),
+                    ),
+                    if (areaName != null && areaName.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1.5,
                         ),
-                      ],
-                      if (heatText != null && heatText.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        AppIcon(
-                          AppIcons.hotness(),
-                          size: 14,
-                          color: AppColors.orange700,
+                        decoration: BoxDecoration(
+                          color: cs.secondaryContainer,
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        const SizedBox(width: 2),
-                        Text(
-                          heatText,
+                        child: Text(
+                          areaName,
                           style: TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.orange700,
+                            color: cs.onSecondaryContainer,
                           ),
                         ),
-                      ],
+                      ),
                     ],
-                  ),
-                ],
-              ),
+                    if (heatText != null && heatText.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      AppIcon(
+                        AppIcons.hotness(),
+                        size: 14,
+                        color: AppColors.orange700,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        heatText,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.orange700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -2078,11 +2075,9 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
             ),
           const SizedBox(width: 8),
           Expanded(
-            child: AppSelectionArea(
-              child: Text.rich(
-                TextSpan(children: inlineSpans),
-                style: tokens.text.bodySmall?.copyWith(fontSize: 12),
-              ),
+            child: Text.rich(
+              TextSpan(children: inlineSpans),
+              style: tokens.text.bodySmall?.copyWith(fontSize: 12),
             ),
           ),
         ],

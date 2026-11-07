@@ -879,63 +879,61 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
         const SizedBox(width: 16),
         // 标题与评分
         Expanded(
-          child: AppSelectionArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  detail.title,
-                  style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                    height: 1.3,
-                  ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppSelectableText(
+                detail.title,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                  height: 1.3,
                 ),
-                if (detail.subtitle?.isNotEmpty == true ||
-                    detail.seasonTitle?.isNotEmpty == true) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    detail.seasonTitle ?? detail.subtitle ?? '',
-                    style: TextStyle(fontSize: 12, color: cs.outline),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                // 评分行
-                if (detail.rating != null && detail.rating!.score > 0)
-                  Row(
-                    children: [
-                      AppIcon(AppIcons.favorite(active: true), color: AppColors.amber, size: 20),
-                      const SizedBox(width: 4),
-                      Text(
-                        detail.rating!.score.toStringAsFixed(1),
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.amber,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '(${NumUtils.formatNum(detail.rating!.count)}人评分)',
-                        style: TextStyle(fontSize: 11, color: cs.outline),
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 8),
-                // 播放/追番数据
-                if (detail.stat != null) ...[
-                  Text(
-                    '${NumUtils.formatNum(detail.stat!.views)} 播放  ·  ${NumUtils.formatNum(detail.stat!.favorites)} 追番',
-                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${NumUtils.formatNum(detail.stat!.danmakus)} 弹幕  ·  ${NumUtils.formatNum(detail.stat!.coins)} 投币',
-                    style: TextStyle(fontSize: 11, color: cs.outline),
-                  ),
-                ],
+              ),
+              if (detail.subtitle?.isNotEmpty == true ||
+                  detail.seasonTitle?.isNotEmpty == true) ...[
+                const SizedBox(height: 4),
+                Text(
+                  detail.seasonTitle ?? detail.subtitle ?? '',
+                  style: TextStyle(fontSize: 12, color: cs.outline),
+                ),
               ],
-            ),
+              const SizedBox(height: 8),
+              // 评分行
+              if (detail.rating != null && detail.rating!.score > 0)
+                Row(
+                  children: [
+                    AppIcon(AppIcons.favorite(active: true), color: AppColors.amber, size: 20),
+                    const SizedBox(width: 4),
+                    Text(
+                      detail.rating!.score.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.amber,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '(${NumUtils.formatNum(detail.rating!.count)}人评分)',
+                      style: TextStyle(fontSize: 11, color: cs.outline),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 8),
+              // 播放/追番数据
+              if (detail.stat != null) ...[
+                Text(
+                  '${NumUtils.formatNum(detail.stat!.views)} 播放  ·  ${NumUtils.formatNum(detail.stat!.favorites)} 追番',
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${NumUtils.formatNum(detail.stat!.danmakus)} 弹幕  ·  ${NumUtils.formatNum(detail.stat!.coins)} 投币',
+                  style: TextStyle(fontSize: 11, color: cs.outline),
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -979,56 +977,54 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
 
   /// 元信息栏（风格标签、开播、声优、制作）
   Widget _buildMetaSection(BangumiDetail detail, AppPalette cs) {
-    return AppSelectionArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 风格标签
-          if (detail.styles.isNotEmpty)
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: detail.styles.map((st) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    st,
-                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                  ),
-                );
-              }).toList(),
-            ),
-          const SizedBox(height: 12),
-          // 开播时间与地区
-          if (detail.publish?.releaseDateShow?.isNotEmpty == true ||
-              detail.areas.isNotEmpty) ...[
-            _buildMetaRow(
-              '开播',
-              [
-                if (detail.publish?.releaseDateShow != null)
-                  detail.publish!.releaseDateShow!,
-                if (detail.areas.isNotEmpty)
-                  detail.areas.map((a) => a.name).join(' / '),
-              ].join('  ·  '),
-              cs,
-            ),
-            const SizedBox(height: 6),
-          ],
-          // 声优
-          if (detail.actors.isNotEmpty) ...[
-            _buildMetaRow('声优', detail.actors, cs),
-            const SizedBox(height: 6),
-          ],
-          // 制作
-          if (detail.staff.isNotEmpty) ...[
-            _buildMetaRow('制作', detail.staff, cs),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 风格标签
+        if (detail.styles.isNotEmpty)
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: detail.styles.map((st) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  st,
+                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                ),
+              );
+            }).toList(),
+          ),
+        const SizedBox(height: 12),
+        // 开播时间与地区
+        if (detail.publish?.releaseDateShow?.isNotEmpty == true ||
+            detail.areas.isNotEmpty) ...[
+          _buildMetaRow(
+            '开播',
+            [
+              if (detail.publish?.releaseDateShow != null)
+                detail.publish!.releaseDateShow!,
+              if (detail.areas.isNotEmpty)
+                detail.areas.map((a) => a.name).join(' / '),
+            ].join('  ·  '),
+            cs,
+          ),
+          const SizedBox(height: 6),
         ],
-      ),
+        // 声优
+        if (detail.actors.isNotEmpty) ...[
+          _buildMetaRow('声优', detail.actors, cs),
+          const SizedBox(height: 6),
+        ],
+        // 制作
+        if (detail.staff.isNotEmpty) ...[
+          _buildMetaRow('制作', detail.staff, cs),
+        ],
+      ],
     );
   }
 
@@ -1044,7 +1040,7 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
           ),
         ),
         Expanded(
-          child: Text(
+          child: AppSelectableText(
             value,
             style: TextStyle(
               fontSize: 11.5,

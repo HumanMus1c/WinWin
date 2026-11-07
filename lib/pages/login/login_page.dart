@@ -18,7 +18,6 @@ import 'package:winwin/pages/login/geetest_webview_dialog.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
-import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
@@ -368,16 +367,14 @@ class _PasswordLoginTabState extends State<_PasswordLoginTab> {
                   ),
           ),
           const SizedBox(height: Style.lg),
-          AppSelectionArea(
-            child: Text(
-              '根据 bilibili 官方登录接口规范，密码将在本地加盐、加密后传输。\n'
-              '盐与公钥均由官方提供；以 RSA/ECB/PKCS1Padding 方式加密。\n'
-              '账号密码仅用于该登录接口，不予保存；本地仅存储登录凭证。\n'
-              '当前 RSA 加密为 stub，密码登录可能因风控失败；遇到风控时会弹出极验滑块验证。',
-              textAlign: TextAlign.center,
-              style: tokens.text.labelSmall?.copyWith(
-                color: cs.onSurface.withValues(alpha: 0.4),
-              ),
+          Text(
+            '根据 bilibili 官方登录接口规范，密码将在本地加盐、加密后传输。\n'
+            '盐与公钥均由官方提供；以 RSA/ECB/PKCS1Padding 方式加密。\n'
+            '账号密码仅用于该登录接口，不予保存；本地仅存储登录凭证。\n'
+            '当前 RSA 加密为 stub，密码登录可能因风控失败；遇到风控时会弹出极验滑块验证。',
+            textAlign: TextAlign.center,
+            style: tokens.text.labelSmall?.copyWith(
+              color: cs.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -682,15 +679,13 @@ class _SmsLoginTabState extends State<_SmsLoginTab> {
                   ),
           ),
           const SizedBox(height: Style.lg),
-          AppSelectionArea(
-            child: Text(
-              '手机号仅用于 bilibili 官方发送验证码与登录接口，不予保存；\n'
-              '本地仅存储登录凭证。\n'
-              '遇到风控时会弹出极验滑块验证，验证通过后自动重试。',
-              textAlign: TextAlign.center,
-              style: tokens.text.labelSmall?.copyWith(
-                color: cs.onSurface.withValues(alpha: 0.4),
-              ),
+          Text(
+            '手机号仅用于 bilibili 官方发送验证码与登录接口，不予保存；\n'
+            '本地仅存储登录凭证。\n'
+            '遇到风控时会弹出极验滑块验证，验证通过后自动重试。',
+            textAlign: TextAlign.center,
+            style: tokens.text.labelSmall?.copyWith(
+              color: cs.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -853,30 +848,22 @@ class _QRLoginTabState extends State<_QRLoginTab> {
                 ),
               ),
             const SizedBox(height: Style.lg),
-            AppSelectionArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    _status,
-                    style: AppThemeHost.of(context).text.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  if (_leftTime > 0 && !_loading)
-                    Padding(
-                      padding: const EdgeInsets.only(top: Style.xs),
-                      child: Text(
-                        '剩余 ${_leftTime}s',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: cs.outline,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+            Text(
+              _status,
+              style: AppThemeHost.of(context).text.bodyMedium,
+              textAlign: TextAlign.center,
             ),
+            if (_leftTime > 0 && !_loading)
+              Padding(
+                padding: const EdgeInsets.only(top: Style.xs),
+                child: Text(
+                  '剩余 ${_leftTime}s',
+                  style: TextStyle(
+                    color: cs.outline,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
             const SizedBox(height: Style.lg),
             // 始终显示手动刷新按钮（加载中除外），便于用户在扫码失败/过期时主动刷新。
             if (!_loading)
@@ -989,15 +976,13 @@ class _CookieLoginTabState extends State<_CookieLoginTab> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: Style.sm),
-          AppSelectionArea(
-            child: Text(
-              '从浏览器获取 bilibili.com 的 Cookie，需包含 DedeUserID 和 bili_jct。\n'
-              '使用 App 端 Api 实现的功能将不可用。',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: cs.primary,
-                fontSize: 13,
-              ),
+          Text(
+            '从浏览器获取 bilibili.com 的 Cookie，需包含 DedeUserID 和 bili_jct。\n'
+            '使用 App 端 Api 实现的功能将不可用。',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: cs.primary,
+              fontSize: 13,
             ),
           ),
           const SizedBox(height: Style.lg),

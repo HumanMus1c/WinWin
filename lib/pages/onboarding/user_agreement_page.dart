@@ -4,7 +4,6 @@ import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPres
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/ui/components/app_components.dart';
-import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
@@ -64,25 +63,19 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                     color: cs.primary,
                   ),
                   const SizedBox(height: 12),
-                  AppSelectionArea(
-                    child: Column(
-                      children: [
-                        Text(
-                          '欢迎使用 WinWin',
-                          textAlign: TextAlign.center,
-                          style: tokens.text.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '开始之前，请阅读并确认以下条款',
-                          textAlign: TextAlign.center,
-                          style: tokens.text.bodyMedium?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    '欢迎使用 WinWin',
+                    textAlign: TextAlign.center,
+                    style: tokens.text.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '开始之前，请阅读并确认以下条款',
+                    textAlign: TextAlign.center,
+                    style: tokens.text.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -124,13 +117,11 @@ class _UserAgreementPageState extends State<UserAgreementPage> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  AppSelectionArea(
-                    child: Text(
-                      '未勾选全部条款时无法继续；选择「我不同意」将退出应用。',
-                      textAlign: TextAlign.center,
-                      style: tokens.text.labelSmall?.copyWith(
-                        color: cs.outline,
-                      ),
+                  Text(
+                    '未勾选全部条款时无法继续；选择「我不同意」将退出应用。',
+                    textAlign: TextAlign.center,
+                    style: tokens.text.labelSmall?.copyWith(
+                      color: cs.outline,
                     ),
                   ),
                 ],
@@ -178,13 +169,11 @@ class UserAgreementClauses extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppSelectionArea(
-      child: AppGroup(
-        children: [
-          for (final clause in _clauses)
-            _ClauseTile(clause: clause, checked: false, showCheckbox: false),
-        ],
-      ),
+    return AppGroup(
+      children: [
+        for (final clause in _clauses)
+          _ClauseTile(clause: clause, checked: false, showCheckbox: false),
+      ],
     );
   }
 }

@@ -11,7 +11,6 @@ import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
-import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
@@ -174,28 +173,21 @@ class _DownloadPageState extends State<DownloadPage> {
                           ],
                         ),
                         const SizedBox(height: 10),
-                        AppSelectionArea(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '当前占用：$_cacheSizeStr',
-                                style: tokens.text.bodyMedium?.copyWith(
-                                  color: cs.onSurface,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '存放路径：$_cachePath',
-                                style: tokens.text.bodySmall?.copyWith(
-                                  color: cs.outline,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                        Text(
+                          '当前占用：$_cacheSizeStr',
+                          style: tokens.text.bodyMedium?.copyWith(
+                            color: cs.onSurface,
+                            fontWeight: FontWeight.w600,
                           ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '存放路径：$_cachePath',
+                          style: tokens.text.bodySmall?.copyWith(
+                            color: cs.outline,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

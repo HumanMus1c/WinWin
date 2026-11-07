@@ -6,7 +6,6 @@ import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/core/emote/emote_store.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/theme/style.dart';
-import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/utils/bilibili_emotes.dart';
 import 'package:winwin/utils/image_utils.dart';
 
@@ -107,18 +106,16 @@ class ReplyContentView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (message.isNotEmpty)
-          AppSelectionArea(
-            child: Text.rich(
-              TextSpan(
-                children: buildReplyEmoteSpans(
-                  context,
-                  message,
-                  content?.emote,
-                  textStyle,
-                ),
+          Text.rich(
+            TextSpan(
+              children: buildReplyEmoteSpans(
+                context,
+                message,
+                content?.emote,
+                textStyle,
               ),
-              style: textStyle,
             ),
+            style: textStyle,
           ),
         if (pictures.isNotEmpty) ...[
           const SizedBox(height: Style.xs + 2),
