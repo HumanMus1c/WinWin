@@ -17,7 +17,9 @@ import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/player/hls_manifest.dart';
 import 'package:winwin/core/player/seek_probe.dart';
 import 'package:winwin/core/player/sponsorblock_usecase.dart';
+import 'package:winwin/core/policy/cdn_failover_policy.dart';
 import 'package:winwin/core/policy/cdn_policy.dart';
+import 'package:winwin/core/policy/playback_error_classifier.dart';
 import 'package:winwin/core/policy/stream_selection_policy.dart';
 import 'package:winwin/core/policy/video_load_policy.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -530,6 +532,9 @@ class WinWinPlayerController {
 
   /// 当前正在使用的 CDN 候选下标。
   int _currentCdnIndex = 0;
+
+  /// CDN 候选失败记忆：自愈/换源时跳过仍在冷却的坏节点。
+  final CdnFailoverPolicy _cdnFailover = CdnFailoverPolicy();
 
   /// 当前生效的视频播放直链。
   String? _currentVideoUrl;
@@ -2676,8 +2681,11 @@ class WinWinPlayerController {
           'in ${sw.elapsedMilliseconds}ms qn=$qn',
         );
         if (playUrl == null) {
-          error.value = '获取播放地址失败';
-          _loadFailureRetryable = true; // 网络类失败：自动重试
+          final message = result is Error ? result.errMsg : null;
+          error.value =
+              PlaybackErrorClassifier.userMessage(message) ?? '获取播放地址失败';
+          _loadFailureRetryable =
+              PlaybackErrorClassifier.isRetryableMessage(message);
           return;
         }
         // 写入缓存（按 VideoLoadPolicy.shouldCachePlayUrlResult 判定）。
@@ -2736,10 +2744,10 @@ class WinWinPlayerController {
           ? const []
           : CdnPolicy.resolveAllUrls(audio.playUrls, isAudio: true);
 
-      _currentCdnIndex = 0;
-      final videoUrl = _videoCdnCandidates.first;
+      _currentCdnIndex = _cdnFailover.nextIndex(_videoCdnCandidates, -1) ?? 0;
+      final videoUrl = _videoCdnCandidates[_currentCdnIndex];
       final audioUrl = _audioCdnCandidates.isNotEmpty
-          ? _audioCdnCandidates.first
+          ? _audioCdnCandidates[_currentCdnIndex % _audioCdnCandidates.length]
           : null;
       _currentVideoUrl = videoUrl;
       _currentAudioUrl = audioUrl;
@@ -2962,12 +2970,17 @@ class WinWinPlayerController {
           'PlayerController',
           'prepare failed: ret=$ret, aborting load',
         );
+        _cdnFailover.recordFailure(videoUrl);
         error.value = '播放失败（错误码 $ret）';
         _loadFailureRetryable = true; // 瞬态媒体打开失败：自动重试
         return;
       }
       // prepare 成功后再次清空 error（覆盖 setMedia 旧 media 卸载期间
       // 可能产生的残留错误事件）。
+      _cdnFailover.recordSuccess(videoUrl);
+      if (audioUrl != null && audioUrl.isNotEmpty) {
+        _cdnFailover.recordSuccess(audioUrl);
+      }
       error.value = null;
 
       // 3. seek 恢复进度。
@@ -3064,7 +3077,9 @@ class WinWinPlayerController {
         error.value = e is DioException
             ? '播放失败：${dioErrorMessage(e)}'
             : '播放失败，请稍后重试';
-        _loadFailureRetryable = true; // 网络类异常：自动重试
+        // 仅网络/超时/5xx 等瞬态错误进入退避重试；DRM/版权/地区限制
+        // 等重试也不会成功，直接保留明确提示。
+        _loadFailureRetryable = PlaybackErrorClassifier.isRetryable(e);
       }
     } finally {
       _loading = false;
@@ -3199,21 +3214,37 @@ class WinWinPlayerController {
       // 双重音频（用户实测「额外一条鬼影音频」）。双轨模式改更新专属 URL 槽。
       final dualAudioMode = _dualPlayerAudio && _audioPlayer != null;
       if (_videoCdnCandidates.length > 1) {
-        _currentCdnIndex = (_currentCdnIndex + 1) % _videoCdnCandidates.length;
-        _currentVideoUrl = _videoCdnCandidates[_currentCdnIndex];
+        final maxIndex = _videoCdnCandidates.length - 1;
+        final failureIndex = _currentCdnIndex.clamp(0, maxIndex).toInt();
+        // 当前候选判定为坏节点：记录失败并按退避冷却，避免下一轮再次撞上。
+        _cdnFailover.recordFailure(_videoCdnCandidates[failureIndex]);
         if (_audioCdnCandidates.isNotEmpty) {
-          final nextAudioUrl = _audioCdnCandidates[_currentCdnIndex %
-              _audioCdnCandidates.length];
-          if (dualAudioMode) {
-            _audioPlayerUrl = nextAudioUrl;
-          } else {
-            _currentAudioUrl = nextAudioUrl;
-          }
+          _cdnFailover.recordFailure(
+            _audioCdnCandidates[failureIndex % _audioCdnCandidates.length],
+          );
         }
-        AppLogger.w(
-          'PlayerController',
-          'Switching CDN candidate: line=${_currentCdnIndex + 1}/${_videoCdnCandidates.length} videoUrl=$_currentVideoUrl',
+        final nextIndex = _cdnFailover.nextIndex(
+          _videoCdnCandidates,
+          failureIndex,
+          excludeCurrent: true,
         );
+        if (nextIndex != null) {
+          _currentCdnIndex = nextIndex;
+          _currentVideoUrl = _videoCdnCandidates[_currentCdnIndex];
+          if (_audioCdnCandidates.isNotEmpty) {
+            final nextAudioUrl = _audioCdnCandidates[_currentCdnIndex %
+                _audioCdnCandidates.length];
+            if (dualAudioMode) {
+              _audioPlayerUrl = nextAudioUrl;
+            } else {
+              _currentAudioUrl = nextAudioUrl;
+            }
+          }
+          AppLogger.w(
+            'PlayerController',
+            'Switching CDN candidate: line=${_currentCdnIndex + 1}/${_videoCdnCandidates.length} videoUrl=$_currentVideoUrl',
+          );
+        }
       }
 
       final videoUrl = _currentVideoUrl;
@@ -3285,6 +3316,17 @@ class WinWinPlayerController {
         _stallRecoveryGiveUpLogged = false;
         // 媒体已重挂：流速窗口作废（旧样本属旧时间轴）。
         _resetFlowWindow();
+        // 重挂成功：新候选已实际可播，清零其失败记忆。
+        final recoveredVideoUrl = _currentVideoUrl;
+        if (recoveredVideoUrl != null) {
+          _cdnFailover.recordSuccess(recoveredVideoUrl);
+        }
+        final recoveredAudioUrl = dualAudioMode
+            ? _audioPlayerUrl
+            : _currentAudioUrl;
+        if (recoveredAudioUrl != null) {
+          _cdnFailover.recordSuccess(recoveredAudioUrl);
+        }
         SeekProbe.note('RECOVER done ret=$ret resume=$resumePosMs');
         AppLogger.w(
           'PlayerController',
@@ -3998,7 +4040,13 @@ class WinWinPlayerController {
             isBackward &&
             _videoCdnCandidates.isNotEmpty) {
           final n = _videoCdnCandidates.length;
-          _currentCdnIndex = (_currentCdnIndex + 1) % n;
+          final nextIndex = _cdnFailover.nextIndex(
+            _videoCdnCandidates,
+            _currentCdnIndex,
+            excludeCurrent: n > 1,
+          );
+          if (nextIndex == null) return;
+          _currentCdnIndex = nextIndex;
           final vUrl = _videoCdnCandidates[_currentCdnIndex];
           final aUrl = _audioCdnCandidates.isNotEmpty
               ? _audioCdnCandidates[_currentCdnIndex % _audioCdnCandidates.length]

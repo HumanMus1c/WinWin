@@ -69,6 +69,11 @@ class _PlayerFocusState extends State<PlayerFocus> {
   double? _originalSpeedBeforeLongPress;
   bool _isLeftArrowPressed = false;
 
+  // ── 长按 ← 连续快退（对标 PiliPlus multiBackward）──
+  Timer? _leftArrowLongPressTimer;
+  bool _isLeftArrowLongPressing = false;
+  Duration? _leftArrowPreview;
+
   @override
   void initState() {
     super.initState();
@@ -79,6 +84,8 @@ class _PlayerFocusState extends State<PlayerFocus> {
   void dispose() {
     _rightArrowLongPressTimer?.cancel();
     _rightArrowLongPressTimer = null;
+    _leftArrowLongPressTimer?.cancel();
+    _leftArrowLongPressTimer = null;
     _focusNode.dispose();
     super.dispose();
   }
@@ -140,11 +147,30 @@ class _PlayerFocusState extends State<PlayerFocus> {
           return true;
         }
         _isLeftArrowPressed = true;
+        _leftArrowPreview =
+            c.isSeeking ? c.seekPosition.value : c.position.value;
+        _leftArrowLongPressTimer = Timer(
+          const Duration(milliseconds: 200),
+          () {
+            if (!mounted || !widget.enabled) return;
+            _isLeftArrowLongPressing = true;
+            _stepLeftBackward(c);
+          },
+        );
         return true;
       } else if (event is KeyUpEvent) {
         if (_isLeftArrowPressed) {
           _isLeftArrowPressed = false;
-          _seekRelative(c, -_seekStep);
+          _leftArrowLongPressTimer?.cancel();
+          _leftArrowLongPressTimer = null;
+          if (_isLeftArrowLongPressing) {
+            _isLeftArrowLongPressing = false;
+            final target = _leftArrowPreview;
+            _leftArrowPreview = null;
+            if (target != null) c.seek(target);
+          } else {
+            _seekRelative(c, -_seekStep);
+          }
         }
         return true;
       }
@@ -244,6 +270,25 @@ class _PlayerFocusState extends State<PlayerFocus> {
     final target = basePos + Duration(seconds: deltaSec);
     final clamped = _clampDuration(target, Duration.zero, c.duration.value);
     c.seek(clamped);
+  }
+
+  /// 长按 ←：每 200ms 累加一个快退步长，松开时一次性提交 seek。
+  void _stepLeftBackward(WinWinPlayerController c) {
+    final current = _leftArrowPreview ?? c.position.value;
+    final target = _clampDuration(
+      current - const Duration(seconds: _seekStep),
+      Duration.zero,
+      c.duration.value,
+    );
+    _leftArrowPreview = target;
+    _leftArrowLongPressTimer?.cancel();
+    _leftArrowLongPressTimer = Timer(
+      const Duration(milliseconds: 200),
+      () {
+        if (!mounted || !widget.enabled || !_isLeftArrowLongPressing) return;
+        _stepLeftBackward(c);
+      },
+    );
   }
 
   void _seekToPercent(WinWinPlayerController c, int percent) {
