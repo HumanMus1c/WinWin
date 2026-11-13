@@ -9,6 +9,7 @@ import 'package:winwin/core/account/account_mgr.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_utils.dart';
 import 'package:winwin/core/log/api_blackbox.dart';
+import 'package:winwin/core/network/weak_network_detector.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/constants.dart';
@@ -51,6 +52,8 @@ class Request {
     client.interceptors.add(
       RetryInterceptor(client, Pref.retryCount, Pref.retryDelay),
     );
+    // 弱网监测放在链尾：第一次网络失败/慢响应即可上报，不等重试全部耗尽。
+    client.interceptors.add(WeakNetworkInterceptor());
     dio = client;
 
     await Accounts.refresh();

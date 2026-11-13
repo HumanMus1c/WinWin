@@ -14,6 +14,7 @@ import 'package:winwin/core/cache/play_url_cache.dart';
 import 'package:winwin/core/diagnostics/stall_watchdog.dart';
 import 'package:winwin/core/log/sync_trace.dart';
 import 'package:winwin/core/log/app_logger.dart';
+import 'package:winwin/core/network/weak_network_detector.dart';
 import 'package:winwin/core/player/hls_manifest.dart';
 import 'package:winwin/core/player/seek_probe.dart';
 import 'package:winwin/core/player/sponsorblock_usecase.dart';
@@ -1966,6 +1967,21 @@ class WinWinPlayerController {
             'pos=$posMs status=${player.mediaStatus}',
           );
         }
+      }
+
+      // 弱网主动提示：流速持续不健康或缓冲停滞 ≥3s 时立即提示一次；
+      // 连续健康 ≥10s 后才重置回合，避免长时间弱网反复弹 toast。
+      final weakNetworkNow =
+          ready.value &&
+          _userIntentPlaying &&
+          !completed.value &&
+          !_isSeeking &&
+          !_isRecovering &&
+          (_flowUnhealthyMs >= 3000 || _bufferingStallMs >= 3000);
+      if (weakNetworkNow) {
+        WeakNetworkDetector.instance.reportPlaybackWeak();
+      } else if (!buffering.value && _flowHealthyMs >= 10000) {
+        WeakNetworkDetector.instance.reportPlaybackHealthy();
       }
 
       // ===== 缓冲冻结 + 流量门控恢复（第二轮修正，2026-09-26 实机反馈）=====
