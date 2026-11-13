@@ -80,6 +80,12 @@ class AppScrollBar extends StatefulWidget {
   /// 滚动结束后回落空闲态的防抖时长。
   static const int idleDelayMs = 700;
 
+  /// 停手后几何结算的延迟（比空闲态更短：滑块长度应及时回到正确比例）。
+  ///
+  /// 结算本身用 [extentTransitionMs] 补间；太晚结算会让用户觉得滑块
+  /// “过一会儿自己动了一下”。
+  static const int geometrySettleDelayMs = 220;
+
   /// 「页面级」滚动视图判定：主轴向尺寸 ≥ 窗口主轴向 × 该比例，才预留通道。
   ///
   /// 弹层 / 面板 / 局部小列表等滚动视图的主轴向尺寸远小于窗口，为其预留
@@ -94,28 +100,48 @@ class AppScrollBar extends StatefulWidget {
   static bool _isReversed(AxisDirection direction) =>
       direction == AxisDirection.up || direction == AxisDirection.left;
 
-  /// 滚动像素位置 → 滑块沿通道的**视觉占比**（0 = 通道起点/上或左，1 = 末端/下或右）。
+  /// 滚动像素位置 → 滑块顶部偏移（像素，未夹紧到 `track − length`）。
   ///
-  /// 抽为纯函数以便单测方向映射；reverse 列表取反。
+  /// 与旧口径 `pixels / maxScrollExtent × (track − length)` 的关键差异：
+  /// **不再乘 `(track − length)`** —— 滑块长度变化（加载更多）不会推动滑块，
+  /// 位置只由「滚动位置 / 内容总长」决定，从而消除「滚动中下滑、加载上推」
+  /// 两个反向运动叠加造成的上下抖动（2026-11-13 反馈轮）。
+  ///
+  /// 端点仍然一致：正向到底时 `pixels = content − viewport`，
+  /// 本式结果 = `track − track × viewport / content ≈ track − length`。
+  ///
+  /// reverse 列表（`axisDirection` 为 up/left）以**滑块底边**为锚点：
+  /// `pixels = 0` 对应视觉底部，`pixels = max` 对应顶部。
   @visibleForTesting
-  static double thumbTravelFraction({
+  static double thumbOffsetForProgress({
     required double pixels,
-    required double maxScrollExtent,
+    required double contentExtent,
+    required double trackExtent,
+    required double thumbLength,
     required AxisDirection axisDirection,
   }) {
-    if (maxScrollExtent <= 0) return 0;
-    final ratio = (pixels / maxScrollExtent).clamp(0.0, 1.0);
-    return _isReversed(axisDirection) ? 1.0 - ratio : ratio;
+    if (contentExtent <= 0 || trackExtent <= 0) return 0;
+    final progress = (pixels / contentExtent).clamp(0.0, 1.0);
+    if (_isReversed(axisDirection)) {
+      return (1.0 - progress) * trackExtent - thumbLength;
+    }
+    return progress * trackExtent;
   }
 
-  /// 滑块视觉占比 → 滚动像素比例（[thumbTravelFraction] 的逆映射）。
+  /// [thumbOffsetForProgress] 的逆映射（拖拽跳转用）。
   @visibleForTesting
-  static double pixelsFractionForTravel({
-    required double travelFraction,
+  static double pixelsForThumbOffset({
+    required double thumbOffset,
+    required double thumbLength,
+    required double contentExtent,
+    required double trackExtent,
     required AxisDirection axisDirection,
   }) {
-    final fraction = travelFraction.clamp(0.0, 1.0);
-    return _isReversed(axisDirection) ? 1.0 - fraction : fraction;
+    if (contentExtent <= 0 || trackExtent <= 0) return 0;
+    final progress = _isReversed(axisDirection)
+        ? 1.0 - (thumbOffset + thumbLength) / trackExtent
+        : thumbOffset / trackExtent;
+    return progress.clamp(0.0, 1.0) * contentExtent;
   }
 
   /// 全局接入点（**单一来源**）：由 [AppScrollBehavior.buildScrollbar] 为桌面平台
@@ -177,10 +203,24 @@ class _AppScrollBarState extends State<AppScrollBar>
   /// 上一次实际绘制的「内容总长」：补间起点与死区判断用。
   double? _displayedExtent;
 
+  /// 滚动 / 拖拽期间**冻结**的内容总长。
+  ///
+  /// 滚动中追加内容时，如果长度与偏移同时结算，会出现「加载把滑块往上推、
+  /// 滚动把滑块往下拉」两个反向运动叠加（实机表现为上下抖）。冻结后滚动期间
+  /// 长度完全不变、滑块只跟手移动；停手（[_AppScrollBarState.idleDelayMs]）后
+  /// 再用 200ms 结算到最新长度，只“收一下”，不来回。
+  double? _frozenContentExtent;
+
+  /// 冻结期间收到的最新内容总长（停手后结算用）。
+  double? _pendingContentExtent;
+
+  bool get _geometryFrozen => _frozenContentExtent != null;
+
   bool _hovered = false;
   bool _dragging = false;
   bool _scrollActive = false;
   Timer? _idleTimer;
+  Timer? _settleTimer;
 
   /// 拖拽时指针在滑块内的偏移量（保证跟手）。
   double _grabOffset = 0;
@@ -188,6 +228,7 @@ class _AppScrollBarState extends State<AppScrollBar>
   @override
   void dispose() {
     _idleTimer?.cancel();
+    _settleTimer?.cancel();
     _emphasis.dispose();
     _extentAnim.dispose();
     super.dispose();
@@ -215,10 +256,14 @@ class _AppScrollBarState extends State<AppScrollBar>
         notification is ScrollUpdateNotification) {
       _idleTimer?.cancel();
       _idleTimer = null;
+      _settleTimer?.cancel();
+      _settleTimer = null;
       if (!_scrollActive) {
         _scrollActive = true;
         _animateToTarget();
       }
+      // 滚动一开始就冻结长度：期间的内容增长只记录，不参与绘制。
+      _beginFreeze();
     } else if (notification is ScrollEndNotification) {
       _idleTimer?.cancel();
       _idleTimer = Timer(
@@ -229,8 +274,48 @@ class _AppScrollBarState extends State<AppScrollBar>
           _animateToTarget();
         },
       );
+      // 几何结算比空闲态更早：停手 220ms 后把长度补间到最新比例。
+      _settleTimer?.cancel();
+      _settleTimer = Timer(
+        const Duration(milliseconds: AppScrollBar.geometrySettleDelayMs),
+        () {
+          if (!mounted || _dragging) return;
+          _settleFreeze();
+        },
+      );
     }
     return false;
+  }
+
+  /// 开始冻结滑块几何：以当前绘制值为基准，停掉在途补间。
+  void _beginFreeze() {
+    if (_frozenContentExtent != null) return;
+    final position = _position;
+    if (position == null) return;
+    final current = _paintContentExtent(position);
+    // 结算目标取最新实时值：若冻结发生在一次未完成补间的中途，
+    // 停手后仍能补间到真实值，而不是停在中间值。
+    final live = position.maxScrollExtent + position.viewportDimension;
+    _frozenContentExtent = current;
+    _pendingContentExtent = live;
+    _displayedExtent = current;
+    _extentAnim.stop();
+  }
+
+  /// 停手后结算：把冻结期间的累计内容增长一次性补间到位。
+  void _settleFreeze() {
+    final frozen = _frozenContentExtent;
+    final pending = _pendingContentExtent;
+    _frozenContentExtent = null;
+    _pendingContentExtent = null;
+    if (frozen == null || pending == null) return;
+    if ((pending - frozen).abs() < AppScrollBar.extentSnapThreshold) {
+      _displayedExtent = pending;
+      return;
+    }
+    _displayedExtent = frozen;
+    _extentTween = Tween<double>(begin: frozen, end: pending);
+    _extentAnim.forward(from: 0);
   }
 
   /// 内容尺寸变化（追加内容 / footer 切换 / 视口变化）时启动滑块补间。
@@ -238,10 +323,16 @@ class _AppScrollBarState extends State<AppScrollBar>
   /// `ScrollMetricsNotification` 由 `ScrollPosition.applyContentDimensions`
   /// 在**布局结束后**以微任务派发（一帧最多一次），因此不会在 build 阶段
   /// 启动动画，也不会被同帧多次布局重复触发。
+  ///
+  /// 滚动 / 拖拽期间**只记录不落地**（冻结策略，见 [_frozenContentExtent]）。
   bool _onMetricsNotification(ScrollMetricsNotification notification) {
     if (notification.depth != 0) return false;
     final live = notification.metrics.maxScrollExtent +
         notification.metrics.viewportDimension;
+    if (_geometryFrozen) {
+      _pendingContentExtent = live;
+      return false;
+    }
     final displayed = _extentAnim.isAnimating && _extentTween != null
         ? _extentTween!.evaluate(_extentAnim)
         : _displayedExtent;
@@ -257,8 +348,10 @@ class _AppScrollBarState extends State<AppScrollBar>
     return false;
   }
 
-  /// 绘制用的内容总长：补间进行中取插值，否则取实时值并记录。
+  /// 绘制用的内容总长：冻结中取冻结值；补间中取插值；否则取实时值并记录。
   double _paintContentExtent(ScrollPosition p) {
+    final frozen = _frozenContentExtent;
+    if (frozen != null) return frozen;
     final live = p.maxScrollExtent + p.viewportDimension;
     final tween = _extentTween;
     if (_extentAnim.isAnimating && tween != null) {
@@ -277,21 +370,27 @@ class _AppScrollBarState extends State<AppScrollBar>
         .clamp(AppScrollBar.minThumbLength, trackExtent);
   }
 
-  /// 绘制用滑块偏移（基于补间后的内容总长）。
+  /// 绘制用滑块偏移（基于冻结 / 补间后的内容总长）。
+  ///
+  /// 位置只由「滚动位置 / 内容总长」决定，**不再乘 `(track − length)`**：
+  /// 长度补间因此不会推动滑块（见 [AppScrollBar.thumbOffsetForProgress]）。
   double _paintThumbOffset(
     double trackExtent,
     ScrollPosition p,
     double thumbLength,
   ) {
     final maxThumbTravel = trackExtent - thumbLength;
-    final paintMax = _paintContentExtent(p) - p.viewportDimension;
-    if (maxThumbTravel <= 0 || paintMax <= 0) return 0;
-    return AppScrollBar.thumbTravelFraction(
-          pixels: p.pixels,
-          maxScrollExtent: paintMax,
-          axisDirection: p.axisDirection,
-        ) *
-        maxThumbTravel;
+    if (maxThumbTravel <= 0) return 0;
+    final content = _paintContentExtent(p);
+    if (content <= 0) return 0;
+    final raw = AppScrollBar.thumbOffsetForProgress(
+      pixels: p.pixels,
+      contentExtent: content,
+      trackExtent: trackExtent,
+      thumbLength: thumbLength,
+      axisDirection: p.axisDirection,
+    );
+    return raw.clamp(0.0, maxThumbTravel);
   }
 
   /// 悬停在滚动条通道上的滚轮转发。
@@ -336,39 +435,34 @@ class _AppScrollBarState extends State<AppScrollBar>
     return null;
   }
 
-  double _thumbLength(double trackExtent, ScrollPosition p) {
-    final content = p.maxScrollExtent + p.viewportDimension;
-    if (content <= 0) return trackExtent;
-    final fraction = p.viewportDimension / content;
-    return (trackExtent * fraction).clamp(AppScrollBar.minThumbLength, trackExtent);
-  }
-
-  double _thumbOffset(double trackExtent, ScrollPosition p, double thumbLength) {
-    final maxThumbTravel = trackExtent - thumbLength;
-    if (maxThumbTravel <= 0 || p.maxScrollExtent <= 0) return 0;
-    return AppScrollBar.thumbTravelFraction(
-          pixels: p.pixels,
-          maxScrollExtent: p.maxScrollExtent,
-          axisDirection: p.axisDirection,
-        ) *
-        maxThumbTravel;
-  }
+  /// 拖拽使用的滑块长度：与绘制同源（冻结中取冻结长度，保证命中与视觉一致）。
+  double _dragThumbLength(double trackExtent, ScrollPosition p) =>
+      _paintThumbLength(trackExtent, p);
 
   void _jumpToThumbOffset(
       double thumbOffset, double trackExtent, ScrollPosition p) {
-    final thumbLength = _thumbLength(trackExtent, p);
+    final thumbLength = _dragThumbLength(trackExtent, p);
     final maxThumbTravel = trackExtent - thumbLength;
     if (maxThumbTravel <= 0) return;
-    final pixelsFraction = AppScrollBar.pixelsFractionForTravel(
-      travelFraction: thumbOffset / maxThumbTravel,
+    final content = _paintContentExtent(p);
+    if (content <= 0) return;
+    final pixels = AppScrollBar.pixelsForThumbOffset(
+      thumbOffset: thumbOffset.clamp(0.0, maxThumbTravel),
+      thumbLength: thumbLength,
+      contentExtent: content,
+      trackExtent: trackExtent,
       axisDirection: p.axisDirection,
     );
-    p.jumpTo(pixelsFraction * p.maxScrollExtent);
+    p.jumpTo(pixels.clamp(p.minScrollExtent, p.maxScrollExtent));
   }
 
   void _dragStart(double localOffset, double trackExtent, ScrollPosition p) {
-    final thumbLength = _thumbLength(trackExtent, p);
-    final thumbOffset = _thumbOffset(trackExtent, p, thumbLength);
+    // 拖拽期间同样冻结长度：视觉与命中一致，且不会因加载而漂移。
+    _settleTimer?.cancel();
+    _settleTimer = null;
+    _beginFreeze();
+    final thumbLength = _dragThumbLength(trackExtent, p);
+    final thumbOffset = _paintThumbOffset(trackExtent, p, thumbLength);
     if (localOffset >= thumbOffset && localOffset <= thumbOffset + thumbLength) {
       _grabOffset = localOffset - thumbOffset;
     } else {
@@ -386,6 +480,8 @@ class _AppScrollBarState extends State<AppScrollBar>
     if (!_dragging) return;
     _dragging = false;
     _animateToTarget();
+    // 松手即结算：把拖拽期间累计的内容增长一次性补间到位。
+    _settleFreeze();
   }
 
   static double _lerp(double a, double b, double t) => a + (b - a) * t;

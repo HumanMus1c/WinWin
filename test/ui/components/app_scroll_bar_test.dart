@@ -185,40 +185,59 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  group('方向映射（reverse 会话列表回归）', () {
-    test('非 reverse：pixels=0 → 通道上端(0)，pixels=max → 下端(1)', () {
+  group('滑块几何映射（长度解耦 + reverse 回归）', () {
+    // 固定几何：轨道 500、内容 2000、视口 500 ⇒ max=1500、长度=125。
+    const track = 500.0;
+    const content = 2000.0;
+    const viewport = 500.0;
+    const length = track * viewport / content;
+    const maxPixels = content - viewport;
+
+    double offsetOf(double pixels, AxisDirection dir) =>
+        AppScrollBar.thumbOffsetForProgress(
+          pixels: pixels,
+          contentExtent: content,
+          trackExtent: track,
+          thumbLength: length,
+          axisDirection: dir,
+        );
+
+    test('非 reverse：pixels=0 → 顶部(0)；pixels=max → track − length', () {
+      expect(offsetOf(0, AxisDirection.down), 0.0);
       expect(
-        AppScrollBar.thumbTravelFraction(
-            pixels: 0, maxScrollExtent: 100, axisDirection: AxisDirection.down),
-        0.0,
-      );
-      expect(
-        AppScrollBar.thumbTravelFraction(
-            pixels: 100, maxScrollExtent: 100, axisDirection: AxisDirection.down),
-        1.0,
+        offsetOf(maxPixels, AxisDirection.down),
+        closeTo(track - length, 1e-9),
       );
     });
 
-    test('reverse：pixels=0 在视觉底部 → 占比 1；pixels=max → 占比 0', () {
+    test('reverse：pixels=0 在视觉底部；pixels=max 在顶部', () {
       expect(
-        AppScrollBar.thumbTravelFraction(
-            pixels: 0, maxScrollExtent: 100, axisDirection: AxisDirection.up),
-        1.0,
+        offsetOf(0, AxisDirection.up),
+        closeTo(track - length, 1e-9),
       );
-      expect(
-        AppScrollBar.thumbTravelFraction(
-            pixels: 100, maxScrollExtent: 100, axisDirection: AxisDirection.up),
-        0.0,
+      expect(offsetOf(maxPixels, AxisDirection.up), closeTo(0.0, 1e-9));
+    });
+
+    test('偏移与滑块长度无关（加载只改变长度，不推动位置）', () {
+      final narrow = AppScrollBar.thumbOffsetForProgress(
+        pixels: 900,
+        contentExtent: content,
+        trackExtent: track,
+        thumbLength: 60,
+        axisDirection: AxisDirection.down,
       );
-      // 横向 reverse 同理（向左）。
-      expect(
-        AppScrollBar.thumbTravelFraction(
-            pixels: 0, maxScrollExtent: 100, axisDirection: AxisDirection.left),
-        1.0,
+      final wide = AppScrollBar.thumbOffsetForProgress(
+        pixels: 900,
+        contentExtent: content,
+        trackExtent: track,
+        thumbLength: 160,
+        axisDirection: AxisDirection.down,
       );
+      expect(wide, narrow);
     });
 
     test('正/逆映射互逆（拖拽跳转与回读一致）', () {
+      const maxOffset = track - length;
       for (final dir in <AxisDirection>[
         AxisDirection.down,
         AxisDirection.right,
@@ -226,11 +245,22 @@ void main() {
         AxisDirection.left,
       ]) {
         for (final f in <double>[0.0, 0.25, 0.5, 0.75, 1.0]) {
-          final pixelsRatio = AppScrollBar.pixelsFractionForTravel(
-              travelFraction: f, axisDirection: dir);
-          final back = AppScrollBar.thumbTravelFraction(
-              pixels: pixelsRatio, maxScrollExtent: 1, axisDirection: dir);
-          expect(back, closeTo(f, 1e-9), reason: 'dir=$dir f=$f');
+          final offset = f * maxOffset;
+          final pixels = AppScrollBar.pixelsForThumbOffset(
+            thumbOffset: offset,
+            thumbLength: length,
+            contentExtent: content,
+            trackExtent: track,
+            axisDirection: dir,
+          );
+          final back = AppScrollBar.thumbOffsetForProgress(
+            pixels: pixels,
+            contentExtent: content,
+            trackExtent: track,
+            thumbLength: length,
+            axisDirection: dir,
+          ).clamp(0.0, maxOffset);
+          expect(back, closeTo(offset, 1e-9), reason: 'dir=$dir f=$f');
         }
       }
     });
