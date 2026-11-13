@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/common/widgets/app_dialog_shell.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/theme/app_colors.dart';
@@ -94,7 +95,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   late final AppTabController _wideTabCtrl;
   late final AppTabController _narrowTabCtrl;
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = AppScrollController();
   bool _autoPausedByCollapse = false;
 
   /// 播放器二级弹层可见性：任一弹层打开期间锁定左栏滚动，

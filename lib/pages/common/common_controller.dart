@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/http/loading_state.dart';
 
 mixin ScrollOrRefreshMixin {
@@ -49,7 +50,7 @@ mixin ScrollOrRefreshMixin {
 abstract class CommonController<R, T> extends GetxController
     with ScrollOrRefreshMixin {
   @override
-  final ScrollController scrollController = ScrollController();
+  final ScrollController scrollController = AppScrollController();
 
   bool isLoading = false;
 

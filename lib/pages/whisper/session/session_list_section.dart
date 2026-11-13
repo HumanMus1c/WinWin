@@ -10,6 +10,8 @@ import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
+import 'package:winwin/common/widgets/list_load_footer.dart';
 import 'package:winwin/common/widgets/miuix_context_menu.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
@@ -27,6 +29,7 @@ import 'package:winwin/pages/whisper/session/session_more_menu_button.dart';
 import 'package:winwin/pages/whisper/session/session_pagination_policy.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/load_more_gate.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
@@ -105,7 +108,10 @@ class SessionListSectionState extends State<SessionListSection> {
   /// 演示模式：上次追加行的滚动位置（需继续滚动约半屏后才再追加）。
   double _demoLastAppendAt = double.negativeInfinity;
 
-  final ScrollController _scrollCtrl = ScrollController();
+  final ScrollController _scrollCtrl = AppScrollController();
+
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  final LoadMoreGate _loadGate = LoadMoreGate();
 
   @override
   void initState() {
@@ -113,7 +119,31 @@ class SessionListSectionState extends State<SessionListSection> {
     AccountService().addListener(_onAccountChanged);
     Pref.demoModeNotifier.addListener(_onDemoChanged);
     _scrollCtrl.addListener(_onDemoScroll);
+    _scrollCtrl.addListener(_onScrollLoad);
     _load();
+  }
+
+  /// 滚动补货：替代原「列表末尾构造时触发」的写法。
+  void _onScrollLoad() {
+    if (Pref.demoMode) return;
+    if (!_hasMore || _isLoadingMore || _loading) return;
+    if (!_scrollCtrl.hasClients || !_scrollCtrl.position.hasContentDimensions) {
+      return;
+    }
+    if (!_loadGate.shouldTrigger(_scrollCtrl.position)) return;
+    _load();
+  }
+
+  /// 首屏内容不足一屏时继续补货（此前由末尾加载项的 post-frame 触发）。
+  void _checkAutoLoad() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_hasMore || _isLoadingMore || _loading) return;
+      if (_scrollCtrl.hasClients &&
+          _scrollCtrl.position.hasContentDimensions &&
+          _scrollCtrl.position.maxScrollExtent <= 0) {
+        _load();
+      }
+    });
   }
 
   @override
@@ -127,6 +157,7 @@ class SessionListSectionState extends State<SessionListSection> {
 
   @override
   void dispose() {
+    _scrollCtrl.removeListener(_onScrollLoad);
     _scrollCtrl.removeListener(_onDemoScroll);
     _scrollCtrl.dispose();
     Pref.demoModeNotifier.removeListener(_onDemoChanged);
@@ -205,6 +236,7 @@ class SessionListSectionState extends State<SessionListSection> {
       return;
     }
     if (refresh) {
+      _loadGate.reset();
       _endTs = 0;
       _hasMore = true;
       // B7 反馈轮#2：刷新期间保留现有列表（不再清空置 _loading —— 消除与
@@ -280,6 +312,7 @@ class SessionListSectionState extends State<SessionListSection> {
             _hasMore = merged.hasMore;
             _endTs = merged.nextEndTs;
           });
+          _checkAutoLoad();
           // 整页重复时用更早的游标自动重试（对齐 BiliPai 分页策略）。
           if (merged.shouldRetry) {
             _load(dupRetry: dupRetry + 1);
@@ -449,22 +482,10 @@ class SessionListSectionState extends State<SessionListSection> {
           SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
               if (index == _sessions.length) {
-                // 加载更多指示器 - 使用 addPostFrameCallback 避免在 build 中调用 _load
-                if (_hasMore && !_isLoadingMore) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted && _hasMore && !_isLoadingMore) {
-                      _load();
-                    }
-                  });
-                }
-                return const Padding(
-                  padding: EdgeInsets.all(Style.md),
-                  child: Center(
-                    child: AppProgressIndicator(
-                      strokeWidth: 2,
-                      color: biliPink,
-                    ),
-                  ),
+                // 恒高槽位：加载 / 没有更多 / 空白 切换不改变内容总长。
+                return ListLoadFooter(
+                  loading: _isLoadingMore,
+                  hasMore: _hasMore,
                 );
               }
               return _SessionTile(
@@ -474,7 +495,7 @@ class SessionListSectionState extends State<SessionListSection> {
                 onToggleDnd: _handleToggleDnd,
                 onRemove: _handleRemove,
               );
-            }, childCount: _sessions.length + (_hasMore ? 1 : 0)),
+            }, childCount: _sessions.length + 1),
           ),
       ],
     );

@@ -13,6 +13,8 @@ import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/common/widgets/demo_editable.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
+import 'package:winwin/common/widgets/list_load_footer.dart';
 import 'package:winwin/core/bootstrap.dart';
 import 'package:winwin/core/demo/demo_overrides.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
@@ -30,12 +32,12 @@ import 'package:winwin/utils/bilibili_url_parser.dart';
 import 'package:winwin/utils/grid.dart';
 import 'package:winwin/utils/id_utils.dart';
 import 'package:winwin/utils/image_utils.dart';
+import 'package:winwin/utils/load_more_gate.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_scaffold.dart';
-import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tab_view.dart';
 
 /// 推送动态页。
@@ -120,7 +122,10 @@ class _DynTabPage extends StatefulWidget {
 
 class _DynTabPageState extends State<_DynTabPage>
     with AutomaticKeepAliveClientMixin {
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = AppScrollController();
+
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  final LoadMoreGate _loadGate = LoadMoreGate();
   LoadingState<DynFeedData> _state = LoadingState.loading();
   final List<DynItemModel> _items = [];
   String? _offset;
@@ -209,6 +214,7 @@ class _DynTabPageState extends State<_DynTabPage>
     // 其余可调 ps 的列表统一走 ViewportLoadBudget 单页上限。
     _loading = true;
     if (refresh) {
+      _loadGate.reset();
       _offset = null;
       _items.clear();
       _likedState.clear();
@@ -242,10 +248,10 @@ class _DynTabPageState extends State<_DynTabPage>
       return;
     }
     final pos = _scrollController.position;
-    if (pos.pixels < pos.maxScrollExtent - 240) return;
     // 演示模式：本地追加"一行"（数量随列数）；到达底部后需继续滚动约半屏
     // 才会再次追加，避免连续触发追加多行。
     if (Pref.demoMode) {
+      if (pos.pixels < pos.maxScrollExtent - 240) return;
       if (pos.pixels <= _demoLastAppendAt + pos.viewportDimension * 0.5) {
         return;
       }
@@ -254,6 +260,8 @@ class _DynTabPageState extends State<_DynTabPage>
       setState(() => _demoExtra += perRow);
       return;
     }
+    // 跨过「距底 1 屏」只触发一次（贴底不重复请求）。
+    if (!_loadGate.shouldTrigger(pos)) return;
     _load(refresh: false);
   }
 
@@ -319,9 +327,6 @@ class _DynTabPageState extends State<_DynTabPage>
                   item: _items[index])
               : _buildDemoDynCard(index);
         }
-        if (index == _items.length - 1) {
-          _onScroll();
-        }
         return _DynVideoCard(item: _items[index]);
       },
     );
@@ -342,9 +347,6 @@ class _DynTabPageState extends State<_DynTabPage>
                   item: _items[index])
               : _buildDemoDynCard(index);
         }
-        if (index == _items.length - 1) {
-          _onScroll();
-        }
         return _DynPgcCard(item: _items[index]);
       },
     );
@@ -364,9 +366,6 @@ class _DynTabPageState extends State<_DynTabPage>
                   item: _items[index])
               : _buildDemoDynCard(index);
         }
-        if (index == _items.length - 1) {
-          _onScroll();
-        }
         return _buildDynCard(_items[index]);
       },
     );
@@ -385,9 +384,6 @@ class _DynTabPageState extends State<_DynTabPage>
               ? _buildDemoDynCard(_items[index].id.hashCode,
                   item: _items[index])
               : _buildDemoDynCard(index);
-        }
-        if (index == _items.length - 1) {
-          _onScroll();
         }
         return _buildDynCard(_items[index]);
       },
@@ -550,30 +546,15 @@ class _DynTabPageState extends State<_DynTabPage>
       );
 
   Widget _buildTrailer() {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Style.lg),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: AppProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-    if (!_hasMore && _items.isNotEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Style.lg),
-        child: Center(
-          child: Text(
-            '没有更多了',
-            style: TextStyle(fontSize: 12, color: AppColors.grey),
-          ),
-        ),
-      );
-    }
-    return const SizedBox.shrink();
+    // 恒高槽位：转圈 / 没有更多 / 空白 三态切换不改变内容总长，
+    // 避免贴底时 footer 缩短导致滚动位置回弹（加载时「上下抖一下」的根因）。
+    return ListLoadFooter(
+      loading: _loading,
+      hasMore: _hasMore,
+      textColor: AppColors.grey,
+      errorText: _state is Error ? (_state as Error).errMsg : null,
+      onRetry: () => _load(refresh: true),
+    );
   }
 }
 

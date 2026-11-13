@@ -3,8 +3,10 @@ import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/list_load_footer.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/bootstrap.dart';
@@ -14,6 +16,7 @@ import 'package:winwin/pages/live/live_room_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/style.dart';
+import 'package:winwin/utils/load_more_gate.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -225,13 +228,16 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
   bool _loading = false;
   late final ScrollController _scrollController;
 
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  final LoadMoreGate _loadGate = LoadMoreGate();
+
   @override
   bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController()..addListener(_onScroll);
+    _scrollController = AppScrollController()..addListener(_onScroll);
     if (AccountService().isLogin) {
       _load(refresh: true);
     }
@@ -263,6 +269,7 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
     if (!refresh && !_hasMore) return;
     _loading = true;
     if (refresh) {
+      _loadGate.reset();
       _page = 1;
       _items.clear();
       _hasMore = true;
@@ -310,9 +317,9 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
       return;
     }
     final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 240) {
-      _load(refresh: false);
-    }
+    // 跨过「距底 1 屏」只触发一次（贴底不重复请求）。
+    if (!_loadGate.shouldTrigger(pos)) return;
+    _load(refresh: false);
   }
 
   @override
@@ -357,12 +364,7 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
                             crossAxisSpacing: Style.cardSpace,
                           ),
                           delegate: SliverChildBuilderDelegate(
-                            (context, i) {
-                              if (i >= _items.length - 2) {
-                                _onScroll();
-                              }
-                              return _LiveCard(item: _items[i]);
-                            },
+                            (context, i) => _LiveCard(item: _items[i]),
                             childCount: _items.length,
                           ),
                         ),
@@ -428,25 +430,8 @@ class _LiveFollowSubViewState extends State<_LiveFollowSubView>
       );
 
   Widget _buildTrailer() {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Style.lg),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: AppProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-    if (!_hasMore) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Style.lg),
-        child: Center(child: Text('没有更多了')),
-      );
-    }
-    return const SizedBox.shrink();
+    // 恒高槽位：三态切换不改变内容总长，避免贴底加载时位置回弹。
+    return ListLoadFooter(loading: _loading, hasMore: _hasMore);
   }
 }
 
@@ -469,13 +454,16 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
   bool _loading = false;
   late final ScrollController _scrollController;
 
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  final LoadMoreGate _loadGate = LoadMoreGate();
+
   @override
   bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController()..addListener(_onScroll);
+    _scrollController = AppScrollController()..addListener(_onScroll);
     _load(refresh: true);
   }
 
@@ -505,6 +493,7 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
     if (!refresh && !_hasMore) return;
     _loading = true;
     if (refresh) {
+      _loadGate.reset();
       _page = 1;
       _items.clear();
       _hasMore = true;
@@ -556,9 +545,9 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
       return;
     }
     final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 240) {
-      _load(refresh: false);
-    }
+    // 跨过「距底 1 屏」只触发一次（贴底不重复请求）。
+    if (!_loadGate.shouldTrigger(pos)) return;
+    _load(refresh: false);
   }
 
   @override
@@ -600,12 +589,7 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
                             crossAxisSpacing: Style.cardSpace,
                           ),
                           delegate: SliverChildBuilderDelegate(
-                            (context, i) {
-                              if (i >= _items.length - 2) {
-                                _onScroll();
-                              }
-                              return _LiveCard(item: _items[i]);
-                            },
+                            (context, i) => _LiveCard(item: _items[i]),
                             childCount: _items.length,
                           ),
                         ),
@@ -644,25 +628,8 @@ class _LiveAreaSubViewState extends State<_LiveAreaSubView>
       );
 
   Widget _buildTrailer() {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Style.lg),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: AppProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-    if (!_hasMore) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Style.lg),
-        child: Center(child: Text('没有更多了')),
-      );
-    }
-    return const SizedBox.shrink();
+    // 恒高槽位：三态切换不改变内容总长，避免贴底加载时位置回弹。
+    return ListLoadFooter(loading: _loading, hasMore: _hasMore);
   }
 }
 

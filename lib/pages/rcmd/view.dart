@@ -16,7 +16,7 @@ import 'package:winwin/services/video_card_meta_service.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
-import 'package:winwin/utils/viewport_load_budget.dart';
+import 'package:winwin/utils/load_more_gate.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/ui/home/home_chrome_metrics.dart';
@@ -39,6 +39,9 @@ class _RcmdPageState extends State<RcmdPage>
 
   /// 演示模式：上次追加行的滚动位置（需继续滚动约半屏后才再追加）。
   double _demoLastAppendAt = double.negativeInfinity;
+
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次，避免贴底每帧重发请求。
+  final LoadMoreGate _loadGate = LoadMoreGate();
 
   @override
   bool get wantKeepAlive => true;
@@ -67,8 +70,14 @@ class _RcmdPageState extends State<RcmdPage>
     if (Pref.demoMode) return;
     final sc = controller.scrollController;
     if (!sc.hasClients || !sc.position.hasContentDimensions) return;
-    if (!ViewportLoadBudget.shouldLoadMore(sc.position)) return;
+    if (!_loadGate.shouldTrigger(sc.position)) return;
     controller.onLoadMore();
+  }
+
+  /// 下拉刷新：重置门闩（列表内容会被整体替换，重新按「未触底」处理）。
+  Future<void> _refresh() {
+    _loadGate.reset();
+    return controller.onRefresh();
   }
 
   void _onDemoChanged() {
@@ -106,7 +115,7 @@ class _RcmdPageState extends State<RcmdPage>
         displacement: 12,
         edgeOffset: HomeChromeMetrics.topReserveOf(context),
         strokeWidth: 2.5,
-        onRefresh: controller.onRefresh,
+        onRefresh: _refresh,
         child: CustomScrollView(
           controller: controller.scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
@@ -193,9 +202,6 @@ class _RcmdPageState extends State<RcmdPage>
           );
         }
         final int itemIndex = showTip && index > tipAt ? index - 1 : index;
-        if (itemIndex == response.length - 1) {
-          controller.onLoadMore();
-        }
         final item = response[itemIndex];
         return _RcmdVideoCard(
           item: item,

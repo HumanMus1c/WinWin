@@ -11,6 +11,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:winwin/ui/components/app_tab_view.dart';
 import 'package:winwin/common/widgets/app_scroll_bar.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
@@ -251,7 +252,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         RouteAware,
         WindowListener,
         VideoInteractionMixin<VideoDetailPage> {
-  final ScrollController scrollController = ScrollController();
+  final ScrollController scrollController = AppScrollController();
   WinWinPlayerController? playerController;
 
   /// 播放器二级弹层可见性（章节面板 / 音量 / 菜单 / 设置对话框 / 截图预览）：

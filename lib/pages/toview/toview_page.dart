@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixFloatingActionButton, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
 import 'package:flutter/widgets.dart';
 
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
+import 'package:winwin/common/widgets/list_load_footer.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
@@ -32,6 +34,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/load_more_gate.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -58,7 +61,10 @@ class ToviewPage extends StatefulWidget {
 }
 
 class _ToviewPageState extends State<ToviewPage> {
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = AppScrollController();
+
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  final LoadMoreGate _loadGate = LoadMoreGate();
   final List<LaterItem> _items = [];
   int _page = 1;
   int? _totalCount;
@@ -163,6 +169,7 @@ class _ToviewPageState extends State<ToviewPage> {
     }
     await ensureBootstrap();
     if (refresh) {
+      _loadGate.reset();
       _page = 1;
       _hasMore = true;
       _items.clear();
@@ -242,19 +249,20 @@ class _ToviewPageState extends State<ToviewPage> {
     if (_scrollController.hasClients &&
         _scrollController.position.hasContentDimensions) {
       final pos = _scrollController.position;
-      if (pos.pixels >= pos.maxScrollExtent - 300) {
-        // 演示模式：滚动仅本地追加"一行"（数量=视口列数），不请求云端。
-        if (Pref.demoMode) {
-          if (pos.pixels <= _demoLastAppendAt + pos.viewportDimension * 0.5) {
-            return;
-          }
-          _demoLastAppendAt = pos.pixels;
-          final perRow = (pos.viewportDimension / 460).floor().clamp(2, 8);
-          setState(() => _demoExtra += perRow);
+      // 演示模式：滚动仅本地追加"一行"（数量=视口列数），不请求云端。
+      if (Pref.demoMode) {
+        if (pos.pixels < pos.maxScrollExtent - 240) return;
+        if (pos.pixels <= _demoLastAppendAt + pos.viewportDimension * 0.5) {
           return;
         }
-        _load();
+        _demoLastAppendAt = pos.pixels;
+        final perRow = (pos.viewportDimension / 460).floor().clamp(2, 8);
+        setState(() => _demoExtra += perRow);
+        return;
       }
+      // 跨过「距底 1 屏」只触发一次（贴底不重复请求）。
+      if (!_loadGate.shouldTrigger(pos)) return;
+      _load();
     }
   }
 
@@ -428,33 +436,13 @@ class _ToviewPageState extends State<ToviewPage> {
                                 },
                               ),
                             ),
-                            if (_isLoadingMore)
-                              const SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: EdgeInsets.all(Style.md),
-                                  child: Center(
-                                    child: AppProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: biliPink,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else if (!_hasMore && _items.isNotEmpty)
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: Style.md),
-                                  child: Center(
-                                    child: Text(
-                                      '没有更多了',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppThemeHost.of(context).colors.outline,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                            // 恒高槽位：转圈 / 没有更多 / 空白 切换不改变内容总长。
+                            SliverToBoxAdapter(
+                              child: ListLoadFooter(
+                                loading: _isLoadingMore,
+                                hasMore: _hasMore,
                               ),
+                            ),
                           ],
                         ),
                       ),

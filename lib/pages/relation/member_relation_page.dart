@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_miuix/miuix.dart' show MiuixCard, MiuixPressFeedbackType, MiuixPressable, MiuixButton;
 
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
+import 'package:winwin/common/widgets/list_load_footer.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -13,6 +15,7 @@ import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/load_more_gate.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/core/shell/app_routes.dart';
@@ -56,6 +59,10 @@ class MemberRelationPage extends StatefulWidget {
 }
 
 class _MemberRelationPageState extends State<MemberRelationPage> {
+  final ScrollController _scrollController = AppScrollController();
+
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  final LoadMoreGate _loadGate = LoadMoreGate();
   final List<_RelationMember> _items = [];
   int _page = 1;
   int? _total;
@@ -66,6 +73,24 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_hasMore || _loading) return;
+    if (!_scrollController.hasClients ||
+        !_scrollController.position.hasContentDimensions) {
+      return;
+    }
+    if (!_loadGate.shouldTrigger(_scrollController.position)) return;
     _load();
   }
 
@@ -78,6 +103,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
 
   Future<void> _load({bool refresh = false}) async {
     if (refresh) {
+      _loadGate.reset();
       _page = 1;
       _hasMore = true;
       _items.clear();
@@ -136,6 +162,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
                       color: biliPink,
                       onRefresh: () => _load(refresh: true),
                       child: CustomScrollView(
+                        controller: _scrollController,
                         physics: const AlwaysScrollableScrollPhysics(),
                         slivers: [
                           SliverPadding(
@@ -146,47 +173,19 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
                                 mainAxisExtent: 76.0,
                               ),
                               itemCount: _items.length,
-                              itemBuilder: (context, index) {
-                                if (index >= _items.length - 4 &&
-                                    _hasMore &&
-                                    !_loading) {
-                                  _load();
-                                }
-                                return _RelationCard(
-                                  member: _items[index],
-                                  onTap: () => _gotoMember(_items[index]),
-                                );
-                              },
+                              itemBuilder: (context, index) => _RelationCard(
+                                member: _items[index],
+                                onTap: () => _gotoMember(_items[index]),
+                              ),
                             ),
                           ),
-                          if (_hasMore)
-                            const SliverToBoxAdapter(
-                              child: Padding(
-                                padding: EdgeInsets.all(Style.md),
-                                child: Center(
-                                  child: AppProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: biliPink,
-                                  ),
-                                ),
-                              ),
+                          // 恒高槽位：加载 / 没有更多 / 空白 切换不改变内容总长。
+                          SliverToBoxAdapter(
+                            child: ListLoadFooter(
+                              loading: _hasMore,
+                              hasMore: _hasMore,
                             ),
-                          if (!_hasMore && _items.isNotEmpty)
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.all(Style.md),
-                                child: Center(
-                                  child: Text(
-                                    '没有更多了',
-                                    style: TextStyle(
-                                      color:
-                                          AppThemeHost.of(context).colors.outline,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                          ),
                         ],
                       ),
                     ),

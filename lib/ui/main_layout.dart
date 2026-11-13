@@ -44,6 +44,15 @@ class _MainLayoutState extends State<MainLayout> {
   /// 上一次滚动偏移，用于判断方向。
   double _lastOffset = 0;
 
+  /// 同方向累计位移。
+  ///
+  /// 滚轮改为平滑补间后，单帧位移只有几像素（高刷屏更小），不能再按
+  /// 「单帧 delta > 4」判断方向；改为同方向累计超过 [_directionThreshold]
+  /// 才动作，方向翻转时清零，避免来回微调时底栏反复滑动。
+  double _accumulated = 0;
+
+  static const double _directionThreshold = 12;
+
   @override
   void dispose() {
     _bottomBarVisible.dispose();
@@ -54,14 +63,26 @@ class _MainLayoutState extends State<MainLayout> {
     if (!n.metrics.hasPixels) return false;
     final offset = n.metrics.pixels;
     final delta = offset - _lastOffset;
-    // 仅在可滚动区域且偏移超过 12px 才触发，避免抖动。
-    if (offset <= 0) {
-      _bottomBarVisible.value = true;
-    } else if (delta.abs() > 4) {
-      // 向下滚 → 隐藏；向上滚 → 显示。
-      _bottomBarVisible.value = delta < 0;
-    }
     _lastOffset = offset;
+
+    if (offset <= 0) {
+      _accumulated = 0;
+      _bottomBarVisible.value = true;
+      return false;
+    }
+    if (delta.abs() < 0.01) return false;
+    if ((_accumulated > 0) != (delta > 0)) {
+      _accumulated = 0;
+    }
+    _accumulated += delta;
+
+    if (_accumulated >= _directionThreshold) {
+      _accumulated = 0;
+      _bottomBarVisible.value = false; // 向下滚 → 隐藏
+    } else if (_accumulated <= -_directionThreshold) {
+      _accumulated = 0;
+      _bottomBarVisible.value = true; // 向上滚 → 显示
+    }
     return false;
   }
 

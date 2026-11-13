@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/common/widgets/app_top_bar_surface.dart';
 import 'package:winwin/common/widgets/miuix_frosted_surface.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
@@ -88,7 +89,7 @@ class ChatDetailPage extends StatefulWidget {
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final List<Map<String, dynamic>> _messages = []; // oldest-first
-  final ScrollController _scrollCtrl = ScrollController();
+  final ScrollController _scrollCtrl = AppScrollController();
   final TextEditingController _inputCtrl = TextEditingController();
   int? _minSeqno;
   bool _hasMore = true;

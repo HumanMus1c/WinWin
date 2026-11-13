@@ -3,8 +3,10 @@ import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
+import 'package:winwin/common/widgets/list_load_footer.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
@@ -18,6 +20,7 @@ import 'package:winwin/pages/bangumi/bangumi_detail_page.dart';
 import 'package:winwin/pages/login/login_page.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/load_more_gate.dart';
 import 'package:winwin/utils/num_utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -293,13 +296,16 @@ class _HotBangumiViewState extends State<_HotBangumiView>
   bool _loading = false;
   late final ScrollController _scrollController;
 
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  final LoadMoreGate _loadGate = LoadMoreGate();
+
   @override
   bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController()..addListener(_onScroll);
+    _scrollController = AppScrollController()..addListener(_onScroll);
     _load(refresh: true);
   }
 
@@ -331,6 +337,7 @@ class _HotBangumiViewState extends State<_HotBangumiView>
     if (!refresh && !_hasMore) return;
     _loading = true;
     if (refresh) {
+      _loadGate.reset();
       _page = 1;
       _items.clear();
       _hasMore = true;
@@ -378,9 +385,8 @@ class _HotBangumiViewState extends State<_HotBangumiView>
       return;
     }
     final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 240) {
-      _load(refresh: false);
-    }
+    if (!_loadGate.shouldTrigger(pos)) return;
+    _load(refresh: false);
   }
 
   @override
@@ -424,12 +430,7 @@ class _HotBangumiViewState extends State<_HotBangumiView>
                         sliver: SliverGrid(
                           gridDelegate: gridDelegate,
                           delegate: SliverChildBuilderDelegate(
-                            (context, i) {
-                              if (i >= _items.length - 2) {
-                                _onScroll();
-                              }
-                              return _PgcCard(item: _items[i]);
-                            },
+                            (context, i) => _PgcCard(item: _items[i]),
                             childCount: _items.length,
                           ),
                         ),
@@ -468,25 +469,8 @@ class _HotBangumiViewState extends State<_HotBangumiView>
       );
 
   Widget _buildTrailer() {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Style.lg),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: AppProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-    if (!_hasMore) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Style.lg),
-        child: Center(child: Text('没有更多了')),
-      );
-    }
-    return const SizedBox.shrink();
+    // 恒高槽位：三态切换不改变内容总长，避免贴底加载时位置回弹。
+    return ListLoadFooter(loading: _loading, hasMore: _hasMore);
   }
 }
 
@@ -507,13 +491,16 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
   bool _loading = false;
   late final ScrollController _scrollController;
 
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  final LoadMoreGate _loadGate = LoadMoreGate();
+
   @override
   bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController()..addListener(_onScroll);
+    _scrollController = AppScrollController()..addListener(_onScroll);
     AccountService().addListener(_onAccountChanged);
     if (AccountService().isLogin) {
       _load(refresh: true);
@@ -561,6 +548,7 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
     if (!refresh && !_hasMore) return;
     _loading = true;
     if (refresh) {
+      _loadGate.reset();
       _page = 1;
       _items.clear();
       _hasMore = true;
@@ -603,9 +591,8 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
       return;
     }
     final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 240) {
-      _load(refresh: false);
-    }
+    if (!_loadGate.shouldTrigger(pos)) return;
+    _load(refresh: false);
   }
 
   @override
@@ -655,12 +642,7 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
                         sliver: SliverGrid(
                           gridDelegate: gridDelegate,
                           delegate: SliverChildBuilderDelegate(
-                            (context, i) {
-                              if (i >= _items.length - 2) {
-                                _onScroll();
-                              }
-                              return _MyBangumiCard(item: _items[i]);
-                            },
+                            (context, i) => _MyBangumiCard(item: _items[i]),
                             childCount: _items.length,
                           ),
                         ),
@@ -721,25 +703,8 @@ class _MyFollowBangumiViewState extends State<_MyFollowBangumiView>
       );
 
   Widget _buildTrailer() {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Style.lg),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: AppProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-    if (!_hasMore) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Style.lg),
-        child: Center(child: Text('没有更多了')),
-      );
-    }
-    return const SizedBox.shrink();
+    // 恒高槽位：三态切换不改变内容总长，避免贴底加载时位置回弹。
+    return ListLoadFooter(loading: _loading, hasMore: _hasMore);
   }
 }
 

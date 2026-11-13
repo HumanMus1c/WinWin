@@ -93,25 +93,57 @@ class AppScaffold extends StatefulWidget {
 }
 
 class _AppScaffoldState extends State<AppScaffold> {
+  /// 收起阈值：越过该滚动位置才收起（顶部附近不收起，避免刚滚动就抽动）。
+  static const double _collapseAfter = 96;
+
+  /// 展开阈值：回到顶部附近立即展开。
+  static const double _expandBelow = 24;
+
+  /// 回滚滞回：收起后至少向上回滚该距离才展开。
+  ///
+  /// 不能按「单帧 delta 方向」判断：平滑滚动后单帧位移只有几像素，且用户
+  /// 来回微调滚轮时方向频繁翻转，会让安全行反复收起/展开（顶栏高度变化又会
+  /// 改变滚动视口 ⇒ 内容与滑块一起抖）。
+  static const double _expandHysteresis = 120;
+
   bool _collapsed = false;
+
+  /// 收起发生时的滚动位置：展开滞回的锚点。
+  double? _collapsedAt;
 
   bool _onScroll(ScrollNotification notification) {
     if (!widget.collapsible || widget.title == null || !widget.reserveTopStrip) {
       return false;
     }
-    const threshold = 8.0;
-    if (notification is ScrollUpdateNotification) {
-      final delta = notification.scrollDelta ?? 0;
-      final atTop = notification.metrics.pixels <= 0;
-      if (!_collapsed && delta > threshold && !atTop) {
-        setState(() => _collapsed = true);
-      } else if (_collapsed && (delta < -threshold || atTop)) {
-        setState(() => _collapsed = false);
+    if (notification is! ScrollUpdateNotification) {
+      if (notification is ScrollEndNotification &&
+          notification.metrics.pixels <= 0 &&
+          _collapsed) {
+        setState(() {
+          _collapsed = false;
+          _collapsedAt = null;
+        });
       }
-    } else if (notification is ScrollEndNotification &&
-        notification.metrics.pixels <= 0 &&
-        _collapsed) {
-      setState(() => _collapsed = false);
+      return false;
+    }
+    final delta = notification.scrollDelta ?? 0;
+    if (delta == 0) return false;
+    final pixels = notification.metrics.pixels;
+
+    if (!_collapsed) {
+      if (delta > 0 && pixels > _collapseAfter) {
+        _collapsedAt = pixels;
+        setState(() => _collapsed = true);
+      }
+      return false;
+    }
+
+    final anchor = _collapsedAt ?? pixels;
+    if (pixels <= _expandBelow || pixels < anchor - _expandHysteresis) {
+      setState(() {
+        _collapsed = false;
+        _collapsedAt = null;
+      });
     }
     return false;
   }

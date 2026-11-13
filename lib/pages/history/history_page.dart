@@ -2,6 +2,8 @@ import 'package:flutter_miuix/miuix.dart'
     show MiuixCard, MiuixIconButton, MiuixPressFeedbackType, MiuixPressable, MiuixTextButton;
 import 'package:flutter/widgets.dart';
 
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
+import 'package:winwin/common/widgets/list_load_footer.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/common/skeleton/video_card_h.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -29,6 +31,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/load_more_gate.dart';
 import 'package:winwin/utils/utils.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
@@ -83,6 +86,9 @@ class _HistoryPageState extends State<HistoryPage> {
   /// 各分类独立的滚动控制器（[AppTabPager] 每页保活，滚动位置互不影响）。
   final Map<String, ScrollController> _scrollControllers = {};
 
+  /// 各分类独立的滚动补货门闩（跨过「距底 1 屏」只触发一次）。
+  final Map<String, LoadMoreGate> _loadGates = {};
+
   /// 当前分类（官方 `type`：all/archive/live/article）。
   String _type = 'all';
 
@@ -106,10 +112,13 @@ class _HistoryPageState extends State<HistoryPage> {
   /// 分类对应的滚动控制器（首次取用时创建并挂载滚动监听）。
   ScrollController _scrollControllerFor(String type) =>
       _scrollControllers.putIfAbsent(type, () {
-        final controller = ScrollController();
+        final controller = AppScrollController();
         controller.addListener(() => _onScroll(type));
         return controller;
       });
+
+  LoadMoreGate _loadGateFor(String type) =>
+      _loadGates.putIfAbsent(type, LoadMoreGate.new);
 
   @override
   void initState() {
@@ -186,6 +195,7 @@ class _HistoryPageState extends State<HistoryPage> {
     }
     await ensureBootstrap();
     if (refresh) {
+      _loadGateFor(type).reset();
       s.max = null;
       s.viewAt = null;
       s.hasMore = true;
@@ -294,19 +304,20 @@ class _HistoryPageState extends State<HistoryPage> {
     final controller = _scrollControllerFor(type);
     if (controller.hasClients && controller.position.hasContentDimensions) {
       final pos = controller.position;
-      if (pos.pixels >= pos.maxScrollExtent - 300) {
-        // 演示模式：滚动仅本地追加"一行"（数量=视口列数），不请求云端。
-        if (Pref.demoMode) {
-          if (pos.pixels <= _demoLastAppendAt + pos.viewportDimension * 0.5) {
-            return;
-          }
-          _demoLastAppendAt = pos.pixels;
-          final perRow = (pos.viewportDimension / 460).floor().clamp(2, 8);
-          setState(() => _demoExtra += perRow);
+      // 演示模式：滚动仅本地追加"一行"（数量=视口列数），不请求云端。
+      if (Pref.demoMode) {
+        if (pos.pixels < pos.maxScrollExtent - 240) return;
+        if (pos.pixels <= _demoLastAppendAt + pos.viewportDimension * 0.5) {
           return;
         }
-        _load(type);
+        _demoLastAppendAt = pos.pixels;
+        final perRow = (pos.viewportDimension / 460).floor().clamp(2, 8);
+        setState(() => _demoExtra += perRow);
+        return;
       }
+      // 跨过「距底 1 屏」只触发一次（贴底不重复请求）。
+      if (!_loadGateFor(type).shouldTrigger(pos)) return;
+      _load(type);
     }
   }
 
@@ -633,33 +644,15 @@ class _HistoryPageState extends State<HistoryPage> {
                 },
               ),
             ),
-            if (s.isLoadingMore)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(Style.md),
-                  child: Center(
-                    child: AppProgressIndicator(
-                      strokeWidth: 2,
-                      color: biliPink,
-                    ),
-                  ),
-                ),
-              )
-            else if (!s.hasMore && s.items.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Style.md),
-                  child: Center(
-                    child: Text(
-                      '没有更多了',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppThemeHost.of(context).colors.outline,
-                      ),
-                    ),
-                  ),
-                ),
+            // 恒高槽位：转圈 / 没有更多 / 空白 切换不改变内容总长。
+            SliverToBoxAdapter(
+              child: ListLoadFooter(
+                loading: s.isLoadingMore,
+                hasMore: s.hasMore,
+                errorText: s.error,
+                onRetry: s.items.isNotEmpty ? () => _load(type) : null,
               ),
+            ),
           ],
         ),
       ),

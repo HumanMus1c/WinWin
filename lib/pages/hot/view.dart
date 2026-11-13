@@ -13,6 +13,7 @@ import 'package:winwin/pages/video/detail_page.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/load_more_gate.dart';
 import 'package:winwin/core/shell/app_routes.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 import 'package:winwin/ui/home/home_chrome_metrics.dart';
@@ -39,6 +40,12 @@ class _HotPageState extends State<HotPage>
   /// 演示模式：上次追加行的滚动位置（需继续滚动约半屏后才再追加）。
   double _demoLastAppendAt = double.negativeInfinity;
 
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  ///
+  /// 热门流此前只在 `itemBuilder` 构建最后一张卡时触发加载（约距底 250px），
+  /// 请求回来时用户通常已贴底，必然看到空白等待；改为滚动监听 + 1 屏提前量。
+  final LoadMoreGate _loadGate = LoadMoreGate();
+
   @override
   bool get wantKeepAlive => true;
 
@@ -47,13 +54,28 @@ class _HotPageState extends State<HotPage>
     super.initState();
     Pref.demoModeNotifier.addListener(_onDemoChanged);
     controller.scrollController.addListener(_onDemoScroll);
+    controller.scrollController.addListener(_onFeedScroll);
   }
 
   @override
   void dispose() {
+    controller.scrollController.removeListener(_onFeedScroll);
     controller.scrollController.removeListener(_onDemoScroll);
     Pref.demoModeNotifier.removeListener(_onDemoChanged);
     super.dispose();
+  }
+
+  void _onFeedScroll() {
+    if (Pref.demoMode) return;
+    final sc = controller.scrollController;
+    if (!sc.hasClients || !sc.position.hasContentDimensions) return;
+    if (!_loadGate.shouldTrigger(sc.position)) return;
+    controller.onLoadMore();
+  }
+
+  Future<void> _refresh() {
+    _loadGate.reset();
+    return controller.onRefresh();
   }
 
   void _onDemoChanged() {
@@ -91,7 +113,7 @@ class _HotPageState extends State<HotPage>
         displacement: 12,
         edgeOffset: HomeChromeMetrics.topReserveOf(context),
         strokeWidth: 2.5,
-        onRefresh: controller.onRefresh,
+        onRefresh: _refresh,
         child: CustomScrollView(
           controller: controller.scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
@@ -136,9 +158,6 @@ class _HotPageState extends State<HotPage>
             ? SliverGrid.builder(
                 gridDelegate: gridDelegate,
                 itemBuilder: (context, index) {
-                  if (index == response.length - 1) {
-                    controller.onLoadMore();
-                  }
                   return VideoCardV(
                     videoItem: response[index],
                     heroTag: 'hot_${response[index].bvid}',

@@ -9,6 +9,7 @@ import 'package:fvp/mdk.dart' as mdk;
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/skeleton/skeleton.dart';
 import 'package:winwin/common/widgets/comment/comment_input_bar.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/demo_player_chrome.dart';
 import 'package:winwin/ui/components/hover_container.dart';
@@ -125,7 +126,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
   bool _isSendingDanmaku = false;
 
   final List<LiveDanmakuMessage> _danmakuList = [];
-  final ScrollController _chatScrollCtrl = ScrollController();
+  final ScrollController _chatScrollCtrl = AppScrollController();
 
   @override
   void initState() {

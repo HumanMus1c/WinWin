@@ -8,6 +8,7 @@ import 'package:flutter_miuix/miuix.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'package:winwin/common/widgets/app_chip.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/common/widgets/app_sliver_header.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/ui/components/app_tab_view.dart';
@@ -346,7 +347,7 @@ class MemberSpacePage extends StatefulWidget {
 class _MemberSpacePageState extends State<MemberSpacePage>
     with SingleTickerProviderStateMixin {
   late AppTabController _tabController;
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = AppScrollController();
 
   /// 顶栏（返回/分享/更多）高度，= `SliverAppBar` 默认 `toolbarHeight`。
   static const double _topBarHeight = 56;

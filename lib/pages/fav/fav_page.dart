@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/common/widgets/app_scroll_bar.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
+import 'package:winwin/common/widgets/list_load_footer.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
@@ -27,6 +29,7 @@ import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_empty_state.dart';
 import 'package:winwin/utils/duration_utils.dart';
 import 'package:winwin/utils/grid.dart';
+import 'package:winwin/utils/load_more_gate.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
@@ -52,7 +55,10 @@ class FavPage extends StatefulWidget {
 }
 
 class _FavPageState extends State<FavPage> {
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = AppScrollController();
+
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  final LoadMoreGate _loadGate = LoadMoreGate();
   final List<FavFolderInfo> _folders = [];
   int _page = 1;
   bool _hasMore = true;
@@ -116,6 +122,7 @@ class _FavPageState extends State<FavPage> {
   Future<void> _load({bool refresh = false}) async {
     await ensureBootstrap();
     if (refresh) {
+      _loadGate.reset();
       _page = 1;
       _hasMore = true;
       _folders.clear();
@@ -208,10 +215,9 @@ class _FavPageState extends State<FavPage> {
     if (!_hasMore || _loading || _isLoadingMore) return;
     if (_scrollController.hasClients &&
         _scrollController.position.hasContentDimensions) {
-      final pos = _scrollController.position;
-      if (pos.pixels >= pos.maxScrollExtent - 300) {
-        _load();
-      }
+      // 跨过「距底 1 屏」只触发一次（贴底不重复请求）。
+      if (!_loadGate.shouldTrigger(_scrollController.position)) return;
+      _load();
     }
   }
 
@@ -260,33 +266,13 @@ class _FavPageState extends State<FavPage> {
                                 },
                               ),
                             ),
-                            if (_isLoadingMore)
-                              const SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: EdgeInsets.all(Style.md),
-                                  child: Center(
-                                    child: AppProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: biliPink,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else if (!_hasMore && _folders.isNotEmpty)
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: Style.md),
-                                  child: Center(
-                                    child: Text(
-                                      '没有更多了',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppThemeHost.of(context).colors.outline,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                            // 恒高槽位：转圈 / 没有更多 / 空白 切换不改变内容总长。
+                            SliverToBoxAdapter(
+                              child: ListLoadFooter(
+                                loading: _isLoadingMore,
+                                hasMore: _hasMore,
                               ),
+                            ),
                           ],
                         ),
                       ),
@@ -422,7 +408,10 @@ class FavDetailPage extends StatefulWidget {
 }
 
 class _FavDetailPageState extends State<FavDetailPage> {
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = AppScrollController();
+
+  /// 滚动补货门闩：跨过「距底 1 屏」只触发一次。
+  final LoadMoreGate _loadGate = LoadMoreGate();
   final List<FavDetailItem> _items = [];
   int _page = 1;
   bool _hasMore = true;
@@ -466,6 +455,7 @@ class _FavDetailPageState extends State<FavDetailPage> {
 
   Future<void> _load({bool refresh = false}) async {
     if (refresh) {
+      _loadGate.reset();
       _page = 1;
       _hasMore = true;
       _items.clear();
@@ -508,10 +498,9 @@ class _FavDetailPageState extends State<FavDetailPage> {
     if (!_hasMore || _loading || _isLoadingMore) return;
     if (_scrollController.hasClients &&
         _scrollController.position.hasContentDimensions) {
-      final pos = _scrollController.position;
-      if (pos.pixels >= pos.maxScrollExtent - 300) {
-        _load();
-      }
+      // 跨过「距底 1 屏」只触发一次（贴底不重复请求）。
+      if (!_loadGate.shouldTrigger(_scrollController.position)) return;
+      _load();
     }
   }
 
@@ -626,33 +615,13 @@ class _FavDetailPageState extends State<FavDetailPage> {
                             },
                           ),
                         ),
-                        if (_isLoadingMore)
-                          const SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.all(Style.md),
-                              child: Center(
-                                child: AppProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: biliPink,
-                                ),
-                              ),
-                            ),
-                          )
-                        else if (!_hasMore && _items.isNotEmpty)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: Style.md),
-                              child: Center(
-                                child: Text(
-                                  '没有更多了',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppThemeHost.of(context).colors.outline,
-                                  ),
-                                ),
-                              ),
-                            ),
+                        // 恒高槽位：转圈 / 没有更多 / 空白 切换不改变内容总长。
+                        SliverToBoxAdapter(
+                          child: ListLoadFooter(
+                            loading: _isLoadingMore,
+                            hasMore: _hasMore,
                           ),
+                        ),
                       ],
                     ),
                   ),
@@ -914,7 +883,7 @@ class _FavPanelState extends State<_FavPanel> {
   String _query = '';
 
   /// 收藏夹列表控制器（供自挂的项目自绘滚动条 [AppScrollBar] 使用）。
-  final ScrollController _listController = ScrollController();
+  final ScrollController _listController = AppScrollController();
 
   @override
   void initState() {

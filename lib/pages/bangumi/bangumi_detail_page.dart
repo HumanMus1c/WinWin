@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'package:winwin/common/widgets/app_chip.dart';
 import 'package:winwin/common/widgets/app_scroll_bar.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
@@ -74,9 +75,9 @@ class _BangumiDetailPageState extends State<BangumiDetailPage> {
   int _followStatus = 0; // 1=想看, 2=在看, 3=看过
 
   // 滚动控制器与最后观看剧集自动定位
-  final ScrollController _leftScrollController = ScrollController();
-  final ScrollController _rightScrollController = ScrollController();
-  final ScrollController _narrowScrollController = ScrollController();
+  final ScrollController _leftScrollController = AppScrollController();
+  final ScrollController _rightScrollController = AppScrollController();
+  final ScrollController _narrowScrollController = AppScrollController();
   final GlobalKey _lastWatchedKey = GlobalKey();
   bool _hasAutoLocated = false;
 

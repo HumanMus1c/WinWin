@@ -1,6 +1,7 @@
 import 'dart:async' show Timer;
 
-import 'package:flutter/gestures.dart' show DragStartBehavior;
+import 'package:flutter/gestures.dart'
+    show DragStartBehavior, GestureBinding, PointerScrollEvent, PointerSignalEvent;
 import 'package:flutter/widgets.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
 
@@ -66,6 +67,15 @@ class AppScrollBar extends StatefulWidget {
 
   /// 三态补间时长。
   static const int transitionMs = 170;
+
+  /// 内容总长（滑块长度）变化的补间时长。
+  static const int extentTransitionMs = 200;
+
+  /// 内容总长的变化死区（px）：小于该值不重定向补间。
+  ///
+  /// 瀑布流布局会逐帧微调 extent 估算值；没有死区时补间会被每帧重定向，
+  /// 反而让滑块持续轻微抽动。
+  static const double extentSnapThreshold = 1.5;
 
   /// 滚动结束后回落空闲态的防抖时长。
   static const int idleDelayMs = 700;
@@ -143,13 +153,29 @@ class AppScrollBar extends StatefulWidget {
 }
 
 class _AppScrollBarState extends State<AppScrollBar>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   /// 强调度：0 = 空闲，1 = hover / 滚动中，2 = 拖拽（由动画平滑逼近）。
   late final AnimationController _emphasis = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: AppScrollBar.transitionMs),
     upperBound: 2,
   );
+
+  /// 内容总长（`maxScrollExtent + viewportDimension`）的补间。
+  ///
+  /// 追加内容 / footer 状态切换 / 视口尺寸变化都会让内容总长突变；
+  /// 直接按实时值绘制滑块，就是「加载时滑块瞬间变短 + 瞬间上移」。
+  /// 这里只对**绘制**做 200ms 补间，正常滚动时仍严格跟手（长度不变，偏移
+  /// 由 pixels 直接决定）。
+  late final AnimationController _extentAnim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: AppScrollBar.extentTransitionMs),
+  );
+
+  Tween<double>? _extentTween;
+
+  /// 上一次实际绘制的「内容总长」：补间起点与死区判断用。
+  double? _displayedExtent;
 
   bool _hovered = false;
   bool _dragging = false;
@@ -163,6 +189,7 @@ class _AppScrollBarState extends State<AppScrollBar>
   void dispose() {
     _idleTimer?.cancel();
     _emphasis.dispose();
+    _extentAnim.dispose();
     super.dispose();
   }
 
@@ -204,6 +231,87 @@ class _AppScrollBarState extends State<AppScrollBar>
       );
     }
     return false;
+  }
+
+  /// 内容尺寸变化（追加内容 / footer 切换 / 视口变化）时启动滑块补间。
+  ///
+  /// `ScrollMetricsNotification` 由 `ScrollPosition.applyContentDimensions`
+  /// 在**布局结束后**以微任务派发（一帧最多一次），因此不会在 build 阶段
+  /// 启动动画，也不会被同帧多次布局重复触发。
+  bool _onMetricsNotification(ScrollMetricsNotification notification) {
+    if (notification.depth != 0) return false;
+    final live = notification.metrics.maxScrollExtent +
+        notification.metrics.viewportDimension;
+    final displayed = _extentAnim.isAnimating && _extentTween != null
+        ? _extentTween!.evaluate(_extentAnim)
+        : _displayedExtent;
+    if (displayed == null) {
+      _displayedExtent = live;
+      return false;
+    }
+    if ((live - displayed).abs() < AppScrollBar.extentSnapThreshold) {
+      return false;
+    }
+    _extentTween = Tween<double>(begin: displayed, end: live);
+    _extentAnim.forward(from: 0);
+    return false;
+  }
+
+  /// 绘制用的内容总长：补间进行中取插值，否则取实时值并记录。
+  double _paintContentExtent(ScrollPosition p) {
+    final live = p.maxScrollExtent + p.viewportDimension;
+    final tween = _extentTween;
+    if (_extentAnim.isAnimating && tween != null) {
+      return tween.evaluate(_extentAnim);
+    }
+    _displayedExtent = live;
+    return live;
+  }
+
+  /// 绘制用滑块长度（基于补间后的内容总长）。
+  double _paintThumbLength(double trackExtent, ScrollPosition p) {
+    final content = _paintContentExtent(p);
+    if (content <= 0) return trackExtent;
+    final fraction = p.viewportDimension / content;
+    return (trackExtent * fraction)
+        .clamp(AppScrollBar.minThumbLength, trackExtent);
+  }
+
+  /// 绘制用滑块偏移（基于补间后的内容总长）。
+  double _paintThumbOffset(
+    double trackExtent,
+    ScrollPosition p,
+    double thumbLength,
+  ) {
+    final maxThumbTravel = trackExtent - thumbLength;
+    final paintMax = _paintContentExtent(p) - p.viewportDimension;
+    if (maxThumbTravel <= 0 || paintMax <= 0) return 0;
+    return AppScrollBar.thumbTravelFraction(
+          pixels: p.pixels,
+          maxScrollExtent: paintMax,
+          axisDirection: p.axisDirection,
+        ) *
+        maxThumbTravel;
+  }
+
+  /// 悬停在滚动条通道上的滚轮转发。
+  ///
+  /// 通道是覆盖在内容之上的**兄弟节点**，滚轮事件不会命中 Scrollable，
+  /// 此前在右侧 12px 条带上滚轮完全无效。这里把事件转给滚动位置，
+  /// 与内容区共用同一套 `pointerScroll`（因而同样有平滑补间）。
+  void _handleLanePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    final position = _position;
+    if (position == null || position.maxScrollExtent <= 0) return;
+    final delta = widget.axis == Axis.vertical
+        ? event.scrollDelta.dy
+        : event.scrollDelta.dx;
+    if (delta == 0) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      final p = _position;
+      if (p == null) return;
+      p.pointerScroll(delta);
+    });
   }
 
   /// 当前可用位置；**内容尺寸未就绪时返回 null**。
@@ -330,18 +438,21 @@ class _AppScrollBarState extends State<AppScrollBar>
   Widget _buildLane(BuildContext context, bool vertical) {
     final onSurface = AppThemeHost.of(context).colors.onSurface;
 
-    final lane = MouseRegion(
-      opaque: false,
-      cursor: SystemMouseCursors.basic,
-      onEnter: (_) {
-        _hovered = true;
-        _animateToTarget();
-      },
-      onExit: (_) {
-        _hovered = false;
-        _animateToTarget();
-      },
-      child: LayoutBuilder(
+    final lane = Listener(
+      // 通道是覆盖层（与内容区并列），滚轮不会命中 Scrollable，需手动转发。
+      onPointerSignal: _handleLanePointerSignal,
+      child: MouseRegion(
+        opaque: false,
+        cursor: SystemMouseCursors.basic,
+        onEnter: (_) {
+          _hovered = true;
+          _animateToTarget();
+        },
+        onExit: (_) {
+          _hovered = false;
+          _animateToTarget();
+        },
+        child: LayoutBuilder(
           builder: (context, constraints) {
             final trackExtent =
                 vertical ? constraints.maxHeight : constraints.maxWidth;
@@ -385,17 +496,22 @@ class _AppScrollBarState extends State<AppScrollBar>
               onHorizontalDragCancel: !vertical ? _dragEnd : null,
               child: RepaintBoundary(
                 child: AnimatedBuilder(
-                  animation: Listenable.merge([widget.controller, _emphasis]),
+                  animation: Listenable.merge([
+                    widget.controller,
+                    _emphasis,
+                    _extentAnim,
+                  ]),
                   builder: (context, _) {
                     final e = _emphasis.value;
                     final position = _position;
                     final canScroll =
                         position != null && position.maxScrollExtent > 0;
+                    // 绘制用补间值；拖拽命中仍走实时度量（保持跟手）。
                     final thumbLength = canScroll
-                        ? _thumbLength(trackExtent, position)
+                        ? _paintThumbLength(trackExtent, position)
                         : trackExtent;
                     final thumbOffset = canScroll
-                        ? _thumbOffset(trackExtent, position, thumbLength)
+                        ? _paintThumbOffset(trackExtent, position, thumbLength)
                         : 0.0;
 
                     // 三态连续插值：0→1 加粗/加深，1→2 再进一步。
@@ -430,6 +546,7 @@ class _AppScrollBarState extends State<AppScrollBar>
             );
           },
         ),
+      ),
     );
 
     // 滚动条**不预留占位**，改为覆盖层贴在内容最外侧 [laneThickness] 条带上：
@@ -444,26 +561,30 @@ class _AppScrollBarState extends State<AppScrollBar>
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
       child: NotificationListener<ScrollNotification>(
         onNotification: _onScrollNotification,
-        child: Stack(
-          children: [
-            widget.child,
-            if (vertical)
-              Positioned(
-                top: 0,
-                bottom: 0,
-                right: 0,
-                width: AppScrollBar.laneThickness,
-                child: lane,
-              )
-            else
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: AppScrollBar.laneThickness,
-                child: lane,
-              ),
-          ],
+        // 内容尺寸变化（加载更多 / footer 切换）→ 滑块长度补间的触发源。
+        child: NotificationListener<ScrollMetricsNotification>(
+          onNotification: _onMetricsNotification,
+          child: Stack(
+            children: [
+              widget.child,
+              if (vertical)
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  right: 0,
+                  width: AppScrollBar.laneThickness,
+                  child: lane,
+                )
+              else
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: AppScrollBar.laneThickness,
+                  child: lane,
+                ),
+            ],
+          ),
         ),
       ),
     );
