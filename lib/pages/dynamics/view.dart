@@ -182,7 +182,8 @@ class _DynTabPageState extends State<_DynTabPage>
       if (_scrollController.hasClients &&
           _scrollController.position.hasContentDimensions) {
         final pos = _scrollController.position;
-        if (pos.maxScrollExtent <= 0) {
+        // 首屏 / 补批后：不足「视口 + 1 屏」时主动补齐下一批（无需等滚动）。
+        if (_loadGate.shouldTrigger(pos)) {
           _load(refresh: false);
         }
       }

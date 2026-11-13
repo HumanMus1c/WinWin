@@ -140,7 +140,7 @@ class SessionListSectionState extends State<SessionListSection> {
       if (!mounted || !_hasMore || _isLoadingMore || _loading) return;
       if (_scrollCtrl.hasClients &&
           _scrollCtrl.position.hasContentDimensions &&
-          _scrollCtrl.position.maxScrollExtent <= 0) {
+          _loadGate.shouldTrigger(_scrollCtrl.position)) {
         _load();
       }
     });

@@ -63,7 +63,9 @@ class LoadMoreGate {
       _armed = true;
       return false;
     }
-    if (distance > triggerDistance) return false;
+    // 严格小于：内容恰好「视口 + 1 屏」时缓冲已满足，不额外请求；
+    // 首次进入时若只有一屏（distance == 0）则立即补齐 n+1。
+    if (distance >= triggerDistance) return false;
     if (!_armed) return false;
 
     final now = DateTime.now();

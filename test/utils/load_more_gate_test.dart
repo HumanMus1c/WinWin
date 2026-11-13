@@ -1,3 +1,4 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winwin/utils/load_more_gate.dart';
@@ -9,6 +10,28 @@ import 'package:winwin/utils/load_more_gate.dart';
 /// - 跨过阈值只放行一次；
 /// - 回滚超过迟滞带后重新武装；
 /// - 内容长度变化（新批次落地）后重新武装。
+/// 裸挂 `ScrollPosition` 用的最小上下文（与 app_scroll_bar_test 同口径）。
+class _FakeScrollContext implements ScrollContext {
+  @override
+  BuildContext? get notificationContext => null;
+  @override
+  BuildContext get storageContext => throw UnimplementedError();
+  @override
+  TickerProvider get vsync => const TestVSync();
+  @override
+  AxisDirection get axisDirection => AxisDirection.down;
+  @override
+  double get devicePixelRatio => 1.0;
+  @override
+  void setIgnorePointer(bool value) {}
+  @override
+  void setCanDrag(bool value) {}
+  @override
+  void setSemanticsActions(Set<SemanticsAction> actions) {}
+  @override
+  void saveOffset(double offset) {}
+}
+
 Widget _host(Widget child) => MediaQuery(
       data: const MediaQueryData(size: Size(400, 400)),
       child: Directionality(textDirection: TextDirection.ltr, child: child),
@@ -55,6 +78,21 @@ void main() {
     controller.jumpTo(controller.position.maxScrollExtent);
     await tester.pump();
     expect(gate.shouldTrigger(controller.position), isTrue);
+  });
+
+  test('恰好「视口 + 1 屏」不预取；少 1px 才触发（首屏 n+1 口径）', () {
+    final gate = LoadMoreGate(minInterval: Duration.zero);
+    final position = ScrollPositionWithSingleContext(
+      physics: const ClampingScrollPhysics(),
+      context: _FakeScrollContext(),
+      keepScrollOffset: false,
+    );
+    position.applyViewportDimension(600);
+    position.applyContentDimensions(0, 600); // 内容 = 视口 + 1 屏
+    expect(gate.shouldTrigger(position), isFalse);
+
+    position.applyContentDimensions(0, 599); // 少 1px ⇒ 缓冲不足
+    expect(gate.shouldTrigger(position), isTrue);
   });
 
   testWidgets('内容变长（新批次落地）后重新武装', (tester) async {

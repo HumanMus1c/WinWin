@@ -78,6 +78,22 @@ class _HotPageState extends State<HotPage>
     return controller.onRefresh();
   }
 
+  /// 已自动补货检查过的条目数。
+  int _prefillCheckedFor = -1;
+
+  /// 首次进入 / 每批追加后：内容不足「视口 + 1 屏」时主动补一批。
+  void _schedulePrefill(int itemCount) {
+    if (_prefillCheckedFor == itemCount) return;
+    _prefillCheckedFor = itemCount;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || Pref.demoMode) return;
+      final sc = controller.scrollController;
+      if (!sc.hasClients || !sc.position.hasContentDimensions) return;
+      if (!_loadGate.shouldTrigger(sc.position)) return;
+      controller.onLoadMore();
+    });
+  }
+
   void _onDemoChanged() {
     if (!mounted) return;
     setState(() {});
@@ -151,6 +167,10 @@ class _HotPageState extends State<HotPage>
   ) {
     // 演示模式：完全使用本地生成的卡片（滚动追加一行，不拉取云端）。
     if (Pref.demoMode) return _buildDemoGrid();
+    if (loadingState case Success(:final response)) {
+      final count = response?.length ?? 0;
+      if (count > 0) _schedulePrefill(count);
+    }
     return switch (loadingState) {
       Loading() => _buildSkeleton,
       Success(:final response) =>

@@ -178,7 +178,8 @@ class _HistoryPageState extends State<HistoryPage> {
       if (controller.hasClients &&
           controller.position.hasContentDimensions) {
         final pos = controller.position;
-        if (pos.maxScrollExtent <= 0) {
+        // 首屏 / 补批后：不足「视口 + 1 屏」时主动补齐下一批（无需等滚动）。
+        if (_loadGateFor(type).shouldTrigger(pos)) {
           _load(type);
         }
       }

@@ -80,6 +80,25 @@ class _RcmdPageState extends State<RcmdPage>
     return controller.onRefresh();
   }
 
+  /// 已自动补货检查过的条目数。
+  int _prefillCheckedFor = -1;
+
+  /// 首次进入 / 每批追加后：内容不足「视口 + 1 屏」时主动补一批。
+  ///
+  /// 解决「首次进入只有一屏、必须手动滚一下才加载 n+1」；滚动中的 n+2
+  /// 仍由 [_onFeedScroll] 的 1 屏缓冲触发。
+  void _schedulePrefill(int itemCount) {
+    if (_prefillCheckedFor == itemCount) return;
+    _prefillCheckedFor = itemCount;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || Pref.demoMode) return;
+      final sc = controller.scrollController;
+      if (!sc.hasClients || !sc.position.hasContentDimensions) return;
+      if (!_loadGate.shouldTrigger(sc.position)) return;
+      controller.onLoadMore();
+    });
+  }
+
   void _onDemoChanged() {
     if (!mounted) return;
     setState(() {});
@@ -165,6 +184,7 @@ class _RcmdPageState extends State<RcmdPage>
 
   /// 推荐卡片网格；刷新保留旧内容时，在旧内容起点插入「上次看到这里」分隔卡。
   Widget _buildFeedGrid(AppPalette colorScheme, List<dynamic> response) {
+    _schedulePrefill(response.length);
     final int? tipAt = controller.lastRefreshAt;
     final bool showTip = tipAt != null && tipAt > 0 && tipAt < response.length;
     return SliverGrid.builder(

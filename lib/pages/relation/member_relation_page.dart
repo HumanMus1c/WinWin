@@ -84,6 +84,19 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
     super.dispose();
   }
 
+  /// 首屏 / 补批后：不足「视口 + 1 屏」时主动补齐下一批（无需等滚动）。
+  void _checkAutoLoad() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_hasMore || _loading) return;
+      if (!_scrollController.hasClients ||
+          !_scrollController.position.hasContentDimensions) {
+        return;
+      }
+      if (!_loadGate.shouldTrigger(_scrollController.position)) return;
+      _load();
+    });
+  }
+
   void _onScroll() {
     if (!_hasMore || _loading) return;
     if (!_scrollController.hasClients ||
@@ -135,6 +148,7 @@ class _MemberRelationPageState extends State<MemberRelationPage> {
           _hasMore = _items.length < (_total ?? 0) && list.isNotEmpty;
           _page++;
         });
+        _checkAutoLoad();
       case Error(:final errMsg):
         setState(() {
           _loading = false;
