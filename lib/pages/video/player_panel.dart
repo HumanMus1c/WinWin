@@ -174,6 +174,23 @@ class _PlayerPanelState extends State<PlayerPanel> {
   }
 
   @override
+  void didUpdateWidget(covariant PlayerPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 分P切换等场景会整体替换 controller：监听迁移到新实例，
+    // 避免继续监听已释放的旧 controller（封面兜底不再响应）。
+    if (!identical(oldWidget.controller, widget.controller)) {
+      oldWidget.controller.userPlayRequested.removeListener(
+        _onUserPlayRequested,
+      );
+      widget.controller.userPlayRequested.addListener(_onUserPlayRequested);
+      // 新控制器若已置位播放意图，直接同步封面兜底（不会再有变更通知）。
+      if (widget.controller.userPlayRequested.value) {
+        _coverFallbackActive = false;
+      }
+    }
+  }
+
+  @override
   void dispose() {
     widget.controller.userPlayRequested.removeListener(_onUserPlayRequested);
     _hideTimer?.cancel();

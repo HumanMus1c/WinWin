@@ -253,6 +253,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         WindowListener,
         VideoInteractionMixin<VideoDetailPage> {
   final ScrollController scrollController = AppScrollController();
+
+  /// 分P 切换条的横向滚动控制器（多分P稿件专用）。
+  final ScrollController _pageScrollController = AppScrollController();
+
+  /// 分P 切换进行中：阻止快速连点引发连续换源竞态。
+  bool _pageSwitching = false;
+
   WinWinPlayerController? playerController;
 
   /// 播放器二级弹层可见性（章节面板 / 音量 / 菜单 / 设置对话框 / 截图预览）：
@@ -394,6 +401,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     playerController?.dispose();
     SyncTrace.log('DetailPage', 'dispose after playerController.dispose');
     scrollController.dispose();
+    _pageScrollController.dispose();
     _commentCtrl.dispose();
     _commentFocus.dispose();
     disposeInteractionEventBus();
@@ -676,6 +684,61 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         error: e,
         stackTrace: s,
       );
+    }
+  }
+
+  /// 切换分P（多分P稿件）。
+  ///
+  /// 采用「新建 controller → 释放旧 controller」的成熟换源路径：共享
+  /// mdk.Player 单例按引用计数复用，不重建播放器；旧 controller 在
+  /// dispose 内上报当前分P进度。新分P的续播点/字幕/章节按新 cid 走
+  /// 与首次进入相同的 playInfo 流程。
+  Future<void> _switchPage(int index) async {
+    if (_pageSwitching) return;
+    final data = _detailState.dataOrNull;
+    final pages = data?.pages;
+    if (data == null || pages == null || index < 0 || index >= pages.length) {
+      return;
+    }
+    final page = pages[index];
+    final newCid = page.cid;
+    final old = playerController;
+    if (newCid == null || newCid <= 0 || newCid == old?.cid) return;
+
+    _pageSwitching = true;
+    final aid = data.aid;
+    try {
+      // 新 controller 先构造：引用计数保持 ≥1，共享 player 不触发延迟销毁。
+      final ctrl = WinWinPlayerController(bvid: widget.bvid, cid: newCid);
+      ctrl.aid = aid;
+      ctrl.completed.addListener(_onPlaybackCompleted);
+      // 点选分P 属明确播放意图：解除「自动播放关闭」的封面兜底。
+      ctrl.userPlayRequested.value = true;
+      old?.completed.removeListener(_onPlaybackCompleted);
+      old?.dispose();
+      if (!mounted) {
+        ctrl.dispose();
+        return;
+      }
+      setState(() {
+        playerController = ctrl;
+        _onlineTotal = null;
+      });
+      unawaited(
+        _applyPlayInfo(ctrl, newCid, page.duration ?? 0, aid: aid),
+      );
+      await ctrl.load(gateForResume: true, autoplay: true);
+      if (!mounted) return;
+      AppLogger.w(
+        'DetailPage',
+        'switch part p=${page.page ?? index + 1} cid=$newCid '
+            'ready=${ctrl.ready.value}',
+      );
+      if (Pref.enableOnlineTotal) {
+        unawaited(_loadOnlineTotal(aid, newCid));
+      }
+    } finally {
+      _pageSwitching = false;
     }
   }
 
@@ -1313,6 +1376,16 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                             ),
                           ),
                         ),
+                      // 分P 切换条：紧贴弹幕发送栏下方，仅多分P稿件展示。
+                      if ((response?.pages?.length ?? 0) > 1)
+                        SliverPadding(
+                          padding: kDetailContentPadding,
+                          sliver: SliverToBoxAdapter(
+                            child: _buildPageSelector(
+                              response!.pages!,
+                            ),
+                          ),
+                        ),
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(
                           Style.safeSpace,
@@ -1594,6 +1667,114 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       onToggleInAppFullscreen: _toggleInAppFullscreen,
       onEscape: _handleEscape,
       onPopupOpenChanged: _onPlayerPopupOpenChanged,
+    );
+  }
+
+  /// 分P 切换条（多分P稿件专用）：弹幕发送栏下方一行横向胶囊，
+  /// 当前播放分P 高亮并以播放图标标识；点选即换源播放。
+  Widget _buildPageSelector(List<VideoPage> pages) {
+    final cs = AppThemeHost.of(context).colors;
+    final currentCid = playerController?.cid;
+    return Padding(
+      padding: const EdgeInsets.only(top: Style.sm),
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: Style.sm),
+            child: Text(
+              '分P',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: SizedBox(
+              height: 30,
+              child: ListView.separated(
+                controller: _pageScrollController,
+                scrollDirection: Axis.horizontal,
+                itemCount: pages.length,
+                separatorBuilder: (_, _) => const SizedBox(width: Style.sm),
+                itemBuilder: (context, index) {
+                  final page = pages[index];
+                  final part = (page.part ?? '').trim();
+                  final label = 'P${page.page ?? index + 1}';
+                  final title = part.isEmpty ? label : '$label $part';
+                  final selected = page.cid == currentCid;
+                  return AppTooltip(
+                    message: title,
+                    child: MiuixPressable(
+                      onPressed: selected ? null : () => _switchPage(index),
+                      feedbackType: MiuixPressFeedbackType.sink,
+                      sinkAmount: 0.98,
+                      borderRadius: BorderRadius.circular(Style.radiusFull),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? cs.primaryContainer
+                              : cs.surfaceContainerHighest.withValues(
+                                  alpha: 0.8,
+                                ),
+                          borderRadius: BorderRadius.circular(Style.radiusFull),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (selected) ...[
+                              AppIcon(
+                                AppIcons.play(active: true),
+                                size: 10,
+                                color: cs.primary,
+                              ),
+                              const SizedBox(width: Style.xs),
+                            ],
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 200),
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: selected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                  color: selected
+                                      ? cs.onPrimaryContainer
+                                      : cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            if ((page.duration ?? 0) > 0) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                DurationUtils.formatDuration(page.duration),
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: selected
+                                      ? cs.onPrimaryContainer.withValues(
+                                          alpha: 0.7,
+                                        )
+                                      : cs.outline,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
