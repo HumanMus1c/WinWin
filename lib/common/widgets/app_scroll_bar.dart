@@ -128,6 +128,26 @@ class AppScrollBar extends StatefulWidget {
     return progress * trackExtent;
   }
 
+  /// 冻结期间是否已滚到「冻结内容的可滚动末端」（应触发追平结算）。
+  ///
+  /// 回归背景（2026-11-13 第二轮实机）：冻结只在停手 220ms 后解除；若用户
+  /// 连续滚动且期间多次补货，滚动位置会越过冻结范围，偏移被夹在
+  /// `track − 长度` 上 ⇒ 滚动条固定不动。越过末端即追平结算可避免卡死。
+  @visibleForTesting
+  static bool shouldCatchUp({
+    required double pixels,
+    required double frozenContentExtent,
+    required double pendingContentExtent,
+    required double viewportExtent,
+    double threshold = extentSnapThreshold,
+  }) {
+    if ((pendingContentExtent - frozenContentExtent).abs() < threshold) {
+      return false;
+    }
+    final frozenMax = frozenContentExtent - viewportExtent;
+    return pixels >= frozenMax - 1;
+  }
+
   /// [thumbOffsetForProgress] 的逆映射（拖拽跳转用）。
   @visibleForTesting
   static double pixelsForThumbOffset({
@@ -214,6 +234,17 @@ class _AppScrollBarState extends State<AppScrollBar>
   /// 冻结期间收到的最新内容总长（停手后结算用）。
   double? _pendingContentExtent;
 
+  /// 「追平结算」进行中。
+  ///
+  /// 冻结期间用户继续滚动、越过冻结内容的可滚动末端时，滑块会贴底不动
+  /// （2026-11-13 实机反馈：预取加载完成后再滚动，滚动条固定不动）。
+  /// 此时立即解除冻结并把长度补间到最新值：滑块在底部平滑收缩一次后继续
+  /// 跟随滚动，而不是一直卡在底部。补间期间禁止重新冻结，保证动画完整。
+  bool _catchUpSettling = false;
+
+  /// 结算世代号：只有最新一次结算完成才允许清除 [_catchUpSettling]。
+  int _settleGeneration = 0;
+
   bool get _geometryFrozen => _frozenContentExtent != null;
 
   bool _hovered = false;
@@ -264,6 +295,8 @@ class _AppScrollBarState extends State<AppScrollBar>
       }
       // 滚动一开始就冻结长度：期间的内容增长只记录，不参与绘制。
       _beginFreeze();
+      // 已滚到冻结内容的末端：立刻追平结算，避免滑块贴底卡死。
+      _maybeCatchUp();
     } else if (notification is ScrollEndNotification) {
       _idleTimer?.cancel();
       _idleTimer = Timer(
@@ -289,7 +322,7 @@ class _AppScrollBarState extends State<AppScrollBar>
 
   /// 开始冻结滑块几何：以当前绘制值为基准，停掉在途补间。
   void _beginFreeze() {
-    if (_frozenContentExtent != null) return;
+    if (_frozenContentExtent != null || _catchUpSettling) return;
     final position = _position;
     if (position == null) return;
     final current = _paintContentExtent(position);
@@ -303,19 +336,44 @@ class _AppScrollBarState extends State<AppScrollBar>
   }
 
   /// 停手后结算：把冻结期间的累计内容增长一次性补间到位。
-  void _settleFreeze() {
+  void _settleFreeze({bool catchUp = false}) {
     final frozen = _frozenContentExtent;
     final pending = _pendingContentExtent;
     _frozenContentExtent = null;
     _pendingContentExtent = null;
     if (frozen == null || pending == null) return;
+    _catchUpSettling = false;
     if ((pending - frozen).abs() < AppScrollBar.extentSnapThreshold) {
       _displayedExtent = pending;
       return;
     }
     _displayedExtent = frozen;
     _extentTween = Tween<double>(begin: frozen, end: pending);
-    _extentAnim.forward(from: 0);
+    _catchUpSettling = catchUp;
+    final generation = ++_settleGeneration;
+    _extentAnim.forward(from: 0).whenComplete(() {
+      if (generation == _settleGeneration) _catchUpSettling = false;
+    });
+  }
+
+  /// 冻结期间已滚到「冻结内容的可滚动末端」时立即追平结算。
+  ///
+  /// 不追平的话，后续滚动位置全部落在冻结范围之外，偏移被夹在
+  /// `track − 长度` 上，表现就是滑块固定不动。
+  void _maybeCatchUp() {
+    final frozen = _frozenContentExtent;
+    final pending = _pendingContentExtent;
+    final position = _position;
+    if (frozen == null || pending == null || position == null) return;
+    if (!AppScrollBar.shouldCatchUp(
+      pixels: position.pixels,
+      frozenContentExtent: frozen,
+      pendingContentExtent: pending,
+      viewportExtent: position.viewportDimension,
+    )) {
+      return;
+    }
+    _settleFreeze(catchUp: true);
   }
 
   /// 内容尺寸变化（追加内容 / footer 切换 / 视口变化）时启动滑块补间。
@@ -344,6 +402,7 @@ class _AppScrollBarState extends State<AppScrollBar>
       return false;
     }
     _extentTween = Tween<double>(begin: displayed, end: live);
+    _catchUpSettling = false;
     _extentAnim.forward(from: 0);
     return false;
   }

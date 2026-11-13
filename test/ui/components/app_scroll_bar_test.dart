@@ -236,6 +236,38 @@ void main() {
       expect(wide, narrow);
     });
 
+    test('追平结算条件：越过冻结内容末端才触发，无增长不触发', () {
+      // 冻结 3000（视口 800 ⇒ 末端 2200），最新内容 5000。
+      expect(
+        AppScrollBar.shouldCatchUp(
+          pixels: 2000,
+          frozenContentExtent: 3000,
+          pendingContentExtent: 5000,
+          viewportExtent: 800,
+        ),
+        isFalse,
+      );
+      expect(
+        AppScrollBar.shouldCatchUp(
+          pixels: 2200,
+          frozenContentExtent: 3000,
+          pendingContentExtent: 5000,
+          viewportExtent: 800,
+        ),
+        isTrue,
+      );
+      // 没有累计增长：冻结值 == 最新值 ⇒ 不追平（此时贴底是正确表现）。
+      expect(
+        AppScrollBar.shouldCatchUp(
+          pixels: 2200,
+          frozenContentExtent: 3000,
+          pendingContentExtent: 3001,
+          viewportExtent: 800,
+        ),
+        isFalse,
+      );
+    });
+
     test('正/逆映射互逆（拖拽跳转与回读一致）', () {
       const maxOffset = track - length;
       for (final dir in <AxisDirection>[
