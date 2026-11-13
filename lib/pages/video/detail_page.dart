@@ -5,7 +5,7 @@ import 'package:flutter_miuix/miuix.dart'
         MiuixHorizontalDivider,
         MiuixIconButton,
         MiuixPressFeedbackType,
-        MiuixPressable, MiuixTextButton, MiuixButton;
+        MiuixPressable, MiuixTextButton, MiuixButton, MiuixSmallTopAppBar;
 import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -41,6 +41,7 @@ import 'package:winwin/main.dart';
 import 'package:winwin/models/video/related_video.dart';
 import 'package:winwin/models/video/reply_item.dart';
 import 'package:winwin/models/video/video_detail.dart';
+import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/video_tag.dart';
 import 'package:winwin/pages/member/member_space_page.dart';
 import 'package:winwin/pages/search/search_result_page.dart';
@@ -65,6 +66,8 @@ import 'package:winwin/core/shell/app_scaffold.dart';
 import 'package:winwin/ui/components/app_progress.dart';
 import 'package:winwin/ui/components/app_tooltip.dart';
 import 'package:winwin/ui/components/app_selectable_text.dart';
+import 'package:winwin/ui/components/app_components.dart';
+import 'package:winwin/core/shell/app_dialogs.dart';
 
 /// 详情页窄屏断点：窗口宽度低于该值时切换单列布局
 /// （对标 BiliPai Tablet/Phone 按宽度分发）。
@@ -572,20 +575,40 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     switch (res) {
       case Success(:final response):
         final pages = response.pages ?? const <VideoPage>[];
-        final int? cid = pages.isNotEmpty && pages.first.cid != null
+        final int? defaultCid = pages.isNotEmpty && pages.first.cid != null
             ? pages.first.cid
             : response.cid;
+        // 分P 记忆（云端）：多P 稿件先查上次观看分P（last_play_cid），
+        // 命中则直接从该分P起播，避免默认 P1 的进度上报覆盖云端记忆。
+        PlayInfoModel? prefetched;
+        var cid = defaultCid;
+        if (cid != null && pages.length > 1 && Accounts.main.isLogin) {
+          final resolved = await _resolveResumePage(cid, pages, response.aid);
+          cid = resolved.cid;
+          prefetched = resolved.info;
+          if (!mounted) return;
+        }
         if (cid != null) {
           final aid = response.aid;
-          // 稿件总时长（秒），用于判定上次进度是否已接近播完。
-          final detailDurSec = response.duration ?? 0;
+          // 当前分P时长（秒），用于判定上次进度是否已接近播完。
+          final detailDurSec =
+              _pageDurationSec(pages, cid) ?? response.duration ?? 0;
           final ctrl = WinWinPlayerController(bvid: widget.bvid, cid: cid);
           ctrl.aid = aid;
           playerController = ctrl;
           // Phase 4.2 优化：playInfo（续播进度/字幕/章节）与播放器加载并行，
           // 不再串行等待 —— 首帧关键路径少一次 HTTP 往返。
-          // playInfo 返回后通过 resumeTo 恢复进度（race-free，见控制器）。
-          unawaited(_applyPlayInfo(ctrl, cid, detailDurSec, aid: aid));
+          // 预检响应属于同分P时直接复用，省一次请求。
+          unawaited(
+            _applyPlayInfo(
+              ctrl,
+              cid,
+              detailDurSec,
+              aid: aid,
+              prefetched: prefetched,
+              pageCount: pages.length,
+            ),
+          );
           // 「视频结束自动退出全屏」监听（仅详情页单集；番剧连播不接）。
           ctrl.completed.addListener(_onPlaybackCompleted);
           // 挂「启动闸门」：续播点（playInfo）返回前不起播，杜绝先闪 0 位画面/声音。
@@ -626,23 +649,77 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     }
   }
 
+  /// 当前分P时长（秒）；未匹配返回 null。
+  static int? _pageDurationSec(List<VideoPage> pages, int cid) {
+    for (final page in pages) {
+      if (page.cid == cid) return page.duration;
+    }
+    return null;
+  }
+
+  /// 分P 记忆：查询云端上次观看分P（`/x/player/wbi/v2` 的 `last_play_cid`）。
+  ///
+  /// 命中其它分P时返回该分P 的 cid（其字幕/章节需按新 cid 另行拉取）；
+  /// 与默认分P一致时直接复用本次 playInfo 响应，省一次请求。
+  /// 预检最多等待 2 秒，失败/超时回退默认分P，避免弱网下卡住整页加载。
+  Future<({int cid, PlayInfoModel? info})> _resolveResumePage(
+    int defaultCid,
+    List<VideoPage> pages,
+    int? aid,
+  ) async {
+    try {
+      final res = await VideoHttp.playInfo(
+        aid: aid,
+        bvid: widget.bvid,
+        cid: defaultCid,
+      ).timeout(const Duration(seconds: 2));
+      if (res case Success(:final response)) {
+        final lastCid = response.lastPlayCid;
+        if (lastCid != null &&
+            lastCid != defaultCid &&
+            pages.any((p) => p.cid == lastCid)) {
+          AppLogger.w(
+            'DetailPage',
+            'resume part from cloud: last_play_cid=$lastCid default=$defaultCid',
+          );
+          return (cid: lastCid, info: null);
+        }
+        return (cid: defaultCid, info: response);
+      }
+    } catch (e) {
+      AppLogger.w('DetailPage', 'resolve resume part failed: $e');
+    }
+    return (cid: defaultCid, info: null);
+  }
+
   /// 拉取 playInfo 并应用到控制器（与 ctrl.load 并行执行，Phase 4.2/4.4/4.5）。
   ///
   /// 提供：上次播放进度（last_play_time，经 [WinWinPlayerController.resumeTo]
   /// 恢复）、字幕列表、章节标记。失败静默，不阻断播放。
+  ///
+  /// [prefetched] 为调用方已取得的同分P 响应（分P 预检），避免重复请求。
+  /// [pageCount] 用于判定 `last_play_time` 的归属：该字段绑定 `last_play_cid`，
+  /// 多P 下只有在两者一致时才可把进度套到当前分P（单P 允许字段缺省的老口径）。
   Future<void> _applyPlayInfo(
     WinWinPlayerController ctrl,
     int cid,
     int detailDurSec, {
     int? aid,
+    PlayInfoModel? prefetched,
+    int pageCount = 1,
   }) async {
     try {
-      final infoRes = await VideoHttp.playInfo(
-        aid: aid,
-        bvid: widget.bvid,
-        cid: cid,
-      );
-      if (!mounted) return;
+      final LoadingState<PlayInfoModel> infoRes;
+      if (prefetched != null) {
+        infoRes = Success(prefetched);
+      } else {
+        infoRes = await VideoHttp.playInfo(
+          aid: aid,
+          bvid: widget.bvid,
+          cid: cid,
+        );
+      }
+      if (!mounted || ctrl.disposed) return;
       if (infoRes case Success(:final response)) {
         // Phase 4.4：传入可用字幕列表，SubtitleController 自动按 AI 偏好选择。
         final subtitles = response.subtitle?.subtitles ?? const [];
@@ -654,10 +731,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         if (viewPoints.isNotEmpty) {
           ctrl.setViewPoints(viewPoints);
         }
+        // `last_play_time` 绑定 `last_play_cid`：多P 下进度属于其它分P 时
+        // 不得套用到当前 cid（否则 P1 会被定位到别的分P进度）；
+        // 单P 不存在归属歧义，沿用原口径直接恢复。
+        final lastCid = response.lastPlayCid;
+        final progressBelongsToCid = pageCount <= 1 || lastCid == cid;
         // last_play_time 单位为毫秒（参照 PiliPlus
         // Duration(milliseconds: data.lastPlayTime)）；
         // 已接近播完（距结尾 ≤10s）时不续播，从头开始。
-        if (response.lastPlayTime > 0) {
+        if (!progressBelongsToCid) {
+          ctrl.releaseStartupGate(reason: 'other-part-progress');
+        } else if (response.lastPlayTime > 0) {
           final lastSec = response.lastPlayTime ~/ 1000;
           if (detailDurSec <= 0 || lastSec < detailDurSec - 10) {
             ctrl.resumeTo(Duration(milliseconds: response.lastPlayTime));
@@ -725,7 +809,13 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         _onlineTotal = null;
       });
       unawaited(
-        _applyPlayInfo(ctrl, newCid, page.duration ?? 0, aid: aid),
+        _applyPlayInfo(
+          ctrl,
+          newCid,
+          page.duration ?? 0,
+          aid: aid,
+          pageCount: pages.length,
+        ),
       );
       await ctrl.load(gateForResume: true, autoplay: true);
       if (!mounted) return;
@@ -1773,7 +1863,68 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               ),
             ),
           ),
+          // 固定的「选集」展开按钮：位于横向胶囊组末尾，不随列表横向滚动。
+          const SizedBox(width: Style.xs),
+          _buildPageExpandButton(pages),
         ],
+      ),
+    );
+  }
+
+  /// 分P 胶囊组末尾的固定展开按钮（不跟随横向滚动）：打开「选集」弹层。
+  Widget _buildPageExpandButton(List<VideoPage> pages) {
+    final cs = AppThemeHost.of(context).colors;
+    return AppTooltip(
+      message: '展开选集',
+      child: MiuixPressable(
+        onPressed: () => _showPageSelectorSheet(pages),
+        feedbackType: MiuixPressFeedbackType.sink,
+        sinkAmount: 0.98,
+        borderRadius: BorderRadius.circular(Style.radiusFull),
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(Style.radiusFull),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '选集',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 2),
+              AppIcon(
+                AppIcons.expandMore(),
+                size: appRowIconSize(context, 12),
+                color: cs.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 打开「选集」弹层（交互对齐「添加到收藏夹」弹层）。
+  ///
+  /// 分P 列表来自稿件详情响应（view API 一次返回全量 pages），
+  /// 因此搜索完全在本地按标题索引过滤，无需额外的云端搜索接口。
+  void _showPageSelectorSheet(List<VideoPage> pages) {
+    showAppSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppThemeHost.of(context).colors.surfaceContainer,
+      builder: (_) => _PageSelectorSheet(
+        pages: pages,
+        currentCid: playerController?.cid,
+        onSelect: _switchPage,
       ),
     );
   }
@@ -3231,6 +3382,259 @@ class _AuthorFollowButtonState extends State<_AuthorFollowButton> {
                   : FontWeight.normal,
             ),
           )])),
+      ),
+    );
+  }
+}
+
+/// 「选集」弹层（交互对齐「添加到收藏夹」弹层）：
+/// 顶部搜索框 + 宫格（行列）展示全部分P，点击即切换到对应分P。
+///
+/// 分P 标题来自稿件详情（view API 全量返回），搜索为**本地标题索引过滤**，
+/// 不依赖云端搜索接口。
+class _PageSelectorSheet extends StatefulWidget {
+  const _PageSelectorSheet({
+    required this.pages,
+    required this.currentCid,
+    required this.onSelect,
+  });
+
+  final List<VideoPage> pages;
+  final int? currentCid;
+  final ValueChanged<int> onSelect;
+
+  @override
+  State<_PageSelectorSheet> createState() => _PageSelectorSheetState();
+}
+
+class _PageSelectorSheetState extends State<_PageSelectorSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = AppScrollController();
+  String _query = '';
+
+  /// 首次布局后定位当前分P 只做一次（搜索过滤不触发定位）。
+  bool _didInitialScroll = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// 本地标题索引：按 `P序号 + 分P标题` 进行大小写不敏感匹配。
+  List<({int index, VideoPage page})> get _filtered {
+    final q = _query.toLowerCase();
+    final result = <({int index, VideoPage page})>[];
+    for (var i = 0; i < widget.pages.length; i++) {
+      final page = widget.pages[i];
+      final title =
+          'p${page.page ?? i + 1} ${(page.part ?? '').trim()}'.toLowerCase();
+      if (q.isEmpty || title.contains(q)) {
+        result.add((index: i, page: page));
+      }
+    }
+    return result;
+  }
+
+  void _select(int index) {
+    Navigator.of(context).pop();
+    widget.onSelect(index);
+  }
+
+  /// 首次布局后把当前分P 滚到可视区。
+  ///
+  /// 宫格懒构建（GridView.builder），远处项的 GlobalKey 尚未建立，
+  /// 故按列数/行高估算目标行偏移，直接跳转。
+  void _scheduleInitialScroll(
+    double maxWidth,
+    List<({int index, VideoPage page})> filtered,
+  ) {
+    if (_didInitialScroll) return;
+    _didInitialScroll = true;
+    final selectedIndex = filtered.indexWhere(
+      (e) => e.page.cid == widget.currentCid,
+    );
+    if (selectedIndex <= 0) return;
+    final usable = maxWidth - Style.md * 2;
+    if (usable <= 0) return;
+    // 与 SliverGridDelegateWithMaxCrossAxisExtent 相同的列数算法。
+    final columns = (usable / (240 + Style.sm))
+        .ceil()
+        .clamp(1, filtered.length)
+        .toInt();
+    final row = selectedIndex ~/ columns;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      final target =
+          (row * (52 + Style.sm) + 26 - position.viewportDimension * 0.35)
+              .clamp(0.0, position.maxScrollExtent);
+      _scrollController.jumpTo(target);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = AppThemeHost.of(context);
+    final cs = tokens.colors;
+    final filtered = _filtered;
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 500),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MiuixSmallTopAppBar(title: '选集'),
+          // 搜索框：与「添加到收藏夹」弹层同款，仅做本地分P 标题过滤。
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Style.md,
+              Style.sm,
+              Style.md,
+              Style.xs,
+            ),
+            child: AppCapsuleTextField(
+              controller: _searchController,
+              hint: '搜索分P',
+              prefix: AppIcon(AppIcons.search(), size: 20),
+              fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+              onChanged: (v) => setState(() => _query = v.trim()),
+            ),
+          ),
+          Expanded(
+            child: filtered.isEmpty
+                ? Center(
+                    child: Text(
+                      _query.isEmpty ? '暂无分P' : '未找到分P',
+                      style: TextStyle(color: cs.onSurfaceVariant),
+                    ),
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      _scheduleInitialScroll(constraints.maxWidth, filtered);
+                      return AppScrollBar(
+                        controller: _scrollController,
+                        forceLane: true,
+                        child: GridView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.fromLTRB(
+                            Style.md,
+                            Style.xs,
+                            Style.md,
+                            Style.md,
+                          ),
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 240,
+                                mainAxisExtent: 52,
+                                crossAxisSpacing: Style.sm,
+                                mainAxisSpacing: Style.sm,
+                              ),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, i) {
+                            final entry = filtered[i];
+                            final page = entry.page;
+                            final index = entry.index;
+                            final selected = page.cid == widget.currentCid;
+                            final part = (page.part ?? '').trim();
+                            return MiuixPressable(
+                              onPressed: () => _select(index),
+                              feedbackType: MiuixPressFeedbackType.sink,
+                              sinkAmount: 0.98,
+                              borderRadius: BorderRadius.circular(
+                                Style.radiusMd,
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: Style.md,
+                                  vertical: Style.sm,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? cs.primaryContainer
+                                      : cs.surfaceContainerHighest.withValues(
+                                          alpha: 0.45,
+                                        ),
+                                  borderRadius: BorderRadius.circular(
+                                    Style.radiusMd,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      'P${page.page ?? index + 1}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: selected
+                                            ? cs.primary
+                                            : cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    const SizedBox(width: Style.sm),
+                                    Expanded(
+                                      child: Text(
+                                        part.isEmpty
+                                            ? '第 ${index + 1} P'
+                                            : part,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: selected
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                          color: selected
+                                              ? cs.onPrimaryContainer
+                                              : cs.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: Style.sm),
+                                    Text(
+                                      DurationUtils.formatDuration(
+                                        page.duration,
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        color: selected
+                                            ? cs.onPrimaryContainer.withValues(
+                                                alpha: 0.7,
+                                              )
+                                            : cs.outline,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          Container(
+            height: 0.5,
+            color: cs.outlineVariant.withValues(alpha: 0.3),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(Style.md),
+            child: Row(
+              children: [
+                Expanded(
+                  child: MiuixButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('关闭'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
