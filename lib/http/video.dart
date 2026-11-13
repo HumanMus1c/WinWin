@@ -11,6 +11,7 @@ import 'package:winwin/models/common/video_type.dart';
 import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/browser_ua.dart';
+import 'package:winwin/http/dio_error_message.dart';
 import 'package:winwin/http/init.dart';
 import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/login.dart';
@@ -169,17 +170,24 @@ abstract final class VideoHttp {
   static Future<LoadingState<VideoDetailData>> videoIntro({
     required String bvid,
   }) async {
-    final res = await Request().get(
-      Api.videoIntro,
-      queryParameters: {'bvid': bvid},
-    );
-    final data = VideoDetailResponse.fromJson(res.data);
-    if (data.code == 0 && data.data != null) {
-      return Success(data.data!);
-    } else {
-      // 透传错误码：62002 稿件不可见 / 62004 审核中 / 62012 仅UP主可见等，
-      // 详情页据此在播放区域展示针对性错误（参照 BiliPai VideoLoadError.fromApiCode）。
-      return Error(data.message, code: data.code);
+    try {
+      final res = await Request().get(
+        Api.videoIntro,
+        queryParameters: {'bvid': bvid},
+        // 详情页自身有错误态与「点击重试」，无需再弹全局 toast。
+        options: Options(extra: {'silent': true}),
+      );
+      final data = VideoDetailResponse.fromJson(res.data);
+      if (data.code == 0 && data.data != null) {
+        return Success(data.data!);
+      } else {
+        // 透传错误码：62002 稿件不可见 / 62004 审核中 / 62012 仅UP主可见等，
+        // 详情页据此在播放区域展示针对性错误（参照 BiliPai VideoLoadError.fromApiCode）。
+        return Error(data.message, code: data.code);
+      }
+    } catch (e) {
+      AppLogger.w('VideoHttp', 'videoIntro request failed: $e, bvid=$bvid');
+      return Error(dioErrorMessage(e));
     }
   }
 
@@ -200,6 +208,8 @@ abstract final class VideoHttp {
         if (bvid != null && bvid.isNotEmpty) 'bvid': bvid,
         'ts': '${DateTime.now().millisecondsSinceEpoch ~/ 1000}',
       },
+      // 在线人数为增强信息，失败静默，不打扰用户。
+      options: Options(extra: {'silent': true}),
     );
     final body = res.data;
     if (body is Map && body['code'] == 0) {
@@ -299,6 +309,8 @@ abstract final class VideoHttp {
       final res = await Request().get(
         Api.playInfo,
         queryParameters: params,
+        // 播放信息为增强数据，失败由调用方静默降级。
+        options: Options(extra: {'silent': true}),
       );
       if (res.data['code'] == 0) {
         final model = PlayInfoModel.fromJson(res.data['data'] ?? {});
@@ -329,6 +341,8 @@ abstract final class VideoHttp {
     final res = await Request().get(
       Api.videoTags,
       queryParameters: {'bvid': bvid},
+      // 标签为增强信息，失败静默降级。
+      options: Options(extra: {'silent': true}),
     );
     if (res.data['code'] == 0) {
       final list = (res.data['data'] as List<dynamic>? ?? const [])

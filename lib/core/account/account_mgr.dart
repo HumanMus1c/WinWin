@@ -12,6 +12,7 @@ import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/http/api.dart';
 import 'package:winwin/http/browser_ua.dart';
 import 'package:winwin/http/constants.dart';
+import 'package:winwin/http/dio_error_message.dart';
 import 'package:winwin/models/common/account_type.dart';
 import 'package:winwin/utils/app_sign.dart';
 
@@ -186,6 +187,9 @@ class AccountManager extends Interceptor {
   }
 
   static void toast(DioException err) {
+    // 调用方显式声明静默的请求（如详情页主数据/后台统计）不再弹全局 toast，
+    // 由页面自身错误态承载，避免弱网下「页面转圈 + 技术性 toast」双重打扰。
+    if (err.requestOptions.extra['silent'] == true) return;
     const List<String> skipShow = [
       'heartbeat',
       'history/report',
@@ -204,10 +208,8 @@ class AccountManager extends Interceptor {
       // skip
     } else {
       dioError(err).then((res) {
-        // 2026-09-29 起改用应用级 Material SnackBar：原 Get.snackbar 在纯
-        // MaterialApp 架构下（无 GetX Overlay）既不显示，又会经
-        // SnackbarController 抛出无法捕获的异步异常（15 条崩溃报告实证）。
-        showAppSnackBar('请求错误：$res\n$url');
+        // 只展示用户可读的提示，不再拼接请求 URL 与原始异常。
+        showAppSnackBar(res);
       });
     }
   }
@@ -273,25 +275,6 @@ class AccountManager extends Interceptor {
   }
 
   static Future<String> dioError(DioException error) async {
-    switch (error.type) {
-      case DioExceptionType.badCertificate:
-        return '证书有误！';
-      case DioExceptionType.badResponse:
-        return '服务器异常，请稍后重试！';
-      case DioExceptionType.cancel:
-        return '请求已被取消，请重新请求';
-      case DioExceptionType.connectionError:
-        return '连接错误，请检查网络设置';
-      case DioExceptionType.connectionTimeout:
-        return '网络连接超时，请检查网络设置';
-      case DioExceptionType.receiveTimeout:
-        return '响应超时，请稍后重试！';
-      case DioExceptionType.sendTimeout:
-        return '发送请求超时，请检查网络设置';
-      case DioExceptionType.transformTimeout:
-        return '转换响应数据超时！';
-      case DioExceptionType.unknown:
-        return '网络异常 ${error.error}';
-    }
+    return dioErrorMessage(error);
   }
 }

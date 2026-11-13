@@ -1,21 +1,27 @@
 import 'package:dio/dio.dart';
 
-/// Dio 异常 → 友好中文文案（移植自 PiliPlus 的 `getErrorMessage`，见复盘第十轮）。
+/// Dio 异常 → 面向用户的弱网/服务端提示。
 ///
-/// 背景：`CommonListController` 此前直接 `Error(e.toString())`，弱网首屏失败时页面会
-/// 原样显示 `DioException [receive timeout]: The request took longer than 0:00:30...`。
-/// 此函数把网络异常统一映射为可读文案，供各页面/控制器复用。
+/// 原则：
+/// - 客户端超时/断网统一提示「网络较慢 / 检查网络」，不出现服务器或原始异常字样；
+/// - 仅 HTTP 5xx 才提示「服务器暂时不可用」；
+/// - 非 Dio 异常不向用户暴露 `Exception` / 堆栈等实现细节。
 String dioErrorMessage(Object e) {
-  if (e is! DioException) return e.toString();
+  if (e is! DioException) return '加载失败，请稍后重试';
   return switch (e.type) {
-    DioExceptionType.badCertificate => '证书有误！',
-    DioExceptionType.badResponse => '服务器异常，请稍后重试！',
-    DioExceptionType.cancel => '请求已被取消，请重新请求',
-    DioExceptionType.connectionError => '连接错误，请检查网络设置',
-    DioExceptionType.connectionTimeout => '网络连接超时，请检查网络设置',
-    DioExceptionType.receiveTimeout => '响应超时，请稍后重试！',
-    DioExceptionType.sendTimeout => '发送请求超时，请检查网络设置',
-    DioExceptionType.transformTimeout => '转换响应数据超时！',
-    DioExceptionType.unknown => '网络异常，请检查网络设置',
+    DioExceptionType.badCertificate => '安全证书校验失败，请检查网络环境',
+    DioExceptionType.badResponse => switch (e.response?.statusCode ?? 0) {
+      >= 500 => '服务器暂时不可用，请稍后重试',
+      401 || 403 => '登录状态失效或没有访问权限',
+      404 => '请求的内容不存在',
+      _ => '请求失败，请稍后重试',
+    },
+    DioExceptionType.cancel => '请求已取消',
+    DioExceptionType.connectionError => '网络连接失败，请检查网络或更换网络环境',
+    DioExceptionType.connectionTimeout => '网络较慢，请检查网络或更换网络环境',
+    DioExceptionType.receiveTimeout => '网络较慢，请检查网络或更换网络环境',
+    DioExceptionType.sendTimeout => '网络较慢，请检查网络或更换网络环境',
+    DioExceptionType.transformTimeout => '网络较慢，请检查网络或更换网络环境',
+    DioExceptionType.unknown => '网络异常，请检查网络或更换网络环境',
   };
 }
