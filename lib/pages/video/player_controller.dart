@@ -37,6 +37,8 @@ import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/play_url.dart';
 import 'package:winwin/pages/danmaku/controller.dart';
 import 'package:winwin/pages/video/subtitle_controller.dart';
+import 'package:winwin/plugin/api/plugin_manager.dart';
+import 'package:winwin/plugin/builtin/sponsor_block/sponsor_block_plugin.dart';
 import 'package:winwin/plugin/canvas_danmaku/canvas_danmaku.dart';
 
 /// WinWin 播放器控制器（fvp / mdk 内核）。
@@ -277,8 +279,11 @@ class WinWinPlayerController {
   );
   List<ViewPoint> get viewPoints => viewPointsNotifier.value;
 
-  /// 是否启用 SponsorBlock 自动跳过（默认 true，用户可在设置中关闭）。
-  bool sponsorBlockEnabled = Pref.enableSponsorBlock;
+  /// 是否启用 SponsorBlock 自动跳过（由「空降助手」插件状态驱动）。
+  ///
+  /// 使用 getter 而非构造期快照：插件在 bootstrap 中注册，播放器可能早于
+  /// 注册完成创建；同时支持播放中启停插件后立即生效。
+  bool get sponsorBlockEnabled => PluginManager.enabled('sponsor_block');
 
   /// 弹幕显示不透明度（0-1）：设置面板改动时写入，弹幕层监听实时刷新。
   final ValueNotifier<double> danmakuOpacity = ValueNotifier(
@@ -3071,6 +3076,10 @@ class WinWinPlayerController {
       // SponsorBlock 段落加载：失败不阻断播放，仅记录日志。
       if (sponsorBlockEnabled) {
         sponsorBlock ??= SponsorBlockUseCase();
+        // 应用插件中的分段类型开关（插件可能已在本会话创建后被修改）。
+        PluginManager.maybeInstance
+            ?.find<SponsorBlockPlugin>()
+            ?.applyConfigTo(sponsorBlock!);
         unawaited(
           sponsorBlock!.fetchSegments(bvid: bvid).then((res) {
             if (_disposed) return;

@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:winwin/common/widgets/app_scroll_bar.dart';
 import 'package:winwin/core/app_messenger.dart';
 import 'package:winwin/core/input/app_escape_scope.dart';
+import 'package:winwin/plugin/builtin/eye_protection/eye_protection_overlay.dart';
 import 'package:winwin/theme/app_typography.dart';
 import 'package:winwin/theme/miuix_theme_bridge.dart';
 import 'package:winwin/ui/components/immersive_title_bar.dart';
@@ -195,7 +196,8 @@ class AppShell extends StatelessWidget {
         data: IconThemeData(color: tokens.colors.onSurface),
         child: ScrollConfiguration(
           behavior: const AppScrollBehavior(),
-          child: app,
+          // 护眼模式叠色层：覆盖 Navigator 与弹层，IgnorePointer 不拦截输入。
+          child: EyeProtectionOverlay(child: app),
         ),
       ),
     );

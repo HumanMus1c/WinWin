@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:winwin/pages/setting/about_page.dart';
 import 'package:winwin/pages/setting/common_setting.dart';
+import 'package:winwin/pages/setting/plugin_manager_page.dart';
 import 'package:winwin/pages/setting/setting_type.dart';
 import 'package:winwin/theme/style.dart';
 import 'package:winwin/ui/components/app_components.dart';
@@ -45,6 +46,11 @@ class _SettingPageState extends State<SettingPage> {
       type: SettingType.extraSetting,
       subtitle: '网络、代理、日志等',
       icon: AppIcon(AppIcons.extraSetting()),
+    ),
+    _SettingEntry(
+      type: SettingType.plugins,
+      subtitle: '内置插件、规则插件与导入',
+      icon: AppIcon(AppIcons.plugin()),
     ),
     _SettingEntry(
       type: SettingType.about,
@@ -100,6 +106,7 @@ class _SettingPageState extends State<SettingPage> {
               .videoSetting ||
               .extraSetting =>
                 CommonSetting(settingType: _type, showAppBar: false),
+              .plugins => const PluginManagerPage(showAppBar: false),
               .about => const AboutPage(showAppBar: false),
             },
           ),

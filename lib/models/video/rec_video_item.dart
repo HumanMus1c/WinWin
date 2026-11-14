@@ -91,6 +91,10 @@ abstract class BaseRcmdVideoItemModel {
   int? param;
   String? pgcBadge;
   ThreePoint? threePoint;
+
+  /// 分区名（Web 推荐流返回；App 流通常为空）。
+  /// 插件规则中的 `tname` 字段用它匹配。
+  String? tname;
 }
 
 /// Item of the web recommend feed (`/x/web-interface/wbi/index/top/feed/rcmd`).
@@ -106,6 +110,7 @@ class RcmdVideoItemModel extends BaseRcmdVideoItemModel {
     title = json['title'];
     duration = json['duration'] ?? -1;
     pubdate = json['pubdate'];
+    tname = json['tname']?.toString();
     param = json['id'];
     if (json['owner'] is Map<String, dynamic>) {
       owner = Owner.fromJson(json['owner']);

@@ -22,6 +22,12 @@ class DanmakuContentItem<T> {
   /// 是否为会员弹幕
   final bool isColorful;
 
+  /// 插件高亮：字重覆盖（FontWeight.values 下标）；null 用全局设置。
+  int? fontWeight;
+
+  /// 插件高亮：字号倍率；null 用全局设置。
+  double? scale;
+
   /// 弹幕数量
   final int? count;
 
@@ -33,6 +39,8 @@ class DanmakuContentItem<T> {
     this.type = DanmakuItemType.scroll,
     this.selfSend = false,
     this.isColorful = false,
+    this.fontWeight,
+    this.scale,
     this.count,
     this.extra,
   });

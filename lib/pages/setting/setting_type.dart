@@ -12,6 +12,7 @@ enum SettingType {
   playSetting('播放器'),
   videoSetting('音视频'),
   extraSetting('其它'),
+  plugins('插件'),
   about('关于'),
   ;
 

@@ -3,9 +3,14 @@ import 'dart:async';
 import 'package:winwin/core/account/account_service.dart';
 import 'package:winwin/core/account/accounts.dart';
 import 'package:winwin/core/account/login_utils.dart';
+import 'package:winwin/core/log/app_logger.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
 import 'package:winwin/http/init.dart';
+import 'package:winwin/plugin/api/plugin_manager.dart';
+import 'package:winwin/plugin/builtin/builtin_plugins.dart';
+import 'package:winwin/plugin/builtin/sponsor_block/sponsor_block_plugin.dart';
+import 'package:winwin/plugin/rules/rule_plugin_manager.dart';
 import 'package:winwin/utils/wbi_sign.dart';
 
 /// Startup bootstrap shared by `main()` and lazily-created controllers.
@@ -28,6 +33,22 @@ Future<void> _run() async {
   await Pref.migrateLegacyTrayKeys();
   await Accounts.init();
   await Request.init();
+
+  // 插件系统（Phase 6）：状态恢复 → 旧 SponsorBlock 开关迁移 → 注册内置插件
+  // → 加载规则插件。任一步失败都不阻断启动，仅记录日志。
+  try {
+    await PluginManager.initialize();
+    await SponsorBlockPlugin.migrateLegacyEnabledState();
+    await PluginManager.instance.registerAll(builtinPlugins);
+    await RulePluginManager.initialize();
+  } catch (error, stackTrace) {
+    AppLogger.e(
+      'bootstrap',
+      'plugin system init failed',
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
 
   // 从加密缓存恢复登录态，驱动 UI 首屏展示。
   AccountService().restore(Pref.userInfoCache);

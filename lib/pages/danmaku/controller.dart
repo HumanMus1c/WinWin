@@ -13,6 +13,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/models/danmaku/danmaku_rule.dart';
 import 'package:winwin/pages/danmaku/danmaku_options.dart';
 import 'package:winwin/plugin/canvas_danmaku/canvas_danmaku.dart';
+import 'package:winwin/plugin/rules/rule_plugin_manager.dart';
 import 'package:winwin/utils/crc32.dart';
 import 'package:winwin/utils/danmaku_utils.dart';
 
@@ -210,17 +211,31 @@ class WinWinDanmakuController {
           : DmUtils.decimalToColor(e.color);
       // 高级弹幕（mode 7）目前按滚动简化处理（高级弹幕需要特殊解析，
       // 后续可接入 SpecialDanmakuContentItem.fromList）。
-      result.add(
-        DanmakuContentItem<DanmakuElem>(
-          e.content,
-          color: color,
-          type: DmUtils.getPosition(e.mode),
-          selfSend: e.isSelf,
-          isColorful: showVip && isVipColor,
-          count: e.count > 1 ? e.count : null,
-          extra: e,
-        ),
+      final item = DanmakuContentItem<DanmakuElem>(
+        e.content,
+        color: color,
+        type: DmUtils.getPosition(e.mode),
+        selfSend: e.isSelf,
+        isColorful: showVip && isVipColor,
+        count: e.count > 1 ? e.count : null,
+        extra: e,
       );
+
+      // JSON 规则插件：隐藏 / 高亮（渲染前执行，切换插件后下一帧即生效）。
+      final rules = RulePluginManager.maybeInstance;
+      if (rules != null) {
+        if (rules.shouldHideDanmaku(item)) continue;
+        final style = rules.danmakuHighlight(item);
+        if (style != null) {
+          final argb = style.argb;
+          if (argb != null) item.color = Color(argb);
+          // FontWeight.values 下标：6 = w700。
+          if (style.bold) item.fontWeight = 6;
+          if (style.scale != 1.0) item.scale = style.scale;
+        }
+      }
+
+      result.add(item);
     }
     return result;
   }

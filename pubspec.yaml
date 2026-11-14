@@ -80,3 +80,5 @@ flutter:
     # 关于页头部展示用高清母版；程序图标三面（关于页 / 标题栏 / exe·任务栏·托盘）同源，
     # 替换品牌图标时需一并同步。
     - assets/flutter_logo.png
+    # 插件系统：随包分发的 JSON 规则包（插件中心「可安装插件」）。
+    - assets/plugins/

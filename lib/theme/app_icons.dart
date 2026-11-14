@@ -338,6 +338,29 @@ abstract final class AppIcons {
   /// 其它设置入口（网络/代理/日志）
   static IconData extraSetting() => CupertinoIcons.gear;
 
+  // ---------------------------------------------------------------------------
+  // 插件系统语义
+  // ---------------------------------------------------------------------------
+
+  /// 插件中心入口
+  static IconData plugin() => CupertinoIcons.cube;
+
+  /// 空降助手（SponsorBlock）
+  static IconData sponsorBlock() => CupertinoIcons.forward_end;
+
+  /// 匿名推荐 / 初见推荐
+  static IconData incognito() => CupertinoIcons.person_crop_circle;
+
+  /// 规则插件（声明式 JSON）
+  static IconData rulePlugin() => CupertinoIcons.doc_text;
+
+  /// 导入外部插件
+  static IconData pluginImport() => CupertinoIcons.tray_arrow_down;
+
+  /// 护眼模式
+  static IconData eyeCare() => CupertinoIcons.eye_fill;
+
+
   /// 关于页 — 项目说明
   static IconData aboutCode() => CupertinoIcons.chevron_left_slash_chevron_right;
 

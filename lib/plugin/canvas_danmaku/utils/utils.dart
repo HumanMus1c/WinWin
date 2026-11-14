@@ -20,9 +20,13 @@ abstract final class DmUtils {
     required double fontSize,
     required int fontWeight,
   }) {
+    final effectiveFontSize = fontSize * (content.scale ?? 1.0);
+    final effectiveWeight = FontWeight.values[
+      (content.fontWeight ?? fontWeight).clamp(0, 8).toInt()
+    ];
     final builder = ui.ParagraphBuilder(ui.ParagraphStyle(
       textAlign: TextAlign.left,
-      fontWeight: FontWeight.values[fontWeight],
+      fontWeight: effectiveWeight,
       textDirection: TextDirection.ltr,
       maxLines: 1,
     ));
@@ -31,14 +35,17 @@ abstract final class DmUtils {
       builder
         ..pushStyle(ui.TextStyle(
           color: content.color,
-          fontSize: fontSize * 0.6,
+          fontSize: effectiveFontSize * 0.6,
         ))
         ..addText('($count)')
         ..pop();
     }
 
     builder
-      ..pushStyle(ui.TextStyle(color: content.color, fontSize: fontSize))
+      ..pushStyle(ui.TextStyle(
+        color: content.color,
+        fontSize: effectiveFontSize,
+      ))
       ..addText(content.text);
 
     return builder.build()
@@ -51,9 +58,13 @@ abstract final class DmUtils {
     required int fontWeight,
     required double strokeWidth,
   }) {
+    final effectiveFontSize = fontSize * (content.scale ?? 1.0);
+    final effectiveWeight = FontWeight.values[
+      (content.fontWeight ?? fontWeight).clamp(0, 8).toInt()
+    ];
     final builder = ui.ParagraphBuilder(ui.ParagraphStyle(
       textAlign: TextAlign.left,
-      fontWeight: FontWeight.values[fontWeight],
+      fontWeight: effectiveWeight,
       textDirection: TextDirection.ltr,
       maxLines: 1,
     ));
@@ -72,7 +83,7 @@ abstract final class DmUtils {
     if (content.count case final count?) {
       builder
         ..pushStyle(ui.TextStyle(
-          fontSize: fontSize * 0.6,
+          fontSize: effectiveFontSize * 0.6,
           foreground: strokePaint,
         ))
         ..addText('($count)')
@@ -80,7 +91,10 @@ abstract final class DmUtils {
     }
 
     builder
-      ..pushStyle(ui.TextStyle(fontSize: fontSize, foreground: strokePaint))
+      ..pushStyle(ui.TextStyle(
+        fontSize: effectiveFontSize,
+        foreground: strokePaint,
+      ))
       ..addText(content.text);
 
     return builder.build()

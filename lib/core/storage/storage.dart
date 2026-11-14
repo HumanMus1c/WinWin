@@ -96,6 +96,13 @@ abstract final class GStorage {
   /// 导入导出，也不随全局 [clear] 清空——下载记录是用户内容引用而非「设置」。
   static late final Box<dynamic> download;
 
+  /// 插件系统状态（Phase 6）：内置插件启停 / 配置 / 私有数据，
+  /// 以及规则插件启停与命中统计。
+  ///
+  /// 独立 box 的原因：插件状态由插件管理器读写，生命周期与设置导入导出
+  /// 解耦；不随全局 [clear] 清空，避免误删用户已安装插件的配置。
+  static late final Box<dynamic> plugin;
+
   /// Lazy-initialized Hive directory path.
   static String? _hivePath;
 
@@ -125,6 +132,8 @@ abstract final class GStorage {
       Hive.openBox('video').then((res) => video = res),
       // 离线下载任务记录
       Hive.openBox('download').then((res) => download = res),
+      // 插件系统状态
+      Hive.openBox('plugin').then((res) => plugin = res),
     ]);
   }
 
@@ -141,6 +150,7 @@ abstract final class GStorage {
       setting.compact(),
       video.compact(),
       download.compact(),
+      plugin.compact(),
     ]);
   }
 
@@ -150,6 +160,7 @@ abstract final class GStorage {
       setting.close(),
       video.close(),
       download.close(),
+      plugin.close(),
     ]);
   }
 

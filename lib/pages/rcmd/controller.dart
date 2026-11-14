@@ -5,6 +5,11 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/models/video/rec_video_item.dart';
 import 'package:winwin/pages/common/common_list_controller.dart';
+import 'package:winwin/plugin/api/plugin_manager.dart';
+import 'package:winwin/plugin/builtin/feed_filter/feed_filter_plugin.dart';
+import 'package:winwin/plugin/builtin/feed_filter/feed_filter_policy.dart';
+import 'package:winwin/plugin/builtin/home_feed_anonymizer/home_feed_anonymizer_plugin.dart';
+import 'package:winwin/plugin/rules/rule_plugin_manager.dart';
 import 'package:winwin/services/video_card_meta_service.dart';
 import 'package:winwin/utils/viewport_load_budget.dart';
 
@@ -78,10 +83,12 @@ class RcmdController extends CommonListController {
     final web = await VideoHttp.rcmdVideoList(
       freshIdx: idx,
       ps: _webPageSize,
+      // 「初见推荐」插件：Web 推荐流不带登录 Cookie。
+      anonymous: HomeFeedAnonymizerPlugin.active,
     );
     if (web case Success(:final response)) {
       _lastSourceWeb = true;
-      return Success(_toBaseList(response));
+      return Success(_applyPlugins(_toBaseList(response)));
     }
 
     AppLogger.w('Rcmd', 'web feed idx=$idx failed: ${web is Error ? web.errMsg : web}');
@@ -94,7 +101,7 @@ class RcmdController extends CommonListController {
     if (anonWeb case Success(:final response)) {
       AppLogger.w('Rcmd', 'web feed idx=$idx recovered by anonymous account');
       _lastSourceWeb = true;
-      return Success(_toBaseList(response));
+      return Success(_applyPlugins(_toBaseList(response)));
     }
 
     final app = await VideoHttp.rcmdVideoListApp(freshIdx: idx);
@@ -105,7 +112,7 @@ class RcmdController extends CommonListController {
         '(anonymous error: ${anonWeb is Error ? anonWeb.errMsg : anonWeb})',
       );
       _lastSourceWeb = false;
-      final list = _toBaseList(response);
+      final list = _applyPlugins(_toBaseList(response));
       await VideoCardMetaService.prefetch(
         list.map((item) => VideoCardData.from(item)),
       );
@@ -125,6 +132,29 @@ class RcmdController extends CommonListController {
     Iterable<BaseRcmdVideoItemModel> items,
   ) =>
       <BaseRcmdVideoItemModel>[...items];
+
+  /// 插件过滤：内置「推荐流过滤」→ 外部 JSON 规则插件。
+  ///
+  /// 过滤器在每批数据进入去重/合并前执行，避免被过滤的卡片先渲染再消失。
+  static List<BaseRcmdVideoItemModel> _applyPlugins(
+    List<BaseRcmdVideoItemModel> items,
+  ) {
+    var result = items;
+
+    final feedFilter = PluginManager.maybeInstance?.find<FeedFilterPlugin>();
+    if (feedFilter != null && PluginManager.enabled(FeedFilterPlugin.pluginId)) {
+      result = [
+        for (final item in result)
+          if (feedFilter.shouldShow(item, kind: FeedKind.recommend)) item,
+      ];
+    }
+
+    final rules = RulePluginManager.maybeInstance;
+    if (rules != null) {
+      result = rules.filterFeed(result);
+    }
+    return result;
+  }
 
   /// 条目唯一键：App 接口的 av 卡由 aid 反推 bvid；其余卡片（直播/番剧等）
   /// 用 goto + param 区分，避免跨类型撞号。
