@@ -1074,13 +1074,15 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     const SizedBox(width: Style.md),
                     _buildDanmakuChip(),
                     const Spacer(),
+                    // 控制栏按「左右两组」布局：新增控件优先放在左组最右端 /
+                    // 右组最左端，直到两组发生重叠。空降助手按此规则放在右组最左端。
+                    _buildSponsorBlockButton(),
                     // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
                     _buildAudioCodecLabel(),
                     _buildQualityLabel(),
                     _buildSpeedLabel(),
                     _buildChapterButton(),
                     _buildSubtitleChip(),
-                    _buildSponsorBlockButton(),
                     const SizedBox(width: Style.sm),
                     _iconButton(
                       icon: AppIcon(
