@@ -19,6 +19,7 @@ import 'package:winwin/core/input/escape_layer_registry.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/models/common/audio_quality.dart';
 import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/pages/danmaku/view.dart';
 import 'package:winwin/pages/video/danmaku_settings_panel.dart';
@@ -1704,108 +1705,99 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// BiliPai 风格音频编码标签：显示当前音轨编码（如 "AAC"），点击打开音轨与音频增强菜单。
+  /// BiliPai 风格音频编码标签：显示当前音轨编码（如 "AAC"/"EAC3"），
+  /// 点击打开音轨与**音质切换**菜单（对齐 PiliPlus `showSetAudioQa`：
+  /// 普通音质 + 杜比全景声 + Hi-Res 无损，仅列出当前视频真实下发的档位）。
   Widget _buildAudioCodecLabel() {
     final c = widget.controller;
-    return ValueListenableBuilder<bool>(
-      valueListenable: c.ready,
-      builder: (context, ready, _) {
-        if (!ready) return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable: Listenable.merge([c.ready, c.qualityVersion]),
+      builder: (context, _) {
+        if (!c.ready.value) return const SizedBox.shrink();
         final codec = c.audioCodecLabel;
         if (codec == null) return const SizedBox.shrink();
         final tracks = c.audioTracks;
         final active = c.activeAudioTrackIndices;
         final activeIndex = active.isNotEmpty ? active.first : -1;
-        final currentNorm = Pref.audioNormalization;
+        final qualities = c.audioQualityOptions;
+        final currentQa = c.currentAudioQualityCode;
+        final quality = AudioQuality.fromCode(currentQa);
+        final entries = <MiuixDropdownEntry>[
+          if (tracks.length > 1)
+            MiuixDropdownEntry(
+              items: [
+                for (final t in tracks)
+                  MiuixDropdownItem(
+                    text: t.title,
+                    selected: t.index == activeIndex,
+                    onClick: () => c.switchAudioTrack(t.index),
+                  ),
+              ],
+            ),
+          if (qualities.isNotEmpty)
+            MiuixDropdownEntry(
+              items: [
+                for (final q in qualities)
+                  MiuixDropdownItem(
+                    text: q.codec.isEmpty ? q.desc : '${q.desc} · ${q.codec}',
+                    selected: q.code == currentQa,
+                    onClick: () => c.switchAudioQuality(q.code),
+                  ),
+              ],
+            ),
+        ];
         // 阶段5d-L1：M3 冻结分支已移除，弹层壳为唯一实现。
-        return MiuixPopupMenu(
-            entries: [
-              if (tracks.length > 1)
-                MiuixDropdownEntry(
-                  items: [
-                    for (final t in tracks)
-                      MiuixDropdownItem(
-                        text: t.title,
-                        selected: t.index == activeIndex,
-                        onClick: () => c.switchAudioTrack(t.index),
-                      ),
-                  ],
+        final label = AppTooltip(
+          message: '音频设置',
+          child: HoverContainer(
+            borderRadius: 6.0,
+            padding: const EdgeInsets.symmetric(
+              horizontal: Style.sm,
+              vertical: 6,
+            ),
+            hoverColor: AppColors.white.withValues(alpha: 0.12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ContrastText(
+                  codec,
+                  style: TextStyle(
+                    color: AppColors.white.withValues(alpha: 0.85),
+                    fontSize: 12,
+                  ),
+                  shadows: ContrastStyle.glyphShadows,
                 ),
-              MiuixDropdownEntry(
-                items: [
-                  MiuixDropdownItem(
-                    text: '智能响度均衡 (loudnorm)',
-                    selected: currentNorm == '2',
-                    onClick: () {
-                      c.setAudioNormalize('2');
-                      setState(() {});
-                    },
-                  ),
-                  MiuixDropdownItem(
-                    text: '动态压缩 (dynaudnorm)',
-                    selected: currentNorm == '1',
-                    onClick: () {
-                      c.setAudioNormalize('1');
-                      setState(() {});
-                    },
-                  ),
-                  MiuixDropdownItem(
-                    text: '禁用',
-                    selected: currentNorm == '0',
-                    onClick: () {
-                      c.setAudioNormalize('0');
-                      setState(() {});
-                    },
-                  ),
-                ],
-              ),
-            ],
-            title: '音频设置',
-            itemTextStyle: const TextStyle(fontSize: 12),
-            onOpenChanged: _onMenuOpenChanged,
-            child: AppTooltip(
-              message: '音频设置',
-              child: HoverContainer(
-                borderRadius: 6.0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Style.sm,
-                  vertical: 6,
-                ),
-                hoverColor: AppColors.white.withValues(alpha: 0.12),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ContrastText(
-                      codec,
-                      style: TextStyle(
-                        color: AppColors.white.withValues(alpha: 0.85),
-                        fontSize: 12,
-                      ),
+                if (quality.badgeLabel != null) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: biliPink.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: ContrastText(
+                      quality.badgeLabel!,
+                      style: const TextStyle(color: biliPink, fontSize: 10),
                       shadows: ContrastStyle.glyphShadows,
                     ),
-                    if (c.audioNormalizeEnabled) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: biliPink.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: const ContrastText(
-                          '均衡',
-                          style: TextStyle(color: biliPink, fontSize: 10),
-                          shadows: ContrastStyle.glyphShadows,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+                  ),
+                ],
+              ],
             ),
-          );
+          ),
+        );
+        // 无可选项（如 durl 兜底流）：保留编码标签展示，不弹空菜单。
+        if (entries.isEmpty) return label;
+        return MiuixPopupMenu(
+          entries: entries,
+          title: '音频设置',
+          itemTextStyle: const TextStyle(fontSize: 12),
+          onOpenChanged: _onMenuOpenChanged,
+          child: label,
+        );
       },
     );
   }

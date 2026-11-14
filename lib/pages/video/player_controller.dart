@@ -31,6 +31,7 @@ import 'package:winwin/http/loading_state.dart';
 import 'package:winwin/http/pgc.dart';
 import 'package:winwin/http/video.dart';
 import 'package:winwin/models/common/audio_normalization.dart';
+import 'package:winwin/models/common/audio_quality.dart';
 import 'package:winwin/models/common/video_type.dart';
 import 'package:winwin/models/video/play_info.dart';
 import 'package:winwin/models/video/play_url.dart';
@@ -284,9 +285,13 @@ class WinWinPlayerController {
     Pref.danmakuOpacity,
   );
 
-  // ── 清晰度状态 ──
+  // ── 清晰度/音质状态 ──
   PlayUrlModel? _playUrl;
   int _currentQn = 80;
+
+  /// 当前实际播放音轨的音质代码（30251/30255/30250/30280/30232/30216），
+  /// 0 = 未知或非 DASH 流。供音频菜单标记当前档位。
+  int _currentAudioQa = 0;
 
   /// 当前是否为首次加载（用于 HDR 自动升级判定）。
   bool _isInitialLoad = true;
@@ -2727,7 +2732,9 @@ class WinWinPlayerController {
         playUrl,
         maxQn: maxQn,
         capability: DeviceCodecCapability.av1,
-        preferSpecialAudio: true,
+        // 音质档位对齐 PiliPlus：按用户偏好档位选择音轨（默认 Hi-Res，
+        // 无 Hi-Res 时自动落到杜比/192K），不再无条件抢占最高档。
+        preferredAudioQuality: Pref.defaultAudioQa,
       );
       final video = selection.video;
       final audio = selection.audio;
@@ -2782,7 +2789,8 @@ class WinWinPlayerController {
 
       _playUrl = playUrl;
       _currentQn = video?.id ?? playUrl.quality ?? qn;
-      // 通知面板重建画质按钮（_playUrl 为普通字段，不自动触发重建）。
+      _currentAudioQa = audio?.id ?? 0;
+      // 通知面板重建画质/音质按钮（_playUrl 为普通字段，不自动触发重建）。
       qualityVersion.value++;
 
       if (kDebugMode) {
@@ -2851,9 +2859,12 @@ class WinWinPlayerController {
             }
           }
           final vCodecs = video?.codecs;
+          final aCodecs = audio?.codecs;
           final codecs = [
             if (vCodecs != null && vCodecs.isNotEmpty) vCodecs,
-            'mp4a.40.2',
+            // 音质切换后音轨可能是 EAC3/FLAC，清单 codecs 必须跟随真实音轨，
+            // 否则 HLS 初始化按 AAC 解析会失败。
+            if (aCodecs != null && aCodecs.isNotEmpty) aCodecs else 'mp4a.40.2',
           ].join(',');
           final bw = (video?.bandwidth ?? 0) + (audio?.bandwidth ?? 0);
           try {
@@ -4568,6 +4579,52 @@ class WinWinPlayerController {
     player.activeAudioTracks = [index];
   }
 
+  // ── 音质切换（对齐 PiliPlus showSetAudioQa）──
+
+  /// 当前视频可选音质列表（Hi-Res 无损 / 杜比全景声 / 普通 AAC），
+  /// 已按档位从高到低排序（[Dash.allAudios]）。
+  List<({int code, String desc, String codec})> get audioQualityOptions {
+    final audios = _playUrl?.dash?.allAudios ?? const <DashAudio>[];
+    return [
+      for (final audio in audios)
+        (
+          code: audio.id ?? 0,
+          desc: AudioQuality.fromCode(audio.id ?? 0).desc,
+          codec: _dashAudioCodecLabel(audio.codecs),
+        ),
+    ];
+  }
+
+  /// 当前实际播放音轨的音质代码（0=未知/非 DASH）。
+  int get currentAudioQualityCode => _currentAudioQa;
+
+  /// 切换音质：复用同清晰度的 playurl（缓存命中则不重新请求），
+  /// 仅重新选择音频流；保持当前进度与播放/暂停意图，并持久化默认音质。
+  Future<void> switchAudioQuality(int code) async {
+    if (code <= 0 || code == _currentAudioQa) return;
+    final remembered = position.value;
+    // 先写入偏好：[_openWithQuality] 按 Pref.defaultAudioQa 选轨。
+    Pref.defaultAudioQa = code;
+    await _openWithQuality(
+      qn: _currentQn,
+      maxQn: _currentQn,
+      start: remembered,
+      autoplay: _userIntentPlaying,
+      isInitialRequest: false,
+    );
+  }
+
+  /// DASH 音轨 codecs 字符串 → 菜单展示用短标签。
+  static String _dashAudioCodecLabel(String? codecs) {
+    final codec = (codecs ?? '').trim().toLowerCase();
+    if (codec.isEmpty) return '';
+    if (codec.contains('ec-3') || codec.contains('eac3')) return 'EAC3';
+    if (codec.contains('ac-3') || codec == 'ac3') return 'AC3';
+    if (codec.contains('flac')) return 'FLAC';
+    if (codec.contains('mp4a') || codec.contains('aac')) return 'AAC';
+    return codec.toUpperCase();
+  }
+
   /// 响度对齐的**静态增益**（线性倍率，1.0 = 不改变）。
   ///
   /// 机制说明（2026-09-30 换机制）：FFmpeg 的 loudnorm / dynaudnorm 是**动态**滤镜，
@@ -4637,40 +4694,8 @@ class WinWinPlayerController {
     );
   }
 
-  /// 是否启用音频响度对齐。
+  /// 是否启用音频响度对齐（请求 playurl 时决定是否携带 voice_balance=1）。
   bool get audioNormalizeEnabled => Pref.audioNormalization != '0';
-
-  /// 开关/切换响度对齐模式（0=禁用, 1=动态压缩, 2=智能响度均衡，或自定义参数）。
-  ///
-  /// 换机制（2026-09-30）：**不再**向播放器下发 FFmpeg 动态滤镜（前瞻延迟/无声），
-  /// 改为重算静态增益并立即应用到实际出声的第二实例音量。
-  ///
-  /// 语义说明：`1`（动态压缩 dynaudnorm）与 `2`（智能响度均衡 loudnorm）在此实现下
-  /// **都退化为静态响度对齐**——动态压缩所需的前瞻缓冲实时不可用。UI 文案的
-  /// 后续调整见复盘文档"遗留项"。
-  void setAudioNormalize(String config) {
-    Pref.audioNormalization = config;
-    _recomputeNormalizationGain(_playUrl?.volume);
-    final ap = _audioPlayer;
-    if (ap != null) {
-      try {
-        ap.volume = _audioInstanceVolume;
-      } catch (_) {}
-    }
-  }
-
-  /// 快速切换音频归一化开/关。
-  void toggleAudioNormalize() {
-    if (audioNormalizeEnabled) {
-      setAudioNormalize('0');
-    } else {
-      setAudioNormalize(
-        Pref.fallbackNormalization.isNotEmpty
-            ? Pref.fallbackNormalization
-            : '2',
-      );
-    }
-  }
 
   /// 设置音量（0 ~ Pref.maxVolume，支持最大 200% 增益提升）。
   void setVolume(double v) {

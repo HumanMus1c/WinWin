@@ -77,13 +77,22 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
   /// 演示音轨（本地占位）。
   static const List<String> _audioTrackSteps = ['默认音轨', '国语', '日语'];
 
+  /// 演示音质档位（对齐正常模式音质菜单：Hi-Res / 杜比 / 普通 AAC）。
+  static const List<({String desc, String codec, String? badge})>
+  _audioQualitySteps = [
+    (desc: 'Hi-Res 无损', codec: 'FLAC', badge: 'Hi-Res'),
+    (desc: '杜比全景声', codec: 'EAC3', badge: '杜比'),
+    (desc: '192K', codec: 'AAC', badge: null),
+    (desc: '132K', codec: 'AAC', badge: null),
+    (desc: '64K', codec: 'AAC', badge: null),
+  ];
+
   bool _playing = true;
   bool _danmakuOn = true;
   double _speed = 1.0;
   int _qualityIndex = 2; // 默认 1080P。
-  static const String _audioCodec = 'AAC';
   int _audioTrackIndex = 0;
-  String _audioNorm = '0';
+  int _audioQualityIndex = 1; // 演示片源支持杜比全景声。
   double _volume = 60;
   bool _locked = false;
   bool _inAppFullscreen = false;
@@ -445,8 +454,10 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
     );
   }
 
-  /// 音频编码标签（对齐正常模式 `_buildAudioCodecLabel`：`MiuixPopupMenu`）。
+  /// 音频编码标签（对齐正常模式 `_buildAudioCodecLabel`：`MiuixPopupMenu`，
+  /// 第二组为音质切换：Hi-Res / 杜比全景声 / 普通 AAC）。
   Widget _buildAudioCodecLabel() {
+    final quality = _audioQualitySteps[_audioQualityIndex];
     return MiuixPopupMenu(
       entries: [
         MiuixDropdownEntry(
@@ -461,21 +472,14 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
         ),
         MiuixDropdownEntry(
           items: [
-            MiuixDropdownItem(
-              text: '智能响度均衡 (loudnorm)',
-              selected: _audioNorm == '2',
-              onClick: () => setState(() => _audioNorm = '2'),
-            ),
-            MiuixDropdownItem(
-              text: '动态压缩 (dynaudnorm)',
-              selected: _audioNorm == '1',
-              onClick: () => setState(() => _audioNorm = '1'),
-            ),
-            MiuixDropdownItem(
-              text: '禁用',
-              selected: _audioNorm == '0',
-              onClick: () => setState(() => _audioNorm = '0'),
-            ),
+            for (int i = 0; i < _audioQualitySteps.length; i++)
+              MiuixDropdownItem(
+                text:
+                    '${_audioQualitySteps[i].desc} · '
+                    '${_audioQualitySteps[i].codec}',
+                selected: i == _audioQualityIndex,
+                onClick: () => setState(() => _audioQualityIndex = i),
+              ),
           ],
         ),
       ],
@@ -491,14 +495,14 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ContrastText(
-                _audioCodec,
+                quality.codec,
                 style: TextStyle(
                   color: AppColors.white.withValues(alpha: 0.85),
                   fontSize: 12,
                 ),
                 shadows: ContrastStyle.glyphShadows,
               ),
-              if (_audioNorm != '0') ...[
+              if (quality.badge != null) ...[
                 const SizedBox(width: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -506,16 +510,12 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                     vertical: 1,
                   ),
                   decoration: BoxDecoration(
-                    color: biliBlue.withValues(alpha: 0.28),
-                    borderRadius: BorderRadius.circular(Style.radiusXs),
+                    color: biliPink.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(3),
                   ),
-                  child: const ContrastText(
-                    '增强',
-                    style: TextStyle(
-                      color: Color(0xFF00AEEC),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: ContrastText(
+                    quality.badge!,
+                    style: const TextStyle(color: biliPink, fontSize: 10),
                     shadows: ContrastStyle.glyphShadows,
                   ),
                 ),

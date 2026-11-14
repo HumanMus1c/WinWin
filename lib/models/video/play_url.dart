@@ -3,6 +3,8 @@ library;
 
 import 'dart:math';
 
+import 'package:winwin/models/common/audio_quality.dart';
+
 /// 安全类型转换：B站 API 部分数值字段可能返回 String（如 "1920"），
 /// 直接 `as int?` 会抛 type cast 异常。此函数兼容 int / double / String。
 int? _asInt(dynamic v) {
@@ -68,6 +70,9 @@ class Dash {
   /// 杜比全景声音轨（可能不存在）
   List<DashAudio>? dolbyAudio;
 
+  /// Hi-Res 无损音轨（`dash.flac.audio`，单对象，可能不存在）
+  DashAudio? flacAudio;
+
   Dash.fromJson(Map<String, dynamic> json) {
     duration = _asInt(json['duration']);
     video = (json['video'] as List?)
@@ -79,6 +84,35 @@ class Dash {
     dolbyAudio = (json['dolby']?['audio'] as List?)
         ?.map((e) => DashAudio.fromJson(e as Map<String, dynamic>))
         .toList();
+    final flacJson = json['flac']?['audio'];
+    if (flacJson is Map) {
+      flacAudio = DashAudio.fromJson(Map<String, dynamic>.from(flacJson));
+    }
+  }
+
+  /// 全部可选音轨（Hi-Res 无损 + 杜比全景声 + 普通 AAC），
+  /// 按音质档位从高到低排序，并按 id 去重（对齐 PiliPlus `Dash.audio` 合并口径）。
+  List<DashAudio> get allAudios {
+    final list = <DashAudio>[
+      ?flacAudio,
+      ...?dolbyAudio,
+      ...?audio,
+    ];
+    final seen = <int>{};
+    final result = <DashAudio>[];
+    for (final item in list) {
+      final id = item.id ?? 0;
+      if (id <= 0 || !item.hasPlayableUrl) continue;
+      if (seen.add(id)) result.add(item);
+    }
+    result.sort((a, b) {
+      final byRank = AudioQuality.fromCode(b.id ?? 0).rank.compareTo(
+        AudioQuality.fromCode(a.id ?? 0).rank,
+      );
+      if (byRank != 0) return byRank;
+      return (b.bandwidth ?? 0).compareTo(a.bandwidth ?? 0);
+    });
+    return result;
   }
 }
 
@@ -121,12 +155,16 @@ class DashVideo {
 }
 
 class DashAudio {
-  /// 音质代码（如 30216=64K、30232=128K、30280=192K）
+  /// 音质代码（如 30216=64K、30232=132K、30280=192K、
+  /// 30250/30255=杜比全景声、30251=Hi-Res 无损）
   int? id;
   String? baseUrl;
   List<String>? backupUrl;
   int? bandwidth;
   int? codecid;
+
+  /// 编解码器标识（如 "mp4a.40.2"、"ec-3"、"flac"），用于音质菜单副标题。
+  String? codecs;
   String? frameRate;
   int? width;
   int? height;
@@ -139,6 +177,7 @@ class DashAudio {
         .toList();
     bandwidth = _asInt(json['bandWidth'] ?? json['bandwidth']);
     codecid = _asInt(json['codecid']);
+    codecs = json['codecs'] as String?;
     frameRate = (json['frameRate'] ?? json['frame_rate'])?.toString();
     width = _asInt(json['width']);
     height = _asInt(json['height']);
@@ -149,6 +188,9 @@ class DashAudio {
         if (baseUrl != null && baseUrl!.isNotEmpty) baseUrl!,
         ...?backupUrl,
       ];
+
+  /// 是否至少有一条可播放直链（无直链的音轨不进入可选列表）。
+  bool get hasPlayableUrl => playUrls.any((u) => u.isNotEmpty);
 }
 
 /// 非 DASH 模式下的分段 MP4 流（durl 节点）。

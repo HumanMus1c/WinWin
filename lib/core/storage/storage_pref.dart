@@ -91,6 +91,10 @@ abstract final class Pref {
   static int get defaultAudioQa =>
       _setting.get(SettingBoxKey.defaultAudioQa, defaultValue: 30251); // Hi-Res
 
+  /// 持久化默认音质偏好（播放器内切换音质后写入）。
+  static set defaultAudioQa(int value) =>
+      _setting.put(SettingBoxKey.defaultAudioQa, value);
+
   static int get defaultAudioQaCellular =>
       _setting.get(SettingBoxKey.defaultAudioQaCellular, defaultValue: 30216);
 

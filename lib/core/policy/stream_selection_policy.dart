@@ -6,6 +6,7 @@
 // 并匹配设备解码能力。AV1 > HEVC > AVC（评分 +3 / +2 / +1）。
 // 杜比全景声 / Hi-Res 音频走特殊处理路径。
 
+import 'package:winwin/models/common/audio_quality.dart';
 import 'package:winwin/models/video/play_url.dart';
 
 /// 视频编解码器类型。
@@ -177,48 +178,45 @@ class StreamSelectionPolicy {
     return best ?? topTracks.first;
   }
 
-  /// 选最佳音轨。
+  /// 选最佳音轨（对齐 PiliPlus `VideoUtils.findTargetAudio`）。
   ///
-  /// 特殊音轨优先级（当 [preferSpecialAudio] 为 true 时）：
-  /// 1. 杜比全景声（dolbyAudio 列表，需设备/会员支持）。
-  /// 2. Hi-Res 无损（audio id 30251）。
-  /// 3. 普通 DASH audio 中 bandwidth 最高的。
+  /// [audios] 为已合并的候选音轨（Hi-Res + 杜比 + 普通，见
+  /// [Dash.allAudios]）。按 [preferredQuality] 的档位（[AudioQuality.rank]）
+  /// 取「不超过偏好档位的最高可用档」；若全部可用档都高于偏好，回退最低档。
   ///
-  /// [preferSpecialAudio] 为 false 时仅走普通音轨。
+  /// 例：偏好 30251（Hi-Res）→ 有 Hi-Res 选 Hi-Res，否则选杜比，再否则 192K；
+  /// 偏好 30232（132K）→ 直接选 132K，不再占用更高档位带宽。
   static DashAudio? selectBestAudio(
     List<DashAudio>? audios, {
-    List<DashAudio>? dolbyAudios,
-    bool preferSpecialAudio = false,
+    int preferredQuality = 30251,
   }) {
-    // Hi-Res 无损（id 30251）优先（高保真立体声母带）。
-    if (preferSpecialAudio && audios != null && audios.isNotEmpty) {
-      for (final a in audios) {
-        if (a.id == 30251 && (a.baseUrl?.isNotEmpty ?? false)) return a;
+    if (audios == null || audios.isEmpty) return null;
+    final preferredRank = AudioQuality.fromCode(preferredQuality).rank;
+
+    DashAudio? selected;
+    var selectedRank = -1;
+    DashAudio? lowest;
+    var lowestRank = 1 << 31;
+    for (final audio in audios) {
+      final rank = AudioQuality.fromCode(audio.id ?? 0).rank;
+      if (rank <= preferredRank && rank > selectedRank) {
+        selected = audio;
+        selectedRank = rank;
+      }
+      if (rank < lowestRank) {
+        lowest = audio;
+        lowestRank = rank;
       }
     }
-
-    // 杜比全景声（多声道下混容易衰减对白音量，仅在显式偏好时选取）。
-    if (preferSpecialAudio &&
-        dolbyAudios != null &&
-        dolbyAudios.isNotEmpty) {
-      return dolbyAudios.reduce(
-        (a, b) => (b.bandwidth ?? 0) > (a.bandwidth ?? 0) ? b : a,
-      );
-    }
-
-    if (audios == null || audios.isEmpty) return null;
-
-    // 普通：bandwidth 最高的立体声音轨（如 30280=192K）。
-    return audios.reduce(
-      (a, b) => (b.bandwidth ?? 0) > (a.bandwidth ?? 0) ? b : a,
-    );
+    return selected ?? lowest;
   }
 
   /// 识别音轨的特殊类型。
-  static SpecialAudioKind identifySpecialAudio(DashAudio? audio, {bool fromDolbyList = false}) {
+  static SpecialAudioKind identifySpecialAudio(DashAudio? audio) {
     if (audio == null) return SpecialAudioKind.normal;
-    if (fromDolbyList) return SpecialAudioKind.dolbyAtmos;
-    if (audio.id == 30251) return SpecialAudioKind.hiRes;
+    final id = audio.id ?? 0;
+    if (id == 30250 || id == 30255) return SpecialAudioKind.dolbyAtmos;
+    if (id == 30251) return SpecialAudioKind.hiRes;
     return SpecialAudioKind.normal;
   }
 
@@ -229,7 +227,7 @@ class StreamSelectionPolicy {
     PlayUrlModel? playUrl, {
     int maxQn = 80,
     DeviceCodecCapability capability = DeviceCodecCapability.av1,
-    bool preferSpecialAudio = false,
+    int preferredAudioQuality = 30251,
     List<VideoCodec>? preferredCodecs,
   }) {
     final dash = playUrl?.dash;
@@ -240,9 +238,8 @@ class StreamSelectionPolicy {
       preferredCodecs: preferredCodecs,
     );
     final audio = selectBestAudio(
-      dash?.audio,
-      dolbyAudios: dash?.dolbyAudio,
-      preferSpecialAudio: preferSpecialAudio,
+      dash?.allAudios,
+      preferredQuality: preferredAudioQuality,
     );
     return StreamSelectionResult(
       video: video,
