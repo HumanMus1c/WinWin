@@ -43,6 +43,7 @@ class StallWatchdog {
   static const int escalateSec = 15;
 
   static int _lastFrameMs = 0;
+  static int _lastCheckMs = 0;
   static bool _renderExpected = false;
   static int _episodeStartMs = 0;
   static bool _softAttempted = false;
@@ -63,6 +64,7 @@ class StallWatchdog {
     if (_renderExpected == v) return;
     _renderExpected = v;
     _lastFrameMs = DateTime.now().millisecondsSinceEpoch;
+    _lastCheckMs = 0;
     _episodeStartMs = 0;
     _softAttempted = false;
   }
@@ -135,8 +137,24 @@ class StallWatchdog {
   }
 
   static void _checkWarmRender() {
-    if (!_autoRecover || !_renderExpected || _lastFrameMs == 0) return;
     final now = DateTime.now().millisecondsSinceEpoch;
+    final checkGap = _lastCheckMs == 0 ? 0 : now - _lastCheckMs;
+    _lastCheckMs = now;
+    if (!_autoRecover || !_renderExpected || _lastFrameMs == 0) return;
+    // 看门狗自身的 2s 检查定时器大幅迟到 ⇒ UI isolate 本身被阻塞（同步 FFI /
+    // 长任务），不是「渲染停摆」。此时绝不能执行设备丢失重载：2026-11-14 21:45
+    // 实证，UI 心跳中断 9.8s 但视频 PTS 仍在推进，重载后反而制造了再缓冲与
+    // 「网络较慢」误报（而冷路径心跳由独立 isolate 负责，不受此影响）。
+    if (checkGap > 2500) {
+      AppLogger.w(
+        'StallWatchdog',
+        'UI STALL: check timer late ${checkGap}ms, skip device-loss recovery',
+      );
+      _episodeStartMs = 0;
+      _softAttempted = false;
+      _lastFrameMs = now;
+      return;
+    }
     final gap = now - _lastFrameMs;
 
     if (gap >= softSec * 1000) {

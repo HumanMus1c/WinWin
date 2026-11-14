@@ -500,6 +500,11 @@ class WinWinPlayerController {
   /// 缓冲态进入：连续不健康 ≥0.8s（与既有 stalled/停滞路径互补）。
   static const int _bufferingEnterUnhealthyMs = 800;
 
+  /// 弱网/音频暂停判据的缓冲存量下限（ms）：缓冲末端领先当前播放位置 ≥ 该值时，
+  /// 位置推进变慢视为本地解码/渲染抖动，不得判弱网、暂停音频或弹提示。
+  /// 2026-11-14 实证：79~101 秒缓冲仍被判弱网并暂停音频，造成可闻断音。
+  static const int _weakNetworkBufferFloorMs = 5000;
+
   final List<int> _flowTs = []; // 采样时间（墙钟 ms）
   final List<int> _flowPos = []; // 采样位置（media ms）
   double? _flowRate; // 窗口流速 = Δpos/Δt（media ms / wall ms）；null=窗口未知
@@ -587,6 +592,9 @@ class WinWinPlayerController {
   /// 上一次被防护的原始读数（第五轮：同值不重复打印 `AUDIO-POS-SANITIZE`，
   /// 避免 100ms 一条刷屏；恢复有效后置 -2）。
   int _lastSanitizeRaw = -2;
+
+  /// 媒体时间轴重置时刻（换源）：用于区分「真实的音频起点 0」与「陈旧假 0」。
+  DateTime? _audioTimelineResetAt;
 
   /// 漂移硬定位冷却截止时间（R3：避免每秒一次硬定位风暴）。
   DateTime? _driftHardCooldownUntil;
@@ -864,9 +872,14 @@ class WinWinPlayerController {
       // ==================================================
     }
 
-    // Windows 平台开启 D3D11 CPU-GPU 纹理同步屏障，杜绝 Flutter Texture 渲染表面的时序撕裂与新旧画面闪烁
+    // Windows 平台：关闭 D3D11 CPU-GPU 同步栅栏（2026-10-21 设备丢失复盘结论——
+    // sync.cpu=1 时 GPU 重置/卡死会让线程永久阻塞在 CPU-GPU 栅栏上，表现为 UI
+    // isolate 停摆、日志静默）。main.dart 启动时已设 0，此处必须一致；旧实现每次
+    // 建播放器又设回 1，把规避措施覆盖掉了（2026-11-14 21:45 卡顿排查确认）。
+    // 代价：关栅栏可能重现纹理时序撕裂/闪烁；若实机出现，不能简单改回 1，需另走
+    //「轮询读取移出 UI 线程」的异步方案。
     if (Platform.isWindows) {
-      mdk.setGlobalOption('d3d11.sync.cpu', 1);
+      mdk.setGlobalOption('d3d11.sync.cpu', 0);
     }
 
     final initialFilter = AudioNormalization.parse(
@@ -1334,6 +1347,21 @@ class WinWinPlayerController {
   bool get _flowUnhealthy =>
       _flowRate != null && _flowRate! < _flowUnhealthyFactor * _expectedFlowRate;
 
+  /// 相对缓冲存量（缓冲末端 - 当前播放位置，ms）；时长未知时返回 -1。
+  int get _bufferedAheadMs {
+    if (duration.value.inMilliseconds <= 0) return -1;
+    final ahead =
+        buffered.value.inMilliseconds - position.value.inMilliseconds;
+    return ahead < 0 ? 0 : ahead;
+  }
+
+  /// 缓冲存量是否不足（弱网提示 / 音频暂停的必要条件）。
+  /// 存量未知按不足处理（保守），但起播阶段由其他门控覆盖。
+  bool get _bufferLowForWeakNetwork {
+    final ahead = _bufferedAheadMs;
+    return ahead < 0 || ahead < _weakNetworkBufferFloorMs;
+  }
+
   /// 每 tick 采样流速并累计健康/不健康时长。
   void _sampleFlow(int posMs) {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -1700,15 +1728,19 @@ class WinWinPlayerController {
           _audioSyncStallMs += 100;
         }
         // 第三轮（T3）：暂停条件与「视频是否真的在健康推进」对齐——
-        //   视频实际停滞 ≥400ms（含冻结）→ 暂停 ✔；
-        //   缓冲态内视频被冻结（paused）或弱网慢速（unhealthy）→ 暂停 ✔；
-        //   推动后（playing、新窗口未建/健康）→ 不打断 ✔（避免 100ms 内又被暂停，
-        //   造成「声音晚到」回归——第二轮「音画同刻续播」的配套修复）；
-        //   有存量正常播（buffering 未解除但速率健康）→ 不打断 ✔。
+        //   视频实际停滞 ≥400ms 且**缓冲存量不足**（含冻结）→ 暂停 ✔；
+        //   缓冲态内视频被冻结（paused）或弱网慢速（unhealthy）且存量不足 → 暂停 ✔；
+        //   缓冲存量充足（≥5s）时的位置变慢是本地解码/渲染抖动，不暂停音频 ✔；
+        //   视频停滞 ≥3s（无论存量）→ 暂停，交给漂移/看门狗兜底 ✔。
+        // 2026-11-14 实证：79 秒缓冲下仅因流速 0.414 暂停音频 6 秒，造成可闻断音。
+        final bufferLow = _bufferLowForWeakNetwork;
         final needAudioPause =
-            _audioSyncStallMs >= 400 ||
-            (buffering.value &&
-                (player.state == mdk.PlaybackState.paused || _flowUnhealthy));
+            _audioSyncStallMs >= 3000 ||
+            (bufferLow &&
+                (_audioSyncStallMs >= 400 ||
+                    (buffering.value &&
+                        (player.state == mdk.PlaybackState.paused ||
+                            _flowUnhealthy))));
         if (needAudioPause) {
           if (!_audioSyncPaused) {
             _audioSyncPaused = true;
@@ -1805,7 +1837,10 @@ class WinWinPlayerController {
           !_isSeeking &&
           !_nativeSeekInFlight &&
           _queuedSeekTargetMs == null &&
-          !_audioRecovering) {
+          !_audioRecovering &&
+          // 弱网缓冲同步主动暂停期间不得做漂移判定：此时 position 可能是陈旧 0，
+          // 会触发假硬定位（2026-11-14 21:49 实证 -69.9s）。
+          !_audioSyncPaused) {
         try {
           // 第四轮（P1）：位置读数防护（陈旧 0 → 上次有效值）；尚无有效值（-1）时
           // 跳过本 tick 判定（不更新推进基准、不触发硬定位/看门狗）。
@@ -2051,12 +2086,15 @@ class WinWinPlayerController {
 
       // 弱网主动提示：流速持续不健康或缓冲停滞 ≥3s 时立即提示一次；
       // 连续健康 ≥10s 后才重置回合，避免长时间弱网反复弹 toast。
+      // 弱网提示必须以「缓冲存量不足」为前提：2026-11-14 实证 79~101 秒缓冲、
+      // 位置因本地解码/渲染抖动变慢时，旧判据仍弹「网络较慢」并暂停音频。
       final weakNetworkNow =
           ready.value &&
           _userIntentPlaying &&
           !completed.value &&
           !_isSeeking &&
           !_isRecovering &&
+          _bufferLowForWeakNetwork &&
           (_flowUnhealthyMs >= 3000 || _bufferingStallMs >= 3000);
       if (weakNetworkNow) {
         WeakNetworkDetector.instance.reportPlaybackWeak();
@@ -2729,6 +2767,7 @@ class WinWinPlayerController {
       _syncRealignStreak = 0;
       // 第四轮（P1）：音频位置防护缓存同步作废（换源后音频实例时间轴重置）。
       _lastValidAudioPosMs = -1;
+      _audioTimelineResetAt = DateTime.now();
       // 注：`_streamDeadlineMs` 不在加载起点清空（2026-10-02 第二轮）——保留旧值
       // 直到本次 URL 解析覆盖；加载失败时仍保持「已过期」事实，自动路径按冷却继续
       // 整载重拉，而不是退回候选轮换（陈旧 URL 必然失败）。
@@ -3471,26 +3510,34 @@ class WinWinPlayerController {
     }
   }
 
-  /// 音频 position 读数防护（第四轮，日志分析修复；第五轮修正误伤）。
+  /// 音频 position 读数防护（第四轮；第五轮 / 2026-11-14 修正）。
   ///
-  /// 陈旧读数（`raw < 1000ms 且视频位置 > 5000ms 且**音频暂停态**且非起播对齐窗口`）
-  /// 一律替换为**上次有效位置**——判定相当于「位置未变」（保持现状），不再产生假
-  /// 漂移；尚无有效值（-1）时返回 -1，调用方应跳过本 tick 判定。
-  /// 第五轮（F3）：增加「暂停态」条件——playing 状态下的小位置是**真实值**
-  /// （音频从 0 起播待对齐），必须交漂移判定正常处理（09-27 14:53 实证：25 条误防护
-  /// 使 1163s 错位的对齐延后约 2s）。
+  /// 陈旧读数一律替换为**上次有效位置**（相当于「位置未变」），尚无有效值时返回 -1
+  /// （调用方跳过本 tick）。判定不再依赖音频 state（第五轮曾要求 `paused`，但实测
+  /// `playing + position=0` 仍会出现：暂停后状态被抢回播放、位置尚未恢复）：
+  /// 1. `raw < 1000ms` 且视频位置 >5s，且已过起播窗口（换源 5s 内或起播对齐中）
+  ///    → 陈旧 0（2026-11-14 21:46/21:49 实证：触发 -98.8s / -69.9s 假硬定位）；
+  /// 2. 相对上次有效值回退 >5s，且非起播窗口 → 陈旧时间轴（重挂/解码器复位）。
+  /// 起播窗口内的小位置是**真实值**（音频从 0 起播待对齐），必须交漂移判定正常处理。
   int _sanitizeAudioPos(int rawPosMs) {
     if (rawPosMs < 0) return _lastValidAudioPosMs;
-    final ap = _audioPlayer;
-    if (rawPosMs < 1000 &&
-        position.value.inMilliseconds > 5000 &&
-        !_audioStartAligning &&
-        ap != null &&
-        ap.state == mdk.PlaybackState.paused) {
+    final videoPosMs = position.value.inMilliseconds;
+    final resetAt = _audioTimelineResetAt;
+    final sinceResetMs = resetAt == null
+        ? 1 << 30
+        : DateTime.now().difference(resetAt).inMilliseconds;
+    final inStartWindow = _audioStartAligning || sinceResetMs <= 5000;
+    final staleZero =
+        rawPosMs < 1000 && videoPosMs > 5000 && !inStartWindow;
+    final droppedBack = _lastValidAudioPosMs >= 5000 &&
+        rawPosMs < _lastValidAudioPosMs - 5000 &&
+        !inStartWindow;
+    if (staleZero || droppedBack) {
       if (_lastSanitizeRaw != rawPosMs) {
         _lastSanitizeRaw = rawPosMs;
         SeekProbe.note(
-          'AUDIO-POS-SANITIZE raw=$rawPosMs stale→$_lastValidAudioPosMs',
+          'AUDIO-POS-SANITIZE raw=$rawPosMs stale→$_lastValidAudioPosMs '
+          'video=$videoPosMs sinceReset=$sinceResetMs',
         );
       }
       return _lastValidAudioPosMs;
@@ -3584,6 +3631,7 @@ class WinWinPlayerController {
       final res = await ap
           .seek(position: targetMs)
           .timeout(const Duration(seconds: 3));
+      if (res >= 0) _lastValidAudioPosMs = targetMs;
       SeekProbe.note(
         'AUDIO-ALIGN done target=$targetMs res=$res pos=${ap.position}',
       );
@@ -3683,6 +3731,8 @@ class WinWinPlayerController {
         } catch (_) {}
       }
       _lastAudioPosMs = canPlay ? videoPosMs : -1;
+      // 重挂成功即把归位点视为有效基准：陈旧 0 防护回退到这里，不再触发二次硬定位。
+      _lastValidAudioPosMs = canPlay ? videoPosMs : -1;
       // 重置时间基准（第七轮）：重挂后从当前位置重新计时，避免立刻又被判停顿。
       _lastAudioAdvanceAt = DateTime.now();
       SeekProbe.note(
@@ -4014,6 +4064,9 @@ class WinWinPlayerController {
     if (player == null || _disposed) return;
 
     _nativeSeekInFlight = true;
+    // 用户 seek 开启新时间轴：作废旧音频位置基准，避免「快退后的旧位置」被
+    // droppedBack 防护当成基准，导致归位永远追不上新位置。
+    _lastValidAudioPosMs = -1;
     // 取证：进入 seek 流程（在首次 FFI 读取之前）——若卡死发生在下方
     // `player.position` / `player.buffered()` 上，本行即为最后现场。
     SeekProbe.note('PROC seq=$seq target=$targetMs enter');
@@ -4261,9 +4314,10 @@ class WinWinPlayerController {
             'AUDIO seek seq=$seq -> $audioTargetMs (main landed res=$res)',
           );
           try {
-            await apSeek
+            final ar = await apSeek
                 .seek(position: audioTargetMs)
                 .timeout(const Duration(seconds: 3));
+            if (ar >= 0) _lastValidAudioPosMs = audioTargetMs;
           } catch (_) {}
         }
 
