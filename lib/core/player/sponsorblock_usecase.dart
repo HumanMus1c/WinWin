@@ -12,7 +12,9 @@
 //   命中则 seek 到段落结尾实现自动跳过。
 
 import 'package:dio/dio.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
+import 'package:winwin/common/constants.dart';
 import 'package:winwin/http/constants.dart';
 import 'package:winwin/http/loading_state.dart';
 
@@ -57,6 +59,30 @@ enum SponsorBlockCategory {
         return SponsorBlockCategory.filler;
       default:
         return SponsorBlockCategory.unknown;
+    }
+  }
+
+  /// SponsorBlock 社区 API 的类别名（提交/查询时使用）。
+  String get wireName {
+    switch (this) {
+      case SponsorBlockCategory.sponsor:
+        return 'sponsor';
+      case SponsorBlockCategory.selfPromo:
+        return 'selfpromo';
+      case SponsorBlockCategory.interaction:
+        return 'interaction';
+      case SponsorBlockCategory.intro:
+        return 'intro';
+      case SponsorBlockCategory.outro:
+        return 'outro';
+      case SponsorBlockCategory.musicOfftopic:
+        return 'music_offtopic';
+      case SponsorBlockCategory.preview:
+        return 'preview';
+      case SponsorBlockCategory.filler:
+        return 'filler';
+      case SponsorBlockCategory.unknown:
+        return 'sponsor';
     }
   }
 
@@ -141,11 +167,38 @@ class SponsorBlockSegment {
   }
 }
 
+/// 社区片段提交结果。
+class SponsorBlockSubmitResult {
+  const SponsorBlockSubmitResult.success() : error = null;
+
+  const SponsorBlockSubmitResult.failure(this.error);
+
+  final String? error;
+
+  bool get isSuccess => error == null;
+}
+
 /// SponsorBlock 用例：段落加载、位置检查、自动跳过决策。
 class SponsorBlockUseCase {
   SponsorBlockUseCase({Dio? dio}) : _dio = dio ?? _createDio();
 
   final Dio _dio;
+
+  static final Future<PackageInfo> _packageInfo =
+      PackageInfo.fromPlatform();
+
+  /// 社区 API 请求头（对齐 BiliPai / PiliPlus 的来源标识）。
+  Future<Map<String, String>> _communityHeaders() async {
+    String version = '1.0.0';
+    try {
+      version = (await _packageInfo).version;
+    } catch (_) {}
+    return {
+      'origin': Constants.appName,
+      'x-ext-version': version,
+      'User-Agent': '${Constants.appName}/$version',
+    };
+  }
 
   /// 已加载的段落列表（按 start 排序）。
   List<SponsorBlockSegment> _segments = const [];
@@ -253,6 +306,109 @@ class SponsorBlockUseCase {
   void clear() {
     _segments = const <SponsorBlockSegment>[];
     _lastSkipped = null;
+  }
+
+  /// 向社区上报一个片段（提交前必须由用户确认）。
+  ///
+  /// 对齐 BiliPai `SponsorBlockRepository.submitSegments` 与
+  /// PiliPlus `SponsorBlock.postSkipSegments` 的请求结构。
+  Future<SponsorBlockSubmitResult> submitSegment({
+    required String bvid,
+    required int cid,
+    required double videoDurationSeconds,
+    required double startSeconds,
+    required double endSeconds,
+    required String category,
+    required String actionType,
+    required String userId,
+  }) async {
+    if (bvid.isEmpty || cid <= 0) {
+      return const SponsorBlockSubmitResult.failure('视频标识无效');
+    }
+    if (startSeconds < 0 || endSeconds <= startSeconds) {
+      return const SponsorBlockSubmitResult.failure('片段时间范围无效');
+    }
+    if (userId.isEmpty) {
+      return const SponsorBlockSubmitResult.failure('社区用户 ID 无效');
+    }
+
+    try {
+      final headers = await _communityHeaders();
+      final version = headers['x-ext-version'] ?? '1.0.0';
+      final res = await _dio.post<dynamic>(
+        '/api/skipSegments',
+        data: {
+          'videoID': bvid,
+          'cid': '$cid',
+          'userID': userId,
+          'videoDuration': videoDurationSeconds,
+          'userAgent': '${Constants.appName}/$version',
+          'segments': [
+            {
+              'segment': [startSeconds, endSeconds],
+              'category': category,
+              'actionType': actionType,
+            },
+          ],
+        },
+        options: Options(
+          headers: headers,
+          contentType: Headers.jsonContentType,
+        ),
+      );
+      if (res.statusCode == 200) {
+        return const SponsorBlockSubmitResult.success();
+      }
+      return SponsorBlockSubmitResult.failure(
+        _statusError(res.statusCode, res.data),
+      );
+    } on DioException catch (error) {
+      return SponsorBlockSubmitResult.failure(
+        '上报失败：${error.message ?? error.type.name}',
+      );
+    } catch (error) {
+      return SponsorBlockSubmitResult.failure('上报失败：$error');
+    }
+  }
+
+  /// 对社区片段投票：1=有用，0=不准确。
+  Future<String?> voteSegment({
+    required String uuid,
+    required int type,
+    required String userId,
+  }) async {
+    if (uuid.isEmpty) return '片段标识无效';
+    try {
+      final res = await _dio.post<dynamic>(
+        '/api/voteOnSponsorTime',
+        data: {'UUID': uuid, 'userID': userId, 'type': type},
+        options: Options(
+          headers: await _communityHeaders(),
+          contentType: Headers.jsonContentType,
+        ),
+      );
+      if (res.statusCode == 200) return null;
+      return _statusError(res.statusCode, res.data);
+    } on DioException catch (error) {
+      return '投票失败：${error.message ?? error.type.name}';
+    } catch (error) {
+      return '投票失败：$error';
+    }
+  }
+
+  String _statusError(int? code, dynamic data) {
+    final detail = data is String ? data.trim() : '';
+    final message = switch (code) {
+      400 => '参数错误',
+      403 => '被自动审核机制拒绝',
+      404 => '未找到数据',
+      409 => '重复提交',
+      429 => '提交太快，请稍后重试',
+      500 => '服务器无法处理请求',
+      _ => '服务器错误（HTTP $code）',
+    };
+    if (detail.isEmpty || detail.length > 120) return message;
+    return '$message：$detail';
   }
 
   void dispose() {

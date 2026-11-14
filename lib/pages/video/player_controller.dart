@@ -285,6 +285,76 @@ class WinWinPlayerController {
   /// 注册完成创建；同时支持播放中启停插件后立即生效。
   bool get sponsorBlockEnabled => PluginManager.enabled('sponsor_block');
 
+  /// 当前已加载的社区片段（供播放页空降助手段落列表使用）。
+  List<SponsorBlockSegment> get sponsorBlockSegments =>
+      sponsorBlock?.segments ?? const [];
+
+  /// 重新拉取当前视频的社区片段（开启插件或上报成功后调用）。
+  Future<List<SponsorBlockSegment>> refreshSponsorBlockSegments() async {
+    if (!sponsorBlockEnabled) return const [];
+    sponsorBlock ??= SponsorBlockUseCase();
+    final result = await sponsorBlock!.fetchSegments(bvid: bvid);
+    return result.dataOrNull ?? sponsorBlock!.segments;
+  }
+
+  /// 上报一个社区片段（调用方负责提交前确认）。
+  Future<SponsorBlockSubmitResult> submitSponsorSegment({
+    required double startSeconds,
+    required double endSeconds,
+    required String category,
+    required String actionType,
+  }) async {
+    if (!sponsorBlockEnabled) {
+      return const SponsorBlockSubmitResult.failure('请先开启空降助手');
+    }
+    if (bvid.isEmpty) {
+      return const SponsorBlockSubmitResult.failure('当前视频不支持片段上报');
+    }
+    final plugin = PluginManager.maybeInstance?.find<SponsorBlockPlugin>();
+    if (plugin == null) {
+      return const SponsorBlockSubmitResult.failure('空降助手未初始化');
+    }
+    if (!plugin.communityContributionEnabled) {
+      return const SponsorBlockSubmitResult.failure(
+        '请先在空降助手设置中允许上报社区片段',
+      );
+    }
+
+    sponsorBlock ??= SponsorBlockUseCase();
+    final result = await sponsorBlock!.submitSegment(
+      bvid: bvid,
+      cid: cid,
+      videoDurationSeconds: duration.value.inMilliseconds / 1000.0,
+      startSeconds: startSeconds,
+      endSeconds: endSeconds,
+      category: category,
+      actionType: actionType,
+      userId: plugin.userId,
+    );
+    if (result.isSuccess) {
+      await refreshSponsorBlockSegments();
+    }
+    return result;
+  }
+
+  /// 对社区片段投票：1=有用，0=不准确。
+  Future<String?> voteSponsorSegment({
+    required SponsorBlockSegment segment,
+    required bool useful,
+  }) async {
+    final plugin = PluginManager.maybeInstance?.find<SponsorBlockPlugin>();
+    if (plugin == null) return '空降助手未初始化';
+    if (!plugin.communityContributionEnabled) {
+      return '请先允许上报社区片段';
+    }
+    sponsorBlock ??= SponsorBlockUseCase();
+    return sponsorBlock!.voteSegment(
+      uuid: segment.uuid,
+      type: useful ? 1 : 0,
+      userId: plugin.userId,
+    );
+  }
+
   /// 弹幕显示不透明度（0-1）：设置面板改动时写入，弹幕层监听实时刷新。
   final ValueNotifier<double> danmakuOpacity = ValueNotifier(
     Pref.danmakuOpacity,

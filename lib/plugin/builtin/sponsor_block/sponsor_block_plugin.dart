@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:winwin/core/player/sponsorblock_usecase.dart';
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/shell/app_theme_host.dart';
+import 'package:winwin/http/constants.dart';
 import 'package:winwin/plugin/api/app_plugin.dart';
 import 'package:winwin/plugin/api/plugin_capability.dart';
 import 'package:winwin/plugin/api/plugin_manager.dart';
@@ -21,6 +23,9 @@ class SponsorBlockPlugin extends BuiltinPlugin {
   static const String pluginId = 'sponsor_block';
 
   static const String _configCategoriesKey = 'categories';
+  static const String _configCommunityEnabledKey =
+      'communityContributionEnabled';
+  static const String _configUserIdKey = 'userId';
 
   final Map<SponsorBlockCategory, bool> _categories = {
     for (final category in SponsorBlockCategory.values)
@@ -28,6 +33,27 @@ class SponsorBlockPlugin extends BuiltinPlugin {
   };
 
   bool _loaded = false;
+  bool _communityContributionEnabled = false;
+  String _userId = '';
+
+  /// 社区上报开关：默认关闭，首次开启后仍需在播放页逐次确认提交。
+  bool get communityContributionEnabled {
+    ensureLoaded();
+    return _communityContributionEnabled;
+  }
+
+  /// 社区匿名用户 ID（30+ 位字母数字），用于归属贡献。
+  String get userId {
+    ensureLoaded();
+    if (_userId.isEmpty) {
+      _userId = const Uuid().v4().replaceAll('-', '');
+      unawaited(_persist());
+    }
+    return _userId;
+  }
+
+  /// 社区服务器（与现有段落拉取共用 bsbsb.top）。
+  String get communityServerUrl => HttpString.sponsorBlockBaseUrl;
 
   @override
   String get id => pluginId;
@@ -77,6 +103,25 @@ class SponsorBlockPlugin extends BuiltinPlugin {
         }
       }
     }
+    _communityContributionEnabled =
+        config?[_configCommunityEnabledKey] == true;
+    final storedUserId = config?[_configUserIdKey]?.toString() ?? '';
+    if (storedUserId.length >= 30) {
+      _userId = storedUserId;
+    } else {
+      _userId = const Uuid().v4().replaceAll('-', '');
+      unawaited(_persist());
+    }
+  }
+
+  Future<void> _persist() {
+    return PluginManager.instance.store.setConfig(pluginId, {
+      _configCategoriesKey: {
+        for (final entry in _categories.entries) entry.key.name: entry.value,
+      },
+      _configCommunityEnabledKey: _communityContributionEnabled,
+      _configUserIdKey: _userId,
+    });
   }
 
   bool isCategoryEnabled(SponsorBlockCategory category) {
@@ -90,11 +135,14 @@ class SponsorBlockPlugin extends BuiltinPlugin {
   ) async {
     ensureLoaded();
     _categories[category] = enabled;
-    await PluginManager.instance.store.setConfig(pluginId, {
-      _configCategoriesKey: {
-        for (final entry in _categories.entries) entry.key.name: entry.value,
-      },
-    });
+    await _persist();
+  }
+
+  /// 社区上报开关（默认关闭）。
+  Future<void> setCommunityContributionEnabled(bool enabled) async {
+    ensureLoaded();
+    _communityContributionEnabled = enabled;
+    await _persist();
   }
 
   /// 把当前分段开关应用到某个播放会话的用例。
@@ -183,6 +231,49 @@ class _SponsorBlockSettingsState extends State<_SponsorBlockSettings> {
                     });
                   },
                 ),
+          ],
+        ),
+        const SizedBox(height: Style.lg),
+        Padding(
+          padding: const EdgeInsets.only(left: Style.lg, bottom: Style.sm),
+          child: Text(
+            '社区上报',
+            style: tokens.text.labelMedium?.copyWith(
+              color: tokens.colors.outline,
+            ),
+          ),
+        ),
+        AppGroup(
+          children: [
+            AppListItem(
+              icon: AppIcon(AppIcons.sponsorBlock(active: true)),
+              title: '允许上报社区片段',
+              subtitle: '默认关闭；开启后每次提交仍需在播放页确认',
+              trailing: AppSwitch(
+                value: widget.plugin.communityContributionEnabled,
+                onChanged: (value) async {
+                  await widget.plugin.setCommunityContributionEnabled(value);
+                  if (mounted) setState(() {});
+                },
+              ),
+              onTap: () async {
+                await widget.plugin.setCommunityContributionEnabled(
+                  !widget.plugin.communityContributionEnabled,
+                );
+                if (mounted) setState(() {});
+              },
+            ),
+            AppListItem(
+              icon: AppIcon(AppIcons.info()),
+              title: '社区用户 ID',
+              subtitle:
+                  '${widget.plugin.userId.substring(0, 8)}… · 用于归属你的片段贡献',
+            ),
+            AppListItem(
+              icon: AppIcon(AppIcons.link()),
+              title: '社区服务器',
+              subtitle: widget.plugin.communityServerUrl,
+            ),
           ],
         ),
         const SizedBox(height: Style.lg),

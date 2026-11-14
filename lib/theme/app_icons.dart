@@ -346,7 +346,8 @@ abstract final class AppIcons {
   static IconData plugin() => CupertinoIcons.cube;
 
   /// 空降助手（SponsorBlock）
-  static IconData sponsorBlock() => CupertinoIcons.forward_end;
+  static IconData sponsorBlock({bool active = false}) =>
+      active ? CupertinoIcons.shield_fill : CupertinoIcons.shield;
 
   /// 匿名推荐 / 初见推荐
   static IconData incognito() => CupertinoIcons.person_crop_circle;

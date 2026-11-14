@@ -26,7 +26,11 @@ import 'package:winwin/pages/video/danmaku_settings_panel.dart';
 import 'package:winwin/pages/video/desktop_pip.dart';
 import 'package:winwin/pages/video/player_controller.dart';
 import 'package:winwin/pages/video/player_focus.dart';
+import 'package:winwin/pages/video/sponsor_block_panel.dart';
 import 'package:winwin/pages/video/subtitle_settings_panel.dart';
+import 'package:winwin/plugin/api/app_plugin.dart';
+import 'package:winwin/plugin/api/plugin_manager.dart';
+import 'package:winwin/plugin/builtin/sponsor_block/sponsor_block_plugin.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/theme/colors.dart';
 import 'package:winwin/theme/style.dart';
@@ -1076,6 +1080,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     _buildSpeedLabel(),
                     _buildChapterButton(),
                     _buildSubtitleChip(),
+                    _buildSponsorBlockButton(),
                     const SizedBox(width: Style.sm),
                     _iconButton(
                       icon: AppIcon(
@@ -1881,6 +1886,38 @@ class _PlayerPanelState extends State<PlayerPanel> {
     ];
     if (idx < 0 || idx >= weights.length) return FontWeight.w500;
     return weights[idx];
+  }
+
+  /// 空降助手控制栏入口：开启/关闭、片段上报与社区片段列表。
+  ///
+  /// 参考 PiliPlus 的顶部「提交片段 / 片段信息」图标与 BiliPai 的
+  /// 「提交片段 / 开启空降助手」入口，合并为控制栏单按钮 + 面板。
+  Widget _buildSponsorBlockButton() {
+    final manager = PluginManager.maybeInstance;
+    if (manager == null) return const SizedBox.shrink();
+    return ValueListenableBuilder<List<PluginInfo>>(
+      valueListenable: manager.plugins,
+      builder: (context, infos, _) {
+        final enabled = infos.any(
+          (info) =>
+              info.plugin.id == SponsorBlockPlugin.pluginId && info.enabled,
+        );
+        return _iconButton(
+          icon: AppIcon(
+            AppIcons.sponsorBlock(active: enabled),
+            shadows: ContrastStyle.glyphShadows,
+          ),
+          tooltip: enabled ? '空降助手（已开启）' : '开启空降助手',
+          color: enabled ? biliBlue : null,
+          onPressed: () => _openSuspending(
+            () => showSponsorBlockPanel(
+              context,
+              controller: widget.controller,
+            ),
+          ),
+        );
+      },
+    );
   }
 
   /// 章节列表按钮（BiliPai 风格圆角 chip）：统一 ~30px 高度规范与 16.5px 图标，有章节时显示，毛玻璃胶囊底衬。
