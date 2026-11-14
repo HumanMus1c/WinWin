@@ -37,6 +37,12 @@ class NormalModel extends SettingsModel {
   final Widget Function(AppTokens tokens)? getTrailing;
   final void Function(BuildContext context, VoidCallback setState)? onTap;
 
+  /// 是否可用；false 时整行置灰且不可点击（功能尚未实现）。
+  final bool enabled;
+
+  /// 标题行尾随部件（如「尚未实现」角标），与标题同基线排布。
+  final Widget? titleTrailing;
+
   const NormalModel({
     super.subtitle,
     super.leading,
@@ -47,6 +53,8 @@ class NormalModel extends SettingsModel {
     this.getSubtitle,
     this.getTrailing,
     this.onTap,
+    this.enabled = true,
+    this.titleTrailing,
   }) : assert(title != null || getTitle != null);
 
   const NormalModel.split({
@@ -58,6 +66,8 @@ class NormalModel extends SettingsModel {
     this.getTitle,
     this.getSubtitle,
     this.getTrailing,
+    this.enabled = true,
+    this.titleTrailing,
   }) : onTap = null,
        assert(title != null || getTitle != null);
 
@@ -77,6 +87,8 @@ class NormalModel extends SettingsModel {
         onTap: onTap,
         contentPadding: contentPadding,
         titleStyle: titleStyle,
+        enabled: enabled,
+        titleTrailing: titleTrailing,
       );
 }
 

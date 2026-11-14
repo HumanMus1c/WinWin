@@ -1,11 +1,15 @@
+import 'package:flutter/widgets.dart';
+
 import 'package:winwin/core/storage/storage.dart';
 import 'package:winwin/core/storage/storage_key.dart';
 import 'package:winwin/core/storage/storage_pref.dart';
+import 'package:winwin/common/widgets/p_badge.dart';
 import 'package:winwin/models/common/audio_normalization.dart';
 import 'package:winwin/models/common/cdn_type.dart';
 import 'package:winwin/pages/setting/models/settings_model.dart';
 import 'package:winwin/pages/setting/widgets/select_dialog.dart';
 import 'package:winwin/pages/setting/widgets/slider_dialog.dart';
+import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/theme/app_icons.dart';
 import 'package:winwin/core/shell/app_dialogs.dart';
 
@@ -65,6 +69,16 @@ List<SettingsModel> get videoSettings => [
       NormalModel(
         title: '音频响度均衡',
         leading: AppIcon(AppIcons.loudnessEqualizer()),
+        // 功能尚未实现：入口整行置灰不可点击，标题右侧挂红色「尚未实现」角标。
+        enabled: false,
+        titleTrailing: const PBadge(
+          text: '尚未实现',
+          type: PBadgeType.error,
+          backgroundColor: AppColors.red,
+          textColor: AppColors.white,
+          fontSize: 11,
+          padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        ),
         getSubtitle: () =>
             '当前配置：${AudioNormalization.getTitleFromConfig(Pref.audioNormalization)}',
         onTap: (context, setState) async {

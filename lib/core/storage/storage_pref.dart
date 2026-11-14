@@ -327,9 +327,11 @@ abstract final class Pref {
   static set maxVolume(double val) =>
       _setting.put(SettingBoxKey.maxVolume, val);
 
-  /// 音频归一化配置：'0'=禁用, '1'=dynaudnorm, '2'=loudnorm (默认)
+  /// 音频归一化配置：'0'=禁用 (默认), '1'=dynaudnorm, '2'=loudnorm
+  ///
+  /// 设置项当前标记「尚未实现」并置灰，故默认回到禁用。
   static String get audioNormalization =>
-      _setting.get(SettingBoxKey.audioNormalization, defaultValue: '2');
+      _setting.get(SettingBoxKey.audioNormalization, defaultValue: '0');
 
   static set audioNormalization(String val) =>
       _setting.put(SettingBoxKey.audioNormalization, val);
