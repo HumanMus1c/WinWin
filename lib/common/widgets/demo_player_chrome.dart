@@ -355,7 +355,7 @@ class _DemoPlayerChromeState extends State<DemoPlayerChrome> {
                     ),
                     _barIconButton(
                       icon: AppIcons.inAppFullscreen(active: _inAppFullscreen),
-                      tooltip: _inAppFullscreen ? '退出网页全屏' : '网页全屏',
+                      tooltip: _inAppFullscreen ? '退出最大化' : '最大化',
                       color: _inAppFullscreen ? biliBlue : null,
                       onPressed: () =>
                           setState(() => _inAppFullscreen = !_inAppFullscreen),

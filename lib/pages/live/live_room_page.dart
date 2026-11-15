@@ -1593,7 +1593,7 @@ class _LiveRoomPageState extends State<LiveRoomPage> {
 
                 onPressed: _toggleInAppFullscreen,
 
-                child: AppTooltip(message: _inAppFullscreen ? '退出网页全屏 (W)' : '网页全屏 (W)', child: AppIcon(
+                child: AppTooltip(message: _inAppFullscreen ? '退出最大化 (W)' : '最大化 (W)', child: AppIcon(
                   _inAppFullscreen
                       ? AppIcons.inAppFullscreen(active: true)
                       : AppIcons.inAppFullscreen(active: false),

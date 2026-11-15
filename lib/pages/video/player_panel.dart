@@ -1161,7 +1161,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                           ),
                           shadows: ContrastStyle.glyphShadows,
                         ),
-                        tooltip: widget.inAppFullscreen ? '退出网页全屏' : '网页全屏',
+                        tooltip: widget.inAppFullscreen ? '退出最大化' : '最大化',
                         color: widget.inAppFullscreen ? biliBlue : null,
                         onPressed: widget.onToggleInAppFullscreen!,
                       ),

@@ -308,6 +308,14 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   bool _fullscreen = false;
   bool _inAppFullscreen = false;
 
+  /// 播放器面板跨布局分支的稳定身份。
+  ///
+  /// 全屏/最大化与普通布局是两棵不同的 body 子树，若每次切换都重建
+  /// [PlayerPanel]，其内部的弹幕引擎（DanmakuScreen）会被销毁重建，画面上
+  /// 已飞行的弹幕随之清空并从右侧重新排队。用 GlobalKey 让同一 Element/State
+  /// 在两个分支间搬移，弹幕轨道、速度与 ticker 得以保持连续。
+  final GlobalKey _playerPanelKey = GlobalKey(debugLabel: 'video_player_panel');
+
   @override
   int? get interactionAid => _detailState.dataOrNull?.aid;
 
@@ -1332,6 +1340,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               children: [
                 Positioned.fill(
                   child: PlayerPanel(
+                    key: _playerPanelKey,
                     controller: playerController!,
                     fullscreen: _fullscreen,
                     inAppFullscreen: _inAppFullscreen,
@@ -1383,7 +1392,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   BackButtonSpec _backButtonSpec() {
     if (_fullscreen || _inAppFullscreen) {
       return BackButtonSpec(
-        tooltip: _fullscreen ? '退出全屏（Esc）' : '退出网页全屏（Esc）',
+        tooltip: _fullscreen ? '退出全屏（Esc）' : '退出最大化（Esc）',
         onPressed: _handleEscape,
       );
     }
@@ -1749,6 +1758,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       return coverWidget;
     }
     return PlayerPanel(
+      key: _playerPanelKey,
       controller: controller,
       cover: widget.cover ?? data?.pic,
       fullscreen: _fullscreen,

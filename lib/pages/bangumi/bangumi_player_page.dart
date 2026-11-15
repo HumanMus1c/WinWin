@@ -128,6 +128,11 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
 
   bool _fullscreen = false;
   bool _inAppFullscreen = false;
+
+  /// 播放器面板跨布局分支的稳定身份（同视频详情页）：避免全屏/最大化切换时
+  /// 重建 [PlayerPanel] 导致内部弹幕引擎被销毁、画面弹幕清空重排。
+  final GlobalKey _playerPanelKey = GlobalKey(debugLabel: 'bangumi_player_panel');
+
   bool _hasLike = false;
   int _coinNum = 0;
   bool _hasFav = false;
@@ -864,6 +869,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
                 body: _withDemoOverlay(
                   playerController != null
                       ? PlayerPanel(
+                          key: _playerPanelKey,
                           controller: playerController!,
                           cover: _currentEpisode.cover ?? widget.detail.cover,
                           fullscreen: _fullscreen,
@@ -911,7 +917,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
   BackButtonSpec _backButtonSpec() {
     if (_fullscreen || _inAppFullscreen) {
       return BackButtonSpec(
-        tooltip: _fullscreen ? '退出全屏（Esc）' : '退出网页全屏（Esc）',
+        tooltip: _fullscreen ? '退出全屏（Esc）' : '退出最大化（Esc）',
         onPressed: _handleEscape,
       );
     }
@@ -930,6 +936,7 @@ class _BangumiPlayerPageState extends State<BangumiPlayerPage>
         color: AppColors.black,
         child: playerController != null
             ? PlayerPanel(
+                key: _playerPanelKey,
                 controller: playerController!,
                 cover: _currentEpisode.cover ?? widget.detail.cover,
                 fullscreen: false,
