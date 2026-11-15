@@ -328,7 +328,10 @@ abstract final class SeekProbe {
   static const int driftDeadZoneMs = 150;
 
   /// 硬定位阈值（ms）。
-  static const int driftHardMs = 1500;
+  /// 2026-11-14 22:53 实证：1.54s 漂移触发硬 seek（同步 FFI 约 0.9s），seek 期间
+  /// 视频继续前进导致落地后再次差 3.16s、二次硬 seek，反而把 UI 占住约 2s。
+  /// 提高到 2500ms：1.5~2.5s 走速率修正，避免用一次 UI 阻塞换一次音频瞬跳。
+  static const int driftHardMs = 2500;
 
   /// 决策周期（ms）：seek 后 3s 内 250ms 快速收敛，其后 1s 持续跟踪。
   static const int driftSeekPeriodMs = 250;

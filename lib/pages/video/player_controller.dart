@@ -402,6 +402,15 @@ class WinWinPlayerController {
   /// 用于单调覆盖保障，防止快退 seek 或解码器刷新导致明明已经缓冲过的进度条向左坍塌缩短。
   int _maxContinuousBufferedMs = 0;
 
+  /// `bufferedTimeRanges()` 最近一次采样时刻（墙钟 ms）。
+  /// 该调用是同步 FFI 且需要分配原生数组；2026-11-14 22:53 实测一个 tick 的
+  /// buffered 段可达 445ms（含前一阶段）。改为 500ms 采样一次，其余 tick 用
+  /// 单次 `player.buffered()` 相对估算。
+  int _lastBufRangesAtMs = 0;
+
+  /// `bufferedTimeRanges()` 采样间隔（ms）。
+  static const int _bufRangesIntervalMs = 500;
+
   /// 缓冲假死计时（毫秒），用于超时检测与自愈。
   int _bufferingStallMs = 0;
 
@@ -458,6 +467,18 @@ class WinWinPlayerController {
 
   /// 本轮（一次大偏差）已尝试的轻量归位次数；不收敛则回退到重挂序列。
   int _audioAlignAttempts = 0;
+
+  /// 音频硬归位 seek 的滑动平均耗时（ms）：用于预测视频在 seek 期间的推进量，
+  /// 一次对齐到位，避免「seek 落地又落后 → 二次硬定位」（2026-11-14 22:53 实证）。
+  double _audioSeekAvgMs = 300;
+
+  /// 硬归位完成时刻：完成后 500ms 内跳过 drift 判定，避开 seek 落地瞬态。
+  DateTime? _lastHardAudioAlignAt;
+
+  /// 音频 drift 采样节流：`position` / `mediaStatus` 都是同步 FFI，2026-11-14
+  /// 22:53 实测读取段可达数百 ms；100ms 轮询每次都读会放大 UI 停摆，降到 4Hz。
+  DateTime? _lastAudioDriftSampleAt;
+  static const int _audioDriftSampleMs = 250;
 
   /// 最近一次 Seek 实际完成返回的时间点，用于在 Seek 后短时间内屏蔽看门狗误重载。
   DateTime? _lastSeekFinishTime;
@@ -1583,8 +1604,13 @@ class WinWinPlayerController {
       final durMs = duration.value.inMilliseconds;
       if (durMs > 0) {
         int calculatedBufMs = 0;
-        try {
-          final ranges = player.bufferedTimeRanges();
+        final nowBufMs = DateTime.now().millisecondsSinceEpoch;
+        final rangesDue =
+            nowBufMs - _lastBufRangesAtMs >= _bufRangesIntervalMs;
+        if (rangesDue) {
+          _lastBufRangesAtMs = nowBufMs;
+          try {
+            final ranges = player.bufferedTimeRanges();
           if (ranges.isNotEmpty) {
             // 1. 优先查找覆盖当前播放点（允许前置/后置 1500ms 容差）的物理缓冲区间
             dynamic activeRange;
@@ -1618,9 +1644,10 @@ class WinWinPlayerController {
               }
             }
           }
-        } catch (_) {}
+          } catch (_) {}
+        }
 
-        // 兜底：若 bufferedTimeRanges 返回空或异常，使用 player.buffered() 相对估算
+        // 区间未到采样期或返回空：用单次 player.buffered() 相对估算。
         if (calculatedBufMs <= 0) {
           final bufMs = player.buffered();
           if (bufMs > 0) {
@@ -1831,8 +1858,17 @@ class WinWinPlayerController {
         _audioSyncStallMs = 0;
       }
       // 方案 3（docs 2.9）：双实例漂移校正——音频侧滞后则提速 3%、超前则减速 3%，
-      // 偏差 >1.5s 直接硬定位；seek 期与任一实例非播放态一律跳过（避开瞬态）。
+      // 偏差 >2.5s 直接硬定位；seek 期与任一实例非播放态一律跳过（避开瞬态）。
+      // 音频 position/mediaStatus 是同步 FFI（2026-11-14 22:53 实测数百 ms），
+      // 降为 4Hz 采样；硬归位完成后 500ms 内跳过判定，避开 seek 落地瞬态。
       final apd = _audioPlayer;
+      final nowDrift = DateTime.now();
+      final driftDue = _lastAudioDriftSampleAt == null ||
+          nowDrift.difference(_lastAudioDriftSampleAt!).inMilliseconds >=
+              _audioDriftSampleMs;
+      if (driftDue) _lastAudioDriftSampleAt = nowDrift;
+      final hardAlignHold = _lastHardAudioAlignAt != null &&
+          nowDrift.difference(_lastHardAudioAlignAt!).inMilliseconds < 500;
       if (apd != null &&
           !_isSeeking &&
           !_nativeSeekInFlight &&
@@ -1840,7 +1876,9 @@ class WinWinPlayerController {
           !_audioRecovering &&
           // 弱网缓冲同步主动暂停期间不得做漂移判定：此时 position 可能是陈旧 0，
           // 会触发假硬定位（2026-11-14 21:49 实证 -69.9s）。
-          !_audioSyncPaused) {
+          !_audioSyncPaused &&
+          driftDue &&
+          !hardAlignHold) {
         try {
           // 第四轮（P1）：位置读数防护（陈旧 0 → 上次有效值）；尚无有效值（-1）时
           // 跳过本 tick 判定（不更新推进基准、不触发硬定位/看门狗）。
@@ -1950,7 +1988,7 @@ class WinWinPlayerController {
                   'AUDIO-ALIGN seek video=$posMs audio=$apPosMs '
                   'drift=${apPosMs - posMs} attempt=$_audioAlignAttempts',
                 );
-                unawaited(_alignAudioInstance(posMs));
+                unawaited(_alignAudioInstance(posMs, hard: true));
               } else if (hardCooldown != null && nowHard.isBefore(hardCooldown)) {
                 SeekProbe.note(
                   'DRIFT-HARD-SKIP cooldown drift=${apPosMs - posMs}',
@@ -2752,6 +2790,7 @@ class WinWinPlayerController {
       duration.value = Duration.zero;
       buffered.value = Duration.zero;
       _maxContinuousBufferedMs = 0;
+      _lastBufRangesAtMs = 0;
       playing.value = false;
       completed.value = false;
       _reportedEnd = false;
@@ -3621,19 +3660,44 @@ class WinWinPlayerController {
   /// 暂停态执行）；杜绝 M1 第七轮定因「播放态直接 seek ⇒ 旧材料与新定位材料同时
   /// 出声」的双重音频（用户实测「额外一条鬼影音频」的来源之一）。
   /// 归位成功后按条件立即恢复；缓冲同步暂停（`_audioSyncPaused`）期间不抢回。
-  Future<void> _alignAudioInstance(int targetMs) async {
+  Future<void> _alignAudioInstance(int targetMs, {bool hard = false}) async {
     final ap = _audioPlayer;
     if (ap == null || _disposed) return;
+    // 硬归位预测：音频 seek 是同步 FFI（2026-11-14 22:53 实测约 0.9s），期间
+    // 视频继续前进；若仍 seek 到旧 target，落地后会再次落后并触发二次硬定位。
+    // 用最近 seek 平均耗时预测视频落点，一次对齐到位。
+    var seekTargetMs = targetMs;
+    if (hard) {
+      final durMs = duration.value.inMilliseconds;
+      seekTargetMs = targetMs + _audioSeekAvgMs.round();
+      if (seekTargetMs < 0) seekTargetMs = 0;
+      if (durMs > 0 && seekTargetMs > durMs) seekTargetMs = durMs;
+    }
+    final seekStartedAt = DateTime.now();
     try {
       if (ap.state == mdk.PlaybackState.playing) {
         ap.state = mdk.PlaybackState.paused; // 暂停态 seek：规避双重音频
       }
       final res = await ap
-          .seek(position: targetMs)
+          .seek(position: seekTargetMs)
           .timeout(const Duration(seconds: 3));
-      if (res >= 0) _lastValidAudioPosMs = targetMs;
+      if (res >= 0) {
+        _lastValidAudioPosMs = seekTargetMs;
+        if (hard) {
+          final elapsedMs = DateTime.now()
+              .difference(seekStartedAt)
+              .inMilliseconds
+              .toDouble();
+          _audioSeekAvgMs = (_audioSeekAvgMs * 0.6 + elapsedMs * 0.4)
+              .clamp(100.0, 1500.0)
+              .toDouble();
+          // seek 落地瞬态（position 可能短暂为 0）：完成后 500ms 内跳过 drift 判定。
+          _lastHardAudioAlignAt = DateTime.now();
+        }
+      }
       SeekProbe.note(
-        'AUDIO-ALIGN done target=$targetMs res=$res pos=${ap.position}',
+        'AUDIO-ALIGN done target=$seekTargetMs res=$res pos=${ap.position} '
+        'hard=${hard ? 1 : 0} avg=${_audioSeekAvgMs.round()}ms',
       );
       if (!_disposed &&
           _userIntentPlaying &&
@@ -3644,7 +3708,9 @@ class WinWinPlayerController {
           _queuedSeekTargetMs == null &&
           ap.state == mdk.PlaybackState.paused) {
         ap.state = mdk.PlaybackState.playing;
-        SeekProbe.note('AUDIO-ALIGN resume pos=${ap.position} video=$targetMs');
+        SeekProbe.note(
+          'AUDIO-ALIGN resume pos=$_lastValidAudioPosMs video=$seekTargetMs',
+        );
       }
     } catch (e) {
       SeekProbe.note('AUDIO-ALIGN failed err=$e');

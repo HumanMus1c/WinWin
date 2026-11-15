@@ -47,20 +47,51 @@ class WeakNetworkDetector {
   DateTime? _healthySince;
   bool _promptedThisEpisode = false;
 
+  /// 连续慢请求计数与窗口：单次 3s 成功响应不再提示（2026-11-14 22:53 实证：
+  /// 播放缓冲领先 15s 时，一条非关键 HTTP 慢请求仍弹「网络较慢」）。
+  int _slowRequestStreak = 0;
+  DateTime? _lastSlowRequestAt;
+  static const Duration _slowRequestWindow = Duration(seconds: 60);
+
+  /// 播放关键请求（playurl 等）：慢一次即可视为弱网；其余接口需连续两次。
+  static bool _isPlaybackCriticalPath(String path) =>
+      path.contains('playurl') || path.contains('/x/player/');
+
   /// 上报一次请求耗时（成功响应）。
-  void reportRequestLatency(Duration latency) {
+  void reportRequestLatency(Duration latency, {String? path}) {
     if (latency >= slowRequestThreshold) {
-      _markWeak();
+      final now = _clock();
+      final last = _lastSlowRequestAt;
+      if (last == null || now.difference(last) > _slowRequestWindow) {
+        _slowRequestStreak = 0;
+      }
+      _slowRequestStreak++;
+      _lastSlowRequestAt = now;
+      final p = path ?? '';
+      final critical = _isPlaybackCriticalPath(p);
+      AppLogger.w(
+        'WeakNetwork',
+        'slow request ${latency.inMilliseconds}ms path=$p '
+        'streak=$_slowRequestStreak critical=${critical ? 1 : 0}',
+      );
+      if (critical || _slowRequestStreak >= 2) {
+        _markWeak(
+          'http path=$p latency=${latency.inMilliseconds}ms '
+          'streak=$_slowRequestStreak critical=${critical ? 1 : 0}',
+        );
+      }
     } else if (latency <= const Duration(milliseconds: 1500)) {
+      _slowRequestStreak = 0;
       _markHealthy();
     }
   }
 
   /// 上报请求超时/连接错误。
-  void reportTimeout() => _markWeak();
+  void reportTimeout({String? path}) =>
+      _markWeak('timeout path=${path ?? '-'}');
 
   /// 上报播放器弱网（流速不健康或缓冲停滞）。
-  void reportPlaybackWeak() => _markWeak();
+  void reportPlaybackWeak() => _markWeak('playback');
 
   /// 上报播放器健康（流速正常且未缓冲）。
   void reportPlaybackHealthy() => _markHealthy();
@@ -72,7 +103,7 @@ class WeakNetworkDetector {
     _promptedThisEpisode = false;
   }
 
-  void _markWeak() {
+  void _markWeak(String source) {
     _healthySince = null;
     if (_promptedThisEpisode) return;
     final now = _clock();
@@ -80,6 +111,7 @@ class WeakNetworkDetector {
     if (last != null && now.difference(last) < promptCooldown) return;
     _promptedThisEpisode = true;
     _lastPromptAt = now;
+    AppLogger.w('WeakNetwork', 'trigger source=$source');
     _onPrompt(message);
   }
 
@@ -119,6 +151,7 @@ class WeakNetworkInterceptor extends Interceptor {
         Duration(
           milliseconds: DateTime.now().millisecondsSinceEpoch - startedAt,
         ),
+        path: response.requestOptions.path,
       );
     }
     handler.next(response);
@@ -131,7 +164,7 @@ class WeakNetworkInterceptor extends Interceptor {
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
       case DioExceptionType.connectionError:
-        _detector.reportTimeout();
+        _detector.reportTimeout(path: err.requestOptions.path);
       default:
         break;
     }

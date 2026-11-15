@@ -19,12 +19,45 @@ void main() {
   });
 
   test('慢请求/超时/播放弱网只提示一次', () {
-    detector.reportRequestLatency(const Duration(seconds: 4));
+    detector.reportRequestLatency(
+      const Duration(seconds: 4),
+      path: '/x/player/wbi/playurl',
+    );
     expect(prompts, hasLength(1));
 
     detector.reportTimeout();
     detector.reportPlaybackWeak();
     expect(prompts, hasLength(1));
+  });
+
+  test('单次非关键慢请求不提示，连续两次才提示', () {
+    detector.reportRequestLatency(
+      const Duration(seconds: 4),
+      path: '/x/v2/reply/main',
+    );
+    expect(prompts, isEmpty, reason: '单次 3s 成功响应不足以判弱网');
+
+    detector.reportRequestLatency(
+      const Duration(seconds: 4),
+      path: '/x/v2/reply/main',
+    );
+    expect(prompts, hasLength(1));
+  });
+
+  test('慢-快-慢 不构成连续慢请求', () {
+    detector.reportRequestLatency(
+      const Duration(seconds: 4),
+      path: '/x/v2/reply/main',
+    );
+    detector.reportRequestLatency(
+      const Duration(milliseconds: 200),
+      path: '/x/v2/reply/main',
+    );
+    detector.reportRequestLatency(
+      const Duration(seconds: 4),
+      path: '/x/v2/reply/main',
+    );
+    expect(prompts, isEmpty, reason: '快速响应应重置连续慢请求计数');
   });
 
   test('连续健康 10 秒后重置回合，并遵守 60 秒冷却', () {
