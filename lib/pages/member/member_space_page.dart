@@ -450,8 +450,14 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   void _handleBodyPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
     final dy = event.scrollDelta.dy;
+    AppLogger.w(
+      'SpaceScroll',
+      'listener dy=$dy clients=${_scrollController.hasClients} '
+          'collapsed=$_headerCollapsed',
+    );
     if (dy == 0 || !_scrollController.hasClients) return;
     GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      AppLogger.w('SpaceScroll', 'resolver won dy=$dy');
       _applyTwoStageWheel(dy);
     });
   }
@@ -465,6 +471,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final p = _scrollController.position;
     final target =
         (p.pixels + delta).clamp(p.minScrollExtent, p.maxScrollExtent);
+    AppLogger.w(
+      'SpaceScroll',
+      'outer animate ${p.runtimeType} ${p.pixels}->$target '
+          'max=${p.maxScrollExtent}',
+    );
     final distance = (target - p.pixels).abs();
     if (distance < 0.5) return;
     final ms = (distance * AppScrollTuning.msPerPixel)
@@ -485,6 +496,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     if (!_scrollController.hasClients) return;
     final outer = _scrollController.position;
     final inner = _tabScrollControllerAt(_tabController.index);
+    AppLogger.w(
+      'SpaceScroll',
+      'apply dy=$dy outer=${outer.pixels}/${outer.maxScrollExtent} '
+          'inner=${inner?.hasClients == true ? inner!.position.pixels : -1}',
+    );
     if (dy > 0) {
       if (outer.maxScrollExtent - outer.pixels > 0.5) {
         _animateOuterWheel(dy);
