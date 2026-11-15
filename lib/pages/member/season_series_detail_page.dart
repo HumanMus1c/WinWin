@@ -3,6 +3,7 @@ import 'package:flutter_miuix/miuix.dart' show MiuixPressFeedbackType, MiuixPres
 import 'package:flutter/widgets.dart';
 
 import 'package:winwin/theme/app_colors.dart';
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/common/widgets/demo_mask.dart';
 import 'package:winwin/common/widgets/image/network_img_layer.dart';
 import 'package:winwin/common/widgets/p_badge.dart';
@@ -56,10 +57,19 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
   bool _failed = false;
   int _pageNum = 1;
 
+  /// 合集/系列详情滚动控制器：接入滚轮补间（默认控制器仍逐刻度硬跳）。
+  final ScrollController _scrollController = AppScrollController();
+
   @override
   void initState() {
     super.initState();
     _loadVideos(refresh: true);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadVideos({bool refresh = false}) async {
@@ -120,6 +130,7 @@ class _SeasonSeriesDetailPageState extends State<SeasonSeriesDetailPage> {
           : AppRefreshIndicator(
         onRefresh: () => _loadVideos(refresh: true),
         child: CustomScrollView(
+          controller: _scrollController,
           slivers: [
             // 头部合集介绍卡片
             SliverToBoxAdapter(

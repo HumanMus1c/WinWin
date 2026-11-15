@@ -349,6 +349,16 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   late AppTabController _tabController;
   final ScrollController _scrollController = AppScrollController();
 
+  /// 各 Tab 独立滚动控制器：此前这些 CustomScrollView/ListView 没有 controller，
+  /// 走 SDK 默认立即跳变，滚轮仍是逐行硬跳（2026-11-15 反馈）。
+  final ScrollController _videosScrollController = AppScrollController();
+  final ScrollController _seasonsScrollController = AppScrollController();
+  final ScrollController _dynamicsScrollController = AppScrollController();
+  final ScrollController _favScrollController = AppScrollController();
+  final ScrollController _bangumiScrollController = AppScrollController();
+  final ScrollController _likedScrollController = AppScrollController();
+  final ScrollController _aboutScrollController = AppScrollController();
+
   /// 顶栏（返回/分享/更多）高度，= `SliverAppBar` 默认 `toolbarHeight`。
   static const double _topBarHeight = 56;
 
@@ -568,6 +578,13 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     _collectionPageCtrl?.dispose();
     _tabController.dispose();
     _scrollController.dispose();
+    _videosScrollController.dispose();
+    _seasonsScrollController.dispose();
+    _dynamicsScrollController.dispose();
+    _favScrollController.dispose();
+    _bangumiScrollController.dispose();
+    _likedScrollController.dispose();
+    _aboutScrollController.dispose();
     super.dispose();
   }
 
@@ -2062,6 +2079,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     );
 
     return CustomScrollView(
+      controller: _videosScrollController,
       slivers: [
         // 排序切换栏 (最新发布 / 最多播放热门)
         SliverToBoxAdapter(
@@ -2201,6 +2219,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   Widget _buildSeasonsTab() {
     if (_seasonsSeries.isEmpty && _loadingSeasons) {
       return ListView.builder(
+        controller: _seasonsScrollController,
         padding: const EdgeInsets.all(Style.safeSpace),
         itemCount: 4,
         itemBuilder: (_, _) => const Padding(
@@ -2214,6 +2233,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     }
 
     return CustomScrollView(
+      controller: _seasonsScrollController,
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.all(Style.safeSpace),
@@ -2368,6 +2388,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final filtered = _filteredDynamics;
 
     return CustomScrollView(
+      controller: _dynamicsScrollController,
       slivers: [
         // 动态类型筛选器
         SliverToBoxAdapter(
@@ -3230,6 +3251,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     if (_loadingFav && _favFolders.isEmpty) {
       return CustomScrollView(
+        controller: _favScrollController,
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.all(Style.safeSpace),
@@ -3252,6 +3274,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     }
 
     return CustomScrollView(
+      controller: _favScrollController,
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.all(Style.safeSpace),
@@ -3369,6 +3392,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   /// 追番追剧 Tab
   Widget _buildBangumiTab() {
     return CustomScrollView(
+      controller: _bangumiScrollController,
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
@@ -3555,6 +3579,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     if (_loadingLiked && _likedVideos.isEmpty) {
       return CustomScrollView(
+        controller: _likedScrollController,
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.all(Style.safeSpace),
@@ -3580,6 +3605,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     }
 
     return CustomScrollView(
+      controller: _likedScrollController,
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.all(Style.safeSpace),
@@ -3656,6 +3682,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final isSenior = card?.levelInfo?.isSeniorMember ?? false;
 
     return ListView(
+      controller: _aboutScrollController,
       padding: const EdgeInsets.all(Style.safeSpace),
       children: [
         MiuixCard(

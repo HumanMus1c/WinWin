@@ -1,6 +1,7 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:winwin/common/widgets/app_scroll_controller.dart';
 import 'package:winwin/common/widgets/refresh_indicator.dart';
 import 'package:winwin/theme/app_colors.dart';
 import 'package:winwin/core/account/account_service.dart';
@@ -82,6 +83,9 @@ class _ProfilePageState extends State<ProfilePage> {
   final _historyKey = GlobalKey<ProfileHistorySectionState>();
   final _toviewKey = GlobalKey<ProfileToviewSectionState>();
 
+  /// 我的页主滚动控制器：接入滚轮补间（默认控制器仍是逐刻度硬跳）。
+  final ScrollController _scrollController = AppScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -90,6 +94,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     AccountService().removeListener(_onAccountChanged);
     super.dispose();
   }
@@ -123,6 +128,7 @@ class _ProfilePageState extends State<ProfilePage> {
           color: biliPink,
           onRefresh: _onRefresh,
           child: ListView(
+            controller: _scrollController,
             padding: const EdgeInsets.only(top: 16, bottom: 100),
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
