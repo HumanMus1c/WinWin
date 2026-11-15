@@ -345,7 +345,7 @@ class MemberSpacePage extends StatefulWidget {
 }
 
 class _MemberSpacePageState extends State<MemberSpacePage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AppTabController _tabController;
   final ScrollController _scrollController = AppScrollController();
 
@@ -382,6 +382,21 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   ScrollPhysics? get _tabPhysics =>
       _headerCollapsed ? null : const NeverScrollableScrollPhysics();
 
+  /// 分类标签条并入顶栏的过渡进度（0 = 原位/吸顶待命，1 = 已并入顶栏）。
+  late final AnimationController _tabMergeCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 200),
+    value: 0,
+  );
+
+  /// 顶栏内标签条的左右避让：左避让全局返回按钮（8 + 42 + 8），
+  /// 右避让分享/更多动作按钮（本人空间只有更多）。
+  double get _tabMergeLeft => Style.sm + 42 + Style.sm;
+  double get _tabMergeRight =>
+      Accounts.main.isLogin && Accounts.main.mid == widget.mid
+          ? Style.sm + 42 + Style.sm
+          : Style.sm + 42 + Style.sm + Style.sm + 42 + Style.sm;
+
   void _onOuterScroll() {
     final c = _scrollController;
     if (!c.hasClients) return;
@@ -390,6 +405,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final collapsed = p.pixels >= p.maxScrollExtent - 0.5;
     if (collapsed == _headerCollapsed || !mounted) return;
     setState(() => _headerCollapsed = collapsed);
+    // 标签条并入/退出顶栏的位移过渡。
+    _tabMergeCtrl.animateTo(
+      collapsed ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+    );
     if (!collapsed) {
       for (final inner in _tabControllers) {
         if (inner.hasClients) inner.jumpTo(0);
@@ -679,6 +700,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     }
     _pendingDisposeControllers.clear();
     _expandCtrl.dispose();
+    _tabMergeCtrl.dispose();
     _collectionPageCtrl?.dispose();
     _tabController.dispose();
     _scrollController.removeListener(_onOuterScroll);
@@ -1127,9 +1149,15 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             // 并紧贴顶栏（视觉并入），滚回时回到原位。
             // 材质为通栏毛玻璃带（与顶栏带同材质），故不再有实色底把模糊垫死；
             // 标签条自身不再叠面板，避免两层材质叠加发灰。
-            SliverPersistentHeader(
+            AnimatedBuilder(
+              animation: _tabMergeCtrl,
+              builder: (context, _) => SliverPersistentHeader(
               pinned: true,
               delegate: _SliverTabBarDelegate(
+                child: IgnorePointer(
+                ignoring: _tabMergeCtrl.value > 0.5,
+                child: Opacity(
+                opacity: (1 - _tabMergeCtrl.value).clamp(0.0, 1.0),
                 child: KeyedSubtree(
                   key: _tabBandKey,
                   child: Padding(
@@ -1147,8 +1175,12 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     ),
                   ),
                 ),
-                extent: tabBandHeight,
+                ),
+                ),
+                extent: (tabBandHeight * (1 - _tabMergeCtrl.value))
+                    .clamp(0.01, tabBandHeight),
               ),
+            ),
             ),
           ];
         },
@@ -1185,10 +1217,11 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       child: KeyedSubtree(
         key: _topBarKey,
         child: ListenableBuilder(
-          listenable: _scrollController,
+          listenable: Listenable.merge([_scrollController, _tabMergeCtrl]),
           builder: (context, _) {
             return Stack(
               fit: StackFit.expand,
+              clipBehavior: Clip.none,
               children: [
                 // 毛玻璃带：常态不画（顶栏纯透明），只有与标签条带合并时才亮起，
                 // 与之拼成一条完整顶栏。`outline: false`：本带不画线，分隔线只由
@@ -1199,6 +1232,52 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                     outline: false,
                     child: SizedBox.expand(),
                   ),
+                // 吸顶过渡：标签条从吸附位位移进顶栏，并避让全局返回按钮
+                // 与右侧分享/更多动作按钮。
+                Positioned.fill(
+                  child: AnimatedBuilder(
+                    animation: _tabMergeCtrl,
+                    builder: (context, _) {
+                      final t = Curves.easeOutCubic
+                          .transform(_tabMergeCtrl.value)
+                          .clamp(0.0, 1.0);
+                      if (t <= 0.01) return const SizedBox.shrink();
+                      final tabs = _availableTabs;
+                      final targetTop =
+                          (_topBarHeight - AppTabBar.defaultHeight) / 2;
+                      final startTop =
+                          _topBarHeight - AppTabBar.defaultHeight * 0.35;
+                      double mix(double a, double b) => a + (b - a) * t;
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Positioned(
+                            top: mix(startTop, targetTop),
+                            left: mix(Style.safeSpace, _tabMergeLeft),
+                            right: mix(Style.safeSpace, _tabMergeRight),
+                            height: AppTabBar.defaultHeight,
+                            child: IgnorePointer(
+                              ignoring: t < 0.6,
+                              child: Opacity(
+                                opacity: t,
+                                child: AppTabBar(
+                                  controller: _tabController,
+                                  tabs:
+                                      tabs.map((tab) => _tabTitle(tab)).toList(),
+                                  height: AppTabBar.defaultHeight,
+                                  // 顶栏自带毛玻璃，标签条不再叠面板。
+                                  blurBackground: false,
+                                  outline: false,
+                                  panelPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
                 Padding(
                   // 上下 4/10：按钮行实际高 42，行中心 = 4 + 21 = 25，与壳层返回
                   // 按钮（top 4、外框 42）严格同高；左右 8 与页面留白一致。
