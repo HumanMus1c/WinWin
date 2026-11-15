@@ -422,9 +422,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   void _handleInnerEdge(double delta) {
     if (delta >= 0 || !_headerCollapsed || !mounted) return;
     setState(() => _headerCollapsed = false);
-    if (_scrollController.hasClients) {
-      _scrollController.position.pointerScroll(delta);
-    }
+    _animateOuterWheel(delta);
   }
 
   ScrollController? _tabScrollControllerAt(int index) {
@@ -458,6 +456,30 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     });
   }
 
+  /// 外层（NestedScrollView 头部段）的滚轮补间。
+  ///
+  /// 外层位置是框架内部的 `_NestedScrollPosition`，其 `pointerScroll` 仍是
+  /// 立即跳变；这里显式用 `animateTo` 补间，保证「未吸顶」阶段同样平滑。
+  void _animateOuterWheel(double delta) {
+    if (!_scrollController.hasClients) return;
+    final p = _scrollController.position;
+    final target =
+        (p.pixels + delta).clamp(p.minScrollExtent, p.maxScrollExtent);
+    final distance = (target - p.pixels).abs();
+    if (distance < 0.5) return;
+    final ms = (distance * AppScrollTuning.msPerPixel)
+        .clamp(
+          AppScrollTuning.minDurationMs.toDouble(),
+          AppScrollTuning.maxDurationMs.toDouble(),
+        )
+        .round();
+    p.animateTo(
+      target,
+      duration: Duration(milliseconds: ms),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   /// 两段式滚轮：头部未折叠 → 先滚外层；折叠后 → 滚内层；上滚反之。
   void _applyTwoStageWheel(double dy) {
     if (!_scrollController.hasClients) return;
@@ -465,7 +487,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     final inner = _tabScrollControllerAt(_tabController.index);
     if (dy > 0) {
       if (outer.maxScrollExtent - outer.pixels > 0.5) {
-        outer.pointerScroll(dy);
+        _animateOuterWheel(dy);
         return;
       }
       if (inner != null && inner.hasClients) {
@@ -477,7 +499,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       inner.position.pointerScroll(dy);
       return;
     }
-    outer.pointerScroll(dy);
+    _animateOuterWheel(dy);
   }
 
   /// 顶栏（返回/分享/更多）高度，= `SliverAppBar` 默认 `toolbarHeight`。
@@ -1132,16 +1154,24 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                   pinned: true,
                   expandedHeight: liveCover,
                   toolbarHeight: _topBarHeight,
-                  background: _buildExpandableHeader(context, card, images),
+                  // 头部区的滚轮也走两段式平滑处理（否则会被框架外层
+                  // Scrollable 以立即跳变方式消费）。
+                  background: Listener(
+                    onPointerSignal: _handleBodyPointerSignal,
+                    child: _buildExpandableHeader(context, card, images),
+                  ),
                 );
               },
             ),
             SliverToBoxAdapter(
               // 演示模式：他人空间整块头部用加载态骨架替代（含头像/昵称/签名等）。
-              child: _buildUserDetailCard(
-                context,
-                (Pref.demoMode && !isOwner) ? null : card,
-                data?.silence,
+              child: Listener(
+                onPointerSignal: _handleBodyPointerSignal,
+                child: _buildUserDetailCard(
+                  context,
+                  (Pref.demoMode && !isOwner) ? null : card,
+                  data?.silence,
+                ),
               ),
             ),
             // 分类标签条：默认留在**统计行下方的原位**（详情卡之后、Tab 体之前，
@@ -1160,7 +1190,9 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 opacity: (1 - _tabMergeCtrl.value).clamp(0.0, 1.0),
                 child: KeyedSubtree(
                   key: _tabBandKey,
-                  child: Padding(
+                  child: Listener(
+                    onPointerSignal: _handleBodyPointerSignal,
+                    child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: Style.safeSpace,
                     ),
@@ -1177,7 +1209,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
                 ),
                 ),
                 ),
-                extent: (tabBandHeight * (1 - _tabMergeCtrl.value))
+                ), extent: (tabBandHeight * (1 - _tabMergeCtrl.value))
                     .clamp(0.01, tabBandHeight),
               ),
             ),
