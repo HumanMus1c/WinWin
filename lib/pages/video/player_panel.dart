@@ -1077,11 +1077,11 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     // 控制栏按「左右两组」布局：新增控件优先放在左组最右端 /
                     // 右组最左端，直到两组发生重叠。空降助手按此规则放在右组最左端。
                     _buildSponsorBlockButton(),
-                    // 右侧：音频标签 + 画质 + 倍速 + 章节 + 字幕 + 功能按钮
+                    // 右侧：音频标签 + 画质 + 倍速 + 字幕 + 功能按钮
+                    // （章节入口已并入左组时间文本后的章节胶囊）
                     _buildAudioCodecLabel(),
                     _buildQualityLabel(),
                     _buildSpeedLabel(),
-                    _buildChapterButton(),
                     _buildSubtitleChip(),
                     const SizedBox(width: Style.sm),
                     _iconButton(
@@ -1245,6 +1245,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
         final pos = DurationUtils.formatDuration(c.currentProgress.inSeconds);
         final dur = DurationUtils.formatDuration(c.duration.value.inSeconds);
         final curChapter = c.currentChapter();
+        final chapters = c.viewPoints;
         // B 站风格：当前时间纯白，总时长降饱和，配合高对比度多向阴影。
         return Row(
           mainAxisSize: MainAxisSize.min,
@@ -1271,56 +1272,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 ],
               ),
             ),
-            if (curChapter != null && curChapter.title.isNotEmpty) ...[
+            if (chapters.isNotEmpty) ...[
               const SizedBox(width: Style.xs),
-              GlassCapsule(
-                borderRadius: 4.0,
-                blur: 8.0,
-                backgroundColor: _chapterPanelOpen
-                    ? biliBlue.withValues(alpha: 0.25)
-                    : AppColors.black.withValues(alpha: 0.35),
-                padding: EdgeInsets.zero,
-                child: HoverContainer(
-                  onTap: () {
-                    _setChapterPanelOpen(!_chapterPanelOpen);
-                    _onPointerActivity();
-                  },
-                  borderRadius: 4.0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  color: AppColors.transparent,
-                  hoverColor: biliBlue.withValues(alpha: 0.3),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 160),
-                        child: Text(
-                          '· ${curChapter.title}',
-                          style: TextStyle(
-                            color: _chapterPanelOpen
-                                ? biliBlue
-                                : AppColors.white.withValues(alpha: 0.88),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            shadows: ContrastStyle.glyphShadows,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      ContrastIcon(AppIcons.chevronForward(),
-                        size: 14,
-                        color: _chapterPanelOpen ? biliBlue : AppColors.white54,
-                        shadows: ContrastStyle.glyphShadows,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              _buildChapterCapsule(curChapter),
             ],
           ],
         );
@@ -1922,63 +1876,64 @@ class _PlayerPanelState extends State<PlayerPanel> {
     );
   }
 
-  /// 章节列表按钮（BiliPai 风格圆角 chip）：统一 ~30px 高度规范与 16.5px 图标，有章节时显示，毛玻璃胶囊底衬。
-  Widget _buildChapterButton() {
-    final c = widget.controller;
-    return ValueListenableBuilder<List<ViewPoint>>(
-      valueListenable: c.viewPointsNotifier,
-      builder: (context, chapters, _) {
-        if (chapters.isEmpty) return const SizedBox.shrink();
-        final isOpen = _chapterPanelOpen;
-        return GlassCapsule(
-          borderRadius: Style.radiusFull,
-          blur: 8,
-          padding: EdgeInsets.zero,
-          backgroundColor: isOpen
-              ? biliBlue.withValues(alpha: 0.28)
-              : AppColors.black.withValues(alpha: 0.35),
-          borderColor: isOpen
-              ? biliBlue.withValues(alpha: 0.45)
-              : AppColors.white.withValues(alpha: 0.15),
-          child: HoverContainer(
-            onTap: () {
-              _setChapterPanelOpen(!_chapterPanelOpen);
-              _onPointerActivity();
-            },
-            borderRadius: Style.radiusFull,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 9,
-              vertical: 5,
+  /// 章节胶囊（左组，紧随时长文本）：沿用原右组「章节」按钮的大胶囊容器与图标，
+  /// 文本替换为当前章节标题；尚未进入任何章节时回退为「章节」文案，保留面板入口。
+  Widget _buildChapterCapsule(ViewPoint? curChapter) {
+    final isOpen = _chapterPanelOpen;
+    final contentColor = isOpen
+        ? biliBlue
+        : AppColors.white.withValues(alpha: 0.85);
+    final title = (curChapter != null && curChapter.title.isNotEmpty)
+        ? curChapter.title
+        : '章节';
+    return GlassCapsule(
+      borderRadius: Style.radiusFull,
+      blur: 8,
+      padding: EdgeInsets.zero,
+      backgroundColor: isOpen
+          ? biliBlue.withValues(alpha: 0.28)
+          : AppColors.black.withValues(alpha: 0.35),
+      borderColor: isOpen
+          ? biliBlue.withValues(alpha: 0.45)
+          : AppColors.white.withValues(alpha: 0.15),
+      child: HoverContainer(
+        onTap: () {
+          _setChapterPanelOpen(!_chapterPanelOpen);
+          _onPointerActivity();
+        },
+        borderRadius: Style.radiusFull,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 9,
+          vertical: 5,
+        ),
+        hoverColor: AppColors.white.withValues(alpha: 0.12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ContrastIcon(
+              AppIcons.chapter(active: isOpen),
+              size: 16.5,
+              color: contentColor,
+              shadows: ContrastStyle.glyphShadows,
             ),
-            hoverColor: AppColors.white.withValues(alpha: 0.12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ContrastIcon(
-                  AppIcons.chapter(active: isOpen),
-                  size: 16.5,
-                  color: isOpen
-                      ? const Color(0xFF00AEEC)
-                      : AppColors.white.withValues(alpha: 0.85),
-                  shadows: ContrastStyle.glyphShadows,
+            const SizedBox(width: Style.xs),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 160),
+              child: ContrastText(
+                title,
+                style: TextStyle(
+                  color: contentColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(width: Style.xs),
-                ContrastText(
-                  '章节 (${chapters.length})',
-                  style: TextStyle(
-                    color: isOpen
-                        ? const Color(0xFF00AEEC)
-                        : AppColors.white.withValues(alpha: 0.85),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  shadows: ContrastStyle.glyphShadows,
-                ),
-              ],
+                shadows: ContrastStyle.glyphShadows,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 
