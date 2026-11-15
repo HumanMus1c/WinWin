@@ -260,6 +260,15 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 分P 切换条的横向滚动控制器（多分P稿件专用）。
   final ScrollController _pageScrollController = AppScrollController();
 
+  /// 右栏评论区滚动控制器。
+  ///
+  /// 评论区列表此前没有 controller，走 SDK 默认 `ScrollPosition`：
+  /// 滚轮仍是逐刻度 `forcePixels` 硬跳，所以只有左栏是平滑滚动。
+  final ScrollController _commentScrollController = AppScrollController();
+
+  /// 右栏「相关推荐」滚动控制器（同上，需显式平滑滚动）。
+  final ScrollController _relatedScrollController = AppScrollController();
+
   /// 分P 切换进行中：阻止快速连点引发连续换源竞态。
   bool _pageSwitching = false;
 
@@ -413,6 +422,8 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     SyncTrace.log('DetailPage', 'dispose after playerController.dispose');
     scrollController.dispose();
     _pageScrollController.dispose();
+    _commentScrollController.dispose();
+    _relatedScrollController.dispose();
     _commentCtrl.dispose();
     _commentFocus.dispose();
     disposeInteractionEventBus();
@@ -2745,6 +2756,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
               child: Pref.demoMode
                   // 演示模式：本地演示评论（与正常模式一致的交互按钮，不发请求）。
                   ? ListView.builder(
+                      controller: _commentScrollController,
                       padding: const EdgeInsets.fromLTRB(
                         Style.cardSpace,
                         Style.xs,
@@ -2756,6 +2768,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                           _DemoReplyTile(bvid: widget.bvid, seed: i),
                     )
                   : ListView.builder(
+                      controller: _commentScrollController,
                       padding: const EdgeInsets.fromLTRB(
                         Style.cardSpace,
                         Style.xs,
@@ -2844,6 +2857,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 尾部统一交给 [_buildReplyTrailer]（spinner/重试/空态/到底）。
   Widget _buildReplyListView() {
     return ListView.builder(
+      controller: _commentScrollController,
       // Clamping + AlwaysScrollable：短内容在顶端也能产生过卷通知，
       // 驱动 AppRefreshIndicator 的下拉位移（自绘环仍靠过卷/滚动通知驱动）。
       physics: const ClampingScrollPhysics(
@@ -2877,6 +2891,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
     // 演示模式：本地生成的横版占位卡片（可点击进入演示详情）。
     if (Pref.demoMode) {
       return ListView.separated(
+        controller: _relatedScrollController,
         padding: const EdgeInsets.fromLTRB(
           Style.cardSpace,
           0,
@@ -2898,6 +2913,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         response.isEmpty
             ? const AppEmptyState(title: '暂无相关推荐', subtitle: '换个视频看看吧')
             : ListView.separated(
+                controller: _relatedScrollController,
                 padding: const EdgeInsets.fromLTRB(
                   Style.cardSpace,
                   0,
@@ -3255,6 +3271,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   Widget _buildRightSkeleton() {
     return ListView.separated(
+      controller: _relatedScrollController,
       padding: const EdgeInsets.fromLTRB(
         Style.cardSpace,
         0,
