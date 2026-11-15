@@ -38,6 +38,13 @@ class AppScrollController extends ScrollController {
     super.debugLabel,
   });
 
+  /// 滚轮已到边界仍继续向外滚时的回调（可选）。
+  ///
+  /// 用于 `NestedScrollView` 两段式协调：内层到顶继续上滚时，由宿主把
+  /// 增量转给外层头部（展开），否则内层会静默吞掉该事件。
+  /// 参数为原始滚轮增量（负值 = 继续向上）。
+  void Function(double delta)? onScrollAtEdge;
+
   @override
   ScrollPosition createScrollPosition(
     ScrollPhysics physics,
@@ -51,6 +58,7 @@ class AppScrollController extends ScrollController {
       keepScrollOffset: keepScrollOffset,
       oldPosition: oldPosition,
       debugLabel: debugLabel,
+      owner: this,
     );
   }
 }
@@ -64,7 +72,11 @@ class AppScrollPosition extends ScrollPositionWithSingleContext {
     super.keepScrollOffset,
     super.oldPosition,
     super.debugLabel,
+    this.owner,
   });
+
+  /// 创建本位置的控制器（读取边界回调用）。
+  final AppScrollController? owner;
 
   /// 连续滚轮事件的目标位置：动画途中再滚时从**目标**继续加，
   /// 而不是从当前像素重新起算（后者会让连滚变成一格一格地追）。
@@ -91,6 +103,17 @@ class AppScrollPosition extends ScrollPositionWithSingleContext {
     final base = _wheelTarget ?? pixels;
     final target = (base + delta).clamp(minScrollExtent, maxScrollExtent);
     _wheelTarget = target;
+
+    // 到达边界后继续向外滚：交给宿主协调（如 NestedScrollView 展开外层头部）。
+    final atMin = pixels <= minScrollExtent + 0.5;
+    final atMax = pixels >= maxScrollExtent - 0.5;
+    final outward =
+        (delta < 0 && atMin && target <= minScrollExtent + 0.5) ||
+            (delta > 0 && atMax && target >= maxScrollExtent - 0.5);
+    if (outward && owner?.onScrollAtEdge != null) {
+      owner!.onScrollAtEdge!(delta);
+      return;
+    }
 
     final distance = (target - pixels).abs();
     if (distance < 0.5) return;

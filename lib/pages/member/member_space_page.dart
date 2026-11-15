@@ -359,6 +359,106 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   final ScrollController _likedScrollController = AppScrollController();
   final ScrollController _aboutScrollController = AppScrollController();
 
+  /// 各 Tab 控制器汇总（两段式滚动协调用）。
+  List<ScrollController> get _tabControllers => [
+        _videosScrollController,
+        _seasonsScrollController,
+        _dynamicsScrollController,
+        _favScrollController,
+        _bangumiScrollController,
+        _likedScrollController,
+        _aboutScrollController,
+      ];
+
+  /// 头部是否已折叠到顶（TAB 条吸顶完成）。
+  ///
+  /// NestedScrollView 只对「未显式传 controller 的内层列表」提供联动控制器；
+  /// 本页各 Tab 用 [AppScrollController] 换取平滑滚轮，故需要自己实现两段式
+  /// 滚动：头部未折叠时滚轮先滚外层，折叠后由内层接管（否则会出现「页面
+  /// 滚到一半固定住、只有 Tab 内容滚动」）。
+  bool _headerCollapsed = false;
+
+  /// 头部未折叠时禁用内层滚动（滚轮/拖拽交给外层头部）。
+  ScrollPhysics? get _tabPhysics =>
+      _headerCollapsed ? null : const NeverScrollableScrollPhysics();
+
+  void _onOuterScroll() {
+    final c = _scrollController;
+    if (!c.hasClients) return;
+    final p = c.position;
+    if (!p.hasContentDimensions) return;
+    final collapsed = p.pixels >= p.maxScrollExtent - 0.5;
+    if (collapsed == _headerCollapsed || !mounted) return;
+    setState(() => _headerCollapsed = collapsed);
+    if (!collapsed) {
+      for (final inner in _tabControllers) {
+        if (inner.hasClients) inner.jumpTo(0);
+      }
+    }
+  }
+
+  /// 内层已到顶仍继续上滚：切回头部段并由外层平滑展开。
+  void _handleInnerEdge(double delta) {
+    if (delta >= 0 || !_headerCollapsed || !mounted) return;
+    setState(() => _headerCollapsed = false);
+    if (_scrollController.hasClients) {
+      _scrollController.position.pointerScroll(delta);
+    }
+  }
+
+  ScrollController? _tabScrollControllerAt(int index) {
+    final tabs = _availableTabs;
+    if (index < 0 || index >= tabs.length) return null;
+    switch (tabs[index]) {
+      case _SpaceTabType.video:
+        return _videosScrollController;
+      case _SpaceTabType.seasons:
+        return _seasonsScrollController;
+      case _SpaceTabType.dynamics:
+        return _dynamicsScrollController;
+      case _SpaceTabType.fav:
+        return _favScrollController;
+      case _SpaceTabType.bangumi:
+        return _bangumiScrollController;
+      case _SpaceTabType.liked:
+        return _likedScrollController;
+      case _SpaceTabType.about:
+        return _aboutScrollController;
+    }
+  }
+
+  /// Tab 体的滚轮转发（仅在内层物理禁用时生效）。
+  void _handleBodyPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    final dy = event.scrollDelta.dy;
+    if (dy == 0 || !_scrollController.hasClients) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      _applyTwoStageWheel(dy);
+    });
+  }
+
+  /// 两段式滚轮：头部未折叠 → 先滚外层；折叠后 → 滚内层；上滚反之。
+  void _applyTwoStageWheel(double dy) {
+    if (!_scrollController.hasClients) return;
+    final outer = _scrollController.position;
+    final inner = _tabScrollControllerAt(_tabController.index);
+    if (dy > 0) {
+      if (outer.maxScrollExtent - outer.pixels > 0.5) {
+        outer.pointerScroll(dy);
+        return;
+      }
+      if (inner != null && inner.hasClients) {
+        inner.position.pointerScroll(dy);
+      }
+      return;
+    }
+    if (inner != null && inner.hasClients && inner.position.pixels > 0.5) {
+      inner.position.pointerScroll(dy);
+      return;
+    }
+    outer.pointerScroll(dy);
+  }
+
   /// 顶栏（返回/分享/更多）高度，= `SliverAppBar` 默认 `toolbarHeight`。
   static const double _topBarHeight = 56;
 
@@ -534,6 +634,10 @@ class _MemberSpacePageState extends State<MemberSpacePage>
       value: 0,
     );
     _tabController = AppTabController(length: _availableTabs.length);
+    _scrollController.addListener(_onOuterScroll);
+    for (final c in _tabControllers) {
+      if (c is AppScrollController) c.onScrollAtEdge = _handleInnerEdge;
+    }
     _initFollowSubscription();
     _loadAll();
     // 演示模式/自定义覆盖变更时重建（遮罩与替换值即时生效）。
@@ -577,6 +681,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     _expandCtrl.dispose();
     _collectionPageCtrl?.dispose();
     _tabController.dispose();
+    _scrollController.removeListener(_onOuterScroll);
     _scrollController.dispose();
     _videosScrollController.dispose();
     _seasonsScrollController.dispose();
@@ -1047,12 +1152,16 @@ class _MemberSpacePageState extends State<MemberSpacePage>
             ),
           ];
         },
-        body: AppTabBody(
-          controller: _tabController,
-          children: tabs.map((t) => KeyedSubtree(
-            key: ValueKey(t),
-            child: _buildTabContent(t, card),
-          )).toList(),
+        body: Listener(
+          // 内层物理禁用时（头部未折叠），滚轮由此转给外层/内层两段式滚动。
+          onPointerSignal: _handleBodyPointerSignal,
+          child: AppTabBody(
+            controller: _tabController,
+            children: tabs.map((t) => KeyedSubtree(
+              key: ValueKey(t),
+              child: _buildTabContent(t, card),
+            )).toList(),
+          ),
         ),
       ),
     );
@@ -2080,6 +2189,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return CustomScrollView(
       controller: _videosScrollController,
+      physics: _tabPhysics,
       slivers: [
         // 排序切换栏 (最新发布 / 最多播放热门)
         SliverToBoxAdapter(
@@ -2220,6 +2330,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     if (_seasonsSeries.isEmpty && _loadingSeasons) {
       return ListView.builder(
         controller: _seasonsScrollController,
+        physics: _tabPhysics,
         padding: const EdgeInsets.all(Style.safeSpace),
         itemCount: 4,
         itemBuilder: (_, _) => const Padding(
@@ -2234,6 +2345,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return CustomScrollView(
       controller: _seasonsScrollController,
+      physics: _tabPhysics,
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.all(Style.safeSpace),
@@ -2389,6 +2501,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return CustomScrollView(
       controller: _dynamicsScrollController,
+      physics: _tabPhysics,
       slivers: [
         // 动态类型筛选器
         SliverToBoxAdapter(
@@ -3252,6 +3365,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     if (_loadingFav && _favFolders.isEmpty) {
       return CustomScrollView(
         controller: _favScrollController,
+        physics: _tabPhysics,
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.all(Style.safeSpace),
@@ -3275,6 +3389,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return CustomScrollView(
       controller: _favScrollController,
+      physics: _tabPhysics,
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.all(Style.safeSpace),
@@ -3393,6 +3508,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
   Widget _buildBangumiTab() {
     return CustomScrollView(
       controller: _bangumiScrollController,
+      physics: _tabPhysics,
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
@@ -3580,6 +3696,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
     if (_loadingLiked && _likedVideos.isEmpty) {
       return CustomScrollView(
         controller: _likedScrollController,
+        physics: _tabPhysics,
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.all(Style.safeSpace),
@@ -3606,6 +3723,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return CustomScrollView(
       controller: _likedScrollController,
+      physics: _tabPhysics,
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.all(Style.safeSpace),
@@ -3683,6 +3801,7 @@ class _MemberSpacePageState extends State<MemberSpacePage>
 
     return ListView(
       controller: _aboutScrollController,
+      physics: _tabPhysics,
       padding: const EdgeInsets.all(Style.safeSpace),
       children: [
         MiuixCard(
